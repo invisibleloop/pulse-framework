@@ -1,6 +1,9 @@
 import { highlight }     from '../lib/highlight.js'
 import { metricsStore }  from '../lib/metrics-store.js'
 import { codeWindow }    from '../../../src/ui/code-window.js'
+import { readFileSync }  from 'fs'
+
+const { version } = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url)))
 
 const exampleSpec = highlight(`export default {
   route: '/dashboard',
@@ -63,7 +66,7 @@ export default {
             <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1" stroke-linejoin="round"/>
           </svg>
         </div>
-        <div class="hero-badge">v0.1 — EARLY ACCESS</div>
+        <div class="hero-badge">v${version} — EARLY ACCESS</div>
         <p class="hero-kicker">A Node.js framework for building server-rendered web apps</p>
         <h1 class="hero-title">Describe the outcome. Pulse guarantees it.</h1>
         <p class="hero-subtitle">One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the framework, not left to configuration. Designed for AI agents.</p>
