@@ -64,8 +64,9 @@ export default {
           </svg>
         </div>
         <div class="hero-badge">v0.1 — EARLY ACCESS</div>
+        <p class="hero-kicker">A Node.js framework for building server-rendered web apps</p>
         <h1 class="hero-title">Describe the outcome. Pulse guarantees it.</h1>
-        <p class="hero-subtitle">One spec object per page — server data, state, mutations, and view, co-located in plain JS. Streaming SSR, security headers, and production caching are enforced by the framework, not left to configuration.<br><br>Designed for AI agents. Production-quality architecture.</p>
+        <p class="hero-subtitle">One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the framework, not left to configuration. Designed for AI agents.</p>
         <div class="hero-ctas">
           <a href="/getting-started" class="btn-primary">Get Started</a>
           <a href="/spec" class="btn-secondary">Read the Spec</a>
