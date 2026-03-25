@@ -1,6 +1,6 @@
 {
   "name": "@invisibleloop/pulse",
-  "version": "0.1.27",
+  "version": "0.1.28",
   "type": "module",
   "description": "AI-first frontend framework. The spec is the source of truth.",
   "license": "MIT",
