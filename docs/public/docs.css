@@ -441,6 +441,7 @@ a:hover {
 .home-code {
   background: #111114;
   padding: 5rem 2rem 6rem;
+  --muted: #9090a0;
 }
 
 .home-code-inner {
