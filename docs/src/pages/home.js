@@ -116,7 +116,7 @@ export default {
           <div class="how-connector" aria-hidden="true"></div>
           <div class="how-step">
             <div class="how-step-num">3</div>
-            <h3>Ship with it built in</h3>
+            <h3>Production quality, built in</h3>
             <p>Streaming SSR, security headers, and immutable caching come from the framework — not your config. Follow the spec, and the results follow.</p>
           </div>
         </div>
