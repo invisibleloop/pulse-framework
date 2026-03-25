@@ -186,7 +186,8 @@ createServer(
     compIcons,
   ],
   {
-    port:      process.env.PORT ? Number(process.env.PORT) : 4000,
-    staticDir: new URL('./public', import.meta.url).pathname,
+    port:         process.env.PORT ? Number(process.env.PORT) : 4000,
+    staticDir:    new URL('./public', import.meta.url).pathname,
+    defaultCache: true,
   }
 )
