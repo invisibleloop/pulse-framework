@@ -167,6 +167,15 @@ a:hover {
   margin-bottom: 1.25rem;
 }
 
+.hero-kicker {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #0a0a0a;
+  opacity: 0.55;
+  margin-bottom: 1rem;
+  letter-spacing: 0.01em;
+}
+
 .hero-badge {
   display: inline-flex;
   align-items: center;
