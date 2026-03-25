@@ -1,5 +1,8 @@
 import { renderLayout, h1, lead } from '../lib/layout.js'
 import { prevNext } from '../lib/nav.js'
+import pkg from '../../../package.json' with { type: 'json' }
+
+const { version } = pkg
 
 const { prev, next } = prevNext('/faq')
 
@@ -30,7 +33,7 @@ export default {
       ${q(
         'Is Pulse ready for production?',
         `<p>The architecture is production-quality — streaming SSR, security headers, immutable caching, and zero runtime dependencies are built in and have been running reliably in real deployments. The framework itself targets Lighthouse 100 on every scaffolded page.</p>
-        <p>That said, Pulse is v0.1 early access. The core spec format is stable, but some APIs may change before v1. It is best suited to new projects where you control the stack, and to teams who are comfortable building on something that is still evolving. If you need a framework with a five-year stability guarantee, wait for v1.</p>`
+        <p>That said, Pulse is v${version} early access. The core spec format is stable, but some APIs may change before v1. It is best suited to new projects where you control the stack, and to teams who are comfortable building on something that is still evolving. If you need a framework with a five-year stability guarantee, wait for v1.</p>`
       )}
 
       ${q(
