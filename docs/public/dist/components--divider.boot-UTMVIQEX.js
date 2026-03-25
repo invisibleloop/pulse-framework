@@ -1,6 +1,0 @@
-import{a as s,b as l}from"./runtime-O3PCG43G.js";import{Qa as p,Sa as o}from"./runtime-UVPXO4IR.js";import"./runtime-VMJA3Z4N.js";import"./runtime-QFURDKA2.js";import{a as i,h as n}from"./runtime-OFZXJMSU.js";import{a as t,b as d}from"./runtime-B73WLANC.js";var{prev:a,next:c}=i("/components/divider"),r={route:"/components/divider",meta:{title:"Divider \u2014 Pulse Docs",description:"Divider component for Pulse UI.",styles:["/pulse-ui.css","/docs.css"]},state:{},view:()=>l({currentHref:"/components/divider",prev:a,next:c,name:"divider",description:'Horizontal rule for visual separation. With a <code>label</code>, the line splits either side of the text \u2014 the classic "or" pattern between login options.',content:`
-      ${s(p({gap:"lg",content:o()+o({label:"or continue with"})}),`divider()
-divider({ label: 'or continue with' })`)}
-
-      ${n(["Prop","Type","Default",""],[["<code>label</code>","string","\u2014",'Optional centred text \u2014 renders as <code>&lt;div&gt;</code> with role="separator" when provided, <code>&lt;hr&gt;</code> otherwise']])}
-    `})};var e=document.getElementById("pulse-root");e&&!e.dataset.pulseMounted&&(e.dataset.pulseMounted="1",t(r,e,window.__PULSE_SERVER__||{},{ssr:!0}),d(e,t));var x=r;export{x as default};

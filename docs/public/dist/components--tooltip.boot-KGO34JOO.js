@@ -1,9 +1,0 @@
-import{a,b as l}from"./runtime-O3PCG43G.js";import{Ra as c,Va as o,a as t}from"./runtime-UVPXO4IR.js";import"./runtime-VMJA3Z4N.js";import"./runtime-QFURDKA2.js";import{a as i,h as p}from"./runtime-OFZXJMSU.js";import{a as r,b as s}from"./runtime-B73WLANC.js";var{prev:d,next:m}=i("/components/tooltip"),n={route:"/components/tooltip",meta:{title:"Tooltip \u2014 Pulse Docs",description:"Tooltip component for Pulse UI.",styles:["/pulse-ui.css","/docs.css"]},state:{},view:()=>l({currentHref:"/components/tooltip",prev:d,next:m,name:"tooltip",description:"CSS-powered tooltip that wraps any element. No JavaScript required \u2014 the bubble appears on hover and <code>:focus-within</code>. Supports four placements.",content:`
-      ${a(c({gap:"lg",justify:"center",content:o({content:"This appears on top",position:"top",trigger:t({label:"Top",variant:"secondary"})})+o({content:"This appears below",position:"bottom",trigger:t({label:"Bottom",variant:"secondary"})})+o({content:"This appears to the left",position:"left",trigger:t({label:"Left",variant:"secondary"})})+o({content:"This appears to the right",position:"right",trigger:t({label:"Right",variant:"secondary"})})}),`tooltip({
-  content:  'This appears on top',
-  position: 'top',       // top | bottom | left | right
-  trigger:  button({ label: 'Hover me', variant: 'secondary' }),
-})`)}
-
-      ${p(["Prop","Type","Default",""],[["<code>content</code>","string","\u2014","Tooltip text (plain text only)"],["<code>trigger</code>","string (HTML)","\u2014","Raw HTML slot \u2014 the element the tooltip wraps"],["<code>position</code>","<code>top | bottom | left | right</code>","<code>top</code>",""],["<code>class</code>","string","\u2014",""]])}
-    `})};var e=document.getElementById("pulse-root");e&&!e.dataset.pulseMounted&&(e.dataset.pulseMounted="1",r(n,e,window.__PULSE_SERVER__||{},{ssr:!0}),s(e,r));var w=n;export{w as default};
