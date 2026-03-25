@@ -1,0 +1,100 @@
+/* ─── Products example ───────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  min-height: 100dvh;
+}
+
+.pd-root { display: flex; flex-direction: column; min-height: 100dvh; }
+
+/* Logo */
+.pd-logo-text { font-weight: 700; }
+
+/* Main */
+.pd-main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+/* Page header */
+.pd-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.pd-subtitle { font-size: .875rem; color: var(--ui-muted); margin-top: .25rem; }
+
+/* Sort uses ui-field/ui-select components */
+.pd-sort-wrap { display: flex; align-items: flex-end; gap: .625rem; }
+
+/* Layout: sidebar + content */
+.pd-sidebar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+/* Search — uses ui-search component */
+.ui-search { flex: 1; min-width: 200px; }
+
+/* Categories */
+.pd-category-wrap { display: flex; flex-direction: column; gap: .375rem; }
+.pd-sidebar-label { font-size: .8rem; color: var(--ui-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+.pd-categories {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem;
+}
+
+.pd-cat-pill { border-radius: 999px !important; }
+
+/* Image inside card — card overflow:hidden clips top corners; remove image radius so bottom is square */
+.ui-card .ui-image-crop { border-radius: 0; }
+
+/* Grid */
+.pd-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.pd-product-body { display: flex; flex-direction: column; gap: .5rem; padding: .875rem; }
+
+.pd-product-meta { display: flex; gap: .375rem; flex-wrap: wrap; }
+
+.pd-product-stats { display: flex; align-items: center; gap: .375rem; }
+
+.pd-rating {
+  font-size: .8rem;
+  color: #b45309;
+  font-weight: 600;
+}
+
+.pd-reviews {
+  font-size: .775rem;
+  color: var(--ui-muted);
+}
+
+.pd-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ui-accent);
+}

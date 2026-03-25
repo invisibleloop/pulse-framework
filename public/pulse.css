@@ -1,0 +1,149 @@
+/* Pulse — base stylesheet */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0f0f0f;
+  --surface:  #1a1a1a;
+  --border:   #2a2a2a;
+  --text:     #e8e8e8;
+  --muted:    #888;
+  --accent:     #9b8dff;   /* links — passes 7:1 on dark bg */
+  --accent-h:   #b8aeff;   /* link hover */
+  --accent-btn: #5c4de3;   /* button bg — white text passes 5.4:1 */
+  --success:  #3ecf8e;
+  --error:    #f03e3e;
+  --radius:   8px;
+  --font:     system-ui, -apple-system, sans-serif;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family:      var(--font);
+  background-color: var(--bg);
+  color:            var(--text);
+  line-height:      1.6;
+  min-height:       100vh;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-h); text-decoration: underline; }
+
+/* Layout */
+.page {
+  max-width:  640px;
+  margin:     0 auto;
+  padding:    3rem 1.5rem;
+}
+
+/* Typography */
+h1 { font-size: 2rem;   font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
+p  { color: var(--muted); margin-bottom: 1rem; }
+
+/* Buttons */
+button {
+  display:          inline-flex;
+  align-items:      center;
+  justify-content:  center;
+  gap:              0.4rem;
+  font-family:      var(--font);
+  font-size:        0.9rem;
+  font-weight:      500;
+  padding:          0.5rem 1.25rem;
+  border-radius:    var(--radius);
+  border:           1px solid var(--border);
+  background:       var(--surface);
+  color:            var(--text);
+  cursor:           pointer;
+  transition:       background 0.15s, border-color 0.15s;
+}
+button:hover:not([disabled]) {
+  background:    var(--accent);
+  border-color:  var(--accent);
+  color:         #fff;
+}
+button[disabled] { opacity: 0.35; cursor: default; }
+button.primary {
+  background:   var(--accent-btn);
+  border-color: var(--accent-btn);
+  color:        #fff;
+}
+button.primary:hover:not([disabled]) {
+  background:   color-mix(in srgb, var(--accent-btn) 85%, #000);
+  border-color: color-mix(in srgb, var(--accent-btn) 85%, #000);
+}
+
+/* Forms */
+label {
+  display:       block;
+  font-size:     0.85rem;
+  font-weight:   500;
+  color:         var(--muted);
+  margin-bottom: 1.25rem;
+}
+label span { display: block; margin-bottom: 0.35rem; }
+
+input, textarea, select {
+  display:        block;
+  width:          100%;
+  font-family:    var(--font);
+  font-size:      0.95rem;
+  padding:        0.6rem 0.85rem;
+  background:     var(--surface);
+  border:         1px solid var(--border);
+  border-radius:  var(--radius);
+  color:          var(--text);
+  outline:        none;
+  transition:     border-color 0.15s;
+}
+input:focus, textarea:focus { border-color: var(--accent-btn); }
+textarea { min-height: 120px; resize: vertical; }
+
+/* Feedback */
+.errors {
+  list-style:    none;
+  background:    color-mix(in srgb, var(--error) 12%, transparent);
+  border:        1px solid color-mix(in srgb, var(--error) 30%, transparent);
+  border-radius: var(--radius);
+  padding:       0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size:     0.875rem;
+  color:         var(--error);
+}
+.errors li + li { margin-top: 0.35rem; }
+
+.success {
+  background:    color-mix(in srgb, var(--success) 12%, transparent);
+  border:        1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  border-radius: var(--radius);
+  padding:       1rem 1.25rem;
+  color:         var(--success);
+  font-weight:   500;
+}
+
+/* Counter */
+.counter { text-align: center; }
+.counter .value {
+  font-size:     5rem;
+  font-weight:   800;
+  line-height:   1;
+  margin:        1.5rem 0;
+  letter-spacing: -0.04em;
+  color:         var(--text);
+}
+.counter .controls { display: flex; gap: 0.75rem; justify-content: center; }
+.counter .controls button { font-size: 1.25rem; min-width: 48px; }
+.counter .hint { font-size: 0.8rem; color: var(--muted); margin-top: 1rem; }
+
+/* Form loading state */
+.form.loading { opacity: 0.6; pointer-events: none; }
+
+/* Skip link — visually hidden until focused */
+.pulse-skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.pulse-skip-link:focus{position:fixed;left:1rem;top:1rem;width:auto;height:auto;padding:.5rem 1rem;background:#000;color:#fff;font-size:1rem;font-weight:600;border-radius:4px;text-decoration:none;z-index:9999;outline:3px solid #fff;outline-offset:2px}
+
+/* Focus ring */
+:focus-visible{outline:3px solid #9b8dff;outline-offset:2px}
+:focus:not(:focus-visible){outline:none}

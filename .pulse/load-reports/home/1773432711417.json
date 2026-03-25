@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-03-13T20:11:51.416Z",
+  "url": "http://localhost:4000/",
+  "config": {
+    "duration": 3,
+    "connections": 5
+  },
+  "rps": 17570.5,
+  "latency": {
+    "mean": 0.2,
+    "p50": 0,
+    "p95": 1,
+    "p99": 1,
+    "max": 16
+  },
+  "requests": {
+    "total": 61655,
+    "success": 61655,
+    "errors": 0
+  },
+  "duration": 3.5
+}

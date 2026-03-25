@@ -1,0 +1,119 @@
+/* ─── Contact example ────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  min-height: 100dvh;
+}
+
+.ct-root { display: flex; flex-direction: column; min-height: 100dvh; }
+
+/* Main */
+.ct-main {
+  flex: 1;
+  padding: 3rem 1rem;
+}
+
+/* Grid */
+.ct-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .ct-grid { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+/* Info column */
+.ct-eyebrow {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ui-accent);
+  font-weight: 600;
+  margin-bottom: .75rem;
+}
+
+.ct-subtitle {
+  color: var(--ui-muted);
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+}
+
+.ct-details { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.ct-detail { display: flex; align-items: flex-start; gap: .875rem; }
+
+.ct-detail-icon {
+  margin-top: .1rem;
+  flex-shrink: 0;
+}
+
+.ct-detail-label {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--ui-muted);
+  margin-bottom: .2rem;
+}
+
+.ct-detail-value {
+  font-size: .95rem;
+  color: var(--ui-text);
+  text-decoration: none;
+}
+
+a.ct-detail-value:hover { color: var(--ui-accent); }
+
+/* Form */
+.ct-form-alerts:not(:empty) { margin-bottom: 1.25rem; }
+
+.ct-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ct-legend {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+}
+
+.ct-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .ct-row { grid-template-columns: 1fr; }
+}
+
+/* Success */
+.ct-success-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #d1fae5;
+  color: #059669;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.ct-success-msg {
+  color: var(--ui-muted);
+  text-align: center;
+  max-width: 30ch;
+}

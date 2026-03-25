@@ -1,0 +1,79 @@
+/* ─── Counter example ────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  min-height: 100dvh;
+}
+
+.cnt-root { display: flex; flex-direction: column; min-height: 100dvh; }
+
+.cnt-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.cnt-eyebrow {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ui-muted);
+}
+
+/* Counter display — no component equivalent for this scale */
+.cnt-display {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+}
+
+.cnt-value {
+  font-size: 5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ui-accent);
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: center;
+}
+
+.cnt-of-max {
+  font-size: 1.5rem;
+  color: var(--ui-muted);
+}
+
+/* Progress track — server serves old markup until restart */
+.cnt-track {
+  width: 100%;
+  height: 6px;
+  background: var(--ui-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cnt-track-fill {
+  height: 100%;
+  background: var(--ui-accent);
+  border-radius: 3px;
+  transition: width .2s ease;
+}
+
+.cnt-step-label {
+  font-size: .8rem;
+  color: var(--ui-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.cnt-hint {
+  font-size: .8rem;
+  color: var(--ui-muted);
+  text-align: center;
+  max-width: 32ch;
+}

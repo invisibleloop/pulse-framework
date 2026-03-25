@@ -1,0 +1,200 @@
+/* ─── Quiz example ───────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  min-height: 100dvh;
+}
+
+.qz-root { display: flex; flex-direction: column; min-height: 100dvh; }
+
+/* Main */
+.qz-main {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1rem;
+}
+
+.qz-card {
+  width: 100%;
+  max-width: 580px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 16px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+/* Intro */
+.qz-intro-icon { font-size: 3.5rem; }
+
+/* Used for results phase heading (wraps badge HTML — cannot use heading component) */
+.qz-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.qz-subtitle {
+  font-size: .875rem;
+  color: var(--ui-muted);
+  text-align: center;
+}
+
+.qz-intro-desc {
+  color: var(--ui-muted);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 36ch;
+}
+
+/* Progress */
+.qz-progress-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: .85rem;
+  color: var(--ui-muted);
+}
+
+/* Question */
+.qz-question {
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.45;
+  width: 100%;
+}
+
+/* Options */
+.qz-options {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: .625rem;
+}
+
+.qz-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .875rem 1.25rem;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  font-size: .95rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all .15s;
+}
+
+.qz-option:hover {
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 8%, transparent);
+}
+
+.qz-option:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 2px;
+}
+
+.qz-option-letter {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--ui-border);
+  color: var(--ui-muted);
+  font-size: .8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+
+.qz-option:hover .qz-option-letter {
+  background: var(--ui-accent);
+  color: #fff;
+}
+
+.qz-option-text { flex: 1; }
+
+/* Results */
+.qz-score-wrap { display: flex; justify-content: center; }
+
+.qz-score-ring {
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  border: 4px solid var(--ui-accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .1rem;
+}
+
+.qz-score-num {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--ui-accent);
+  line-height: 1;
+}
+
+.qz-score-denom {
+  font-size: .7rem;
+  color: var(--ui-muted);
+}
+
+.qz-results {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.qz-result-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .875rem;
+  padding: .875rem;
+  border-radius: 8px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+}
+
+.qz-result-row--correct { border-left: 3px solid #10b981; }
+.qz-result-row--wrong   { border-left: 3px solid #ef4444; }
+
+.qz-result-icon {
+  flex-shrink: 0;
+  margin-top: .1rem;
+}
+
+.qz-result-row--correct .qz-result-icon { color: #10b981; }
+.qz-result-row--wrong   .qz-result-icon { color: #ef4444; }
+
+.qz-result-q {
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.qz-result-answer {
+  font-size: .8rem;
+  color: #10b981;
+  margin-top: .25rem;
+}

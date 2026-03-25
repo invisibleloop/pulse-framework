@@ -1,0 +1,132 @@
+/* ─── Pricing example ────────────────────────────────────────────────────── */
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  min-height: 100dvh;
+}
+
+/* Logo */
+.pr-logo {
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -.01em;
+}
+
+/* Hero */
+.pr-eyebrow {
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+
+/* Fluid type for hero title — kept custom since heading() uses fixed sizes */
+.pr-hero-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.pr-hero-sub {
+  color: var(--ui-muted);
+  text-align: center;
+  max-width: 44ch;
+  line-height: 1.6;
+}
+
+/* Billing toggle */
+.pr-toggle {
+  display: flex;
+  gap: .25rem;
+  background: var(--ui-surface-2);
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+  padding: .25rem;
+  align-items: center;
+}
+
+.pr-save-label {
+  font-size: .7rem;
+  font-weight: 700;
+  padding: .15rem .45rem;
+  border-radius: 99px;
+  border: 1px solid currentColor;
+  color: var(--ui-text);
+}
+
+.pr-annual-note {
+  font-size: .8rem;
+  color: var(--ui-muted);
+  text-align: center;
+}
+
+/* Plans */
+.pr-plans {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  width: 100%;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .pr-plans { grid-template-columns: 1fr; max-width: 400px; }
+}
+
+/* Feature table */
+.pr-feature-table {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pr-feature-header,
+.pr-feature-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  align-items: center;
+}
+
+.pr-feature-header {
+  background: var(--ui-surface-2);
+  font-size: .8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--ui-muted);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.pr-feature-header span:not(:first-child),
+.pr-feature-row span:not(:first-child) {
+  text-align: center;
+}
+
+.pr-feature-row {
+  font-size: .9rem;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.pr-feature-row:last-child { border-bottom: none; }
+.pr-feature-row:nth-child(odd) { background: color-mix(in srgb, var(--ui-surface-2) 50%, transparent); }
+
+.pr-feature-name { color: var(--ui-text); }
+
+.pr-feature-val { color: var(--ui-muted); font-size: .875rem; }
+
+.pr-feature-val--yes {
+  color: #10b981;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.pr-feature-val--no {
+  color: var(--ui-border);
+}

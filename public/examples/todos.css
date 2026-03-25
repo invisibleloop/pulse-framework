@@ -1,0 +1,137 @@
+/* ─── Todos example ──────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  background: var(--ui-bg);
+  color: var(--ui-text);
+  min-height: 100dvh;
+}
+
+.td-root { display: flex; flex-direction: column; min-height: 100dvh; }
+
+/* Main */
+.td-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+}
+
+.td-panel {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.td-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.td-counts { display: flex; gap: .375rem; }
+
+/* Form */
+.td-form { display: flex; flex-direction: column; gap: .5rem; }
+
+.td-form-row { display: flex; align-items: flex-end; gap: .5rem; }
+
+/* Override the ui-field wrapper inside the form row so it grows to fill space */
+.td-text-field { flex: 1; margin: 0; }
+
+.td-limit-msg {
+  font-size: .8rem;
+  color: var(--ui-warning, #f59e0b);
+}
+
+/* Toolbar */
+.td-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.td-filters { display: flex; gap: .25rem; }
+
+/* List */
+.td-list { list-style: none; }
+
+.td-item {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .875rem 1rem;
+  border-bottom: 1px solid var(--ui-border);
+  transition: background .1s;
+}
+
+.td-item:last-child { border-bottom: none; }
+.td-item:hover { background: color-mix(in srgb, var(--ui-accent) 4%, transparent); }
+
+.td-item--done .td-text {
+  text-decoration: line-through;
+  color: var(--ui-muted);
+}
+
+/* Custom checkbox */
+.td-check-label {
+  display: flex;
+  align-items: center;
+  gap: .625rem;
+  flex: 1;
+  cursor: pointer;
+}
+
+.td-checkbox { position: absolute; opacity: 0; width: 0; height: 0; }
+
+.td-check-mark {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--ui-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+
+.td-checkbox:checked + .td-check-mark {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+}
+
+.td-checkbox:checked + .td-check-mark::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translate(-1px, -1px);
+  display: block;
+}
+
+.td-checkbox:focus-visible + .td-check-mark {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 2px;
+}
+
+.td-text {
+  font-size: .95rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Remove button — hidden until hover/focus */
+.td-remove-btn { opacity: 0; transition: opacity .15s; }
+.td-item:hover .td-remove-btn,
+.td-remove-btn:focus-visible { opacity: 1; }

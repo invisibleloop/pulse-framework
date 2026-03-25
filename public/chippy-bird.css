@@ -1,0 +1,246 @@
+/* Chippy Bird — Landing page theme
+ * Overrides --ui-* tokens and adds page-specific styles only.
+ * Layout is handled by pulse-ui.css layout components.
+ */
+
+:root {
+  --ui-accent:       #f7b731;
+  --ui-accent-hover: #f9c74f;
+  --ui-accent-dim:   rgba(247, 183, 49, .15);
+  --ui-bg:           #08111f;
+  --ui-surface:      #0d1c36;
+  --ui-surface-2:    #12233f;
+  --ui-border:       #1a3055;
+  --ui-text:         #eef3ff;
+  --ui-muted:        #6e88b0;
+  --ui-green:        #3dd68c;
+  --ui-red:          #ff6b6b;
+
+  /* Game palette — extracted from screenshots */
+  --cb-sky:          #87ceeb;
+  --cb-sky-mid:      #5aabe0;
+  --cb-wood:         #9e6b2e;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+body {
+  font-family:            system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color:       var(--ui-bg);
+  color:                  var(--ui-text);
+  line-height:            1.6;
+  min-height:             100vh;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--ui-accent); text-decoration: none; }
+a:hover { opacity: .85; }
+
+/* ─── Nav logo ───────────────────────────────────────────────────────────── */
+.cb-logo { font-weight: 800; font-size: 1rem; letter-spacing: -.01em; }
+
+/* ─── Eyebrow + titles ───────────────────────────────────────────────────── */
+.cb-eyebrow {
+  font-size:      .78rem;
+  font-weight:    600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color:          var(--ui-accent);
+}
+
+.cb-section-title {
+  font-size:      clamp(1.75rem, 4vw, 2.5rem);
+  font-weight:    800;
+  line-height:    1.15;
+  letter-spacing: -.02em;
+  color:          var(--ui-text);
+  text-align:     center;
+}
+
+.cb-muted {
+  font-size:  1rem;
+  color:      var(--ui-muted);
+  line-height: 1.6;
+  text-align: center;
+  max-width:  480px;
+}
+
+/* ─── Stats divider ──────────────────────────────────────────────────────── */
+.cb-stat-divider {
+  width:      1px;
+  height:     3rem;
+  background: var(--ui-border);
+  flex-shrink: 0;
+}
+
+.ui-stat-value { color: var(--ui-accent); }
+
+/* ─── Free badge ─────────────────────────────────────────────────────────── */
+.cb-free-badge {
+  display:        inline-block;
+  background:     var(--ui-accent-dim);
+  color:          var(--ui-accent);
+  font-size:      .78rem;
+  font-weight:    700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding:        .3rem .9rem;
+  border-radius:  99px;
+}
+
+/* ─── CTA section ────────────────────────────────────────────────────────── */
+.cb-cta { background: linear-gradient(135deg, #0a1628 0%, #0f2a5a 100%); }
+
+.cb-cta-title {
+  font-size:      clamp(2rem, 5vw, 3rem);
+  font-weight:    800;
+  letter-spacing: -.02em;
+  color:          var(--ui-text);
+}
+
+/* ─── Notify form ────────────────────────────────────────────────────────── */
+.cb-notify-form { width: 100%; max-width: 420px; }
+.cb-notify-form--loading { opacity: .6; pointer-events: none; }
+
+.cb-notify-input {
+  flex:          1;
+  min-width:     0;
+  height:        44px;
+  padding:       0 .875rem;
+  background:    var(--ui-surface);
+  border:        1px solid var(--ui-border);
+  border-radius: var(--ui-radius, 8px);
+  color:         var(--ui-text);
+  font-size:     .9rem;
+  font-family:   inherit;
+  outline:       none;
+}
+.cb-notify-input:focus-visible {
+  border-color: var(--ui-accent);
+  box-shadow:   0 0 0 2px var(--ui-accent-dim);
+}
+.cb-notify-input::placeholder { color: var(--ui-muted); }
+
+/* ─── Footer ─────────────────────────────────────────────────────────────── */
+.cb-footer {
+  background:  var(--ui-surface);
+  border-top:  1px solid var(--ui-border);
+  padding:     1.5rem;
+  text-align:  center;
+}
+.cb-footer p   { font-size: .85rem; color: var(--ui-muted); margin: 0; }
+.cb-footer a   { color: var(--ui-accent); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ─── Split Hero ─────────────────────────────────────────────────────────── */
+.cb-hero-wrap {
+  background:
+    radial-gradient(ellipse 55% 80% at 78% 55%, rgba(87, 171, 224, .18) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 40% at 78% 20%, rgba(135, 206, 235, .10) 0%, transparent 55%),
+    var(--ui-bg);
+}
+
+.cb-hero-split {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             4rem;
+  max-width:       1100px;
+  margin:          0 auto;
+  padding:         6rem 2rem 5rem;
+  min-height:      680px;
+}
+
+.cb-hero-content  { flex: 1; max-width: 500px; }
+
+.cb-hero-heading {
+  font-size:      clamp(2.75rem, 5.5vw, 4.25rem);
+  font-weight:    900;
+  line-height:    1.0;
+  letter-spacing: -.03em;
+  color:          var(--ui-text);
+  margin:         .6rem 0 1.25rem;
+}
+
+.cb-hero-sub {
+  font-size:    1.05rem;
+  color:        var(--ui-muted);
+  line-height:  1.65;
+  margin-bottom: 2rem;
+  max-width:    400px;
+}
+
+.cb-hero-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+
+/* ─── iPhone Frame ───────────────────────────────────────────────────────── */
+.cb-hero-visual {
+  flex-shrink: 0;
+  display:     flex;
+  align-items: center;
+}
+
+.cb-iphone {
+  position:      relative;
+  width:         230px;
+  background:    #0a0b14;
+  border-radius: 42px;
+  padding:       13px;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.09),
+    0 0 0 7px #0a0b14,
+    0 0 0 9px rgba(255,255,255,.04),
+    0 50px 100px rgba(0,0,0,.75),
+    0 0 80px rgba(87, 171, 224, .22);
+  animation: cb-float 5s ease-in-out infinite;
+  transform: rotate(3deg);
+}
+
+/* Dynamic Island */
+.cb-iphone::before {
+  content:          '';
+  position:         absolute;
+  top:              17px;
+  left:             50%;
+  transform:        translateX(-50%);
+  width:            78px;
+  height:           24px;
+  background:       #0a0b14;
+  border-radius:    12px;
+  z-index:          3;
+}
+
+.cb-iphone-screen {
+  border-radius: 31px;
+  overflow:      hidden;
+  line-height:   0;
+}
+
+.cb-iphone-screen img {
+  display: block;
+  width:   100%;
+  height:  auto;
+}
+
+@keyframes cb-float {
+  0%, 100% { transform: rotate(3deg) translateY(0); }
+  50%       { transform: rotate(3deg) translateY(-14px); }
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .cb-stat-divider { display: none; }
+  .cb-notify-form .ui-cluster { flex-direction: column; }
+  .cb-notify-form .ui-btn { width: 100%; }
+}
+
+@media (max-width: 768px) {
+  .cb-hero-split {
+    flex-direction: column-reverse;
+    gap:            2.5rem;
+    padding:        3rem 1.5rem;
+    text-align:     center;
+  }
+  .cb-hero-content  { max-width: 100%; }
+  .cb-hero-sub      { max-width: 100%; margin-left: auto; margin-right: auto; }
+  .cb-hero-actions  { justify-content: center; }
+  .cb-iphone        { width: 200px; }
+}
