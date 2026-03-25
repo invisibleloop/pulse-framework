@@ -1,9 +1,9 @@
 import { highlight }     from '../lib/highlight.js'
 import { metricsStore }  from '../lib/metrics-store.js'
 import { codeWindow }    from '../../../src/ui/code-window.js'
-import { readFileSync }  from 'fs'
+import pkg from '../../../package.json' with { type: 'json' }
 
-const { version } = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url)))
+const { version } = pkg
 
 const exampleSpec = highlight(`export default {
   route: '/dashboard',
