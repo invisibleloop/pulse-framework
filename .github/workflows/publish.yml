@@ -39,4 +39,4 @@ jobs:
           npm version ${{ inputs.bump }} -m "chore: release %s [skip ci]"
           git push --follow-tags
 
-      - run: npm publish --provenance
+      - run: npm publish --provenance --access public
