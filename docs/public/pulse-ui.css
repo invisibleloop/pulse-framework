@@ -1635,7 +1635,6 @@ hr.ui-divider {
   font-family: var(--ui-mono);
   color:       var(--ui-muted);
   margin-left: auto;
-  opacity:     .7;
 }
 
 .ui-code-window-pre {
