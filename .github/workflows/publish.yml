@@ -1,25 +1,17 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: Version bump
-        type: choice
-        options: [patch, minor, major]
-        default: patch
-        required: true
+  push:
+    branches: [main]
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -31,14 +23,14 @@ jobs:
 
       - run: npm test
 
-      - name: Bump version and tag
+      - name: Publish if version is new
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase
-          npm version ${{ inputs.bump }} -m "chore: release %s [skip ci]"
-          git push --follow-tags
-
-      - run: npm publish --provenance --access public
+          VERSION=$(node -p "require('./package.json').version")
+          EXISTS=$(npm view @invisibleloop/pulse@$VERSION version 2>/dev/null || echo "")
+          if [ -z "$EXISTS" ]; then
+            npm publish --provenance --access public
+          else
+            echo "Version $VERSION already published — skipping."
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
