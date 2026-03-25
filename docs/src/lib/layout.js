@@ -6,6 +6,9 @@
  */
 
 import { NAV } from './nav.js'
+import pkg from '../../../package.json' with { type: 'json' }
+
+const { version } = pkg
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -33,7 +36,7 @@ function sidebar(currentHref) {
           </svg>
           <span class="logo-name">Pulse</span>
         </a>
-        <span class="version-badge">v0.1</span>
+        <span class="version-badge">v${version}</span>
       </div>
       <nav class="sidebar-nav">
         ${sections}
