@@ -1,0 +1,6 @@
+import{a as n,b as d}from"./runtime-O3PCG43G.js";import{Ma as t}from"./runtime-UVPXO4IR.js";import"./runtime-VMJA3Z4N.js";import"./runtime-QFURDKA2.js";import{a as r,h as a}from"./runtime-OFZXJMSU.js";import{a as o,b as s}from"./runtime-B73WLANC.js";var{prev:i,next:l}=r("/components/app-badge"),p={route:"/components/app-badge",meta:{title:"App Badge \u2014 Pulse Docs",description:"App Badge component for Pulse UI.",styles:["/pulse-ui.css","/docs.css"]},state:{},view:()=>d({currentHref:"/components/app-badge",prev:i,next:l,name:"appBadge",description:"App Store and Google Play download buttons. Designed to sit in a <code>hero()</code> actions slot, or anywhere a download CTA is needed.",content:`
+      ${n('<div style="display:flex;gap:.75rem;flex-wrap:wrap">'+t({store:"apple",href:"#"})+t({store:"google",href:"#"})+"</div>",`appBadge({ store: 'apple',  href: appStoreUrl })
+appBadge({ store: 'google', href: playStoreUrl })`)}
+
+      ${a(["Prop","Type","Default",""],[["<code>store</code>","string","'apple'","'apple' or 'google'"],["<code>href</code>","string","'#'","Link to the app store listing"]])}
+    `})};var e=document.getElementById("pulse-root");e&&!e.dataset.pulseMounted&&(e.dataset.pulseMounted="1",o(p,e,window.__PULSE_SERVER__||{},{ssr:!0}),s(e,o));var B=p;export{B as default};
