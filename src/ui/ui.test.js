@@ -346,6 +346,12 @@ test('stat: renders change with trend class', () => {
   assert.match(html, /\+5%/)
 })
 
+test('stat: trend icon span has role=img for valid aria-label', () => {
+  const html = stat({ label: 'X', value: '10', change: '+5%', trend: 'up' })
+  assert.match(html, /role="img"/)
+  assert.match(html, /aria-label="increase"/)
+})
+
 test('stat: no change rendered when change is empty', () => {
   const html = stat({ label: 'X', value: '10' })
   assert.doesNotMatch(html, /ui-stat-change/)

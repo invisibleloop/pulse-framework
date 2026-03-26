@@ -39,7 +39,7 @@ export function stat({
 
   const changeHtml = change
     ? `<p class="ui-stat-change ui-stat-change--${e(trend)}">
-  <span aria-label="${e(TREND_LABELS[trend])}">${TREND_ICONS[trend]}</span>
+  <span role="img" aria-label="${e(TREND_LABELS[trend])}">${TREND_ICONS[trend]}</span>
   ${e(change)}
 </p>`
     : ''
