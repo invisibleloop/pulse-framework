@@ -37,6 +37,7 @@ import meta               from './src/pages/meta.js'
 import performance        from './src/pages/performance.js'
 import accessibility      from './src/pages/accessibility.js'
 import testing           from './src/pages/testing.js'
+import store             from './src/pages/store.js'
 
 // Component pages
 import compButton      from './src/pages/components/button.js'
@@ -130,6 +131,7 @@ createServer(
     performance,
     accessibility,
     testing,
+    store,
     // Component pages
     compButton,
     compBadge,

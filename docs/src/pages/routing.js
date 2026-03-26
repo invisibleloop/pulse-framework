@@ -27,7 +27,18 @@ export default {
   state: {},
   view: () => \`<h1>About</h1>\`,
 }`, 'js'))}
-      <p>Pulse matches the exact path. Trailing slashes are normalised — <code>/about</code> and <code>/about/</code> are treated the same.</p>
+      <p>Pulse matches the exact path. By default, trailing slashes are removed — <code>/about/</code> redirects to <code>/about</code> with a 301. This is controlled by the <code>trailingSlash</code> option in <code>createServer</code>:</p>
+      ${table(
+        ['Value', 'Behaviour'],
+        [
+          ['<code>"remove"</code> (default)', 'Redirects <code>/about/</code> → <code>/about</code> (301)'],
+          ['<code>"add"</code>', 'Redirects <code>/about</code> → <code>/about/</code> (301)'],
+          ['<code>"allow"</code>', 'Serves both — no redirect'],
+        ]
+      )}
+      ${codeBlock(highlight(`createServer(specs, {
+  trailingSlash: 'add', // enforce trailing slashes
+})`, 'js'))}
 
       ${section('dynamic', 'Dynamic segments')}
       <p>Use a colon prefix for dynamic path segments. Named segments are captured and available in <code>ctx.params</code> in <a href="/server-data">server data</a>:</p>
