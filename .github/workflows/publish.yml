@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          registry-url: https://registry.npmjs.org
 
       - run: npm ci
 
@@ -26,7 +27,7 @@ jobs:
 
       - name: Bump patch version if already published, then publish
         run: |
-          npm config set registry https://registry.npmjs.org/
+          npm config delete //registry.npmjs.org/:_authToken || true
           VERSION=$(node -p "require('./package.json').version")
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
