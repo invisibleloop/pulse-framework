@@ -24,8 +24,6 @@ jobs:
       - run: npm test
 
       - name: Bump patch version if already published, then publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
