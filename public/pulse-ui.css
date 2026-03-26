@@ -1633,7 +1633,7 @@ hr.ui-divider {
 .ui-code-window-lang {
   font-size:   .7rem;
   font-family: var(--ui-mono);
-  color:       var(--ui-muted);
+  color:       #9898b2;
   margin-left: auto;
 }
 
