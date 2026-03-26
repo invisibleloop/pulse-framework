@@ -574,7 +574,7 @@ export function createServer(specs, options = {}) {
       }
 
       if (stream) {
-        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp)
+        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
       } else {
         await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp)
       }
@@ -737,7 +737,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
  * Stream the response — shell first, deferred segments follow.
  * On a page-cache hit, serves the buffered HTML as a string (no streaming needed).
  */
-async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
+async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
   // Serve from in-process page cache when available — skip streaming overhead.
   // Pages with spec.server or spec.store embed a nonce'd __PULSE_SERVER__ script so are never cached.
   const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
