@@ -27,7 +27,7 @@ jobs:
 
       - name: Bump patch version if already published, then publish
         run: |
-          npm config delete //registry.npmjs.org/:_authToken || true
+          sed -i '/^\/\/registry.npmjs.org\/:_authToken/d' "$NPM_CONFIG_USERCONFIG"
           VERSION=$(node -p "require('./package.json').version")
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
