@@ -32,4 +32,5 @@ jobs:
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
           done
           npm version $VERSION --no-git-tag-version
+          echo "$VERSION" > public/.pulse-ui-version
           npm publish --provenance --access public
