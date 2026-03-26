@@ -53,8 +53,9 @@ export async function scaffold(targetDir, options = {}) {
 ${port !== 3000 ? `  port: ${port},\n` : ''}}
 `)
 
-  // Home page — working counter proves the app runs
-  write(targetDir, 'src/pages/home.js', homePage(name))
+  // Home page + tests — working counter proves the app runs
+  write(targetDir, 'src/pages/home.js',      homePage(name))
+  write(targetDir, 'src/pages/home.test.js', homePageTest(name))
 
   // Minimal stylesheet
   write(targetDir, 'public/app.css', baseCSS())
@@ -184,6 +185,15 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
   } catch {
     execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
   }
+
+  // Initialise git so the Stop hook can use `git status` to track only changed files.
+  // Without this the hook falls back to listing all src/pages/*.js and flags home.js.
+  try {
+    execSync('git init && git add -A && git commit -m "init"', { cwd: targetDir, stdio: 'pipe' })
+    console.log('  ✓ Git repository initialised')
+  } catch {
+    // Non-fatal — project still works without git, stop hook falls back gracefully.
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -244,6 +254,51 @@ export default {
 `
 }
 
+function homePageTest(_appName) {
+  return `\
+import assert from 'node:assert/strict'
+import { test } from 'node:test'
+import { renderSync } from '@invisibleloop/pulse/testing'
+import spec from './home.js'
+
+test('home page renders app name', () => {
+  const r = renderSync(spec)
+  assert(r.has('main#main-content'))
+  assert(r.has('h1'))
+})
+
+test('home page renders counter at 0', () => {
+  const r = renderSync(spec)
+  assert(r.has('span[aria-live]'))
+  assert.equal(r.get('span[aria-live]').text, '0')
+})
+
+test('home page decrement disabled at min', () => {
+  const r = renderSync(spec, { state: { count: 0 } })
+  const buttons = r.findAll('button')
+  const dec = buttons.find(b => b.attr('aria-label') === 'Decrease count')
+  assert(dec, 'decrement button not found')
+  assert(dec.attrs.disabled !== undefined, 'decrement should be disabled at 0')
+})
+
+test('home page increment disabled at max', () => {
+  const r = renderSync(spec, { state: { count: 10 } })
+  const buttons = r.findAll('button')
+  const inc = buttons.find(b => b.attr('aria-label') === 'Increase count')
+  assert(inc, 'increment button not found')
+  assert(inc.attrs.disabled !== undefined, 'increment should be disabled at 10')
+})
+
+test('increment mutation adds 1', () => {
+  assert.deepEqual(spec.mutations.increment({ count: 4 }), { count: 5 })
+})
+
+test('decrement mutation subtracts 1', () => {
+  assert.deepEqual(spec.mutations.decrement({ count: 4 }), { count: 3 })
+})
+`
+}
+
 function baseCSS() {
   return `\
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -279,6 +334,12 @@ public/app.css   ← global stylesheet
 2. Read \`pulse://guide\` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns
 
 The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
+
+## Before writing any code
+
+**Always present a plan and wait for the user to confirm before writing a single line of code.**
+
+The plan must include: route, page sections, components used, state shape, and whether hydration is needed. End the plan with an explicit question — "Shall I go ahead?" — and stop. Do not proceed until the user says yes (or equivalent). This applies to every new page or significant change, no matter how clear the task seems.
 
 ## After completing any feature
 
