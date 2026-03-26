@@ -73,7 +73,20 @@ All components use `--ui-font` (body) and `--ui-mono` (code). These resolve from
 
 ### Google Fonts
 
-Add the Google Fonts stylesheet URL **before** `pulse-ui.css` in `meta.styles`. Use `family=Name:wght@weights` and always include `&display=swap`.
+**Google Fonts requires CSP configuration** — the default CSP blocks external font and stylesheet sources. You must pass `csp` to `createServer`, otherwise the font will be blocked and the page will fail Lighthouse Best Practices:
+
+```js
+// server.js
+createServer(specs, {
+  port: 3000,
+  csp: {
+    'style-src':  ['https://fonts.googleapis.com'],
+    'font-src':   ['https://fonts.gstatic.com'],
+  },
+})
+```
+
+Then add the URL **before** `pulse-ui.css` in `meta.styles`. Use `family=Name:wght@weights` and always include `&display=swap`.
 
 ```js
 meta: {
@@ -89,6 +102,8 @@ Then in app.css:
 ```css
 :root { --font: 'Inter', system-ui, sans-serif; }
 ```
+
+If you cannot modify `createServer` (e.g. the project uses auto-discovery), use a self-hosted font in `public/fonts/` with `@font-face` in `app.css` — no CSP changes needed.
 
 For multiple weights or italic variants, separate them with a semicolon in the URL:
 ```

@@ -75,6 +75,7 @@ export default {
 ## Key rules
 
 - view() returns an HTML string using template literals
+- **Component props are auto-escaped — pass literal strings, not HTML entities.** Use `'© 2026 Acme'` not `'&copy; 2026 Acme'`. Use `'Pricing & Plans'` not `'Pricing &amp; Plans'`. Passing HTML entities to component props double-escapes them (`&amp;amp;`, `&amp;copy;`) and shows raw entity text to the user.
 - data-event="mutationName" on buttons/elements — passes the DOM event to the mutation
 - data-event="change:mutationName" to fire on input change
 - data-action="actionName" on <form> elements only — submits pass FormData to the action

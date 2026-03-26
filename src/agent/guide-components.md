@@ -151,7 +151,7 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 | `feature` | `icon` (HTML slot), `title`, `level` (1–6, default 3), `description`, `center` |
 | `testimonial` | `quote`, `name`, `role`, `src`, `rating` (1–5) |
 | `pricing` | `name`, `level` (1–6, default 3), `price`, `period`, `features` ([strings]), `action` (HTML slot), `highlighted` |
-| `accordion` | `items` ([{title,content}]) — native `<details>`, no JS |
+| `accordion` | `items` ([{question,answer}]) — native `<details>`, no JS |
 | `appBadge` | `store` (apple/google), `href` |
 | `cta` | `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `actions` (HTML slot), `align` |
 
