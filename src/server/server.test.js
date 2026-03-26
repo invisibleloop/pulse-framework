@@ -685,6 +685,53 @@ await test('meta.canonical overrides auto-generated canonical URL', async () => 
   })
 })
 
+await test('meta.canonical as a function receives ctx (string path)', async () => {
+  const spec = {
+    route: '/about',
+    meta: { title: 'About', styles: [], canonical: (ctx) => `https://example.com${ctx.params.slug ?? '/about'}` },
+    state: {},
+    view: () => `<main id="main-content"><h1>About</h1></main>`,
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const { body } = await get(port, '/about')
+    assert(body.includes(`<link rel="canonical" href="https://example.com/about">`),
+      `Expected function canonical, got: ${body.slice(0, 500)}`)
+  })
+})
+
+await test('meta.canonical as a function receives serverState (string path)', async () => {
+  const spec = {
+    route: '/product',
+    meta: {
+      title:     'Product',
+      styles:    [],
+      canonical: (ctx, serverState) => `https://example.com/products/${serverState?.data?.slug ?? 'fallback'}`,
+    },
+    state: {},
+    server: { data: async () => ({ slug: 'my-product-slug' }) },
+    view: (state, server) => `<main id="main-content"><h1>${server.data.slug}</h1></main>`,
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const { body } = await get(port, '/product')
+    assert(body.includes(`<link rel="canonical" href="https://example.com/products/my-product-slug">`),
+      `Expected serverState-derived canonical, got: ${body.slice(0, 500)}`)
+  })
+})
+
+await test('meta.canonical as a function receives ctx in streaming mode', async () => {
+  const spec = {
+    route: '/about',
+    meta: { title: 'About', styles: [], canonical: (ctx) => `https://example.com/about` },
+    state: {},
+    view: () => `<main id="main-content"><h1>About</h1></main>`,
+  }
+  await withServer([spec], { stream: true }, async (port) => {
+    const { body } = await get(port, '/about')
+    assert(body.includes(`<link rel="canonical" href="https://example.com/about">`),
+      `Expected function canonical in stream, got: ${body.slice(0, 500)}`)
+  })
+})
+
 await test('canonical tag injected in streaming response', async () => {
   await withServer([canonicalSpec], { stream: true }, async (port) => {
     const { body } = await get(port, '/about')

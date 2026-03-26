@@ -34,3 +34,23 @@ Convention: name dynamic-route files [param].js inside a subfolder:
   src/pages/blog/[slug].js  with  route: '/blog/:slug'
 
 This is purely a human readability convention. Pulse does not process [ ] in filenames.
+
+## Canonical URLs
+
+Pulse auto-derives a canonical URL from every request and emits `<link rel="canonical">` in the `<head>`. No config needed in most cases.
+
+Override with `meta.canonical` when content is accessible at multiple URLs, or for paginated series:
+
+```js
+// Static override
+meta: { canonical: 'https://mysite.com/blog' }
+
+// From URL params (works in both streaming and string mode)
+meta: { canonical: (ctx) => `https://mysite.com/products/${ctx.params.slug}` }
+
+// From server data — e.g. canonical slug from a DB lookup
+// Only works when stream: false. In streaming mode serverState is null at head-write time.
+meta: { canonical: (ctx, serverState) => `https://mysite.com/products/${serverState.product.slug}` }
+```
+
+The function signature is `(ctx, serverState) => string`. `serverState` is only populated on the string (non-streaming) path — if your canonical depends on server fetcher results, add `stream: false` to that spec.
