@@ -45,7 +45,7 @@ export default {
 
       ${section('vs-validation', 'Constraints vs Validation')}
       ${table(
-        ['', 'Constraints', 'Validation'],
+        ['Aspect', 'Constraints', 'Validation'],
         [
           ['When it runs', 'After <strong>every</strong> mutation, automatically', 'Only when an action has <code>validate: true</code>'],
           ['What it does', 'Clamps numeric values silently', 'Rejects the action and surfaces errors'],

@@ -1,5 +1,21 @@
 /* Pulse Documentation — Design System */
 
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  padding: .5rem 1rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  border-radius: 0 0 .375rem .375rem;
+  text-decoration: none;
+  z-index: 9999;
+}
+.skip-link:focus {
+  top: 0;
+}
+
 *,
 *::before,
 *::after {
@@ -16,7 +32,7 @@
   --border: #38383f;
   --border-subtle: #1a1a20;
   --text: #e2e2ea;
-  --muted: #9090a0;
+  --muted: ##3d3d38;
   --muted-2: #7e7e92;
   --accent: #c9b800;
   --accent-text: #0a0a0a;
@@ -171,7 +187,7 @@ a:hover {
   font-size: 0.95rem;
   font-weight: 500;
   color: #0a0a0a;
-  opacity: 0.55;
+  opacity: 0.7;
   margin-bottom: 1rem;
   letter-spacing: 0.01em;
 }
@@ -189,7 +205,6 @@ a:hover {
   padding: 0.3rem 0.85rem;
   margin-bottom: 2rem;
   letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .hero h1 {
@@ -470,7 +485,6 @@ a:hover {
   line-height: 1.65;
 }
 
-
 /* ─── FAQ page ───────────────────────────────────────────────────────────────── */
 .faq-item {
   padding: 2rem 0;
@@ -571,6 +585,7 @@ a:hover {
   height: 2.5rem;
   background: #f0e642;
   flex-shrink: 0;
+  opacity: 0.3;
 }
 
 /* ─── How it works — black band ─────────────────────────────────────────────── */
@@ -653,6 +668,7 @@ a:hover {
   background: #f0e642;
   margin-top: 1.25rem;
   flex-shrink: 0;
+  opacity: 0.3;
 }
 
 /* ─── AI-first section ───────────────────────────────────────────────────────── */

@@ -68,7 +68,7 @@ export default {
       ${callout('tip', 'Use an absolute URL for <code>ogImage</code> — social media crawlers need the full URL to fetch the image. Recommended size: 1200×630 pixels.')}
 
       ${section('structured-data', 'Structured data (ld+json)')}
-      <p>The <code>schema</code> field accepts a plain object conforming to <a href="https://schema.org" target="_blank" rel="noopener">schema.org</a> vocabulary. Pulse serialises it as a <code>&lt;script type="application/ld+json"&gt;</code> tag in the head:</p>
+      <p>The <code>schema</code> field accepts a plain object conforming to <a href="https://schema.org" target="_blank" rel="noopener" aria-label="schema.org (opens in new tab)">schema.org</a> vocabulary. Pulse serialises it as a <code>&lt;script type="application/ld+json"&gt;</code> tag in the head:</p>
       ${codeBlock(highlight(`meta: {
   title: 'How to make sourdough — My Blog',
   schema: {

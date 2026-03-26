@@ -156,7 +156,7 @@ onError: (state, err) => ({
 }),`, 'js'))}
       <p><code>_toast</code> works in <code>onStart</code>, <code>onSuccess</code>, and <code>onError</code>, and also in mutations. The toast container is injected into <code>document.body</code> once and survives client-side navigations.</p>
       ${table(
-        ['Option', 'Type', 'Default', ''],
+        ['Option', 'Type', 'Default', 'Description'],
         [
           ['<code>message</code>', 'string', '—', 'Required. The notification text.'],
           ['<code>variant</code>', '<code>success | error | warning | info</code>', '<code>info</code>', ''],

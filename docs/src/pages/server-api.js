@@ -230,7 +230,7 @@ Cross-Origin-Resource-Policy: same-origin`, 'bash'))}
       ${section('hsts', 'HSTS')}
       <p>When a request arrives with <code>x-forwarded-proto: https</code> (or over a TLS socket), Pulse adds:</p>
       ${codeBlock(highlight(`Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, 'bash'))}
-      <p>This is automatic — no configuration required. On plain HTTP the header is omitted. The <code>preload</code> directive means you can submit the domain to <a href="https://hstspreload.org" target="_blank" rel="noopener">hstspreload.org</a> so browsers enforce HTTPS before the first connection — this is a separate manual step, not automatic.</p>
+      <p>This is automatic — no configuration required. On plain HTTP the header is omitted. The <code>preload</code> directive means you can submit the domain to <a href="https://hstspreload.org" target="_blank" rel="noopener" aria-label="hstspreload.org (opens in new tab)">hstspreload.org</a> so browsers enforce HTTPS before the first connection — this is a separate manual step, not automatic.</p>
 
       ${section('cookies', 'Cookie defaults')}
       <p>Cookies set via <code>ctx.setCookie()</code> default to <code>SameSite=Lax</code>. CSRF protection is on by default — omitting a <code>sameSite</code> option does not weaken it.</p>

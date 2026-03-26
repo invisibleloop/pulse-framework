@@ -55,7 +55,7 @@ export default {
         </a>
         <div class="home-nav-links">
           <a href="/getting-started">Docs</a>
-          <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a>
         </div>
       </nav>
 
@@ -398,7 +398,7 @@ export default {
 
       </main>
       <footer class="home-footer">
-        <p>MIT License · <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener">GitHub</a> · <a href="/getting-started">Get started in 2 minutes</a></p>
+        <p>MIT License · <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a> · <a href="/getting-started">Get started in 2 minutes</a></p>
       </footer>
     </div>
   `,
