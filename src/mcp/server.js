@@ -233,25 +233,27 @@ server.registerTool(
 server.registerTool(
   'pulse_create_page',
   {
-    description: `Create a new page in the Pulse project. Filename determines route: home.js → /, about.js → /about.
+    description: `Validate and register a page spec that you have already written to disk with the Write tool.
 
-IMPORTANT: Always follow these rules when writing the spec content:
+Workflow — always in this order:
+1. Write the spec file to src/pages/<name>.js using the Write tool (user sees the diff)
+2. Call pulse_create_page with just the name to validate it
+
+Do NOT pass content here — write the file first, then call this tool.
+
+Rules for the spec you write:
 - Import Pulse UI components from '@invisibleloop/pulse/ui' — never write raw HTML for nav, hero, button, card, input, etc.
 - Include '/pulse-ui.css' in meta.styles whenever using any UI component
-- Use u- utility classes for spacing/layout (u-flex, u-flex-col, u-gap-4, u-mt-8, u-text-center, etc.) — never inline styles
-- Use var(--ui-*) CSS tokens in any custom CSS — never hardcode hex colours
+- Use u- utility classes for spacing/layout — never inline styles
+- Use var(--ui-*) CSS tokens for any colour — never hardcode hex values
 - onSuccess AND onError are both required in every action
 - Do NOT use data-event on text inputs — use FormData in onStart/run instead
 - Always export default spec`,
     inputSchema: {
-      name:    z.string().describe('Filename without extension, e.g. "about" or "blog/post"'),
-      content: z.string().describe('Complete JS spec — must export default a valid Pulse spec object'),
+      name: z.string().describe('Filename without extension, matching what you wrote — e.g. "about" or "blog/post"'),
     },
   },
-  async ({ name, content }) => {
-    const validation = await validateContent(content)
-    if (validation.content[0].text.startsWith('Invalid')) return validation
-
+  async ({ name }) => {
     const segments = name.replace(/\.js$/, '').split('/')
     const fullPath = path.join(PAGES_DIR, ...segments) + '.js'
 
@@ -259,11 +261,16 @@ IMPORTANT: Always follow these rules when writing the spec content:
       return text('Error: page name must not escape src/pages/')
     }
 
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true })
-    fs.writeFileSync(fullPath, content, 'utf8')
+    if (!fs.existsSync(fullPath)) {
+      return text(`Error: ${path.relative(ROOT, fullPath)} does not exist — write the file with the Write tool first, then call pulse_create_page.`)
+    }
+
+    const content = fs.readFileSync(fullPath, 'utf8')
+    const validation = await validateContent(content)
+    if (validation.content[0].text.startsWith('Invalid')) return validation
 
     const route = derivedRouteFromName(name)
-    return text(`Created ${path.relative(ROOT, fullPath)} → route "${route}"`)
+    return text(`Validated ${path.relative(ROOT, fullPath)} → route "${route}"`)
   }
 )
 
@@ -826,7 +833,7 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 - \`pulse_list_structure\` — list pages, components, and pulse-ui version. Call at the start of every session.
 - \`pulse_validate\` — validate spec content. Call after every write. Fix all errors AND warnings.
 - \`pulse_review\` — switch into reviewer mode and critically examine a spec you just built. Returns the source, rendered HTML, validator output, and a full review checklist. **Call this only after validate, Lighthouse (desktop + mobile), and tests all pass — it is the final phase before declaring done.**
-- \`pulse_create_page\` — create a new page spec. Validates before writing.
+- \`pulse_create_page\` — validate a page spec you already wrote to disk. **Always write the file with the Write tool first, then call this.** Never pass content to this tool.
 - \`pulse_create_component\` — create a reusable component.
 - \`pulse_create_store\` — create the pulse.store.js global store.
 - \`pulse_create_action\` — generate a correctly-structured action snippet.

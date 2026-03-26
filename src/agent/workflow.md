@@ -33,7 +33,7 @@ Wait for the user to confirm or adjust the plan before writing any code.
 
 ## Phase 3 — Build
 
-Write the spec and any related files (components, styles, tests skeleton). Follow the checklist in full. After each file is written, output a one-line status: `✓ Page written — validating...`
+Write the spec and any related files using the **Write tool** — not `pulse_create_page`. This shows the user a readable diff of the file content. After writing, call `pulse_create_page(name)` to validate the file you just wrote. After each file is written, output a one-line status: `✓ Page written — validating...`
 
 ---
 
