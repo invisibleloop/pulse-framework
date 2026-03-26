@@ -212,6 +212,62 @@ function highlightBash(code) {
 // HTML tokeniser (minimal)
 // ---------------------------------------------------------------------------
 
+function highlightHtmlTag(tag) {
+  // Single-pass tag highlighter — avoids the chained .replace() trap where a
+  // later pass re-processes class="tok-fn" strings already injected by an
+  // earlier pass, producing broken HTML like <span class=<span …>"tok-fn"</span>>.
+  let out = ''
+  let i = 0
+
+  // Opening < or </
+  out += '&lt;'
+  i++ // skip <
+  if (tag[i] === '/') { out += '/'; i++ }
+
+  // Tag name
+  let name = ''
+  while (i < tag.length && /[\w-]/.test(tag[i])) name += tag[i++]
+  if (name) out += span('tok-kw', name)
+
+  // Attributes and remainder up to >
+  while (i < tag.length) {
+    const ch = tag[i]
+    if (ch === '>') { out += '&gt;'; i++; break }
+    if (ch === '/') { out += '/'; i++; continue }
+
+    if (/[\w-]/.test(ch)) {
+      // Attribute name
+      let attr = ''
+      while (i < tag.length && /[\w-]/.test(tag[i])) attr += tag[i++]
+
+      if (tag[i] === '=') {
+        out += span('tok-fn', attr) + esc('=')
+        i++ // skip =
+        // Attribute value
+        const q = tag[i]
+        if (q === '"' || q === "'") {
+          let val = q
+          i++
+          while (i < tag.length && tag[i] !== q) {
+            if (tag[i] === '\\') { val += tag[i] + (tag[i + 1] || ''); i += 2; continue }
+            val += tag[i++]
+          }
+          if (i < tag.length) val += tag[i++] // closing quote
+          out += span('tok-str', val)
+        }
+      } else {
+        out += esc(attr)
+      }
+      continue
+    }
+
+    out += esc(ch)
+    i++
+  }
+
+  return out
+}
+
 function highlightHtml(code) {
   let out = ''
   let i = 0
@@ -231,19 +287,7 @@ function highlightHtml(code) {
     if (code[i] === '<') {
       const end = code.indexOf('>', i)
       if (end === -1) { out += esc(code[i++]); continue }
-      const tag = code.slice(i, end + 1)
-      // Simple: highlight tag name + attributes
-      const highlighted = tag.replace(
-        /^(<\/?)([\w-]+)/,
-        (_, lt, name) => esc(lt) + span('tok-kw', name)
-      ).replace(
-        /([\w-]+)(=)/g,
-        (_, attr, eq) => span('tok-fn', attr) + esc(eq)
-      ).replace(
-        /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
-        (_, str) => span('tok-str', str)
-      )
-      out += highlighted
+      out += highlightHtmlTag(code.slice(i, end + 1))
       i = end + 1
       continue
     }
