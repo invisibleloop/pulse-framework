@@ -4,7 +4,15 @@ Pulse is a spec-first frontend framework. Pages are JS files that export a defau
 
 ```js
 export default {
-  meta: { title, description, styles: ['/app.css'] },
+  meta: {
+    title:       'Page Title',             // string or (ctx) => string
+    description: 'Meta description',       // string or (ctx) => string
+    styles:      ['/app.css'],             // string[] or (ctx) => string[]
+    ogTitle:     'Social title',           // optional — falls back to title
+    ogImage:     'https://…/og.jpg',       // optional — 1200×630 recommended
+    canonical:   'https://mysite.com/…',  // optional — string or (ctx, serverState) => string
+    schema:      { '@context': 'https://schema.org', '@type': 'WebPage', … },  // optional JSON-LD
+  },
   state: { /* initial state */ },
   mutations: {
     // Synchronous. Return partial state. First arg is state, second is the DOM event.
