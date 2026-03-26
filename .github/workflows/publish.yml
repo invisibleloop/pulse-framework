@@ -31,7 +31,7 @@ jobs:
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
           done
-          npm version $VERSION --no-git-tag-version
+          npm version $VERSION --no-git-tag-version --allow-same-version
           echo "$VERSION" > public/.pulse-ui-version
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
