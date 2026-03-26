@@ -45,7 +45,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>logo</code>',     'string (HTML)', '—',   'Raw HTML slot — SVG, img, or text'],
           ['<code>logoHref</code>', 'string',        "'/'", 'Logo link destination'],

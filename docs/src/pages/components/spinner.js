@@ -60,7 +60,7 @@ spinner({ color: 'white'  })`
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>size</code>',  '<code>sm | md | lg</code>',           '<code>md</code>',     '1rem / 1.5rem / 2.5rem'],
           ['<code>color</code>', '<code>accent | muted | white</code>', '<code>accent</code>', ''],

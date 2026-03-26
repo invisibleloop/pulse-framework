@@ -64,7 +64,7 @@ button({ label: 'Submit',  type: 'submit', variant: 'primary' })`
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>label</code>',    'string',  '—',         'Visible text'],
           ['<code>variant</code>',  'string',  'primary',   'primary · secondary · ghost · danger'],

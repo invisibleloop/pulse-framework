@@ -35,7 +35,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>quote</code>',  'string', '—', ''],
           ['<code>name</code>',   'string', '—', 'Author name — also used for avatar initials'],

@@ -54,7 +54,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>src</code>',      'string',  '—',     'Image source URL'],
           ['<code>alt</code>',      'string',  '—',     'Alt text — required for accessibility'],

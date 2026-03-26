@@ -27,7 +27,7 @@ divider({ label: 'or continue with' })`
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>label</code>', 'string', '—', 'Optional centred text — renders as <code>&lt;div&gt;</code> with role="separator" when provided, <code>&lt;hr&gt;</code> otherwise'],
         ]

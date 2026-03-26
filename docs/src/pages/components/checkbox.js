@@ -109,7 +109,7 @@ export default {
 
       <h2 class="doc-h2" id="props">Props</h2>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',      'string',  '—',     'Field name'],
           ['<code>value</code>',     'string',  '—',     'Submitted value when checked (defaults to browser default <code>"on"</code>)'],

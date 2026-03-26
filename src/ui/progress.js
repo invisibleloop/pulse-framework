@@ -48,11 +48,13 @@ export function progress({
     ${showValue && !indeterminate ? `<span class="ui-progress-value">${pct}%</span>` : ''}
   </div>` : ''
 
+  const ariaLabel = label ? e(label) : indeterminate ? 'Loading' : `${pct}%`
+
   return `<div
   class="${e(classes)}"
   role="progressbar"
+  aria-label="${ariaLabel}"
   ${!indeterminate ? `aria-valuenow="${clamped}" aria-valuemin="0" aria-valuemax="${max}"` : ''}
-  ${label ? `aria-label="${e(label)}"` : ''}
   style="--progress-height:${h}"
 >${header}
   <div class="ui-progress-track">

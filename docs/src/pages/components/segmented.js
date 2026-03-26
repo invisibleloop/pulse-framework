@@ -106,7 +106,7 @@ segmented({ name: 'view', value: 'b', size: 'lg', options: [...] })`
       ${callout('note', 'The segmented control submits the selected <code>value</code> string under <code>name</code> in FormData. Read it via <code>formData.get(\'period\')</code> in <code>action.onStart</code> or <code>action.run</code>.')}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',     'string',  '—',    'Field name — submitted in FormData'],
           ['<code>options</code>',  'array',   '[]',   'Array of <code>{ value, label }</code>'],

@@ -107,7 +107,7 @@ fileUpload({ name: 'photo', label: 'Photo', accept: 'image/*', event: 'change:se
       ${callout('note', 'The file object itself cannot be stored in Pulse state — state must be serialisable. Store the filename or a preview URL (via <code>URL.createObjectURL</code>) instead, and upload the file in an action via FormData.')}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',     'string',  '—',     'Field name — file available in FormData under this key'],
           ['<code>label</code>',    'string',  '—',     'Visible label text'],

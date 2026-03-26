@@ -31,7 +31,7 @@ input({ name: 'search', label: 'Search', placeholder: 'Filter by name…', hint:
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',        'string',  '—',    'Also used as id base: <code>field-{name}</code>'],
           ['<code>label</code>',       'string',  '—',    ''],

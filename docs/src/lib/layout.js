@@ -120,7 +120,7 @@ export function codeBlock(highlighted, filename = '') {
 }
 
 export function table(headers, rows) {
-  const ths = headers.map(h => `<th>${h}</th>`).join('')
+  const ths = headers.map(h => `<th scope="col">${h}</th>`).join('')
   const trs = rows.map(row =>
     `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
   ).join('')

@@ -212,9 +212,9 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
           cols: 3,
           gap: 'md',
           content:
-            card({ content: stat({ label: 'Revenue', value: '$18.2k', change: '+12%', trend: 'up' }) + `<div style="margin-top:.75rem">${sparkline({ data: [8,11,9,14,12,16,15,18], width: '100%', color: 'success', area: true })}</div>` }) +
-            card({ content: stat({ label: 'Users', value: '4,821', change: '+8.4%', trend: 'up' }) + `<div style="margin-top:.75rem">${sparkline({ data: [22,28,24,31,27,34,30,38], width: '100%', color: 'accent', area: true })}</div>` }) +
-            card({ content: stat({ label: 'Churn', value: '2.1%', change: '−0.3%', trend: 'down' }) + `<div style="margin-top:.75rem">${sparkline({ data: [8,6,7,5,6,4,5,3], width: '100%', color: 'error', area: true })}</div>` }),
+            card({ content: stat({ label: 'Revenue', value: '$18.2k', change: '+12%', trend: 'up' }) + `<div style="margin-top:.75rem">${sparkline({ data: [8,11,9,14,12,16,15,18], color: 'success', area: true })}</div>` }) +
+            card({ content: stat({ label: 'Users', value: '4,821', change: '+8.4%', trend: 'up' }) + `<div style="margin-top:.75rem">${sparkline({ data: [22,28,24,31,27,34,30,38], color: 'accent', area: true })}</div>` }) +
+            card({ content: stat({ label: 'Churn', value: '2.1%', change: '−0.3%', trend: 'down' }) + `<div style="margin-top:.75rem">${sparkline({ data: [8,6,7,5,6,4,5,3], color: 'error', area: true })}</div>` }),
         }),
         `card({
   content: stat({ label: 'Revenue', value: '$18.2k', change: '+12%', trend: 'up' }) +
@@ -226,7 +226,7 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
 
       <h3 class="doc-h3">barChart()</h3>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>data</code>',       'array',   '—',       '<code>{ label, value }[]</code>'],
           ['<code>height</code>',     'number',  '220',     'SVG height in px'],
@@ -239,7 +239,7 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
 
       <h3 class="doc-h3" style="margin-top:2rem">lineChart()</h3>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>data</code>',      'array',   '—',        '<code>{ label, value }[]</code>'],
           ['<code>height</code>',    'number',  '220',      'SVG height in px'],
@@ -252,7 +252,7 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
 
       <h3 class="doc-h3" style="margin-top:2rem">donutChart()</h3>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>data</code>',      'array',  '—',    '<code>{ label, value, color? }[]</code> — color per segment'],
           ['<code>size</code>',      'number', '200',  'Diameter in px'],
@@ -264,7 +264,7 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
 
       <h3 class="doc-h3" style="margin-top:2rem">sparkline()</h3>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>data</code>',   'number[]', '—',        'Plain array of numbers'],
           ['<code>width</code>',  'number',   '80',       'SVG width in px'],

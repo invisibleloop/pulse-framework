@@ -92,7 +92,7 @@ heading({ level: 2, text: 'The quick brown fox jumps over the lazy dog tonight',
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>level</code>',   'number (1–6)', '2',               'Controls both the HTML tag and the default visual size'],
           ['<code>text</code>',    'string',       '—',               'Heading text — escaped automatically'],

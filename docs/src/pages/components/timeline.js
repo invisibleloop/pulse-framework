@@ -204,7 +204,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>direction</code>', 'string', "'vertical'", "'vertical' · 'horizontal'"],
           ['<code>items</code>',     'array',  '[]',         'Array of <code>timelineItem</code> option objects'],
@@ -214,7 +214,7 @@ export default {
 
       <h3 class="doc-h3" style="margin-top:2rem">timelineItem() props</h3>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>',  'string (HTML)', '—',        'Raw HTML body — accepts any component output'],
           ['<code>label</code>',    'string',        '—',        'Timestamp or step label (escaped)'],

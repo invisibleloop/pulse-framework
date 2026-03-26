@@ -272,7 +272,7 @@ feature({ icon: iconCode({   size: 22, bg: 'square', bgColor: 'muted'   }), titl
       ${iconGrid_()}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>size</code>',    'number', '16',      'Width and height in px'],
           ['<code>class</code>',   'string', '—',       'Extra CSS classes (on wrapper when <code>bg</code> is set, otherwise on the SVG)'],

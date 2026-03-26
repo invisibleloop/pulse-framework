@@ -50,7 +50,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',        'string',        '—',     ''],
           ['<code>level</code>',       'number',        '3',     'Heading tag for the plan name (1–6). Visual style is unchanged.'],

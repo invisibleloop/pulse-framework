@@ -90,7 +90,7 @@ rating({ value: 4, size: 'lg' })`
       ${callout('note', 'The interactive rating submits the selected star count as a number string under <code>name</code> in FormData. Read it with <code>Number(formData.get(\'score\'))</code>. If nothing is selected, the field is absent from FormData.')}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>value</code>',    'number',  '0',       'Current rating. Supports 0.5 steps in display mode.'],
           ['<code>max</code>',      'number',  '5',       'Total number of stars'],

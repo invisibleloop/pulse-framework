@@ -54,7 +54,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>steps</code>',   'string[]', '[]',  'Array of step label strings'],
           ['<code>current</code>', 'number',   '0',   '0-based index of the active step. Pass <code>steps.length</code> to mark all steps complete.'],

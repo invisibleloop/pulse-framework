@@ -29,7 +29,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>', 'string (HTML)', '—',    'Raw HTML slot'],
           ['<code>size</code>',    'string',        "'lg'", "'sm' (640px) · 'md' (768px) · 'lg' (1100px) · 'xl' (1280px)"],

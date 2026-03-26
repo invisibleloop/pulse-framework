@@ -163,7 +163,7 @@ export default {
 
       <h2 class="doc-h2" id="props-group">radioGroup() props</h2>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',    'string',  '—',       'Shared <code>name</code> attribute for all inputs in the group'],
           ['<code>legend</code>',  'string',  '—',       'Group label — renders as a <code>&lt;legend&gt;</code>'],
@@ -178,7 +178,7 @@ export default {
 
       <h2 class="doc-h2" id="props-radio">radio() props</h2>
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',     'string',  '—',      'Field name'],
           ['<code>value</code>',    'string',  '—',      'Submitted value when this option is selected'],

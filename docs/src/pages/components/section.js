@@ -41,7 +41,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>',  'string (HTML)', '—',         'Raw HTML slot'],
           ['<code>variant</code>',  'string',        "'default'", "'default' · 'alt' · 'dark'"],

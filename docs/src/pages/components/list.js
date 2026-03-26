@@ -99,7 +99,7 @@ list({ gap: 'md', items: [...] })`,
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>items</code>',   'string[]',                         '—',             'Array of HTML strings for each list item — escape user data before passing'],
           ['<code>ordered</code>', 'boolean',                          '<code>false</code>', '<code>false</code> renders <code>&lt;ul&gt;</code>, <code>true</code> renders <code>&lt;ol&gt;</code>'],

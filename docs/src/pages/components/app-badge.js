@@ -30,7 +30,7 @@ appBadge({ store: 'google', href: playStoreUrl })`
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>store</code>', 'string', "'apple'", "'apple' or 'google'"],
           ['<code>href</code>',  'string', "'#'",     'Link to the app store listing'],

@@ -99,7 +99,7 @@ const x = 1 + 2</code></pre>
       ${callout('warning', '<strong>Do not escape the content prop.</strong> <code>prose()</code> renders raw HTML — it is designed for trusted server-side content only. Never pass unescaped user input directly. Sanitise CMS output before rendering if your CMS allows arbitrary HTML.')}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>', 'string', '—',                        'Raw HTML string — rendered as-is, not escaped. Use for server-side content only.'],
           ['<code>size</code>',    '<code>sm | base | lg</code>', '<code>base</code>', 'Base font size scale. <code>sm</code>=0.875rem, <code>base</code>=1rem, <code>lg</code>=1.125rem'],

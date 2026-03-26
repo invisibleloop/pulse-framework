@@ -85,7 +85,7 @@ progress({ value: 60, size: 'lg' })`,
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>value</code>',      'number',  '—',          'Current value. Omit for indeterminate.'],
           ['<code>max</code>',        'number',  '100',        ''],
