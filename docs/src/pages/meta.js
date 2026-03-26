@@ -46,6 +46,7 @@ export default {
           ['<code>ogTitle</code>', '<code>string</code>', 'Open Graph title. If omitted, falls back to <code>title</code>.'],
           ['<code>ogImage</code>', '<code>string</code>', 'Open Graph image URL — shown when the page is shared on social media.'],
           ['<code>schema</code>', '<code>object</code>', 'JSON-LD structured data object — emitted as a <code>&lt;script type="application/ld+json"&gt;</code> tag.'],
+          ['<code>canonical</code>', '<code>string | (ctx, serverState) => string</code>', 'Canonical URL — overrides the auto-derived canonical. Accepts a function for dynamic values.'],
         ]
       )}
 
@@ -95,6 +96,26 @@ export default {
           ['<code>Organization</code>', 'Company/brand information'],
         ]
       )}
+
+      ${section('canonical', 'Canonical URLs')}
+      <p>Pulse automatically derives a canonical URL from the request and emits it as a <code>&lt;link rel="canonical"&gt;</code> tag on every page. In most cases no configuration is needed.</p>
+      <p>Use <code>meta.canonical</code> to override — for example, on paginated pages or when content is accessible at more than one URL. A plain string is resolved once at startup:</p>
+      ${codeBlock(highlight(`// Paginated blog — pages 2, 3, … all canonicalise to the first page
+meta: {
+  title:     'Blog — Page 2',
+  canonical: 'https://mysite.com/blog',
+}`, 'js'))}
+      <p>Pass a function to derive the canonical from the request context or server data. The function receives <code>(ctx, serverState)</code>:</p>
+      ${codeBlock(highlight(`// Canonical from a URL param
+meta: {
+  canonical: (ctx) => \`https://mysite.com/products/\${ctx.params.slug}\`,
+}
+
+// Canonical from a server fetcher result (e.g. canonical slug from a database lookup)
+meta: {
+  canonical: (ctx, serverState) => \`https://mysite.com/products/\${serverState.product.slug}\`,
+}`, 'js'))}
+      ${callout('note', '<strong>Streaming caveat:</strong> when <code>stream: true</code> (the default), the <code>&lt;head&gt;</code> is written before server fetchers resolve, so <code>serverState</code> will be <code>null</code> for streaming responses. If your canonical depends on server data, set <code>stream: false</code> on that spec, or derive it from <code>ctx.params</code> instead.')}
 
       ${section('styles', 'Stylesheets')}
       <p>The <code>styles</code> array accepts any number of stylesheet URLs. They are emitted as <code>&lt;link rel="stylesheet"&gt;</code> tags in the <code>&lt;head&gt;</code> in the order declared:</p>

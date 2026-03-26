@@ -541,14 +541,16 @@ export function createServer(specs, options = {}) {
         }
       }
 
-      // Build canonical URL — prefer spec.meta.canonical, otherwise derive from request.
+      // Derive the canonical base URL from the request.
       // Canonical path follows the trailingSlash mode so the <link> is consistent with redirects.
+      // spec.meta.canonical (string or function) is resolved inside each handler, where serverState
+      // is available — allowing dynamic canonicals from server fetcher results.
       const proto        = req.headers['x-forwarded-proto'] || 'http'
       const host         = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`
       const canonicalPath = trailingSlash === 'add' && pathname !== '/'
         ? (pathname.endsWith('/') ? pathname : pathname + '/')
         : (pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname)
-      const canonicalUrl = spec.meta?.canonical || `${proto}://${host}${canonicalPath}`
+      const canonicalBase = `${proto}://${host}${canonicalPath}`
 
       // Raw content spec (RSS, sitemap, JSON API, webhooks) — bypass HTML pipeline
       if (spec.contentType) {
@@ -563,9 +565,9 @@ export function createServer(specs, options = {}) {
       }
 
       if (stream) {
-        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalUrl, nonce, runtimeBundle, defaultCache, store, csp)
+        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp)
       } else {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalUrl, nonce, runtimeBundle, defaultCache, store, csp)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp)
       }
 
     } catch (err) {
@@ -676,7 +678,7 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
  * Render to a complete string then send — simpler, easier to cache.
  * Checks the in-process page cache before rendering; stores result after.
  */
-async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalUrl = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
+async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
   const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
   // Pages with server data or store data embed a nonce'd __PULSE_SERVER__ script — don't cache them
   const ttl      = (!spec.server && !spec.store?.length) ? pageCacheTtl(spec, dev, defaultCache) : 0
@@ -689,6 +691,12 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     fromCache  = true
   } else {
     const { html: content, serverState, timing } = await cachedRenderToString(spec, ctx, dev)
+    // Resolve canonical — supports a function receiving (ctx, serverState) so the URL can be
+    // derived from server fetcher results (e.g. a canonical slug from a database lookup).
+    const canonicalRaw = spec.meta?.canonical
+    const canonicalUrl = typeof canonicalRaw === 'function'
+      ? (canonicalRaw(ctx, serverState) || canonicalBase)
+      : (canonicalRaw || canonicalBase)
     const canonicalTag      = canonicalUrl ? `<link rel="canonical" href="${escHtml(canonicalUrl)}">` : ''
     const resolvedSpec      = { ...spec, meta: resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
@@ -720,7 +728,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
  * Stream the response — shell first, deferred segments follow.
  * On a page-cache hit, serves the buffered HTML as a string (no streaming needed).
  */
-async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalUrl = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
+async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
   // Serve from in-process page cache when available — skip streaming overhead.
   // Pages with spec.server or spec.store embed a nonce'd __PULSE_SERVER__ script so are never cached.
   const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
@@ -748,6 +756,13 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   // Write the document opening immediately so the browser starts parsing
   const meta  = resolveMeta(spec.meta, ctx)
   const title = meta.title || 'Pulse'
+  // Resolve canonical — supports a string or a function receiving (ctx).
+  // Note: server fetcher results are not yet available when the <head> is written in streaming mode.
+  // If your canonical depends on server data, use stream: false on that spec, or set it as a string.
+  const canonicalRaw = spec.meta?.canonical
+  const canonicalUrl = typeof canonicalRaw === 'function'
+    ? (canonicalRaw(ctx) || canonicalBase)
+    : (canonicalRaw || canonicalBase)
 
   const stylePreloads = (meta.styles || [])
     .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}">`)
