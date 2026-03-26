@@ -692,10 +692,19 @@ server.registerTool(
 server.registerTool(
   'pulse_update',
   {
-    description: 'Re-copy pulse-ui.css, pulse-ui.js, and the agent checklist from the installed package into public/. Run after npm update @invisibleloop/pulse, or when visual output looks wrong and you suspect stale CSS.',
+    description: 'Install the latest @invisibleloop/pulse package, then re-copy pulse-ui.css, pulse-ui.js, and the agent checklist into public/. One command does the full upgrade.',
     inputSchema: {},
   },
-  () => {
+  async () => {
+    // 1. npm install latest
+    const { execSync } = await import('child_process')
+    try {
+      execSync('npm install @invisibleloop/pulse@latest', { cwd: ROOT, stdio: 'pipe' })
+    } catch (e) {
+      return text(`npm install failed:\n${e.stderr?.toString() || e.message}`)
+    }
+
+    // 2. Copy assets from the newly installed package
     const pkgPublic  = new URL('../../public', import.meta.url).pathname
     const publicDir  = path.join(ROOT, 'public')
     const assets     = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
@@ -718,7 +727,7 @@ server.registerTool(
 
     const versionFile = path.join(publicDir, '.pulse-ui-version')
     const version     = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : '?'
-    return text(`pulse-ui updated to v${version}\n\n${updated.map(f => `✓ ${f}`).join('\n')}`)
+    return text(`Pulse updated to v${version}\n\n${updated.map(f => `✓ ${f}`).join('\n')}`)
   }
 )
 
@@ -841,7 +850,7 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 - \`pulse_restart_server\` — stop and restart the dev server.
 - \`pulse_build\` — production build + starts prod server on devPort+1 for Lighthouse. Returns the URL. Call \`pulse_restart_server\` after to return to dev. **Slow — takes 30–60 s. Tell the user before calling.**
 - \`pulse_check_version\` — check installed package version, static asset version, and latest on npm. Use this instead of running npm commands when the user asks about updates.
-- \`pulse_update\` — re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist from the installed package into \`public/\`. Run this after \`npm update @invisibleloop/pulse\`, or whenever visual output looks wrong and you suspect stale CSS.
+- \`pulse_update\` — install the latest \`@invisibleloop/pulse\` package and re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist into \`public/\`. One command does the full upgrade.
 
 **Chrome DevTools MCP tools** (globally available):
 - \`mcp__chrome-devtools__take_screenshot\` — visual screenshot of the page.
