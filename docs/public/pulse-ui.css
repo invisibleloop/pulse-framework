@@ -810,8 +810,8 @@ hr.ui-divider {
 }
 
 .ui-testimonial-avatar--initials {
-  background:      var(--ui-accent-dim, rgba(155,141,255,.12));
-  color:           var(--ui-accent, var(--accent, #9b8dff));
+  background:      var(--ui-muted-bg, rgba(128,128,128,.2));
+  color:           var(--ui-text, var(--text, #e2e2ea));
   font-size:       .8rem;
   font-weight:     700;
   display:         flex;

@@ -160,7 +160,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
  * @param {Object}  [options.timing]     - Server-Timing values
  * @returns {string}
  */
-export function wrapDocument({ content, spec = {}, serverState = {}, storeState = null, storeDef = null, timing = {}, extraBody = '', extraHead = '', nonce = '', runtimeBundle = '' }) {
+export function wrapDocument({ content, spec = {}, serverState = {}, storeState = null, storeDef = null, timing = {}, extraBody = '', extraHead = '', nonce = '', runtimeBundle = '', faviconHref = '' }) {
   const meta  = spec.meta  || {}
   const title = meta.title || 'Pulse'
 
@@ -250,7 +250,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="${faviconHref || 'data:,'}">
   <title>${esc(title)}</title>
   ${stylePreloads}
   ${runtimePreload}

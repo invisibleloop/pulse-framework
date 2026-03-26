@@ -400,6 +400,11 @@ export function createServer(specs, options = {}) {
   const hydrateMap     = loadManifest(manifest, staticDir)
   const runtimeBundle  = hydrateMap['_runtime'] || ''
 
+  // Auto-detect favicon in staticDir
+  const faviconPath = staticDir
+    ? ['/favicon.svg', '/favicon.ico', '/favicon.png'].find(f => fs.existsSync(path.join(staticDir, f))) || null
+    : null
+
   // Validate all specs upfront — fail at startup, not at request time
   for (const spec of specs) {
     const { valid, errors } = validateSpec(spec)
@@ -704,7 +709,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     const canonicalTag      = canonicalUrl ? `<link rel="canonical" href="${escHtml(canonicalUrl)}">` : ''
     const resolvedSpec      = { ...spec, meta: resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
-    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag, nonce, runtimeBundle })
+    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag, nonce, runtimeBundle, faviconHref: faviconPath || '' })
     html              = wrapped.html
     serverTimingValue = wrapped.serverTimingValue
     if (ttl > 0) pageHtmlCache.set(cacheKey, { html }, ttl)
@@ -799,7 +804,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="${faviconPath || 'data:,'}">
   <title>${escHtml(title)}</title>
 ${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}
 </head>
