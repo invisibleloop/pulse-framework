@@ -16,7 +16,11 @@ import fs     from 'fs'
 import path   from 'path'
 import zlib   from 'zlib'
 import crypto from 'crypto'
-import { promisify } from 'util'
+import { promisify }  from 'util'
+import { createRequire } from 'module'
+
+const _require = createRequire(import.meta.url)
+export const version = _require('../../package.json').version
 import { renderToString, renderToStream, wrapDocument, resolveServerState } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
