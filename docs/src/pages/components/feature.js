@@ -46,7 +46,7 @@ feature({ icon: iconPhone({ size: 20 }), title: 'Works offline',      descriptio
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>icon</code>',        'string (HTML)', '—', 'Raw HTML slot — SVG or emoji; displayed in an accent-tinted box'],
           ['<code>title</code>',       'string',        '—', ''],

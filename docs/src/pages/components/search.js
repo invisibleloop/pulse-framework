@@ -40,7 +40,7 @@ search({
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',        'string',  '—',     'Field name and id base'],
           ['<code>label</code>',       'string',  '—',     'Label text — always provide for accessibility'],

@@ -35,7 +35,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>',  'string',                          '—',       'Tooltip text (plain text only)'],
           ['<code>trigger</code>',  'string (HTML)',                   '—',       'Raw HTML slot — the element the tooltip wraps'],

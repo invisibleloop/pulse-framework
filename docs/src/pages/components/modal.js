@@ -46,7 +46,7 @@ modal({
 modalTrigger({ target: 'confirm-delete', label: 'Delete item', variant: 'danger' })`
       )}
 
-      <h3 class="doc-h3" id="sizes"><a href="#sizes" class="heading-anchor">Sizes</a></h3>
+      <h2 class="doc-h2" id="sizes"><a href="#sizes" class="heading-anchor">Sizes</a></h2>
       ${demo(
         cluster({ gap: 'sm', justify: 'center', content:
           modalTrigger({ target: 'demo-sm', label: 'Small',  variant: 'secondary', size: 'sm' }) +
@@ -58,7 +58,7 @@ modalTrigger({ target: 'confirm-delete', label: 'Delete item', variant: 'danger'
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>id</code>',      'string',                        '—',              'Unique ID — required for triggers to target this dialog'],
           ['<code>title</code>',   'string',                        '—',              ''],
@@ -70,10 +70,10 @@ modalTrigger({ target: 'confirm-delete', label: 'Delete item', variant: 'danger'
         ]
       )}
 
-      <h3 class="doc-h3" id="trigger-props"><a href="#trigger-props" class="heading-anchor">modalTrigger props</a></h3>
+      <h2 class="doc-h2" id="trigger-props"><a href="#trigger-props" class="heading-anchor">modalTrigger props</a></h2>
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>target</code>',  'string',                                          '—',                 "The modal's <code>id</code>"],
           ['<code>label</code>',   'string',                                          '<code>Open</code>', ''],
@@ -83,13 +83,13 @@ modalTrigger({ target: 'confirm-delete', label: 'Delete item', variant: 'danger'
         ]
       )}
 
-      <h3 class="doc-h3" id="custom-trigger"><a href="#custom-trigger" class="heading-anchor">Custom triggers</a></h3>
+      <h2 class="doc-h2" id="custom-trigger"><a href="#custom-trigger" class="heading-anchor">Custom triggers</a></h2>
       <p class="doc-body">Any element with <code>data-dialog-open="&lt;id&gt;"</code> opens the dialog when clicked. Use <code>data-dialog-close</code> on any element inside or outside the dialog to close it programmatically:</p>
       <pre class="code-block"><code>&lt;button data-dialog-open="my-modal"&gt;Open&lt;/button&gt;
 &lt;button data-dialog-close&gt;Cancel&lt;/button&gt;</code></pre>
       ${callout('tip', 'The dialog also closes on ESC, backdrop click, and <code>&lt;form method="dialog"&gt;</code> submit — all native browser behaviour, no JavaScript needed.')}
 
-      <h3 class="doc-h3" id="forms-inside"><a href="#forms-inside" class="heading-anchor">Forms inside a modal</a></h3>
+      <h2 class="doc-h2" id="forms-inside"><a href="#forms-inside" class="heading-anchor">Forms inside a modal</a></h2>
       <p class="doc-body"><code>modal()</code> wraps all content in <code>&lt;form method="dialog"&gt;</code> for native close behaviour. You <strong>cannot nest a <code>&lt;form data-action="..."&gt;</code> inside it</strong> — browsers silently discard nested forms, so the action will never fire.</p>
       <p class="doc-body">When a modal button needs to trigger a Pulse action, place the form <em>outside</em> the modal and use the HTML <code>form</code> attribute to associate the button with it:</p>
       <pre class="code-block"><code>// The action form lives outside the modal — hidden, no visible fields needed

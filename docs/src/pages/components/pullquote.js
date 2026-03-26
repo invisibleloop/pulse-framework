@@ -58,7 +58,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>quote</code>', 'string',            '—',           'The quote text — escaped automatically'],
           ['<code>cite</code>',  'string',            '—',           'Attribution text — rendered in a <code>&lt;figcaption&gt;</code>'],

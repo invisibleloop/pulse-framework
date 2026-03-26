@@ -82,7 +82,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>items</code>',     'array',  '[]',  'Array of <code>{ label, href }</code>. The last item should have no <code>href</code> — it becomes the current page.'],
           ['<code>separator</code>', 'string', "'/'", 'Character rendered between items'],

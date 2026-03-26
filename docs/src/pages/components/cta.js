@@ -38,7 +38,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>eyebrow</code>',  'string',        '—',          'Small label above the heading'],
           ['<code>title</code>',    'string',        '—',          'Main heading'],

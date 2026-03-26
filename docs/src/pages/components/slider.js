@@ -93,7 +93,7 @@ slider({
       ${callout('warning', 'Do not use <code>data-event="input:mutationName"</code> on a slider. Pulse replaces <code>innerHTML</code> on every mutation, which interrupts the drag mid-gesture. Use <code>change</code> instead — it fires once when the user releases the handle.')}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',     'string',  '—',     'Field name — submitted in FormData'],
           ['<code>label</code>',    'string',  '—',     'Visible label text'],

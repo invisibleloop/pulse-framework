@@ -153,7 +153,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>', 'string (HTML)', '—',     'Raw HTML slot — direct children are grid items'],
           ['<code>cols</code>',    'number',        '3',     '1 · 2 · 3 · 4'],

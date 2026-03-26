@@ -68,7 +68,7 @@ toggle({ name: 'b', label: 'On and disabled',  disabled: true, checked: true })`
       ${callout('note', 'The switch submits as <code>\'on\'</code> under its <code>name</code> when checked. When unchecked, the field is absent from FormData entirely — the same behaviour as a native checkbox. Read it with <code>formData.get(\'name\') === \'on\'</code>.')}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>name</code>',     'string',  '—',     'Field name — submitted in FormData'],
           ['<code>label</code>',    'string',  '—',     'Visible label text'],

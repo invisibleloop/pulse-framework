@@ -36,7 +36,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>', 'string (HTML)', '—',         'Raw HTML slot'],
           ['<code>gap</code>',     'string',        "'md'",      "'xs' · 'sm' · 'md' · 'lg' · 'xl'"],

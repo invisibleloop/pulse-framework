@@ -52,7 +52,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>legend</code>',  'string', '—',   'Group label — rendered as <code>&lt;legend&gt;</code>, announced by screen readers on focus'],
           ['<code>content</code>', 'string', '—',   'Raw HTML slot — input(), select(), textarea(), grid(), etc.'],

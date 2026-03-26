@@ -41,7 +41,7 @@ export default {
 })`
       )}
 
-      <h3 class="doc-h3" id="arrows-dots"><a href="#arrows-dots" class="heading-anchor">Arrows and dots</a></h3>
+      <h2 class="doc-h2" id="arrows-dots"><a href="#arrows-dots" class="heading-anchor">Arrows and dots</a></h2>
       ${demo(
         carousel({
           arrows: true,
@@ -59,7 +59,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>slides</code>', 'string[] (HTML)',  '[]',             'Array of raw HTML strings — one per slide'],
           ['<code>arrows</code>', 'boolean',           '<code>true</code>',  'Show prev/next arrow buttons'],

@@ -41,7 +41,7 @@ stat({ label: 'Avg. session', value: '4m 12s' })`
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>label</code>',  'string',  '—',       ''],
           ['<code>value</code>',  'string',  '—',       'Formatted value string — e.g. "2.4k", "98%"'],

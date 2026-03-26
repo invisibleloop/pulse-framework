@@ -63,7 +63,7 @@ export function fileUpload({
 
   return `<div class="${e(wrapClasses)}">
   ${labelHtml}
-  <div class="${e(zoneClasses)}" role="button" tabindex="${disabled ? '-1' : '0'}" aria-label="Upload file"
+  <div class="${e(zoneClasses)}" role="button" tabindex="${disabled ? '-1' : '0'}" aria-label="Drag and drop or browse"${disabled ? ' aria-disabled="true"' : ''}
   >
     <div class="ui-upload-body">
       ${icon}

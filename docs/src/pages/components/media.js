@@ -37,7 +37,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>image</code>',   'string (HTML)', '—',         'Raw HTML slot — img, figure, SVG, or styled div'],
           ['<code>content</code>', 'string (HTML)', '—',         'Raw HTML slot'],

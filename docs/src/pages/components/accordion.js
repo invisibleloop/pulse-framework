@@ -38,7 +38,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>items</code>', 'array', '[]', '<code>{ question: string, answer: string }[]</code>'],
         ]

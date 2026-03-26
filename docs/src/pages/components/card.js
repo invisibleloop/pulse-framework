@@ -210,7 +210,7 @@ export default {
       )}
 
       ${table(
-        ['Prop', 'Type', 'Default', ''],
+        ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>title</code>',   'string',  '—',     'Escaped automatically'],
           ['<code>level</code>',   'number',  '3',     'Heading tag for the title (1–6). Visual style is unchanged — use this to keep the document outline correct when the surrounding context already has an h2 or h3.'],
