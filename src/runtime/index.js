@@ -24,6 +24,9 @@ const showToast = (opts) => import('./toast.js').then(m => m.showToast(opts))
  * @param {Object} [serverState] - Serialised server state from SSR
  */
 export function mount(spec, el, serverState = {}, options = {}) {
+  if (!spec || spec.state === undefined || !spec.view) {
+    throw new Error('[Pulse] mount: spec must have state and view')
+  }
   // Spec is validated server-side at startup — no need to re-validate in the browser
   // Initialise the client store from SSR data (no-op after the first page mount).
   // window.__PULSE_STORE__ is serialised by the server when a store is registered.
@@ -451,7 +454,8 @@ function dispatchTimed(target, name, e, dispatch) {
 function applyConstraints(state, constraints) {
   if (!constraints) return state
 
-  const next = deepClone(state)
+  const hasNested = Object.keys(constraints).some(p => p.includes('.'))
+  const next = hasNested ? structuredClone(state) : state
 
   for (const [path, rules] of Object.entries(constraints)) {
     const { obj, key } = resolvePath(next, path)
@@ -570,7 +574,7 @@ function resolvePath(obj, path) {
  * @returns {Object}
  */
 function deepClone(obj) {
-  return JSON.parse(JSON.stringify(obj))
+  return structuredClone(obj)
 }
 
 function viewErrorFallback(err) {
