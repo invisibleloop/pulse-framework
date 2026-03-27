@@ -122,9 +122,10 @@ export function mount(spec, el, serverState = {}, options = {}) {
       const raw = spec.mutations[type](state, payload)
       if (raw?._toast) showToast(raw._toast)
       const { _toast, ...partial } = raw ?? {}
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
       persist()
-      render()
+      if (shallowChanged(prev, state)) render()
       return
     }
 
@@ -147,8 +148,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
       const raw = action.onStart(currentState, payload)
       if (raw?._toast) showToast(raw._toast)
       const { _toast, ...partial } = raw ?? {}
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
-      render()
+      if (shallowChanged(prev, state)) render()
     }
 
     // Validate before running if requested
@@ -159,8 +161,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
         const raw = action.onError?.(state, { validation: errors }) ?? {}
         if (raw._toast) showToast(raw._toast)
         const { _toast, ...partial } = raw
+        const prev = state
         state = applyConstraints({ ...state, ...partial }, spec.constraints)
-        render()
+        if (shallowChanged(prev, state)) render()
         return
       }
     }
@@ -174,17 +177,20 @@ export function mount(spec, el, serverState = {}, options = {}) {
       if (raw._storeUpdate) updateStore(raw._storeUpdate)
       if (raw._toast)       showToast(raw._toast)
       const { _storeUpdate: _su, _toast: _t, ...partial } = raw
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
+      if (shallowChanged(prev, state)) render()
     } catch (error) {
       console.error(`[Pulse] Action "${name}" failed:`, error)
       const raw = action.onError(state, error) ?? {}
       if (raw._toast) showToast(raw._toast)
       const { _toast, ...partial } = raw
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
+      if (shallowChanged(prev, state)) render()
     }
 
     persist()
-    render()
   }
 
   // ---------------------------------------------------------------------------
@@ -575,6 +581,24 @@ function resolvePath(obj, path) {
  */
 function deepClone(obj) {
   return structuredClone(obj)
+}
+
+/**
+ * Returns true when two flat state objects differ by reference at any key.
+ * Used to skip render() when a mutation produces no actual change —
+ * e.g. a constraint-clamped increment when already at max.
+ * Only compares top-level keys — nested objects are compared by reference,
+ * which is correct since mutations return new partial objects via spread.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @returns {boolean}
+ */
+function shallowChanged(a, b) {
+  if (a === b) return false
+  const ka = Object.keys(a)
+  if (ka.length !== Object.keys(b).length) return true
+  return ka.some(k => a[k] !== b[k])
 }
 
 function viewErrorFallback(err) {

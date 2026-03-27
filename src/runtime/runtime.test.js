@@ -254,6 +254,30 @@ test('constraints on nested paths', () => {
   assert(instance.getState().slider.value === 100, `Expected 100, got ${instance.getState().slider.value}`)
 })
 
+test('render is skipped when mutation produces no state change', () => {
+  const el = new FakeElement()
+  let renderCount = 0
+  const spec = {
+    route: '/nochange',
+    state: { count: 10 },
+    constraints: { count: { min: 0, max: 10 } },
+    view: (s) => { renderCount++; return `<span>${s.count}</span>` },
+    mutations: {
+      increment: (state) => ({ count: state.count + 1 }),  // clamped to 10
+      noop:      ()      => ({}),                           // empty partial
+    }
+  }
+  const instance = mount(spec, el)
+  renderCount = 0  // reset after initial render
+
+  instance.dispatch('increment')  // already at max — state unchanged
+  instance.dispatch('noop')       // empty partial — state unchanged
+  assert(renderCount === 0, `Expected 0 renders for no-change dispatches, got ${renderCount}`)
+
+  instance.dispatch('increment') // state unchanged by constraint
+  assert(instance.getState().count === 10)
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nActions\n')
