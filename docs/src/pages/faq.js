@@ -45,7 +45,7 @@ export default {
       ${q(
         'Why no virtual DOM?',
         `<p>A virtual DOM solves the problem of efficient incremental updates to a large, complex component tree. Pulse pages are server-rendered HTML strings — the client runtime re-renders a bounded section of the page when state changes, which is fast enough for the kinds of interactions Pulse is designed for.</p>
-        <p>Eliminating the virtual DOM means eliminating the ~40–100 kB runtime that comes with it. Pulse ships ~3.5 kB brotli to the browser on first visit (shared runtime + page bundle). That is not a compression trick — there is genuinely no framework runtime on the client.</p>`
+        <p>Eliminating the virtual DOM means eliminating the ~40–100 kB runtime that comes with it. Pulse ships ~4 kB brotli to the browser on first visit (shared runtime + page bundle). That is not a compression trick — there is genuinely no framework runtime on the client.</p>`
       )}
 
       ${q(

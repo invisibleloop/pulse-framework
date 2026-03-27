@@ -93,15 +93,15 @@ export default {
       ${table(
         ['App size', 'What the boot file contains', 'Size (brotli)'],
         [
-          ['Single page', 'Your spec + the full Pulse runtime bundled together', '~3.5 kB'],
-          ['Multiple pages', 'Your spec only — runtime is in a separate <code>runtime-[hash].js</code> chunk', '~0.35–0.5 kB'],
+          ['Single page', 'Your spec + the full Pulse runtime bundled together', '~4 kB'],
+          ['Multiple pages', 'Your spec only — runtime is in a separate <code>runtime-[hash].js</code> chunk', '~0.4–0.9 kB'],
         ]
       )}
       <p>With multiple pages, esbuild's code splitting extracts the Pulse runtime into a shared chunk because every page imports it. The browser downloads it once and caches it — subsequent page navigations only fetch the small per-page boot file.</p>
       <p><strong>What you see in the network tab across navigations:</strong></p>
       <ul>
-        <li><strong>First page visit</strong> — <code>runtime-[hash].js</code> (~3.1 kB) + <code>home.boot-[hash].js</code> (~0.35 kB)</li>
-        <li><strong>Navigate to another page</strong> — <code>contact.boot-[hash].js</code> (~0.47 kB) only. Runtime already cached.</li>
+        <li><strong>First page visit</strong> — <code>runtime-[hash].js</code> (~3.8 kB) + <code>home.boot-[hash].js</code> (~0.4 kB)</li>
+        <li><strong>Navigate to another page</strong> — <code>contact.boot-[hash].js</code> (~0.5 kB) only. Runtime already cached.</li>
         <li><strong>Return visit</strong> — nothing. Both files served from cache with <code>immutable</code> headers.</li>
       </ul>
       ${callout('tip', 'The runtime hash only changes when the Pulse runtime itself is updated — not when your app changes. Deploying new pages or mutations does not bust the runtime cache for returning visitors.')}

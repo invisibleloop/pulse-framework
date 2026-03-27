@@ -186,7 +186,7 @@ The bundle is self-executing (imports spec, calls `mount` + `initNavigation` int
 
 `npm run build` generates three things per app:
 
-- `public/dist/runtime-[hash].js` — shared runtime (mount + navigate + schema, ~2.1 kB brotli)
+- `public/dist/runtime-[hash].js` — shared runtime (mount + navigate + store, ~3.8 kB brotli)
 - `public/dist/[name].boot-[hash].js` — per-page spec bundle (~0.5–0.9 kB brotli)
 - `public/dist/manifest.json` — maps `/examples/foo.js` → `/dist/foo.boot-HASH.js`
 
@@ -395,8 +395,10 @@ Before writing any UI HTML by hand, check `src/ui/index.js` — there are 50+ co
 
 | Page | CLS | JS (brotli) |
 |---|---|---|
-| /counter | 0.00 | 3.5 kB (first visit) / 0.35 kB (cached runtime) |
-| /contact | 0.00 | 3.6 kB (first visit) / 0.47 kB (cached runtime) |
+| /counter | 0.00 | 4.2 kB (first visit) / 0.4 kB (cached runtime) |
+| /contact | 0.00 | 4.3 kB (first visit) / 0.5 kB (cached runtime) |
+
+First-visit JS = runtime chunk (~3.8 kB) + per-page boot file (~0.4–0.9 kB). On repeat visits the runtime is served from cache — only the boot file is fetched. If multiple pages share UI components, esbuild's code splitting extracts those into the runtime chunk, so the runtime chunk grows with shared code.
 
 Lighthouse: 100/100/100 (Accessibility / Best Practices / SEO) on both pages.
 

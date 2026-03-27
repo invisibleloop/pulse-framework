@@ -83,7 +83,7 @@ export default {
         </div>
         <div class="home-stat-divider"></div>
         <div class="home-stat">
-          <span class="home-stat-value">3.5 kB</span>
+          <span class="home-stat-value">4 kB</span>
           <span class="home-stat-label">Runtime JS, first visit (brotli)</span>
         </div>
         <div class="home-stat-divider"></div>
@@ -200,7 +200,7 @@ export default {
               </tr>
               <tr>
                 <th scope="row">Client JS shipped</th>
-                <td class="v-yes">3.5 kB brotli (shared runtime, first visit)</td>
+                <td class="v-yes">~4 kB brotli (shared runtime, first visit)</td>
                 <td class="v-no">50-200 kB+ depending on features</td>
                 <td class="v-partial">~15 kB brotli</td>
               </tr>
@@ -251,8 +251,8 @@ export default {
               The shell renders and streams instantly. Deferred segments arrive as data resolves — no blocking, no flash.
             </li>
             <li>
-              <strong>3.5 kB of JS on first visit.</strong>
-              The shared runtime is brotli-compressed and cached across all navigations. Subsequent pages cost 0.35–0.5 kB.
+              <strong>~4 kB of JS on first visit.</strong>
+              The shared runtime is brotli-compressed and cached across all navigations. Subsequent pages cost 0.4–0.9 kB.
             </li>
             <li>
               <strong>Zero CLS.</strong>
