@@ -20,6 +20,222 @@ import { createHash } from 'crypto'
 import { discoverPages } from '../src/cli/discover.js'
 import { renderToString } from '../src/runtime/ssr.js'
 
+// ---------------------------------------------------------------------------
+// Server-only property stripping
+// ---------------------------------------------------------------------------
+
+/**
+ * These spec properties are resolved and used exclusively on the server.
+ * Stripping them from the client bundle:
+ *   - reduces bundle size
+ *   - prevents server-only imports (DB clients, Node built-ins, internal APIs)
+ *     from being shipped to and evaluated in the browser
+ *   - avoids bundling errors when server imports use Node-only modules
+ */
+const SERVER_ONLY_KEYS = ['server', 'guard', 'serverTimeout', 'contentType', 'render']
+
+/**
+ * Strip all server-only property declarations from a spec source string.
+ * Matches properties at the start of a line (after optional whitespace) —
+ * the standard formatting for Pulse spec files.
+ */
+function stripServerOnlyKeys(source) {
+  for (const key of SERVER_ONLY_KEYS) {
+    source = removeObjectKey(source, key)
+  }
+  return source
+}
+
+/**
+ * Remove a single named property (key + value + optional trailing comma/newline)
+ * from a JS source string. Uses a character-level scanner to correctly handle
+ * nested structures, string literals, template literals, and function expressions.
+ */
+function removeObjectKey(source, key) {
+  const keyRe = new RegExp(`^([ \\t]*)(${key})([ \\t]*:)`, 'gm')
+  let match
+
+  while ((match = keyRe.exec(source)) !== null) {
+    const removeStart = match.index                    // start of indentation
+    const afterColon  = match.index + match[0].length // character after ':'
+
+    // Skip whitespace between ':' and value
+    let pos = afterColon
+    while (pos < source.length && (source[pos] === ' ' || source[pos] === '\t')) pos++
+
+    // Scan past the full value
+    pos = scanJsValue(source, pos)
+
+    // Consume optional trailing comma and newline
+    while (pos < source.length && (source[pos] === ' ' || source[pos] === '\t')) pos++
+    if (pos < source.length && source[pos] === ',') pos++
+    if (pos < source.length && source[pos] === '\n') pos++
+
+    source = source.slice(0, removeStart) + source.slice(pos)
+    keyRe.lastIndex = removeStart
+  }
+
+  return source
+}
+
+/**
+ * Scan a JS value starting at `pos`, returning the index just past it.
+ *
+ * Correctly handles:
+ *   - Object / array / group literals:  { }  [ ]  ( )
+ *   - Arrow functions:  (params) => expr  or  (params) => { body }
+ *   - Function expressions:  function(params) { body }  /  async function ...
+ *   - String literals:  '...'  "..."
+ *   - Template literals:  `...${expr}...`
+ *   - Line and block comments
+ *   - Simple values (numbers, booleans, identifiers, null/undefined)
+ *
+ * Stops when it finds a comma or closing delimiter at depth 0 that is NOT
+ * followed by a continuation (arrow `=>`, method call `.`, etc.).
+ */
+function scanJsValue(src, pos) {
+  let i     = pos
+  let depth = 0
+
+  while (i < src.length) {
+    const c = src[i]
+
+    // ---- Line comment -------------------------------------------------------
+    if (c === '/' && src[i + 1] === '/') {
+      while (i < src.length && src[i] !== '\n') i++
+      continue
+    }
+
+    // ---- Block comment ------------------------------------------------------
+    if (c === '/' && src[i + 1] === '*') {
+      const end = src.indexOf('*/', i + 2)
+      i = end < 0 ? src.length : end + 2
+      continue
+    }
+
+    // ---- String literals ----------------------------------------------------
+    if (c === '"' || c === "'") {
+      i++
+      while (i < src.length) {
+        if (src[i] === '\\') { i += 2; continue }
+        if (src[i] === c)    { i++; break }
+        i++
+      }
+      if (depth === 0) return i
+      continue
+    }
+
+    // ---- Template literals --------------------------------------------------
+    if (c === '`') {
+      i = scanTemplateLiteral(src, i + 1)
+      if (depth === 0) return i
+      continue
+    }
+
+    // ---- Open delimiters ----------------------------------------------------
+    if (c === '{' || c === '[' || c === '(') {
+      depth++
+      i++
+      continue
+    }
+
+    // ---- Close delimiters ---------------------------------------------------
+    if (c === '}' || c === ']' || c === ')') {
+      if (depth === 0) {
+        // Hit the parent structure's closing delimiter — stop, don't consume
+        return i
+      }
+      depth--
+      i++
+      if (depth === 0) {
+        // Just closed a top-level nested block — peek ahead to see if this is
+        // the end of the value or if the expression continues.
+        let j = i
+        while (j < src.length && (src[j] === ' ' || src[j] === '\t')) j++
+        const next = src[j]
+        // Terminator characters — value is complete
+        if (!next || next === ',' || next === '}' || next === ']' || next === ')' || next === '\n') {
+          return i
+        }
+        // Arrow function body follows:  (params) => ...
+        if (next === '=' && src[j + 1] === '>') continue
+        // Anything else (method chain, ternary, etc.) — keep scanning
+        continue
+      }
+      continue
+    }
+
+    // ---- Terminators at top level -------------------------------------------
+    if (depth === 0) {
+      if (c === ',')  return i
+      if (c === '\n') return i
+    }
+
+    i++
+  }
+
+  return i
+}
+
+/**
+ * Scan a template literal body (starting just after the opening backtick).
+ * Returns the index just past the closing backtick.
+ * Handles `${...}` expression blocks including nested strings and templates.
+ */
+function scanTemplateLiteral(src, pos) {
+  let i = pos
+  while (i < src.length) {
+    if (src[i] === '\\') { i += 2; continue }
+    if (src[i] === '`')  { return i + 1 }
+    if (src[i] === '$' && src[i + 1] === '{') {
+      i += 2
+      let depth = 1
+      while (i < src.length && depth > 0) {
+        const c = src[i]
+        if (c === '{') { depth++; i++; continue }
+        if (c === '}') { depth--; i++; continue }
+        if (c === '"' || c === "'") {
+          const q = c; i++
+          while (i < src.length) {
+            if (src[i] === '\\') { i += 2; continue }
+            if (src[i] === q)    { i++; break }
+            i++
+          }
+          continue
+        }
+        if (c === '`') { i = scanTemplateLiteral(src, i + 1); continue }
+        i++
+      }
+      continue
+    }
+    i++
+  }
+  return i
+}
+
+/**
+ * esbuild plugin — strips server-only spec properties before bundling.
+ * Only transforms files under src/pages/ to avoid touching runtime/server code.
+ *
+ * @param {string} pagesDir  Absolute path to src/pages/
+ */
+function createStripServerPlugin(pagesDir) {
+  return {
+    name: 'pulse-strip-server',
+    setup(build) {
+      build.onLoad({ filter: /\.js$/ }, (args) => {
+        if (!args.path.startsWith(pagesDir + path.sep) &&
+            args.path !== pagesDir.replace(/\/$/, '') + '.js') return undefined
+
+        const source   = fs.readFileSync(args.path, 'utf8')
+        const stripped = stripServerOnlyKeys(source)
+        return { contents: stripped, loader: 'js' }
+      })
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Project root — can be overridden via --root flag for CLI usage
 const rootArg = process.argv.indexOf('--root')
 const ROOT    = rootArg !== -1
@@ -105,6 +321,7 @@ const result = await esbuild.build({
   metafile:    true,
   sourcemap:   false,
   treeShaking: true,
+  plugins:     [createStripServerPlugin(PAGES_DIR)],
   define: {
     'process.env.NODE_ENV': '"production"'
   }

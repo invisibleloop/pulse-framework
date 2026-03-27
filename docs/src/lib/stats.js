@@ -47,11 +47,11 @@ function fmt(kb, fallback) {
   return (kb != null) ? kb.toFixed(kb < 1 ? 2 : 1) : fallback
 }
 
-const runtimeKb  = fmt(bundles?.runtimeKb,  '3.1')
+const runtimeKb  = fmt(bundles?.runtimeKb,  '3.8')
 const firstVisit = bundles?.runtimeKb && bundles?.pageBootKb
   ? (bundles.runtimeKb + bundles.pageBootKb).toFixed(1)
-  : '3.5'
-const pageNavKb  = fmt(bundles?.pageBootKb,  '0.35')
+  : '4.2'
+const pageNavKb  = fmt(bundles?.pageBootKb,  '0.4')
 
 export const metrics = {
   generatedAt: new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }),
