@@ -51,11 +51,48 @@ function stripServerOnlyKeys(source) {
  * from a JS source string. Uses a character-level scanner to correctly handle
  * nested structures, string literals, template literals, and function expressions.
  */
+/**
+ * Returns true if `pos` in `source` falls inside a string or template literal.
+ * Used to avoid stripping keys that appear inside code-example strings in docs pages.
+ */
+function isInsideString(source, pos) {
+  let i = 0
+  const stack = []  // stack of open delimiters: '"' | "'" | '`' | '{'  ('{' = template expression)
+  while (i < pos) {
+    const c = source[i]
+    const top = stack[stack.length - 1]
+    if (top === '"' || top === "'") {
+      if (c === '\\') { i += 2; continue }
+      if (c === top)  { stack.pop() }
+      i++; continue
+    }
+    if (top === '`') {
+      if (c === '\\') { i += 2; continue }
+      if (c === '`')  { stack.pop(); i++; continue }
+      if (c === '$' && source[i + 1] === '{') { stack.push('{'); i += 2; continue }
+      i++; continue
+    }
+    if (top === '{') {
+      // inside a template expression — track nested braces
+      if (c === '{') { stack.push('{'); i++; continue }
+      if (c === '}') { stack.pop(); i++; continue }
+      if (c === '"' || c === "'" || c === '`') { stack.push(c); i++; continue }
+      i++; continue
+    }
+    // top-level
+    if (c === '"' || c === "'" || c === '`') { stack.push(c) }
+    i++
+  }
+  return stack.length > 0
+}
+
 function removeObjectKey(source, key) {
   const keyRe = new RegExp(`^([ \\t]*)(${key})([ \\t]*:)`, 'gm')
   let match
 
   while ((match = keyRe.exec(source)) !== null) {
+    if (isInsideString(source, match.index)) { continue }
+
     const removeStart = match.index                    // start of indentation
     const afterColon  = match.index + match[0].length // character after ':'
 
