@@ -203,7 +203,10 @@ function parseMultipart(buf, boundary) {
 // ---------------------------------------------------------------------------
 
 class TtlCache {
-  constructor() { this._store = new Map() }
+  constructor() {
+    this._store    = new Map()
+    this._interval = null
+  }
 
   get(key) {
     const entry = this._store.get(key)
@@ -215,10 +218,37 @@ class TtlCache {
   set(key, value, ttlSeconds) {
     this._store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
   }
+
+  /** Remove all entries whose TTL has elapsed. */
+  purgeExpired() {
+    const now = Date.now()
+    for (const [key, entry] of this._store) {
+      if (now > entry.expiresAt) this._store.delete(key)
+    }
+  }
+
+  /**
+   * Start a background eviction timer.
+   * The interval is unref()'d so it never prevents the Node.js process from exiting.
+   *
+   * @param {number} intervalMs - how often to purge (default 60 000 ms)
+   */
+  startEviction(intervalMs = 60_000) {
+    if (this._interval) return  // already running
+    this._interval = setInterval(() => this.purgeExpired(), intervalMs).unref()
+  }
+
+  /** Stop the background eviction timer (used for graceful shutdown and tests). */
+  stopEviction() {
+    if (this._interval) { clearInterval(this._interval); this._interval = null }
+  }
 }
 
 const serverDataCache = new TtlCache()
 const pageHtmlCache   = new TtlCache()
+
+serverDataCache.startEviction()
+pageHtmlCache.startEviction()
 
 // ---------------------------------------------------------------------------
 // Cache-Control builder
@@ -395,6 +425,7 @@ export function createServer(specs, options = {}) {
 
   // Per-host brand cache — avoids hitting the data store on every request
   const brandCache = new TtlCache()
+  brandCache.startEviction(30_000)  // brand TTL is 60s, scan every 30s
 
   // Load manifest — maps source hydrate paths to production bundle paths
   const hydrateMap     = loadManifest(manifest, staticDir)
@@ -621,6 +652,11 @@ export function createServer(specs, options = {}) {
     draining = true
 
     console.log('⚡ Pulse shutting down gracefully…')
+
+    // Stop background cache eviction timers
+    serverDataCache.stopEviction()
+    pageHtmlCache.stopEviction()
+    brandCache.stopEviction()
 
     // Stop accepting new connections; exit once all connections are closed
     server.close(() => process.exit(0))
