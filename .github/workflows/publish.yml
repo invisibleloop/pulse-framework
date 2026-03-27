@@ -25,11 +25,12 @@ jobs:
 
       - run: npm test
 
-      - name: Bump patch version if already published, then publish
+      - name: Bump version from conventional commits, then publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(node scripts/release-version.js)
+          # Fallback: if this exact version is somehow already on npm, bump patch
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
           done

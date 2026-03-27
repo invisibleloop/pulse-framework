@@ -21,7 +21,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, wrapDocument, resolveServerState } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 
@@ -63,6 +63,7 @@ const BASE_CSP = {
   'img-src':        ["'self'", 'data:'],
   'font-src':       ["'self'"],
   'connect-src':    ["'self'"],
+  'object-src':     ["'none'"],
   'frame-ancestors':["'none'"],
   'base-uri':       ["'self'"],
   'form-action':    ["'self'"],
@@ -598,9 +599,13 @@ export function createServer(specs, options = {}) {
         return
       }
 
-      // Client-side navigation request — return JSON fragment, not a full document
+      // Client-side navigation request — return JSON fragment (or NDJSON stream), not a full document
       if (req.headers['x-pulse-navigate'] === 'true') {
-        await handleNavResponse(spec, ctx, res, dev)
+        if (stream) {
+          await handleNavStreamResponse(spec, ctx, res)
+        } else {
+          await handleNavResponse(spec, ctx, res, dev)
+        }
         return
       }
 
@@ -717,6 +722,38 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
     ...SECURITY_HEADERS,
   })
   res.end(payload)
+}
+
+/**
+ * Client-side navigation — streaming NDJSON variant.
+ * Sends meta immediately, then streams shell HTML and deferred segments
+ * as their server data resolves. The browser applies chunks progressively,
+ * showing shell content without waiting for slower deferred fetchers.
+ */
+async function handleNavStreamResponse(spec, ctx, res) {
+  const meta = resolveMeta(spec.meta, ctx)
+
+  res.writeHead(200, {
+    'Content-Type':      'application/x-ndjson',
+    'Cache-Control':     'no-store',
+    'X-Accel-Buffering': 'no',
+    ...SECURITY_HEADERS,
+  })
+
+  const navStream = renderToNavStream(spec, ctx, meta)
+  const reader    = navStream.getReader()
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      res.write(value)
+    }
+  } catch {
+    // Headers already sent — cannot change status, just end cleanly
+  } finally {
+    res.end()
+  }
 }
 
 /**

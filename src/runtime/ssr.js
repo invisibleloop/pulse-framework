@@ -162,6 +162,102 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
 }
 
 // ---------------------------------------------------------------------------
+// renderToNavStream
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a spec to a stream of newline-delimited JSON (NDJSON) messages
+ * for use during client-side navigation. Sends four message types:
+ *
+ *   { type: 'meta',     title, styles, scripts, hydrate }  — immediately
+ *   { type: 'html',     html, deferred }                   — shell ready
+ *   { type: 'deferred', id, html }                         — each deferred segment
+ *   { type: 'done',     serverState, storeState }          — all data resolved
+ *
+ * The client (navigate.js) reads lines as they arrive:
+ *   - meta  → updates title + stylesheets
+ *   - html  → swaps root.innerHTML (shell), finds <pulse-deferred> placeholders
+ *   - deferred → replaces the matching placeholder with rendered HTML
+ *   - done  → stores serverState, mounts spec
+ *
+ * @param {import('../spec/schema.js').PulseSpec} spec
+ * @param {Object} [ctx]
+ * @param {Object} [resolvedMeta]  - Pre-resolved meta (title, styles, scripts)
+ * @returns {ReadableStream}
+ */
+export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
+  assertValidSpec(spec)
+
+  const { shell, deferred } = getStreamOrder(spec)
+  const clientState = { ...spec.state }
+
+  let controller
+  const stream = new ReadableStream({ start(c) { controller = c } })
+
+  ;(async () => {
+    try {
+      const timeout = ctx.fetcherTimeout ?? null
+      const writeLine = (obj) => controller.enqueue(encode(JSON.stringify(obj) + '\n'))
+
+      // Eagerly start ALL fetcher promises so shell and deferred run in parallel
+      const fetcherCache = new Map()
+      if (spec.server) {
+        for (const [key, fn] of Object.entries(spec.server)) {
+          fetcherCache.set(key, withTimeout(fn(ctx), timeout, key))
+        }
+      }
+
+      // 1. Send meta immediately — no data fetching needed
+      writeLine({
+        type:    'meta',
+        title:   resolvedMeta.title   || 'Pulse',
+        styles:  resolvedMeta.styles  || [],
+        scripts: resolvedMeta.scripts || [],
+        hydrate: spec.hydrate || null,
+      })
+
+      // 2. Await shell fetchers then send shell HTML
+      const shellServerState = await awaitFetchersForSegments(spec, shell, fetcherCache)
+      const mergedShellState = mergeStoreKeys(spec, shellServerState, ctx.store)
+      let shellHtml = renderNamedSegments(spec, shell, clientState, mergedShellState)
+
+      // Append <pulse-deferred> placeholders so the client knows where to inject deferred content
+      if (deferred.length > 0) {
+        shellHtml += deferred.map(key => `<pulse-deferred id="pd-${key}"></pulse-deferred>`).join('')
+      }
+
+      writeLine({ type: 'html', html: shellHtml, deferred })
+
+      // 3. Stream each deferred segment as soon as its own fetchers resolve
+      await Promise.all(deferred.map(async (key) => {
+        const segServerState = await awaitFetchersForSegments(spec, [key], fetcherCache)
+        const mergedSegState = mergeStoreKeys(spec, segServerState, ctx.store)
+        const segHtml        = renderNamedSegments(spec, [key], clientState, mergedSegState)
+        writeLine({ type: 'deferred', id: key, html: segHtml })
+      }))
+
+      // 4. Collect all resolved server state then send done
+      const allServerState = fetcherCache.size > 0
+        ? Object.fromEntries(await Promise.all([...fetcherCache.entries()].map(async ([k, p]) => [k, await p])))
+        : {}
+      const mergedAll = mergeStoreKeys(spec, allServerState, ctx.store)
+
+      writeLine({
+        type:        'done',
+        serverState: Object.keys(mergedAll).length > 0 ? mergedAll : undefined,
+        storeState:  ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
+      })
+
+      controller.close()
+    } catch (err) {
+      controller.error(err)
+    }
+  })()
+
+  return stream
+}
+
+// ---------------------------------------------------------------------------
 // Page HTML wrapper
 // ---------------------------------------------------------------------------
 
