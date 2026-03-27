@@ -191,5 +191,8 @@ createServer(
     port:         process.env.PORT ? Number(process.env.PORT) : 4000,
     staticDir:    new URL('./public', import.meta.url).pathname,
     defaultCache: true,
+    csp: {
+      'img-src': ['https://picsum.photos', 'https://images.unsplash.com'],
+    },
   }
 )

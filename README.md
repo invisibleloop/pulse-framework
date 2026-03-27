@@ -1,6 +1,6 @@
 # Pulse
 
-**A spec-first, AI-native web framework.** Early access — v0.1.30.
+**A spec-first, AI-native web framework.** Early access.
 
 Write a plain JavaScript object that describes what a page does. Pulse handles routing, SSR, hydration, client-side navigation, compression, security headers, and caching automatically.
 

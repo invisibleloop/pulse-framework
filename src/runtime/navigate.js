@@ -22,10 +22,16 @@ export function initNavigation(root, mountFn) {
   // Track the current mount instance so we can destroy it (and its store
   // subscription) before mounting the next page.
   let currentMount = null
+  let currentNavController = null
 
   async function navigate(path, push) {
+    // Cancel any in-flight navigation before starting a new one
+    currentNavController?.abort()
+    const controller = new AbortController()
+    currentNavController = controller
+
     try {
-      const res = await fetch(path, { headers: { 'X-Pulse-Navigate': 'true' } })
+      const res = await fetch(path, { headers: { 'X-Pulse-Navigate': 'true' }, signal: controller.signal })
 
       if (!res.ok) { location.href = path; return }
 
@@ -34,6 +40,10 @@ export function initNavigation(root, mountFn) {
       if (ct.includes('application/x-ndjson')) {
         // Streaming nav response — apply chunks progressively as they arrive
         const reader  = res.body.getReader()
+        // Explicitly cancel the reader when this navigation is superseded — aborting
+        // the fetch signal does not reliably cancel an in-progress body stream reader
+        // in all browsers, so we do it explicitly.
+        controller.signal.addEventListener('abort', () => reader.cancel(), { once: true })
         const decoder = new TextDecoder()
         let buf              = ''
         let hydratePath      = null
@@ -87,6 +97,9 @@ export function initNavigation(root, mountFn) {
         }
         if (buf) await processLine(buf)
 
+        // Bail out if a newer navigation superseded us while we were streaming
+        if (controller.signal.aborted) return
+
         runScripts(root)
         document.dispatchEvent(new CustomEvent('pulse:navigate'))
 
@@ -101,6 +114,8 @@ export function initNavigation(root, mountFn) {
       } else {
         // Legacy JSON response (server running with stream: false)
         const { html, title, styles, scripts, hydrate, serverState, storeState } = await res.json()
+
+        if (controller.signal.aborted) return
 
         if (storeState && window.__updatePulseStore__) {
           window.__updatePulseStore__(storeState)
@@ -126,7 +141,8 @@ export function initNavigation(root, mountFn) {
         scrollAndFocus(root)
       }
 
-    } catch {
+    } catch (err) {
+      if (err?.name === 'AbortError') return
       location.href = path
     }
   }

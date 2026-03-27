@@ -49,8 +49,8 @@ export function uiImage({
 
   if (ratio) {
     return `<figure class="${e(figClasses)}"${maxWidthStyle}>
-  <div class="ui-image-crop">
-    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img--cover" style="aspect-ratio:${e(ratio)}"${widthAttr}${heightAttr} loading="lazy" decoding="async">
+  <div class="ui-image-crop" style="aspect-ratio:${e(ratio)}">
+    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img--cover"${widthAttr}${heightAttr} loading="lazy" decoding="async">
   </div>
   ${captionHtml}
 </figure>`
