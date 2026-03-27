@@ -773,6 +773,15 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     ? (canonicalRaw(ctx) || canonicalBase)
     : (canonicalRaw || canonicalBase)
 
+  // 103 Early Hints — browser starts fetching CSS/JS while server resolves data
+  const earlyLinks = [
+    ...(meta.styles || []).map(href => `<${href}>; rel=preload; as=style`),
+    ...(runtimeBundle && spec.hydrate?.startsWith('/dist/') ? [`<${runtimeBundle}>; rel=modulepreload; as=script`] : []),
+  ]
+  if (earlyLinks.length > 0) {
+    try { res.writeEarlyHints({ link: earlyLinks }) } catch {}
+  }
+
   const stylePreloads = (meta.styles || [])
     .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}">`)
     .join('\n')
