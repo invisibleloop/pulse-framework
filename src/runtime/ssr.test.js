@@ -245,6 +245,97 @@ await test('stream does not inject __PULSE_SERVER__ when no server data', async 
   assert(!html.includes('__PULSE_SERVER__'), `Should not include empty server state: ${html}`)
 })
 
+await test('each server fetcher runs at most once across all segments', async () => {
+  let callCount = 0
+  const spec = {
+    route: '/dedup',
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed', 'sidebar'],
+    },
+    server: {
+      user: async () => { callCount++; return 'user-data' },
+    },
+    state: {},
+    view: {
+      header:  (s, { user }) => `<header>${user}</header>`,
+      feed:    (s, { user }) => `<feed>${user}</feed>`,
+      sidebar: (s, { user }) => `<aside>${user}</aside>`,
+    }
+  }
+
+  await streamToString(renderToStream(spec))
+  assert(callCount === 1, `Expected fetcher called once, got ${callCount}`)
+})
+
+await test('stream.scope: shell does not wait for deferred-only fetchers', async () => {
+  const spec = {
+    route: '/scoped',
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+      scope: {
+        header: ['user'],   // fast (10ms)
+        feed:   ['posts'],  // slow (80ms)
+      }
+    },
+    server: {
+      user:  async () => { await new Promise(r => setTimeout(r, 10));  return 'user-data' },
+      posts: async () => { await new Promise(r => setTimeout(r, 80)); return 'posts-data' },
+    },
+    state: {},
+    view: {
+      header: (s, { user })  => `<header>${user}</header>`,
+      feed:   (s, { posts }) => `<main>${posts}</main>`,
+    }
+  }
+
+  const chunks = []
+  const stream = renderToStream(spec)
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let shellTime = null
+  const t0 = Date.now()
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const chunk = decoder.decode(value)
+    if (shellTime === null && chunk.includes('<header>')) shellTime = Date.now() - t0
+    chunks.push(chunk)
+  }
+
+  const fullHtml = chunks.join('')
+  assert(fullHtml.includes('user-data'),  'header should contain user-data')
+  assert(fullHtml.includes('posts-data'), 'feed should contain posts-data')
+  // Shell should arrive ~10ms (user fetcher), not ~80ms (posts fetcher)
+  assert(shellTime !== null && shellTime < 40, `Shell arrived too late: ${shellTime}ms (expected ~10ms)`)
+})
+
+await test('stream.scope: __PULSE_SERVER__ includes state from all scoped fetchers', async () => {
+  const spec = {
+    route: '/scoped-state',
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+      scope: { header: ['user'], feed: ['posts'] }
+    },
+    server: {
+      user:  async () => ({ name: 'Andy' }),
+      posts: async () => [{ title: 'Hello' }],
+    },
+    state: {},
+    view: {
+      header: (s, { user })  => `<header>${user.name}</header>`,
+      feed:   (s, { posts }) => `<main>${posts[0].title}</main>`,
+    }
+  }
+
+  const html = await streamToString(renderToStream(spec))
+  assert(html.includes('"name":"Andy"'),   `Expected user state serialised: ${html}`)
+  assert(html.includes('"title":"Hello"'), `Expected posts state serialised: ${html}`)
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nwrapDocument\n')

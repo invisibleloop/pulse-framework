@@ -114,7 +114,17 @@ export const mySpec = {
   // Streaming SSR — split view into shell (instant) + deferred segments
   stream: {
     shell:    ['header', 'nav'],
-    deferred: ['feed']
+    deferred: ['feed'],
+
+    // Optional: scope each segment to only the server fetchers it needs.
+    // Shell sends as soon as its own fetchers resolve — deferred-only fetchers
+    // never block the shell. Each deferred segment streams independently.
+    // Omit scope (or omit a segment from scope) to give it all server state.
+    scope: {
+      header: ['user'],         // 'user' fetcher resolves → shell writes
+      nav:    ['user'],
+      feed:   ['posts', 'ads'], // 'posts' + 'ads' fetchers resolve → feed writes
+    }
   }
 }
 

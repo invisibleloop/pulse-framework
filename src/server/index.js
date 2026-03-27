@@ -607,7 +607,7 @@ export function createServer(specs, options = {}) {
       if (stream) {
         await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
       } else {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
       }
 
     } catch (err) {
@@ -723,7 +723,7 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
  * Render to a complete string then send — simpler, easier to cache.
  * Checks the in-process page cache before rendering; stores result after.
  */
-async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
+async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
   const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
   // Pages with server data or store data embed a nonce'd __PULSE_SERVER__ script — don't cache them
   const ttl      = (!spec.server && !spec.store?.length) ? pageCacheTtl(spec, dev, defaultCache) : 0

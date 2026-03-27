@@ -18,8 +18,16 @@
  * Shell segments render immediately on first flush.
  * Deferred segments render after their server data resolves.
  *
- * @property {string[]} shell    - Segment keys to render in the first flush
+ * @property {string[]} shell      - Segment keys to render in the first flush
  * @property {string[]} [deferred] - Segment keys to render after async data
+ * @property {Object.<string, string[]>} [scope]
+ *   Optional per-segment fetcher scoping. Maps each segment name to the server
+ *   keys it needs. When declared, the shell only awaits its own fetchers and
+ *   each deferred segment streams as soon as its own fetchers resolve — fetchers
+ *   scoped to deferred segments never block the shell.
+ *
+ *   Example: { header: ['user'], feed: ['posts', 'ads'] }
+ *   Segments not listed in scope receive all server state (safe default).
  */
 
 /**
@@ -187,6 +195,29 @@ export function validateSpec(spec) {
       for (const seg of allSegments) {
         if (!spec.view[seg]) {
           errors.push(`spec.stream references "${seg}" but spec.view.${seg} is not defined`)
+        }
+      }
+    }
+    // validate scope annotations
+    if (spec.stream.scope !== undefined) {
+      if (typeof spec.stream.scope !== 'object' || Array.isArray(spec.stream.scope)) {
+        errors.push('spec.stream.scope must be a plain object mapping segment names to fetcher key arrays')
+      } else {
+        const allSegments = new Set([...(spec.stream.shell || []), ...(spec.stream.deferred || [])])
+        const serverKeys  = new Set(Object.keys(spec.server || {}))
+        for (const [seg, keys] of Object.entries(spec.stream.scope)) {
+          if (!allSegments.has(seg)) {
+            errors.push(`spec.stream.scope references unknown segment "${seg}"`)
+          }
+          if (!Array.isArray(keys)) {
+            errors.push(`spec.stream.scope["${seg}"] must be an array of server fetcher key strings`)
+          } else {
+            for (const key of keys) {
+              if (!serverKeys.has(key)) {
+                errors.push(`spec.stream.scope["${seg}"] references unknown server key "${key}"`)
+              }
+            }
+          }
         }
       }
     }
