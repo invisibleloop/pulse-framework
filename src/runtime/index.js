@@ -368,8 +368,18 @@ function morph(el, newHtml) {
 }
 
 function morphNodes(cur, nxt) {
-  const curNodes = Array.from(cur.childNodes)
   const nxtNodes = Array.from(nxt.childNodes)
+
+  // Key-based reconciliation — activated when every element child carries data-key.
+  // Handles insert, remove, and reorder in O(n) without touching unaffected nodes.
+  const nxtEls = nxtNodes.filter(n => n.nodeType === 1)
+  if (nxtEls.length > 0 && nxtEls.every(n => n.getAttribute('data-key') !== null)) {
+    morphKeyed(cur, nxtEls)
+    return
+  }
+
+  // Position-based fallback for unkeyed content
+  const curNodes = Array.from(cur.childNodes)
 
   nxtNodes.forEach((nxtNode, i) => {
     const curNode = curNodes[i]
@@ -397,6 +407,50 @@ function morphNodes(cur, nxt) {
 
   // Remove surplus nodes
   while (cur.childNodes.length > nxtNodes.length) cur.removeChild(cur.lastChild)
+}
+
+/**
+ * Key-based reconciliation for a container whose element children all carry data-key.
+ * Builds a map of existing keyed nodes, then places new nodes in reverse order using
+ * insertBefore — O(n) moves, O(n) removals, zero unnecessary DOM patches.
+ *
+ * @param {Element} cur   - existing parent element
+ * @param {Element[]} nxtEls - ordered array of new element children (all have data-key)
+ */
+function morphKeyed(cur, nxtEls) {
+  // Index existing keyed children
+  const keyMap = new Map()
+  for (const node of cur.childNodes) {
+    if (node.nodeType === 1) {
+      const k = node.getAttribute('data-key')
+      if (k !== null) keyMap.set(k, node)
+    }
+  }
+
+  // Place elements in reverse order — insertBefore(node, ref) where ref tracks the
+  // right-hand boundary. When a node is already in the correct position, skip the move.
+  let ref = null
+  for (let i = nxtEls.length - 1; i >= 0; i--) {
+    const nxtEl = nxtEls[i]
+    const key   = nxtEl.getAttribute('data-key')
+    let   node  = keyMap.get(key)
+
+    if (node) {
+      keyMap.delete(key)
+      morphAttrs(node, nxtEl)
+      morphNodes(node, nxtEl)
+    } else {
+      node = nxtEl.cloneNode(true)
+    }
+
+    if (node.nextSibling !== ref || node.parentNode !== cur) {
+      cur.insertBefore(node, ref)
+    }
+    ref = node
+  }
+
+  // Remove elements no longer in the list
+  for (const node of keyMap.values()) cur.removeChild(node)
 }
 
 function morphAttrs(cur, nxt) {

@@ -138,6 +138,16 @@ Pulse binds to DOM attributes — no JSX, no templates.
 <button data-dialog-close>Cancel</button>                <!-- closes nearest ancestor <dialog> -->
 ```
 
+**List keys — use `data-key` on repeated elements** to enable key-based DOM reconciliation. When all element children of a container carry `data-key`, the runtime matches nodes by key instead of position — inserts, removals, and reorders become O(1) rather than O(n) patches, and existing DOM nodes (inputs, images) are preserved correctly:
+
+```html
+<ul>
+  ${items.map(item => `<li data-key="${item.id}">${item.name}</li>`).join('')}
+</ul>
+```
+
+All sibling elements in the container must have `data-key` to activate key mode — mixed keyed/unkeyed siblings fall back to position-based matching.
+
 **Modal pattern — never use `state.modalOpen`.** Always render the `<dialog>` in the DOM unconditionally and use `data-dialog-open` to show it. ESC key, backdrop click, and `<form method="dialog">` all close it natively with no spec state.
 
 **Important:** Do not use `data-event` on text inputs to mirror their value into state. The `innerHTML` replacement on every keystroke destroys focus. Instead, use uncontrolled inputs and capture `FormData` in `action.onStart` before `validate` runs.
