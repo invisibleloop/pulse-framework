@@ -14,10 +14,40 @@ function stripServerOnlyKeys(source) {
   return source
 }
 
+function isInsideString(source, pos) {
+  let i = 0
+  const stack = []
+  while (i < pos) {
+    const c = source[i]
+    const top = stack[stack.length - 1]
+    if (top === '"' || top === "'") {
+      if (c === '\\') { i += 2; continue }
+      if (c === top)  { stack.pop() }
+      i++; continue
+    }
+    if (top === '`') {
+      if (c === '\\') { i += 2; continue }
+      if (c === '`')  { stack.pop(); i++; continue }
+      if (c === '$' && source[i + 1] === '{') { stack.push('{'); i += 2; continue }
+      i++; continue
+    }
+    if (top === '{') {
+      if (c === '{') { stack.push('{'); i++; continue }
+      if (c === '}') { stack.pop(); i++; continue }
+      if (c === '"' || c === "'" || c === '`') { stack.push(c); i++; continue }
+      i++; continue
+    }
+    if (c === '"' || c === "'" || c === '`') { stack.push(c) }
+    i++
+  }
+  return stack.length > 0
+}
+
 function removeObjectKey(source, key) {
   const keyRe = new RegExp(`^([ \\t]*)(${key})([ \\t]*:)`, 'gm')
   let match
   while ((match = keyRe.exec(source)) !== null) {
+    if (isInsideString(source, match.index)) { continue }
     const removeStart = match.index
     const afterColon  = match.index + match[0].length
     let pos = afterColon
@@ -179,6 +209,16 @@ test('async function expression (not arrow)',
 test('server with deeply nested template literal in view is not affected',
   'export default {\n  server: { items: async () => [] },\n  view: (s, srv) => `<ul>${srv.items.map(i => `<li>${i}</li>`).join(\'\')}</ul>`\n}',
   'export default {\n  view: (s, srv) => `<ul>${srv.items.map(i => `<li>${i}</li>`).join(\'\')}</ul>`\n}'
+)
+
+test('render: inside a template literal string (docs code example) is not stripped',
+  'export default {\n  route: \'/auth\',\n  view: () => `${highlight(`export default {\n  render: (ctx) => ctx.user\n}`)}`\n}',
+  'export default {\n  route: \'/auth\',\n  view: () => `${highlight(`export default {\n  render: (ctx) => ctx.user\n}`)}`\n}'
+)
+
+test('server: inside a double-quoted string is not stripped',
+  'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}',
+  'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}'
 )
 
 // ---------------------------------------------------------------------------
