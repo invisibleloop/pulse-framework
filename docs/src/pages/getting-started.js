@@ -23,6 +23,7 @@ export default {
       ${section('requirements', 'Requirements')}
       <ul>
         <li><strong>Node.js 22 or later</strong> — <a href="https://nodejs.org" target="_blank" rel="noopener" aria-label="nodejs.org (opens in new tab)">nodejs.org</a></li>
+        <li><strong>Google Chrome</strong> — used by the agent for screenshots and Lighthouse audits — <a href="https://www.google.com/chrome" target="_blank" rel="noopener" aria-label="Download Google Chrome (opens in new tab)">google.com/chrome</a></li>
         <li><strong>Claude Code</strong> — the CLI for Claude, installed and authenticated — <a href="https://docs.anthropic.com/en/docs/claude-code/getting-started" target="_blank" rel="noopener" aria-label="Claude Code installation guide (opens in new tab)">installation guide</a></li>
       </ul>
       <p>Claude Code provides the <code>claude</code> command. Pulse launches it automatically with the Pulse MCP server wired in — so the agent has instant access to the framework reference, your project structure, and all Pulse tools without any manual configuration.</p>
