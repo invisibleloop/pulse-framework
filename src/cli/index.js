@@ -8,6 +8,10 @@
  *   pulse build        production build → public/dist/
  *   pulse start        production server (requires prior build)
  *   pulse update       re-copy pulse-ui.css/js from installed package → public/
+ *   pulse --version    print installed version and exit
+ *   pulse -v           alias for --version
+ *   pulse --help       show usage and exit
+ *   pulse -h           alias for --help
  */
 
 import path from 'path'
@@ -329,6 +333,32 @@ async function runStart(root) {
 // ---------------------------------------------------------------------------
 
 switch (command) {
+  case '--version':
+  case '-v': {
+    const pkgPath = new URL('../../package.json', import.meta.url).pathname
+    const { version } = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+    console.log(version)
+    process.exit(0)
+  }
+  case '--help':
+  case '-h':
+    console.log(`
+  ⚡ Pulse — spec-first frontend framework
+
+  Usage: pulse [command]
+
+  Commands:
+    (none)      detect project or start scaffold wizard
+    dev         start dev server
+    build       production build → public/dist/
+    start       production server (requires prior build)
+    update      re-copy pulse-ui assets from installed package → public/
+
+  Options:
+    -v, --version   print version and exit
+    -h, --help      show this help
+`)
+    process.exit(0)
   case 'dev':
     await runDev(CWD)
     break

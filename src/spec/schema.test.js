@@ -103,6 +103,61 @@ test('rejects stream.shell that is not an array', () => {
   )
 })
 
+test('accepts valid stream.scope', () => {
+  const spec = {
+    route: '/s',
+    state: {},
+    server: { user: async () => {}, posts: async () => {} },
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+      scope:    { header: ['user'], feed: ['posts'] },
+    },
+    view: { header: () => '', feed: () => '' },
+  }
+  const { valid } = validateSpec(spec)
+  assert(valid, 'Expected valid spec with stream.scope')
+})
+
+test('rejects stream.scope referencing unknown segment', () => {
+  assertErrors(
+    {
+      route: '/s',
+      state: {},
+      server: { user: async () => {} },
+      stream: { shell: ['header'], scope: { unknown: ['user'] } },
+      view: { header: () => '' },
+    },
+    'spec.stream.scope references unknown segment "unknown"'
+  )
+})
+
+test('rejects stream.scope referencing unknown server key', () => {
+  assertErrors(
+    {
+      route: '/s',
+      state: {},
+      server: { user: async () => {} },
+      stream: { shell: ['header'], scope: { header: ['missing'] } },
+      view: { header: () => '' },
+    },
+    'spec.stream.scope["header"] references unknown server key "missing"'
+  )
+})
+
+test('rejects stream.scope with non-array value', () => {
+  assertErrors(
+    {
+      route: '/s',
+      state: {},
+      server: { user: async () => {} },
+      stream: { shell: ['header'], scope: { header: 'user' } },
+      view: { header: () => '' },
+    },
+    'spec.stream.scope["header"] must be an array'
+  )
+})
+
 test('rejects mutations with non-function values', () => {
   assertErrors(
     { route: '/x', state: {}, view: () => '', mutations: { inc: 'not a function' } },

@@ -3,7 +3,7 @@
  * run: node src/runtime/ssr.test.js
  */
 
-import { renderToString, renderToStream, wrapDocument, withTimeout } from './ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, withTimeout } from './ssr.js'
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -245,6 +245,97 @@ await test('stream does not inject __PULSE_SERVER__ when no server data', async 
   assert(!html.includes('__PULSE_SERVER__'), `Should not include empty server state: ${html}`)
 })
 
+await test('each server fetcher runs at most once across all segments', async () => {
+  let callCount = 0
+  const spec = {
+    route: '/dedup',
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed', 'sidebar'],
+    },
+    server: {
+      user: async () => { callCount++; return 'user-data' },
+    },
+    state: {},
+    view: {
+      header:  (s, { user }) => `<header>${user}</header>`,
+      feed:    (s, { user }) => `<feed>${user}</feed>`,
+      sidebar: (s, { user }) => `<aside>${user}</aside>`,
+    }
+  }
+
+  await streamToString(renderToStream(spec))
+  assert(callCount === 1, `Expected fetcher called once, got ${callCount}`)
+})
+
+await test('stream.scope: shell does not wait for deferred-only fetchers', async () => {
+  const spec = {
+    route: '/scoped',
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+      scope: {
+        header: ['user'],   // fast (10ms)
+        feed:   ['posts'],  // slow (80ms)
+      }
+    },
+    server: {
+      user:  async () => { await new Promise(r => setTimeout(r, 10));  return 'user-data' },
+      posts: async () => { await new Promise(r => setTimeout(r, 80)); return 'posts-data' },
+    },
+    state: {},
+    view: {
+      header: (s, { user })  => `<header>${user}</header>`,
+      feed:   (s, { posts }) => `<main>${posts}</main>`,
+    }
+  }
+
+  const chunks = []
+  const stream = renderToStream(spec)
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let shellTime = null
+  const t0 = Date.now()
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    const chunk = decoder.decode(value)
+    if (shellTime === null && chunk.includes('<header>')) shellTime = Date.now() - t0
+    chunks.push(chunk)
+  }
+
+  const fullHtml = chunks.join('')
+  assert(fullHtml.includes('user-data'),  'header should contain user-data')
+  assert(fullHtml.includes('posts-data'), 'feed should contain posts-data')
+  // Shell should arrive ~10ms (user fetcher), not ~80ms (posts fetcher)
+  assert(shellTime !== null && shellTime < 40, `Shell arrived too late: ${shellTime}ms (expected ~10ms)`)
+})
+
+await test('stream.scope: __PULSE_SERVER__ includes state from all scoped fetchers', async () => {
+  const spec = {
+    route: '/scoped-state',
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+      scope: { header: ['user'], feed: ['posts'] }
+    },
+    server: {
+      user:  async () => ({ name: 'Andy' }),
+      posts: async () => [{ title: 'Hello' }],
+    },
+    state: {},
+    view: {
+      header: (s, { user })  => `<header>${user.name}</header>`,
+      feed:   (s, { posts }) => `<main>${posts[0].title}</main>`,
+    }
+  }
+
+  const html = await streamToString(renderToStream(spec))
+  assert(html.includes('"name":"Andy"'),   `Expected user state serialised: ${html}`)
+  assert(html.includes('"title":"Hello"'), `Expected posts state serialised: ${html}`)
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nwrapDocument\n')
@@ -413,6 +504,169 @@ await test('renderToString: resolves normally when fetcher completes within time
   }
   const { html } = await renderToString(spec, { fetcherTimeout: 500 })
   assert(html.includes('quick'), `Expected rendered data, got: ${html}`)
+})
+
+// ---------------------------------------------------------------------------
+// renderToNavStream
+// ---------------------------------------------------------------------------
+
+/**
+ * Collect all NDJSON messages from a renderToNavStream response.
+ * Returns them as an array of parsed objects in arrival order.
+ */
+async function collectNavMessages(stream) {
+  const reader  = stream.getReader()
+  const decoder = new TextDecoder()
+  let buf = ''
+  const messages = []
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split('\n')
+    buf = lines.pop()
+    for (const line of lines) {
+      if (line.trim()) messages.push(JSON.parse(line))
+    }
+  }
+  if (buf.trim()) messages.push(JSON.parse(buf))
+  return messages
+}
+
+console.log('\nrenderToNavStream\n')
+
+await test('sends meta as the first message with no data fetching', async () => {
+  const spec = {
+    route:   '/nav',
+    state:   {},
+    view:    () => '<main id="main-content">hello</main>',
+    hydrate: '/nav.js',
+  }
+  const stream   = renderToNavStream(spec, {}, { title: 'Nav Page', styles: ['/app.css'] })
+  const messages = await collectNavMessages(stream)
+  const meta     = messages[0]
+  assert(meta.type === 'meta',       `First message should be meta, got ${meta.type}`)
+  assert(meta.title === 'Nav Page',  `Expected title 'Nav Page', got ${meta.title}`)
+  assert(meta.hydrate === '/nav.js', `Expected hydrate '/nav.js', got ${meta.hydrate}`)
+  assert(meta.styles[0] === '/app.css', 'styles should be forwarded')
+})
+
+await test('sends html message with shell content', async () => {
+  const spec = {
+    route: '/nav',
+    state: {},
+    view:  () => '<main id="main-content">shell</main>',
+  }
+  const messages = await collectNavMessages(renderToNavStream(spec))
+  const html     = messages.find(m => m.type === 'html')
+  assert(html, 'should have html message')
+  assert(html.html.includes('shell'), 'html should contain view output')
+})
+
+await test('sends done message with serverState', async () => {
+  const spec = {
+    route:  '/nav',
+    state:  {},
+    server: { items: async () => [1, 2, 3] },
+    view:   (s, srv) => `<main id="main-content">${srv.items.length}</main>`,
+  }
+  const messages  = await collectNavMessages(renderToNavStream(spec))
+  const done      = messages.find(m => m.type === 'done')
+  assert(done, 'should have done message')
+  assert(Array.isArray(done.serverState?.items), 'serverState.items should be present')
+  assert(done.serverState.items.length === 3, 'serverState.items should have 3 entries')
+})
+
+await test('sends deferred messages for each deferred segment', async () => {
+  const spec = {
+    route:  '/nav',
+    state:  {},
+    server: { user: async () => ({ name: 'Alice' }), posts: async () => ['a', 'b'] },
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+    },
+    view: {
+      header: ()         => '<header>nav</header>',
+      feed:   (s, srv)   => `<aside>${srv.posts.length} posts</aside>`,
+    },
+  }
+  const messages  = await collectNavMessages(renderToNavStream(spec))
+  const types     = messages.map(m => m.type)
+  assert(types[0] === 'meta',     `First should be meta, got ${types[0]}`)
+  assert(types.includes('html'),      'should include html')
+  assert(types.includes('deferred'),  'should include deferred')
+  assert(types[types.length - 1] === 'done', 'last should be done')
+
+  const deferred = messages.find(m => m.type === 'deferred')
+  assert(deferred.id === 'feed',           `Expected deferred id 'feed', got ${deferred.id}`)
+  assert(deferred.html.includes('2 posts'), `Expected feed content, got: ${deferred.html}`)
+})
+
+await test('shell html includes <pulse-deferred> placeholders for deferred segments', async () => {
+  const spec = {
+    route:  '/nav',
+    state:  {},
+    server: { posts: async () => [] },
+    stream: { shell: ['header'], deferred: ['feed'] },
+    view: {
+      header: () => '<header>top</header>',
+      feed:   () => '<aside>feed</aside>',
+    },
+  }
+  const messages = await collectNavMessages(renderToNavStream(spec))
+  const html     = messages.find(m => m.type === 'html')
+  assert(html.html.includes('pd-feed'), 'shell html should include <pulse-deferred id="pd-feed"> placeholder')
+  assert(Array.isArray(html.deferred),  'html message should list deferred key names')
+  assert(html.deferred[0] === 'feed',   `Expected deferred[0]='feed', got ${html.deferred[0]}`)
+})
+
+await test('stream.scope: meta arrives before slow deferred fetcher resolves', async () => {
+  const spec = {
+    route:  '/nav',
+    state:  {},
+    server: {
+      fast: async () => 'quick',
+      slow: async () => { await new Promise(r => setTimeout(r, 80)); return 'late' },
+    },
+    stream: {
+      shell:    ['header'],
+      deferred: ['feed'],
+      scope:    { header: ['fast'], feed: ['slow'] },
+    },
+    view: {
+      header: (s, srv) => `<header>${srv.fast}</header>`,
+      feed:   (s, srv) => `<aside>${srv.slow}</aside>`,
+    },
+  }
+  const t0       = Date.now()
+  const stream   = renderToNavStream(spec)
+  const reader   = stream.getReader()
+  const decoder  = new TextDecoder()
+  let buf = ''
+  let metaTime = null
+  let shellTime = null
+
+  outer: while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += decoder.decode(value, { stream: true })
+    const lines = buf.split('\n')
+    buf = lines.pop()
+    for (const line of lines) {
+      if (!line.trim()) continue
+      const msg = JSON.parse(line)
+      if (msg.type === 'meta')  metaTime  = Date.now() - t0
+      if (msg.type === 'html')  { shellTime = Date.now() - t0; break outer }
+    }
+  }
+  reader.cancel()
+
+  assert(metaTime  !== null,  'meta should have arrived')
+  assert(shellTime !== null,  'shell should have arrived')
+  assert(metaTime  < 20,  `meta should arrive <20ms (fast), got ${metaTime}ms`)
+  assert(shellTime < 40,  `shell should arrive <40ms (only awaits 'fast'), got ${shellTime}ms`)
 })
 
 // ---------------------------------------------------------------------------

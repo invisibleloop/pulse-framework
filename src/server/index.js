@@ -21,7 +21,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, wrapDocument, resolveServerState } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 
@@ -63,6 +63,7 @@ const BASE_CSP = {
   'img-src':        ["'self'", 'data:'],
   'font-src':       ["'self'"],
   'connect-src':    ["'self'"],
+  'object-src':     ["'none'"],
   'frame-ancestors':["'none'"],
   'base-uri':       ["'self'"],
   'form-action':    ["'self'"],
@@ -203,7 +204,10 @@ function parseMultipart(buf, boundary) {
 // ---------------------------------------------------------------------------
 
 class TtlCache {
-  constructor() { this._store = new Map() }
+  constructor() {
+    this._store    = new Map()
+    this._interval = null
+  }
 
   get(key) {
     const entry = this._store.get(key)
@@ -215,10 +219,37 @@ class TtlCache {
   set(key, value, ttlSeconds) {
     this._store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
   }
+
+  /** Remove all entries whose TTL has elapsed. */
+  purgeExpired() {
+    const now = Date.now()
+    for (const [key, entry] of this._store) {
+      if (now > entry.expiresAt) this._store.delete(key)
+    }
+  }
+
+  /**
+   * Start a background eviction timer.
+   * The interval is unref()'d so it never prevents the Node.js process from exiting.
+   *
+   * @param {number} intervalMs - how often to purge (default 60 000 ms)
+   */
+  startEviction(intervalMs = 60_000) {
+    if (this._interval) return  // already running
+    this._interval = setInterval(() => this.purgeExpired(), intervalMs).unref()
+  }
+
+  /** Stop the background eviction timer (used for graceful shutdown and tests). */
+  stopEviction() {
+    if (this._interval) { clearInterval(this._interval); this._interval = null }
+  }
 }
 
 const serverDataCache = new TtlCache()
 const pageHtmlCache   = new TtlCache()
+
+serverDataCache.startEviction()
+pageHtmlCache.startEviction()
 
 // ---------------------------------------------------------------------------
 // Cache-Control builder
@@ -395,6 +426,7 @@ export function createServer(specs, options = {}) {
 
   // Per-host brand cache — avoids hitting the data store on every request
   const brandCache = new TtlCache()
+  brandCache.startEviction(30_000)  // brand TTL is 60s, scan every 30s
 
   // Load manifest — maps source hydrate paths to production bundle paths
   const hydrateMap     = loadManifest(manifest, staticDir)
@@ -567,16 +599,20 @@ export function createServer(specs, options = {}) {
         return
       }
 
-      // Client-side navigation request — return JSON fragment, not a full document
+      // Client-side navigation request — return JSON fragment (or NDJSON stream), not a full document
       if (req.headers['x-pulse-navigate'] === 'true') {
-        await handleNavResponse(spec, ctx, res, dev)
+        if (stream) {
+          await handleNavStreamResponse(spec, ctx, res)
+        } else {
+          await handleNavResponse(spec, ctx, res, dev)
+        }
         return
       }
 
       if (stream) {
         await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
       } else {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
       }
 
     } catch (err) {
@@ -621,6 +657,11 @@ export function createServer(specs, options = {}) {
     draining = true
 
     console.log('⚡ Pulse shutting down gracefully…')
+
+    // Stop background cache eviction timers
+    serverDataCache.stopEviction()
+    pageHtmlCache.stopEviction()
+    brandCache.stopEviction()
 
     // Stop accepting new connections; exit once all connections are closed
     server.close(() => process.exit(0))
@@ -684,10 +725,42 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
 }
 
 /**
+ * Client-side navigation — streaming NDJSON variant.
+ * Sends meta immediately, then streams shell HTML and deferred segments
+ * as their server data resolves. The browser applies chunks progressively,
+ * showing shell content without waiting for slower deferred fetchers.
+ */
+async function handleNavStreamResponse(spec, ctx, res) {
+  const meta = resolveMeta(spec.meta, ctx)
+
+  res.writeHead(200, {
+    'Content-Type':      'application/x-ndjson',
+    'Cache-Control':     'no-store',
+    'X-Accel-Buffering': 'no',
+    ...SECURITY_HEADERS,
+  })
+
+  const navStream = renderToNavStream(spec, ctx, meta)
+  const reader    = navStream.getReader()
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      res.write(value)
+    }
+  } catch {
+    // Headers already sent — cannot change status, just end cleanly
+  } finally {
+    res.end()
+  }
+}
+
+/**
  * Render to a complete string then send — simpler, easier to cache.
  * Checks the in-process page cache before rendering; stores result after.
  */
-async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}) {
+async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
   const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
   // Pages with server data or store data embed a nonce'd __PULSE_SERVER__ script — don't cache them
   const ttl      = (!spec.server && !spec.store?.length) ? pageCacheTtl(spec, dev, defaultCache) : 0
@@ -772,6 +845,15 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   const canonicalUrl = typeof canonicalRaw === 'function'
     ? (canonicalRaw(ctx) || canonicalBase)
     : (canonicalRaw || canonicalBase)
+
+  // 103 Early Hints — browser starts fetching CSS/JS while server resolves data
+  const earlyLinks = [
+    ...(meta.styles || []).map(href => `<${href}>; rel=preload; as=style`),
+    ...(runtimeBundle && spec.hydrate?.startsWith('/dist/') ? [`<${runtimeBundle}>; rel=modulepreload; as=script`] : []),
+  ]
+  if (earlyLinks.length > 0) {
+    try { res.writeEarlyHints({ link: earlyLinks }) } catch {}
+  }
 
   const stylePreloads = (meta.styles || [])
     .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}">`)

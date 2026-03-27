@@ -24,6 +24,9 @@ const showToast = (opts) => import('./toast.js').then(m => m.showToast(opts))
  * @param {Object} [serverState] - Serialised server state from SSR
  */
 export function mount(spec, el, serverState = {}, options = {}) {
+  if (!spec || spec.state === undefined || !spec.view) {
+    throw new Error('[Pulse] mount: spec must have state and view')
+  }
   // Spec is validated server-side at startup — no need to re-validate in the browser
   // Initialise the client store from SSR data (no-op after the first page mount).
   // window.__PULSE_STORE__ is serialised by the server when a store is registered.
@@ -119,9 +122,10 @@ export function mount(spec, el, serverState = {}, options = {}) {
       const raw = spec.mutations[type](state, payload)
       if (raw?._toast) showToast(raw._toast)
       const { _toast, ...partial } = raw ?? {}
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
       persist()
-      render()
+      if (shallowChanged(prev, state)) render()
       return
     }
 
@@ -144,8 +148,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
       const raw = action.onStart(currentState, payload)
       if (raw?._toast) showToast(raw._toast)
       const { _toast, ...partial } = raw ?? {}
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
-      render()
+      if (shallowChanged(prev, state)) render()
     }
 
     // Validate before running if requested
@@ -156,8 +161,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
         const raw = action.onError?.(state, { validation: errors }) ?? {}
         if (raw._toast) showToast(raw._toast)
         const { _toast, ...partial } = raw
+        const prev = state
         state = applyConstraints({ ...state, ...partial }, spec.constraints)
-        render()
+        if (shallowChanged(prev, state)) render()
         return
       }
     }
@@ -171,17 +177,20 @@ export function mount(spec, el, serverState = {}, options = {}) {
       if (raw._storeUpdate) updateStore(raw._storeUpdate)
       if (raw._toast)       showToast(raw._toast)
       const { _storeUpdate: _su, _toast: _t, ...partial } = raw
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
+      if (shallowChanged(prev, state)) render()
     } catch (error) {
       console.error(`[Pulse] Action "${name}" failed:`, error)
       const raw = action.onError(state, error) ?? {}
       if (raw._toast) showToast(raw._toast)
       const { _toast, ...partial } = raw
+      const prev = state
       state = applyConstraints({ ...state, ...partial }, spec.constraints)
+      if (shallowChanged(prev, state)) render()
     }
 
     persist()
-    render()
   }
 
   // ---------------------------------------------------------------------------
@@ -359,8 +368,18 @@ function morph(el, newHtml) {
 }
 
 function morphNodes(cur, nxt) {
-  const curNodes = Array.from(cur.childNodes)
   const nxtNodes = Array.from(nxt.childNodes)
+
+  // Key-based reconciliation — activated when every element child carries data-key.
+  // Handles insert, remove, and reorder in O(n) without touching unaffected nodes.
+  const nxtEls = nxtNodes.filter(n => n.nodeType === 1)
+  if (nxtEls.length > 0 && nxtEls.every(n => n.getAttribute('data-key') !== null)) {
+    morphKeyed(cur, nxtEls)
+    return
+  }
+
+  // Position-based fallback for unkeyed content
+  const curNodes = Array.from(cur.childNodes)
 
   nxtNodes.forEach((nxtNode, i) => {
     const curNode = curNodes[i]
@@ -388,6 +407,50 @@ function morphNodes(cur, nxt) {
 
   // Remove surplus nodes
   while (cur.childNodes.length > nxtNodes.length) cur.removeChild(cur.lastChild)
+}
+
+/**
+ * Key-based reconciliation for a container whose element children all carry data-key.
+ * Builds a map of existing keyed nodes, then places new nodes in reverse order using
+ * insertBefore — O(n) moves, O(n) removals, zero unnecessary DOM patches.
+ *
+ * @param {Element} cur   - existing parent element
+ * @param {Element[]} nxtEls - ordered array of new element children (all have data-key)
+ */
+function morphKeyed(cur, nxtEls) {
+  // Index existing keyed children
+  const keyMap = new Map()
+  for (const node of cur.childNodes) {
+    if (node.nodeType === 1) {
+      const k = node.getAttribute('data-key')
+      if (k !== null) keyMap.set(k, node)
+    }
+  }
+
+  // Place elements in reverse order — insertBefore(node, ref) where ref tracks the
+  // right-hand boundary. When a node is already in the correct position, skip the move.
+  let ref = null
+  for (let i = nxtEls.length - 1; i >= 0; i--) {
+    const nxtEl = nxtEls[i]
+    const key   = nxtEl.getAttribute('data-key')
+    let   node  = keyMap.get(key)
+
+    if (node) {
+      keyMap.delete(key)
+      morphAttrs(node, nxtEl)
+      morphNodes(node, nxtEl)
+    } else {
+      node = nxtEl.cloneNode(true)
+    }
+
+    if (node.nextSibling !== ref || node.parentNode !== cur) {
+      cur.insertBefore(node, ref)
+    }
+    ref = node
+  }
+
+  // Remove elements no longer in the list
+  for (const node of keyMap.values()) cur.removeChild(node)
 }
 
 function morphAttrs(cur, nxt) {
@@ -451,7 +514,8 @@ function dispatchTimed(target, name, e, dispatch) {
 function applyConstraints(state, constraints) {
   if (!constraints) return state
 
-  const next = deepClone(state)
+  const hasNested = Object.keys(constraints).some(p => p.includes('.'))
+  const next = hasNested ? structuredClone(state) : state
 
   for (const [path, rules] of Object.entries(constraints)) {
     const { obj, key } = resolvePath(next, path)
@@ -570,7 +634,25 @@ function resolvePath(obj, path) {
  * @returns {Object}
  */
 function deepClone(obj) {
-  return JSON.parse(JSON.stringify(obj))
+  return structuredClone(obj)
+}
+
+/**
+ * Returns true when two flat state objects differ by reference at any key.
+ * Used to skip render() when a mutation produces no actual change —
+ * e.g. a constraint-clamped increment when already at max.
+ * Only compares top-level keys — nested objects are compared by reference,
+ * which is correct since mutations return new partial objects via spread.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @returns {boolean}
+ */
+function shallowChanged(a, b) {
+  if (a === b) return false
+  const ka = Object.keys(a)
+  if (ka.length !== Object.keys(b).length) return true
+  return ka.some(k => a[k] !== b[k])
 }
 
 function viewErrorFallback(err) {

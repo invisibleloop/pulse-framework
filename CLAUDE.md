@@ -114,7 +114,17 @@ export const mySpec = {
   // Streaming SSR — split view into shell (instant) + deferred segments
   stream: {
     shell:    ['header', 'nav'],
-    deferred: ['feed']
+    deferred: ['feed'],
+
+    // Optional: scope each segment to only the server fetchers it needs.
+    // Shell sends as soon as its own fetchers resolve — deferred-only fetchers
+    // never block the shell. Each deferred segment streams independently.
+    // Omit scope (or omit a segment from scope) to give it all server state.
+    scope: {
+      header: ['user'],         // 'user' fetcher resolves → shell writes
+      nav:    ['user'],
+      feed:   ['posts', 'ads'], // 'posts' + 'ads' fetchers resolve → feed writes
+    }
   }
 }
 
@@ -137,6 +147,16 @@ Pulse binds to DOM attributes — no JSX, no templates.
 <button data-dialog-open="my-modal">Open modal</button> <!-- opens <dialog id="my-modal"> -->
 <button data-dialog-close>Cancel</button>                <!-- closes nearest ancestor <dialog> -->
 ```
+
+**List keys — use `data-key` on repeated elements** to enable key-based DOM reconciliation. When all element children of a container carry `data-key`, the runtime matches nodes by key instead of position — inserts, removals, and reorders become O(1) rather than O(n) patches, and existing DOM nodes (inputs, images) are preserved correctly:
+
+```html
+<ul>
+  ${items.map(item => `<li data-key="${item.id}">${item.name}</li>`).join('')}
+</ul>
+```
+
+All sibling elements in the container must have `data-key` to activate key mode — mixed keyed/unkeyed siblings fall back to position-based matching.
 
 **Modal pattern — never use `state.modalOpen`.** Always render the `<dialog>` in the DOM unconditionally and use `data-dialog-open` to show it. ESC key, backdrop click, and `<form method="dialog">` all close it natively with no spec state.
 

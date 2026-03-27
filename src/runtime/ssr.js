@@ -90,27 +90,38 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
   // Run async — don't await here, stream is returned immediately
   ;(async () => {
     try {
-      // Resolve shell server data (only what shell segments need)
-      const shellServerState = await resolveServerStateForSegments(spec, ctx, shell)
+      const timeout = ctx.fetcherTimeout ?? null
 
-      // Merge declared store keys — store keys lose to page-level keys
+      // Eagerly start ALL fetcher promises so shell and deferred run in parallel.
+      // Each fetcher runs at most once — deferred-scoped fetchers fire immediately
+      // rather than waiting for the shell to finish, and shared fetchers are
+      // never called twice even if referenced by multiple segments.
+      const fetcherCache = new Map()
+      if (spec.server) {
+        for (const [key, fn] of Object.entries(spec.server)) {
+          fetcherCache.set(key, withTimeout(fn(ctx), timeout, key))
+        }
+      }
+
+      // Await only the fetchers the shell segments need
+      const shellServerState = await awaitFetchersForSegments(spec, shell, fetcherCache)
       const mergedShellState = mergeStoreKeys(spec, shellServerState, ctx.store)
 
-      // Write shell immediately
+      // Write shell immediately — deferred fetchers may still be in-flight
       const shellHtml = renderNamedSegments(spec, shell, clientState, mergedShellState)
       controller.enqueue(encode(shellHtml))
 
-      // Write deferred segments as they resolve
       if (deferred.length > 0) {
-        // Enqueue placeholder elements so the browser knows where to insert
+        // Placeholders so the browser knows where to insert deferred content
         const placeholders = deferred
           .map(key => `<pulse-deferred id="pd-${key}"></pulse-deferred>`)
           .join('')
         controller.enqueue(encode(placeholders))
 
-        // Resolve and stream each deferred segment
+        // Stream each deferred segment as soon as its own fetchers resolve.
+        // Promise.all runs them concurrently — the fastest segment wins.
         await Promise.all(deferred.map(async (key) => {
-          const segServerState = await resolveServerStateForSegments(spec, ctx, [key])
+          const segServerState = await awaitFetchersForSegments(spec, [key], fetcherCache)
           const mergedSegState = mergeStoreKeys(spec, segServerState, ctx.store)
           const segHtml        = renderNamedSegments(spec, [key], clientState, mergedSegState)
 
@@ -129,13 +140,113 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
         }))
       }
 
-      // Inject server state so the client hydration can read it without
-      // a second request — mirrors what wrapDocument does for the string path.
-      // Emit when there is page server data or store data to serialise.
-      if (Object.keys(mergedShellState).length > 0) {
-        const script = `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(mergedShellState)};</script>`
-        controller.enqueue(encode(script))
+      // Collect all resolved server state for client hydration.
+      // All promises are already settled by the time we reach here.
+      const allServerState = fetcherCache.size > 0
+        ? Object.fromEntries(await Promise.all([...fetcherCache.entries()].map(async ([k, p]) => [k, await p])))
+        : {}
+      const mergedAllState = mergeStoreKeys(spec, allServerState, ctx.store)
+      if (Object.keys(mergedAllState).length > 0) {
+        controller.enqueue(encode(
+          `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(mergedAllState)};</script>`
+        ))
       }
+
+      controller.close()
+    } catch (err) {
+      controller.error(err)
+    }
+  })()
+
+  return stream
+}
+
+// ---------------------------------------------------------------------------
+// renderToNavStream
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a spec to a stream of newline-delimited JSON (NDJSON) messages
+ * for use during client-side navigation. Sends four message types:
+ *
+ *   { type: 'meta',     title, styles, scripts, hydrate }  — immediately
+ *   { type: 'html',     html, deferred }                   — shell ready
+ *   { type: 'deferred', id, html }                         — each deferred segment
+ *   { type: 'done',     serverState, storeState }          — all data resolved
+ *
+ * The client (navigate.js) reads lines as they arrive:
+ *   - meta  → updates title + stylesheets
+ *   - html  → swaps root.innerHTML (shell), finds <pulse-deferred> placeholders
+ *   - deferred → replaces the matching placeholder with rendered HTML
+ *   - done  → stores serverState, mounts spec
+ *
+ * @param {import('../spec/schema.js').PulseSpec} spec
+ * @param {Object} [ctx]
+ * @param {Object} [resolvedMeta]  - Pre-resolved meta (title, styles, scripts)
+ * @returns {ReadableStream}
+ */
+export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
+  assertValidSpec(spec)
+
+  const { shell, deferred } = getStreamOrder(spec)
+  const clientState = { ...spec.state }
+
+  let controller
+  const stream = new ReadableStream({ start(c) { controller = c } })
+
+  ;(async () => {
+    try {
+      const timeout = ctx.fetcherTimeout ?? null
+      const writeLine = (obj) => controller.enqueue(encode(JSON.stringify(obj) + '\n'))
+
+      // Eagerly start ALL fetcher promises so shell and deferred run in parallel
+      const fetcherCache = new Map()
+      if (spec.server) {
+        for (const [key, fn] of Object.entries(spec.server)) {
+          fetcherCache.set(key, withTimeout(fn(ctx), timeout, key))
+        }
+      }
+
+      // 1. Send meta immediately — no data fetching needed
+      writeLine({
+        type:    'meta',
+        title:   resolvedMeta.title   || 'Pulse',
+        styles:  resolvedMeta.styles  || [],
+        scripts: resolvedMeta.scripts || [],
+        hydrate: spec.hydrate || null,
+      })
+
+      // 2. Await shell fetchers then send shell HTML
+      const shellServerState = await awaitFetchersForSegments(spec, shell, fetcherCache)
+      const mergedShellState = mergeStoreKeys(spec, shellServerState, ctx.store)
+      let shellHtml = renderNamedSegments(spec, shell, clientState, mergedShellState)
+
+      // Append <pulse-deferred> placeholders so the client knows where to inject deferred content
+      if (deferred.length > 0) {
+        shellHtml += deferred.map(key => `<pulse-deferred id="pd-${key}"></pulse-deferred>`).join('')
+      }
+
+      writeLine({ type: 'html', html: shellHtml, deferred })
+
+      // 3. Stream each deferred segment as soon as its own fetchers resolve
+      await Promise.all(deferred.map(async (key) => {
+        const segServerState = await awaitFetchersForSegments(spec, [key], fetcherCache)
+        const mergedSegState = mergeStoreKeys(spec, segServerState, ctx.store)
+        const segHtml        = renderNamedSegments(spec, [key], clientState, mergedSegState)
+        writeLine({ type: 'deferred', id: key, html: segHtml })
+      }))
+
+      // 4. Collect all resolved server state then send done
+      const allServerState = fetcherCache.size > 0
+        ? Object.fromEntries(await Promise.all([...fetcherCache.entries()].map(async ([k, p]) => [k, await p])))
+        : {}
+      const mergedAll = mergeStoreKeys(spec, allServerState, ctx.store)
+
+      writeLine({
+        type:        'done',
+        serverState: Object.keys(mergedAll).length > 0 ? mergedAll : undefined,
+        storeState:  ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
+      })
 
       controller.close()
     } catch (err) {
@@ -327,20 +438,54 @@ export async function resolveServerState(spec, ctx) {
 }
 
 /**
- * Resolve server data for a specific set of segments only.
- * Used by the streaming renderer to avoid fetching deferred data
- * before the shell is sent.
+ * Await the subset of already-started fetcher promises that the given
+ * segment group needs. Uses spec.stream.scope when declared; falls back
+ * to all fetchers when a segment has no scope annotation.
  *
- * Currently resolves all server state — segment-level data dependencies
- * will be an opt-in annotation in a future iteration.
+ * Fetchers are never started here — they were all started eagerly at the
+ * top of renderToStream via the fetcherCache Map.
  *
  * @param {import('../spec/schema.js').PulseSpec} spec
- * @param {Object} ctx
- * @param {string[]} _segments - Segment keys (reserved for future scoping)
+ * @param {string[]} segmentKeys
+ * @param {Map<string, Promise>} fetcherCache
  * @returns {Promise<Object>}
  */
-async function resolveServerStateForSegments(spec, ctx, _segments) {
-  return resolveServerState(spec, ctx)
+async function awaitFetchersForSegments(spec, segmentKeys, fetcherCache) {
+  if (!spec.server || fetcherCache.size === 0) return {}
+
+  const neededKeys = getScopedFetcherKeys(spec, segmentKeys)
+
+  const entries = await Promise.all(
+    neededKeys
+      .filter(key => fetcherCache.has(key))
+      .map(async key => [key, await fetcherCache.get(key)])
+  )
+
+  return Object.fromEntries(entries)
+}
+
+/**
+ * Return the server fetcher keys needed by a set of segments.
+ * Uses spec.stream.scope when declared. Segments not listed in scope
+ * receive all server keys (safe default — same behaviour as before).
+ *
+ * @param {import('../spec/schema.js').PulseSpec} spec
+ * @param {string[]} segmentKeys
+ * @returns {string[]}
+ */
+function getScopedFetcherKeys(spec, segmentKeys) {
+  if (!spec.server) return []
+
+  const scope = spec.stream?.scope
+  if (!scope) return Object.keys(spec.server)  // no annotation → all fetchers
+
+  const needed = new Set()
+  for (const seg of segmentKeys) {
+    const scoped = scope[seg]
+    if (!scoped) return Object.keys(spec.server)  // unscoped segment → all fetchers
+    for (const key of scoped) needed.add(key)
+  }
+  return [...needed]
 }
 
 // ---------------------------------------------------------------------------
