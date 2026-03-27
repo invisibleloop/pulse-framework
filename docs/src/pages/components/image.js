@@ -24,14 +24,14 @@ export default {
       <h2 class="doc-h2" id="ratio">With aspect ratio</h2>
       <p>Set <code>ratio</code> to constrain the image to a fixed aspect ratio. The image fills the crop area with <code>object-fit: cover</code>.</p>
       ${demo(
-        uiImage({ src: 'https://picsum.photos/seed/pulse1/800/450', alt: 'Mountain landscape at dusk', ratio: '16/9' }),
+        uiImage({ src: '/img/placeholder-landscape.svg', alt: 'Mountain landscape at dusk', ratio: '16/9' }),
         `uiImage({ src: '/img/photo.jpg', alt: 'Mountain landscape at dusk', ratio: '16/9' })`,
         { col: true }
       )}
 
       <h2 class="doc-h2" id="rounded">Square and rounded</h2>
       ${demo(
-        `<div style="max-width:200px;margin:0 auto">${uiImage({ src: 'https://picsum.photos/seed/pulse2/400/400', alt: 'Profile photo', ratio: '1/1', rounded: true })}</div>`,
+        `<div style="max-width:200px;margin:0 auto">${uiImage({ src: '/img/placeholder-square.svg', alt: 'Profile photo', ratio: '1/1', rounded: true })}</div>`,
         `uiImage({ src: '/img/avatar.jpg', alt: 'Profile photo', ratio: '1/1', rounded: true })`,
         { col: true }
       )}
@@ -39,7 +39,7 @@ export default {
       <h2 class="doc-h2" id="caption">With caption</h2>
       ${demo(
         uiImage({
-          src:     'https://picsum.photos/seed/pulse3/800/600',
+          src:     '/img/placeholder-tall.svg',
           alt:     'Aerial view of a coastal town',
           ratio:   '4/3',
           caption: 'Aerial view of Porto, Portugal. Photo by João Silva.',

@@ -601,8 +601,12 @@ export function createServer(specs, options = {}) {
 
       // Client-side navigation request — return JSON fragment (or NDJSON stream), not a full document
       if (req.headers['x-pulse-navigate'] === 'true') {
-        if (stream) {
-          await handleNavStreamResponse(spec, ctx, res)
+        // Only use NDJSON streaming when there are actual deferred segments to stream.
+        // For simple pages (no spec.stream.deferred), the JSON path is faster and does
+        // not hold the HTTP/1.1 connection open for the duration of the stream.
+        const hasDeferred = stream && spec.stream?.deferred?.length > 0
+        if (hasDeferred) {
+          await handleNavStreamResponse(spec, ctx, req, res)
         } else {
           await handleNavResponse(spec, ctx, res, dev)
         }
@@ -730,7 +734,7 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
  * as their server data resolves. The browser applies chunks progressively,
  * showing shell content without waiting for slower deferred fetchers.
  */
-async function handleNavStreamResponse(spec, ctx, res) {
+async function handleNavStreamResponse(spec, ctx, req, res) {
   const meta = resolveMeta(spec.meta, ctx)
 
   res.writeHead(200, {
@@ -743,6 +747,12 @@ async function handleNavStreamResponse(spec, ctx, res) {
   const navStream = renderToNavStream(spec, ctx, meta)
   const reader    = navStream.getReader()
 
+  // If the client disconnects (e.g. user navigated away before the stream ended),
+  // cancel the reader immediately so the HTTP connection is freed rather than held
+  // open until the navStream finishes naturally.
+  const onClose = () => reader.cancel()
+  req.on('close', onClose)
+
   try {
     while (true) {
       const { done, value } = await reader.read()
@@ -752,6 +762,7 @@ async function handleNavStreamResponse(spec, ctx, res) {
   } catch {
     // Headers already sent — cannot change status, just end cleanly
   } finally {
+    req.off('close', onClose)
     res.end()
   }
 }
