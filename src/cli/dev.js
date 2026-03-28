@@ -71,6 +71,16 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
     fs.copyFileSync(checklistSrc, checklistDst)
   }
 
+  // Sync slash commands into .claude/commands/ so /pulse-dev etc. always exist
+  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsDst = path.join(ROOT, '.claude', 'commands')
+  if (fs.existsSync(commandsSrc)) {
+    fs.mkdirSync(commandsDst, { recursive: true })
+    for (const file of fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'))) {
+      fs.copyFileSync(path.join(commandsSrc, file), path.join(commandsDst, file))
+    }
+  }
+
   console.log(`  ✓ pulse-ui assets synced (v${pkgVersion})\n`)
 })()
 

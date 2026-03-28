@@ -85,6 +85,14 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
   // CLAUDE.md — in .claude/ so it's alongside Claude Code's own config, not cluttering the project root
   write(targetDir, '.claude/CLAUDE.md', claudeMd(name))
 
+  // Slash commands — copied from src/agent/commands/ so scaffold and dev sync stay in lock-step
+  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  if (fs.existsSync(commandsSrc)) {
+    for (const file of fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'))) {
+      write(targetDir, `.claude/commands/${file}`, fs.readFileSync(path.join(commandsSrc, file), 'utf8'))
+    }
+  }
+
   // settings.json — hooks that enforce correct agent behaviour
   write(targetDir, '.claude/settings.json', JSON.stringify({
     hooks: {
@@ -408,3 +416,4 @@ function write(dir, relPath, content) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
   fs.writeFileSync(filePath, content, 'utf8')
 }
+
