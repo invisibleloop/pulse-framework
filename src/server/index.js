@@ -708,7 +708,7 @@ export function createServer(specs, options = {}) {
  */
 async function handleNavResponse(spec, ctx, res, dev = false) {
   const { html, serverState } = await cachedRenderToString(spec, ctx, dev)
-  const meta = resolveMeta(spec.meta, ctx)
+  const meta = await resolveMeta(spec.meta, ctx)
 
   const payload = JSON.stringify({
     html,
@@ -735,7 +735,7 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
  * showing shell content without waiting for slower deferred fetchers.
  */
 async function handleNavStreamResponse(spec, ctx, req, res) {
-  const meta = resolveMeta(spec.meta, ctx)
+  const meta = await resolveMeta(spec.meta, ctx)
 
   res.writeHead(200, {
     'Content-Type':      'application/x-ndjson',
@@ -791,7 +791,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
       ? (canonicalRaw(ctx, serverState) || canonicalBase)
       : (canonicalRaw || canonicalBase)
     const canonicalTag      = canonicalUrl ? `<link rel="canonical" href="${escHtml(canonicalUrl)}">` : ''
-    const resolvedSpec      = { ...spec, meta: resolveMeta(spec.meta, ctx) }
+    const resolvedSpec      = { ...spec, meta: await resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
     const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag, nonce, runtimeBundle, faviconHref: faviconPath || '' })
     html              = wrapped.html
@@ -847,7 +847,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   const t0 = performance.now()
 
   // Write the document opening immediately so the browser starts parsing
-  const meta  = resolveMeta(spec.meta, ctx)
+  const meta  = await resolveMeta(spec.meta, ctx)
   const title = meta.title || 'Pulse'
   // Resolve canonical — supports a string or a function receiving (ctx).
   // Note: server fetcher results are not yet available when the <head> is written in streaming mode.
@@ -1389,12 +1389,14 @@ function serveStatic(req, res, staticDir, dev = false) {
  * @param {Object} ctx
  * @returns {Object}
  */
-function resolveMeta(meta, ctx) {
+async function resolveMeta(meta, ctx) {
   if (!meta) return {}
   const resolved = {}
-  for (const [key, val] of Object.entries(meta)) {
-    resolved[key] = typeof val === 'function' ? val(ctx) : val
-  }
+  await Promise.all(
+    Object.entries(meta).map(async ([key, val]) => {
+      resolved[key] = typeof val === 'function' ? await val(ctx) : val
+    })
+  )
   return resolved
 }
 

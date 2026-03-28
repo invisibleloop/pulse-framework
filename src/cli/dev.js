@@ -25,16 +25,15 @@ const ROOT = rootArg !== -1
   ? path.resolve(args[rootArg + 1])
   : process.cwd()
 
+let _config = {}
+const configPath = path.join(ROOT, 'pulse.config.js')
+if (fs.existsSync(configPath)) {
+  try { _config = (await import(configPath)).default ?? {} } catch { /* ignore */ }
+}
+
 async function resolvePort() {
   if (portArg !== -1) return parseInt(args[portArg + 1], 10)
-  const configPath = path.join(ROOT, 'pulse.config.js')
-  if (fs.existsSync(configPath)) {
-    try {
-      const mod = await import(configPath)
-      if (mod.default?.port) return mod.default.port
-    } catch { /* fall through */ }
-  }
-  return 3000
+  return _config.port || 3000
 }
 
 const PORT = await resolvePort()
@@ -148,6 +147,7 @@ const { updateSpecs } = createServer(specs, {
   manifest:  {},        // never use a build manifest in dev — always serve source files
   extraBody: reloadScript,
   dev:       true,
+  ...(_config.csp ? { csp: _config.csp } : {}),
 
   onRequest(req, res) {
     const url = req.url.split('?')[0]

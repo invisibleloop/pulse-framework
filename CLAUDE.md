@@ -228,12 +228,15 @@ All specs are validated at startup — bad specs throw before the server accepts
 
 Pass `resolveBrand: async (host) => brandConfig` to `createServer`. The result is cached per host for 60 seconds and attached to `ctx.brand`. It is available in `guard`, `server` fetchers, and any `meta` field that is a function.
 
-Any `meta` field can be a function `(ctx) => value` — called per request, not at startup:
+Any `meta` field can be a function `(ctx) => value` — called per request, not at startup. Meta functions can also be **async**, so you can fetch data for `title`, `description`, `ogImage` etc.:
 
 ```js
 export default {
   meta: {
-    title:  (ctx) => `${ctx.brand.name} — Home`,
+    title:  async (ctx) => {
+      const product = await fetchProduct(ctx.params.id)
+      return product ? `${product.name} — Store` : 'Store'
+    },
     styles: (ctx) => ['/pulse-ui.css', `/themes/${ctx.brand.slug}.css`],
   },
   server: {
@@ -242,6 +245,34 @@ export default {
   view: (state, { brand }) => `<h1>${brand.name}</h1>`,
   guard: async (ctx) => {
     if (!ctx.brand) return { redirect: '/not-found' }
+  },
+}
+```
+
+If `meta` and `server` both need the same API data, use a **request-scoped cache** on `ctx` to avoid fetching twice. `ctx` is created fresh per request, so `ctx._cache` never leaks between requests:
+
+```js
+// shared-fetchers.js
+export async function getProduct(ctx) {
+  ctx._cache        ??= {}
+  ctx._cache.product ??= await db.products.find(ctx.params.id)
+  return ctx._cache.product
+}
+```
+
+```js
+// spec
+import { getProduct } from './shared-fetchers.js'
+
+export default {
+  meta: {
+    title: async (ctx) => {
+      const p = await getProduct(ctx)   // fetches once, cached on ctx
+      return p ? `${p.name} — Store` : 'Store'
+    },
+  },
+  server: {
+    product: (ctx) => getProduct(ctx),  // hits the same cache, no second fetch
   },
 }
 ```
