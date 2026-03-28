@@ -44,6 +44,16 @@ code { background: var(--ui-surface-2); color: var(--ui-accent); border: 1px sol
 
 To apply a **light theme**, set `meta.theme: 'light'` in the spec — this adds `data-theme="light"` to the `<body>` and activates the built-in light token set (accessible contrast for badges, alerts, and all semantic colours). Do NOT manually copy token values into `:root`.
 
+**Overriding tokens on a light-theme page:** `pulse-ui.css` defines light theme values under `[data-theme="light"]`, which has higher specificity than `:root`. Overrides written only to `:root` will be silently beaten. Always target `[data-theme="light"]` when overriding tokens for a light-theme page:
+
+```css
+/* WRONG — loses to pulse-ui.css */
+:root { --ui-accent: #e25; }
+
+/* CORRECT */
+[data-theme="light"] { --ui-accent: #e25; }
+```
+
 ```js
 meta: {
   theme: 'light',
