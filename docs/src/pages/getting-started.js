@@ -78,7 +78,12 @@ Validate the email format before submitting."`, 'bash'))}
 ├── .claude/
 │   ├── CLAUDE.md            ← session instructions Claude reads on startup
 │   ├── settings.json        ← hooks: syntax checks, colour guards, package blocklist
-│   └── pulse-checklist.md   ← spec review checklist, kept in sync by Pulse
+│   ├── pulse-checklist.md   ← spec review checklist, kept in sync by Pulse
+│   └── commands/            ← slash commands available inside Claude
+│       ├── pulse-dev.md
+│       ├── pulse-stop.md
+│       ├── pulse-build.md
+│       └── pulse-start.md
 ├── package.json
 └── pulse.config.js          ← port and project settings`, 'bash'))}
       <p><code>src/pages/home.js</code> is a complete working spec — a counter with increment and decrement buttons. Open <a href="http://localhost:3000">localhost:3000</a> after running <code>/pulse-dev</code> to see it. Every new page you create goes into <code>src/pages/</code> and is discovered automatically.</p>
@@ -92,6 +97,18 @@ Validate the email format before submitting."`, 'bash'))}
 /pulse-start   # run the production server
 /pulse-report  # Lighthouse audit + performance report`, 'bash'))}
       <p>You can also skip the commands entirely — just describe what you want and the agent handles the rest, including starting the dev server when needed.</p>
+
+      ${section('update', 'Keeping up to date')}
+      <p>When a new version of Pulse is released, update the package and then run <code>pulse update</code> from your project root:</p>
+      ${codeBlock(highlight(`npm update @invisibleloop/pulse
+pulse update`, 'bash'))}
+      <p><code>pulse update</code> copies the latest UI assets and agent files into your project:</p>
+      <ul>
+        <li><code>public/pulse-ui.css</code> and <code>public/pulse-ui.js</code> — component library styles and behaviour</li>
+        <li><code>.claude/pulse-checklist.md</code> — spec review checklist</li>
+        <li><code>.claude/commands/</code> — slash commands</li>
+      </ul>
+      <p>Your own source files, <code>CLAUDE.md</code>, and <code>pulse.config.js</code> are never touched.</p>
 
       ${section('next-steps', 'Next steps')}
       <ul>
