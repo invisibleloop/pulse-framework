@@ -15,21 +15,25 @@
  * @param {number|string} opts.height   - img height attribute
  * @param {number|string} opts.maxWidth - CSS max-width on the figure (px value or CSS string). Use this to constrain portrait/narrow images inside wide columns.
  * @param {string}  opts.class
+ * @param {string}  opts.loading      - 'lazy' (default) or 'eager' — use 'eager' for above-the-fold / LCP images
+ * @param {string}  opts.fetchpriority - 'high' | 'low' | 'auto' — set 'high' on the LCP image
  */
 
 import { escHtml as e } from '../html.js'
 
 export function uiImage({
-  src        = '',
-  alt        = '',
-  caption    = '',
-  ratio      = '',
-  rounded    = false,
-  pill       = false,
-  width      = '',
-  height     = '',
-  maxWidth   = '',
-  class: cls = '',
+  src           = '',
+  alt           = '',
+  caption       = '',
+  ratio         = '',
+  rounded       = false,
+  pill          = false,
+  width         = '',
+  height        = '',
+  maxWidth      = '',
+  loading       = 'lazy',
+  fetchpriority = '',
+  class: cls    = '',
 } = {}) {
   // The outer figure uses display:contents so the inner crop div
   // becomes a direct flex/block child of whatever container holds it.
@@ -40,8 +44,9 @@ export function uiImage({
     ? ` style="max-width:${e(typeof maxWidth === 'number' ? `${maxWidth}px` : maxWidth)};margin-left:auto;margin-right:auto"`
     : ''
 
-  const widthAttr  = width  ? ` width="${e(String(width))}"` : ''
-  const heightAttr = height ? ` height="${e(String(height))}"` : ''
+  const widthAttr         = width         ? ` width="${e(String(width))}"` : ''
+  const heightAttr        = height        ? ` height="${e(String(height))}"` : ''
+  const fetchpriorityAttr = fetchpriority ? ` fetchpriority="${e(fetchpriority)}"` : ''
 
   const captionHtml = caption
     ? `<figcaption class="ui-image-caption">${e(caption)}</figcaption>`
@@ -50,7 +55,7 @@ export function uiImage({
   if (ratio) {
     return `<figure class="${e(figClasses)}"${maxWidthStyle}>
   <div class="ui-image-crop" style="aspect-ratio:${e(ratio)}">
-    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img--cover"${widthAttr}${heightAttr} loading="lazy" decoding="async">
+    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img--cover"${widthAttr}${heightAttr} loading="${e(loading)}" decoding="async"${fetchpriorityAttr}>
   </div>
   ${captionHtml}
 </figure>`
@@ -58,7 +63,7 @@ export function uiImage({
 
   return `<figure class="${e(figClasses)}"${maxWidthStyle}>
   <div class="ui-image-wrap">
-    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img"${widthAttr}${heightAttr} loading="lazy" decoding="async">
+    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img"${widthAttr}${heightAttr} loading="${e(loading)}" decoding="async"${fetchpriorityAttr}>
   </div>
   ${captionHtml}
 </figure>`

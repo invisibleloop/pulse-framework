@@ -42,6 +42,7 @@ if (!fs.existsSync(manifestPath)) {
 
 let port         = portArg !== -1 ? parseInt(args[portArg + 1], 10) : null
 let defaultCache = null
+let csp          = null
 
 const configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(configPath)) {
@@ -49,6 +50,7 @@ if (fs.existsSync(configPath)) {
     const mod    = await import(configPath)
     port         = port || mod.default?.port || null
     defaultCache = mod.default?.defaultCache ?? null
+    csp          = mod.default?.csp ?? null
   } catch { /* ignore */ }
 }
 
@@ -71,4 +73,5 @@ createServer(specs, {
   stream:       true,
   staticDir:    PUBLIC_DIR,
   defaultCache,
+  ...(csp ? { csp } : {}),
 })

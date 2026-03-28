@@ -225,6 +225,32 @@ await test('sets title from spec.meta', async () => {
   })
 })
 
+await test('resolves async meta.title function (string mode)', async () => {
+  const spec = {
+    route: '/async-meta',
+    state: {},
+    view:  () => '<p>content</p>',
+    meta:  { title: async () => 'Async Title' },
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const { body } = await get(port, '/async-meta')
+    assert(body.includes('<title>Async Title</title>'), `Expected async title: ${body}`)
+  })
+})
+
+await test('resolves async meta.title function (streaming mode)', async () => {
+  const spec = {
+    route: '/async-meta-stream',
+    state: {},
+    view:  () => '<p>content</p>',
+    meta:  { title: async () => 'Stream Async Title' },
+  }
+  await withServer([spec], { stream: true }, async (port) => {
+    const { body } = await get(port, '/async-meta-stream')
+    assert(body.includes('<title>Stream Async Title</title>'), `Expected async title in stream: ${body}`)
+  })
+})
+
 await test('injects JSON-LD script when meta.schema is set (string mode)', async () => {
   const spec = {
     route: '/article',
@@ -428,49 +454,56 @@ const deferredNavSpec = {
 
 console.log('\nClient-side navigation — streaming (stream: true)\n')
 
-await test('X-Pulse-Navigate with stream:true returns application/x-ndjson', async () => {
-  await withServer([streamNavSpec], {}, async (port) => {
-    const { status, headers } = await request(port, 'GET', '/stream-nav', { 'X-Pulse-Navigate': 'true' })
+await test('X-Pulse-Navigate with stream:true returns application/x-ndjson for deferred specs', async () => {
+  await withServer([deferredNavSpec], { stream: true }, async (port) => {
+    const { status, headers } = await request(port, 'GET', '/deferred-nav', { 'X-Pulse-Navigate': 'true' })
     assert(status === 200, `Expected 200, got ${status}`)
     assert(headers['content-type']?.includes('application/x-ndjson'), `Expected NDJSON: ${headers['content-type']}`)
   })
 })
 
+await test('X-Pulse-Navigate with stream:true returns application/json for non-deferred specs', async () => {
+  await withServer([streamNavSpec], { stream: true }, async (port) => {
+    const { status, headers } = await request(port, 'GET', '/stream-nav', { 'X-Pulse-Navigate': 'true' })
+    assert(status === 200, `Expected 200, got ${status}`)
+    assert(headers['content-type']?.includes('application/json'), `Expected JSON: ${headers['content-type']}`)
+  })
+})
+
 await test('streaming nav: first NDJSON line is a meta message with title and hydrate', async () => {
-  await withServer([streamNavSpec], {}, async (port) => {
-    const { body } = await request(port, 'GET', '/stream-nav', { 'X-Pulse-Navigate': 'true' })
+  await withServer([deferredNavSpec], { stream: true }, async (port) => {
+    const { body } = await request(port, 'GET', '/deferred-nav', { 'X-Pulse-Navigate': 'true' })
     const lines    = body.trim().split('\n').filter(Boolean)
     const meta     = JSON.parse(lines[0])
-    assert(meta.type === 'meta',                      `First line should be meta, got ${meta.type}`)
-    assert(meta.title === 'Stream Nav',               `Expected title 'Stream Nav', got ${meta.title}`)
-    assert(meta.hydrate === '/examples/stream-nav.js', `Expected hydrate, got ${meta.hydrate}`)
-    assert(meta.styles[0] === '/app.css',             `Expected styles, got ${JSON.stringify(meta.styles)}`)
+    assert(meta.type === 'meta',                            `First line should be meta, got ${meta.type}`)
+    assert(meta.title === 'Deferred Nav',                   `Expected title 'Deferred Nav', got ${meta.title}`)
+    assert(meta.hydrate === '/examples/deferred-nav.js',    `Expected hydrate, got ${meta.hydrate}`)
   })
 })
 
 await test('streaming nav: html message contains rendered server data', async () => {
-  await withServer([streamNavSpec], {}, async (port) => {
-    const { body }  = await request(port, 'GET', '/stream-nav', { 'X-Pulse-Navigate': 'true' })
+  await withServer([deferredNavSpec], { stream: true }, async (port) => {
+    const { body }  = await request(port, 'GET', '/deferred-nav', { 'X-Pulse-Navigate': 'true' })
     const messages  = body.trim().split('\n').filter(Boolean).map(l => JSON.parse(l))
     const htmlMsg   = messages.find(m => m.type === 'html')
     assert(htmlMsg,                                    'should have html message')
-    assert(htmlMsg.html.includes('streamed hello'),    `Expected server data in html: ${htmlMsg.html}`)
+    assert(htmlMsg.html.includes('shell-data'),        `Expected shell server data in html: ${htmlMsg.html}`)
     assert(!htmlMsg.html.includes('<!DOCTYPE'),        'html should not be a full document')
   })
 })
 
 await test('streaming nav: done message contains serverState', async () => {
-  await withServer([streamNavSpec], {}, async (port) => {
-    const { body }   = await request(port, 'GET', '/stream-nav', { 'X-Pulse-Navigate': 'true' })
+  await withServer([deferredNavSpec], { stream: true }, async (port) => {
+    const { body }   = await request(port, 'GET', '/deferred-nav', { 'X-Pulse-Navigate': 'true' })
     const messages   = body.trim().split('\n').filter(Boolean).map(l => JSON.parse(l))
     const done       = messages.find(m => m.type === 'done')
-    assert(done,                                          'should have done message')
-    assert(done.serverState?.msg === 'streamed hello',    `Expected serverState.msg, got ${JSON.stringify(done.serverState)}`)
+    assert(done,                                              'should have done message')
+    assert(done.serverState?.fast === 'shell-data',           `Expected serverState.fast, got ${JSON.stringify(done.serverState)}`)
   })
 })
 
 await test('streaming nav: deferred spec sends shell then deferred then done', async () => {
-  await withServer([deferredNavSpec], {}, async (port) => {
+  await withServer([deferredNavSpec], { stream: true }, async (port) => {
     const { body }   = await request(port, 'GET', '/deferred-nav', { 'X-Pulse-Navigate': 'true' })
     const messages   = body.trim().split('\n').filter(Boolean).map(l => JSON.parse(l))
     const types      = messages.map(m => m.type)
@@ -491,7 +524,7 @@ await test('streaming nav: deferred spec sends shell then deferred then done', a
 })
 
 await test('streaming nav: html includes <pulse-deferred> placeholder for deferred segments', async () => {
-  await withServer([deferredNavSpec], {}, async (port) => {
+  await withServer([deferredNavSpec], { stream: true }, async (port) => {
     const { body }  = await request(port, 'GET', '/deferred-nav', { 'X-Pulse-Navigate': 'true' })
     const messages  = body.trim().split('\n').filter(Boolean).map(l => JSON.parse(l))
     const html      = messages.find(m => m.type === 'html')

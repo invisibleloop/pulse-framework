@@ -40,6 +40,7 @@ import { radio, radioGroup } from './radio.js'
 import { segmented }  from './segmented.js'
 import { fileUpload } from './fileupload.js'
 import { modal, modalTrigger } from './modal.js'
+import { uiImage }             from './uiimage.js'
 
 // ─── button ─────────────────────────────────────────────────────────────────
 
@@ -1241,6 +1242,45 @@ test('modalTrigger: does not use legacy data-modal-open', () => {
 
 test('modalTrigger: escapes target id to prevent XSS', () => {
   const html = modalTrigger({ target: '"><script>', label: 'x' })
+  assert.doesNotMatch(html, /<script>/)
+})
+
+// ─── uiImage ────────────────────────────────────────────────────────────────
+
+test('uiImage: renders img with src and alt', () => {
+  const html = uiImage({ src: '/photo.jpg', alt: 'A photo' })
+  assert.match(html, /src="\/photo\.jpg"/)
+  assert.match(html, /alt="A photo"/)
+})
+
+test('uiImage: defaults to loading="lazy"', () => {
+  const html = uiImage({ src: '/photo.jpg', alt: '' })
+  assert.match(html, /loading="lazy"/)
+})
+
+test('uiImage: accepts loading="eager"', () => {
+  const html = uiImage({ src: '/photo.jpg', alt: '', loading: 'eager' })
+  assert.match(html, /loading="eager"/)
+})
+
+test('uiImage: omits fetchpriority when not set', () => {
+  const html = uiImage({ src: '/photo.jpg', alt: '' })
+  assert.doesNotMatch(html, /fetchpriority/)
+})
+
+test('uiImage: renders fetchpriority="high" when set', () => {
+  const html = uiImage({ src: '/photo.jpg', alt: '', fetchpriority: 'high' })
+  assert.match(html, /fetchpriority="high"/)
+})
+
+test('uiImage: wraps in aspect-ratio crop when ratio given', () => {
+  const html = uiImage({ src: '/photo.jpg', alt: '', ratio: '16/9' })
+  assert.match(html, /aspect-ratio:16\/9/)
+  assert.match(html, /ui-image-img--cover/)
+})
+
+test('uiImage: escapes src to prevent XSS', () => {
+  const html = uiImage({ src: '"><script>alert(1)</script>', alt: '' })
   assert.doesNotMatch(html, /<script>/)
 })
 
