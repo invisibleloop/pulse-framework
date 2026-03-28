@@ -273,6 +273,26 @@ meta: {
 
 For multi-brand setups, each brand theme file just overrides `--font` in `:root`.
 
+## Overriding Theme Colours
+
+`pulse-ui.css` defines light theme variables under `[data-theme="light"]`, which has **higher specificity than `:root`**. Overrides written only to `:root` will be silently beaten by those rules.
+
+Always target `[data-theme="light"]` when overriding colours for the light theme:
+
+```css
+/* WRONG — loses to [data-theme="light"] rules in pulse-ui.css */
+:root {
+  --color-accent: #e25;
+}
+
+/* CORRECT */
+[data-theme="light"] {
+  --color-accent: #e25;
+}
+```
+
+If a colour must apply in both themes, set it in both `:root` and `[data-theme="light"]`.
+
 ## HTTP Response Behaviour
 
 - **Full page request** — SSR HTML with hydration bootstrap
