@@ -289,7 +289,7 @@ async function runUpdate(root) {
     const dst = path.join(publicDir, asset)
     if (!fs.existsSync(src)) { missing.push(asset); continue }
     fs.copyFileSync(src, dst)
-    updated.push(asset)
+    updated.push(`public/${asset}`)
   }
 
   // Sync agent checklist into .claude/
@@ -301,12 +301,23 @@ async function runUpdate(root) {
     updated.push('.claude/pulse-checklist.md')
   }
 
+  // Sync slash commands into .claude/commands/
+  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsDst = path.join(root, '.claude', 'commands')
+  if (fs.existsSync(commandsSrc)) {
+    fs.mkdirSync(commandsDst, { recursive: true })
+    for (const file of fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'))) {
+      fs.copyFileSync(path.join(commandsSrc, file), path.join(commandsDst, file))
+      updated.push(`.claude/commands/${file}`)
+    }
+  }
+
   // Read the new version for the success message
   const versionFile = path.join(publicDir, '.pulse-ui-version')
   const version     = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : '?'
 
-  console.log(`\n⚡ Pulse UI updated to ${version}\n`)
-  for (const f of updated) console.log(`  ✓ public/${f}`)
+  console.log(`\n⚡ Pulse updated to ${version}\n`)
+  for (const f of updated) console.log(`  ✓ ${f}`)
   for (const f of missing) console.log(`  ✗ ${f} not found in package`)
   console.log()
 }
