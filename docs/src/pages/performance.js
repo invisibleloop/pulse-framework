@@ -34,6 +34,7 @@ export default {
         ]
       )}
       ${callout('note', 'Run <code>mcp__chrome-devtools__lighthouse_audit</code> after every new page to verify all four scores are 100. Fix any failures before considering the task done.')}
+      ${callout('warning', '<strong>Third-party ads caveat:</strong> Pages that load ad network scripts will not achieve 100 across all categories. Ad scripts introduce render-blocking JS, third-party cookies (Best Practices), and late-loading content that causes CLS. Reserving fixed space for ad slots reduces CLS but cannot fully compensate for what ad networks inject at runtime. Treat 100/100/100 as the baseline for ad-free pages only.')}
 
       ${section('streaming-ssr', 'Streaming SSR')}
       <p>Pulse uses Node.js streams for SSR. The server sends the <code>&lt;head&gt;</code> and page shell immediately, before any async data resolves. Browsers start downloading CSS and fonts while the server fetches data — so the user sees a styled shell within milliseconds.</p>

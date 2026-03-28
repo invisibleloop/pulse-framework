@@ -454,3 +454,5 @@ First-visit JS = runtime chunk (~3.8 kB) + per-page boot file (~0.4–0.9 kB). O
 Lighthouse: 100/100/100 (Accessibility / Best Practices / SEO) on both pages.
 
 LCP is fast by design (streaming SSR sends HTML before data resolves) but actual millisecond values depend on machine speed, browser, network conditions, and server location — do not quote specific numbers.
+
+**Caveat — third-party ads:** Pages that load ad network scripts will not achieve 100 across all categories. Ad scripts introduce render-blocking JS, third-party cookies (Best Practices), and late-loading content that causes CLS. Reserving fixed space for ad slots reduces CLS but cannot fully compensate for what ad networks inject at runtime. Treat 100/100/100 as the baseline for ad-free pages only.
