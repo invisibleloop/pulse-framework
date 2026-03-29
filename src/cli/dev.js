@@ -63,12 +63,18 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
   }
   fs.writeFileSync(stampPath, pkgVersion, 'utf8')
 
-  // Sync agent checklist into .claude/ so CLAUDE.md can import it
-  const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
-  const checklistDst = path.join(ROOT, '.claude', 'pulse-checklist.md')
-  if (fs.existsSync(checklistSrc)) {
-    fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
-    fs.copyFileSync(checklistSrc, checklistDst)
+  // Sync agent files into .claude/
+  const agentFiles = [
+    ['../agent/checklist.md',      'pulse-checklist.md'],
+    ['../agent/coverage-check.js', 'coverage-check.js'],
+  ]
+  for (const [rel, dst] of agentFiles) {
+    const src = new URL(rel, import.meta.url).pathname
+    if (fs.existsSync(src)) {
+      const dstPath = path.join(ROOT, '.claude', dst)
+      fs.mkdirSync(path.dirname(dstPath), { recursive: true })
+      fs.copyFileSync(src, dstPath)
+    }
   }
 
   // Sync slash commands into .claude/commands/ so /pulse-dev etc. always exist
