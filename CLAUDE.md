@@ -35,7 +35,7 @@ public/
 
 ## The Spec
 
-A spec is a plain JS object. Every property is optional except `route`, `state`, and `view`.
+A spec is a plain JS object. Every property is optional except `route` and `view`. `state` defaults to `{}` — omit it on purely server-rendered pages.
 
 ```js
 export const mySpec = {
@@ -62,6 +62,7 @@ export const mySpec = {
   store: ['user', 'cart'],
 
   // Initial client state — deep cloned on mount, never mutated directly
+  // Optional — omit entirely on purely server-rendered pages (no mutations/actions/persist)
   state: { count: 0 },
 
   // Declarative min/max bounds — always enforced after mutations

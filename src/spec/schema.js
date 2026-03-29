@@ -159,9 +159,7 @@ export function validateSpec(spec) {
   }
 
   // state
-  if (spec.state === undefined) {
-    errors.push('spec.state is required — use {} if there is no client state')
-  } else if (typeof spec.state !== 'object' || Array.isArray(spec.state)) {
+  if (spec.state !== undefined && (typeof spec.state !== 'object' || Array.isArray(spec.state))) {
     errors.push('spec.state must be a plain object')
   }
 

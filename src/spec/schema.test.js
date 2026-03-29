@@ -54,8 +54,13 @@ test('rejects route that does not start with /', () => {
   assertErrors({ route: 'contact', state: {}, view: () => '' }, 'must start with "/"')
 })
 
-test('requires state', () => {
-  assertErrors({ route: '/contact', view: () => '' }, 'spec.state is required')
+test('state is optional — omitting it is valid', () => {
+  const { valid, errors } = validateSpec({ route: '/contact', view: () => '' })
+  if (!valid) throw new Error(`Expected valid but got: ${errors.join(', ')}`)
+})
+
+test('state must be a plain object when provided', () => {
+  assertErrors({ route: '/contact', state: 'bad', view: () => '' }, 'spec.state must be a plain object')
 })
 
 test('requires view', () => {
