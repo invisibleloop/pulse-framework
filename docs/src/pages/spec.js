@@ -25,7 +25,7 @@ export default {
         ['Field', 'Type', 'Required', 'Description'],
         [
           ['<code>route</code>', '<code>string</code>', 'Yes', 'URL pattern for this page. Supports <code>:param</code> segments.'],
-          ['<code>state</code>', '<code>object</code>', 'Yes', 'Initial client-side state. Deep-cloned on mount.'],
+          ['<code>state</code>', '<code>object</code>', 'No', 'Initial client-side state. Deep-cloned on mount. Defaults to <code>{}</code> — omit on purely server-rendered pages.'],
           ['<code>view</code>', '<code>function</code>', 'Yes', 'Returns an HTML string. Receives <code>(state, serverState)</code>.'],
           ['<code>meta</code>', '<code>object</code>', 'No', 'Page metadata: title, description, styles, OG tags, schema.'],
           ['<code>hydrate</code>', '<code>string</code>', 'Auto', 'Auto-derived from the URL entry in <code>createServer</code>. Do not set manually.'],
@@ -53,7 +53,7 @@ route: '/blog/:year/:slug'`, 'js'))}
       <p>Dynamic segments are available in server data and actions via <code>ctx.params</code>. See <a href="/routing">Routing</a> for more.</p>
 
       ${section('state', 'state')}
-      <p>The initial client-side state for the page. Always a plain object. Pulse deep-clones it on every mount — mutations never affect the original spec, and state cannot leak between page loads.</p>
+      <p>The initial client-side state for the page. Always a plain object. Defaults to <code>{}</code> — you can omit it entirely on purely server-rendered pages with no <code>mutations</code>, <code>actions</code>, or <code>persist</code>. Pulse deep-clones it on every mount — mutations never affect the original spec, and state cannot leak between page loads.</p>
       ${codeBlock(highlight(`state: {
   count: 0,
   user: { name: '', email: '' },

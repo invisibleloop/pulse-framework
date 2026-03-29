@@ -24,8 +24,8 @@ const showToast = (opts) => import('./toast.js').then(m => m.showToast(opts))
  * @param {Object} [serverState] - Serialised server state from SSR
  */
 export function mount(spec, el, serverState = {}, options = {}) {
-  if (!spec || spec.state === undefined || !spec.view) {
-    throw new Error('[Pulse] mount: spec must have state and view')
+  if (!spec || !spec.view) {
+    throw new Error('[Pulse] mount: spec must have a view')
   }
   // Spec is validated server-side at startup — no need to re-validate in the browser
   // Initialise the client store from SSR data (no-op after the first page mount).
@@ -60,7 +60,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
   }
 
   // Deep clone initial state — never mutate the spec itself
-  let state = deepClone(spec.state)
+  let state = deepClone(spec.state ?? {})
 
   // Restore persisted keys from localStorage
   const persistKey = spec.persist?.length ? `pulse:${spec.route || location.pathname}` : null
@@ -69,7 +69,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
     try {
       const saved = JSON.parse(localStorage.getItem(persistKey) || '{}')
       spec.persist.forEach(k => {
-        if (saved[k] !== undefined && saved[k] !== spec.state[k]) {
+        if (saved[k] !== undefined && saved[k] !== (spec.state ?? {})[k]) {
           state[k] = saved[k]
           restoredFromPersist = true
         }
