@@ -117,7 +117,7 @@ export function barChart({
   const ariaLabel = `Bar chart: ${data.map(d => `${d.label ?? ''} ${d.value}`).join(', ')}`
   const clsAttr   = cls ? ` class="${e(cls)}"` : ''
 
-  return `<svg${clsAttr} viewBox="0 0 ${IW} ${height}" width="100%" height="${height}" role="img" aria-label="${e(ariaLabel)}">${grid}${baseline}${bars}</svg>`
+  return `<svg${clsAttr} viewBox="0 0 ${IW} ${height}" preserveAspectRatio="none" height="${height}" style="display:block;width:100%" role="img" aria-label="${e(ariaLabel)}">${grid}${baseline}${bars}</svg>`
 }
 
 // ─── Line chart ───────────────────────────────────────────────────────────────
@@ -193,7 +193,7 @@ export function lineChart({
   const ariaLabel = `Line chart: ${data.map(d => `${d.label ?? ''} ${d.value}`).join(', ')}`
   const clsAttr   = cls ? ` class="${e(cls)}"` : ''
 
-  return `<svg${clsAttr} viewBox="0 0 ${IW} ${height}" width="100%" height="${height}" role="img" aria-label="${e(ariaLabel)}">${grid}${areaPath}${line}${dots}${xlabels}</svg>`
+  return `<svg${clsAttr} viewBox="0 0 ${IW} ${height}" preserveAspectRatio="none" height="${height}" style="display:block;width:100%" role="img" aria-label="${e(ariaLabel)}">${grid}${areaPath}${line}${dots}${xlabels}</svg>`
 }
 
 // ─── Donut chart ──────────────────────────────────────────────────────────────
@@ -207,6 +207,7 @@ export function lineChart({
  * @param {number}  opts.thickness - Ring thickness in px (default: 40)
  * @param {string}  opts.label     - Large text in the centre
  * @param {string}  opts.sublabel  - Smaller text below the centre label
+ * @param {boolean} opts.fluid     - Expand to parent width (preserves aspect ratio)
  * @param {string}  opts.class
  */
 export function donutChart({
@@ -215,6 +216,7 @@ export function donutChart({
   thickness  = 40,
   label      = '',
   sublabel   = '',
+  fluid      = false,
   class: cls = '',
 } = {}) {
   if (!data.length) return ''
@@ -267,8 +269,9 @@ export function donutChart({
 
   const ariaLabel = `Donut chart: ${data.map(d => `${d.label ?? ''} ${d.value}`).join(', ')}`
   const clsAttr   = cls ? ` class="${e(cls)}"` : ''
+  const dims      = fluid ? `style="display:block;width:100%"` : `width="${size}" height="${size}"`
 
-  return `<svg${clsAttr} viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="${e(ariaLabel)}">${segments}${labelEl}${subEl}</svg>`
+  return `<svg${clsAttr} viewBox="0 0 ${size} ${size}" ${dims} role="img" aria-label="${e(ariaLabel)}">${segments}${labelEl}${subEl}</svg>`
 }
 
 // ─── Sparkline ────────────────────────────────────────────────────────────────
@@ -283,6 +286,7 @@ export function donutChart({
  * @param {number}   opts.height - SVG height in px (default: 32)
  * @param {'accent'|'success'|'warning'|'error'|'blue'|'muted'} opts.color
  * @param {boolean}  opts.area   - Fill area under the line
+ * @param {boolean}  opts.fluid  - Expand to parent width (preserves aspect ratio)
  * @param {string}   opts.class
  */
 export function sparkline({
@@ -291,6 +295,7 @@ export function sparkline({
   height     = 32,
   color      = 'accent',
   area       = false,
+  fluid      = false,
   class: cls = '',
 } = {}) {
   if (data.length < 2) return ''
@@ -316,6 +321,7 @@ export function sparkline({
   }
 
   const clsAttr = cls ? ` class="${e(cls)}"` : ''
+  const dims    = fluid ? `preserveAspectRatio="none" height="${height}" style="display:block;width:100%"` : `width="${width}" height="${height}"`
 
-  return `<svg${clsAttr} viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">${areaPath}<polyline points="${points}" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+  return `<svg${clsAttr} viewBox="0 0 ${width} ${height}" ${dims} aria-hidden="true">${areaPath}<polyline points="${points}" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 }

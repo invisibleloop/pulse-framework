@@ -120,7 +120,7 @@ export default {
       )}
 
       <h2 class="doc-h2" id="donut">Donut chart</h2>
-      <p>Ring chart with multiple segments. Each item can override its colour. Pass <code>label</code> and <code>sublabel</code> for a centred annotation.</p>
+      <p>Ring chart with multiple segments. Each item can override its colour. Pass <code>label</code> and <code>sublabel</code> for a centred annotation. Add <code>fluid: true</code> to expand to the parent container width.</p>
       ${demo(
         `<div style="display:flex;justify-content:center">` +
         donutChart({
@@ -171,7 +171,7 @@ export default {
       )}
 
       <h2 class="doc-h2" id="sparkline">Sparkline</h2>
-      <p>Minimal inline trend line — pass a plain array of numbers. Designed to sit alongside <code>stat()</code> tiles or inside table cells.</p>
+      <p>Minimal inline trend line — pass a plain array of numbers. Designed to sit alongside <code>stat()</code> tiles or inside table cells. Add <code>fluid: true</code> to expand to the parent container width.</p>
       ${demo(
         `<div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap">` +
           sparkline({ data: [12,18,14,22,19,28,24,31], color: 'accent',  area: true  }) +
@@ -228,14 +228,15 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
       ${table(
         ['Prop', 'Type', 'Default', 'Description'],
         [
-          ['<code>data</code>',       'array',   '—',       '<code>{ label, value }[]</code>'],
-          ['<code>height</code>',     'number',  '220',     'SVG height in px'],
+          ['<code>data</code>',       'array',   '—',        '<code>{ label, value }[]</code>'],
+          ['<code>height</code>',     'number',  '220',      'SVG height in px'],
           ['<code>color</code>',      'string',  "'accent'", 'accent · success · warning · error · blue · muted'],
-          ['<code>showValues</code>', 'boolean', 'false',   'Value labels above each bar'],
-          ['<code>showGrid</code>',   'boolean', 'true',    'Horizontal grid lines'],
-          ['<code>gap</code>',        'number',  '0.25',    'Gap between bars as fraction 0–0.9'],
+          ['<code>showValues</code>', 'boolean', 'false',    'Value labels above each bar'],
+          ['<code>showGrid</code>',   'boolean', 'true',     'Horizontal grid lines'],
+          ['<code>gap</code>',        'number',  '0.25',     'Gap between bars as fraction 0–0.9'],
         ]
       )}
+      <p class="doc-note u-mt-2">Always renders at full parent width (<code>width="100%"</code>).</p>
 
       <h3 class="doc-h3" style="margin-top:2rem">lineChart()</h3>
       ${table(
@@ -249,16 +250,18 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
           ['<code>showGrid</code>',  'boolean', 'true',     'Horizontal grid lines'],
         ]
       )}
+      <p class="doc-note u-mt-2">Always renders at full parent width (<code>width="100%"</code>).</p>
 
       <h3 class="doc-h3" style="margin-top:2rem">donutChart()</h3>
       ${table(
         ['Prop', 'Type', 'Default', 'Description'],
         [
-          ['<code>data</code>',      'array',  '—',    '<code>{ label, value, color? }[]</code> — color per segment'],
-          ['<code>size</code>',      'number', '200',  'Diameter in px'],
-          ['<code>thickness</code>', 'number', '40',   'Ring thickness in px'],
-          ['<code>label</code>',     'string', '—',    'Large centre text'],
-          ['<code>sublabel</code>',  'string', '—',    'Smaller text below centre label'],
+          ['<code>data</code>',      'array',   '—',     '<code>{ label, value, color? }[]</code> — color per segment'],
+          ['<code>size</code>',      'number',  '200',   'Diameter in px'],
+          ['<code>thickness</code>', 'number',  '40',    'Ring thickness in px'],
+          ['<code>label</code>',     'string',  '—',     'Large centre text'],
+          ['<code>sublabel</code>',  'string',  '—',     'Smaller text below centre label'],
+          ['<code>fluid</code>',     'boolean', 'false', 'Expand to parent width, preserving aspect ratio'],
         ]
       )}
 
@@ -267,10 +270,11 @@ sparkline({ data: [31,24,28,19,22,14,18,12], color: 'error',  area: true })`
         ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>data</code>',   'number[]', '—',        'Plain array of numbers'],
-          ['<code>width</code>',  'number',   '80',       'SVG width in px'],
+          ['<code>width</code>',  'number',   '80',       'SVG width in px (ignored when fluid: true)'],
           ['<code>height</code>', 'number',   '32',       'SVG height in px'],
           ['<code>color</code>',  'string',   "'accent'", 'accent · success · warning · error · blue · muted'],
           ['<code>area</code>',   'boolean',  'false',    'Fill area under the line'],
+          ['<code>fluid</code>',  'boolean',  'false',    'Expand to parent width, preserving aspect ratio'],
         ]
       )}
     `,
