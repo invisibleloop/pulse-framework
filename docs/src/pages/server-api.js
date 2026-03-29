@@ -18,16 +18,16 @@ export default {
     next,
     content: `
       ${h1('Server API')}
-      ${lead('<code>createServer(specs, options)</code> starts an HTTP server with all guarantees active. Specs are validated before the server accepts connections. SSR, streaming, brotli compression, immutable asset caching, security headers, CSP nonces, and HSTS are all handled automatically.')}
+      ${lead('<code>createServer(entries, options)</code> starts an HTTP server with all guarantees active. Specs are validated before the server accepts connections. SSR, streaming, brotli compression, immutable asset caching, security headers, CSP nonces, and HSTS are all handled automatically.')}
 
-      ${section('signature', 'createServer(specs, options)')}
+      ${section('signature', 'createServer(entries, options)')}
       ${codeBlock(highlight(`import { createServer } from '@invisibleloop/pulse'
 
-createServer(specs, options)`, 'js'))}
+await createServer(entries, options)`, 'js'))}
       ${table(
         ['Parameter', 'Type', 'Description'],
         [
-          ['<code>specs</code>', '<code>Spec[]</code>', 'Array of page spec objects. Validated at startup — a bad spec throws before the server accepts connections.'],
+          ['<code>entries</code>', '<code>Array&lt;URL | Spec&gt;</code>', 'Array of <code>URL</code> objects or plain spec objects. URL entries are imported and hydration is auto-derived. Validated at startup — a bad spec throws before the server accepts connections.'],
           ['<code>options</code>', '<code>object</code>', 'Server configuration options (see below).'],
         ]
       )}
@@ -41,6 +41,7 @@ createServer(specs, options)`, 'js'))}
           ['<code>staticDir</code>', '<code>string</code>', '<code>undefined</code>', 'Path to a directory of static files to serve. Relative to the process working directory.'],
           ['<code>manifest</code>', '<code>string | object</code>', '<code>null</code>', 'Explicit manifest path or object. Overrides auto-detection from <code>staticDir/dist/manifest.json</code>.'],
           ['<code>trailingSlash</code>', '<code>"remove" | "add" | "allow"</code>', '<code>"remove"</code>', '<code>"remove"</code> — 301 redirect <code>/about/</code> → <code>/about</code>. <code>"add"</code> — 301 redirect <code>/about</code> → <code>/about/</code>. <code>"allow"</code> — serve both, no redirect.'],
+          ['<code>root</code>', '<code>URL | string</code>', '<code>process.cwd()</code>', 'Project root used to derive browser-importable paths from URL entries. Pass <code>new URL(\'.\', import.meta.url)</code> for a CWD-independent value.'],
           ['<code>store</code>', '<code>object</code>', '<code>null</code>', 'Global store definition (default export from <code>pulse.store.js</code>). See <a href="/store">Global Store</a>.'],
           ['<code>maxBody</code>', '<code>number</code>', '<code>1048576</code>', 'Maximum request body size in bytes (default 1 MB). Requests exceeding this limit receive a 413 response.'],
           ['<code>defaultCache</code>', '<code>boolean | number | object</code>', '<code>null</code>', 'Default HTML cache TTL for all pages in production. <code>true</code> = 1 h + 24 h SWR. A number sets <code>max-age</code> in seconds. An object accepts <code>{ public, maxAge, staleWhileRevalidate }</code>. <code>spec.cache</code> overrides per-page.'],
@@ -55,37 +56,42 @@ createServer(specs, options)`, 'js'))}
 
       ${section('example', 'Full example')}
       ${codeBlock(highlight(`import { createServer } from '@invisibleloop/pulse'
-import home    from './src/pages/home.js'
-import contact from './src/pages/contact.js'
 
-createServer([home, contact], {
-  port:      3000,
-  stream:    true,
-  staticDir: 'public',
-  onRequest: (req, res) => {
-    // Add custom headers
-    res.setHeader('X-My-Header', 'my-value')
-    // Return false to block a request
-    if (req.url.startsWith('/admin') && !isAuthenticated(req)) {
-      res.writeHead(401)
-      res.end('Unauthorized')
-      return false
-    }
-    // Return undefined (or nothing) to let Pulse handle it
-  },
-  onError: (err, req, res) => {
-    console.error(err)
-    if (!res.headersSent) {
-      res.writeHead(500, { 'Content-Type': 'text/html' })
-      res.end('<h1>Internal Server Error</h1>')
-    }
-  },
-})`, 'js'))}
+await createServer(
+  [
+    new URL('./src/pages/home.js',    import.meta.url),
+    new URL('./src/pages/contact.js', import.meta.url),
+  ],
+  {
+    port:      3000,
+    stream:    true,
+    staticDir: 'public',
+    root:      new URL('.', import.meta.url),
+    onRequest: (req, res) => {
+      // Add custom headers
+      res.setHeader('X-My-Header', 'my-value')
+      // Return false to block a request
+      if (req.url.startsWith('/admin') && !isAuthenticated(req)) {
+        res.writeHead(401)
+        res.end('Unauthorized')
+        return false
+      }
+      // Return undefined (or nothing) to let Pulse handle it
+    },
+    onError: (err, req, res) => {
+      console.error(err)
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/html' })
+        res.end('<h1>Internal Server Error</h1>')
+      }
+    },
+  }
+)`, 'js'))}
 
       ${section('multi-brand', 'Multi-brand sites')}
       <p>One Pulse server can serve multiple brands, using the request domain as the key. Pass <code>resolveBrand</code> to <code>createServer</code> — it receives the <code>host</code> header and returns a brand config object of any shape you choose. The result is cached per host for 60 seconds and attached to <code>ctx.brand</code>.</p>
       ${codeBlock(highlight(`// server.js
-createServer(specs, {
+await createServer(specs, {
   resolveBrand: async (host) => {
     const slug = host.split('.')[0]          // 'acme' from 'acme.myco.com'
     return db.brands.findBySlug(slug)        // { slug, name, accent, logo, ... }
@@ -126,7 +132,7 @@ createServer(specs, {
       ${section('static-files', 'Static file serving')}
       <p>When <code>staticDir</code> is set, Pulse serves all files in that directory at their relative path. For example, a file at <code>public/app.css</code> is served at <code>/app.css</code>.</p>
       <p>If <code>staticDir/dist/manifest.json</code> exists, Pulse automatically loads it to resolve production hydration bundle paths. No additional configuration is needed.</p>
-      ${codeBlock(highlight(`createServer(specs, {
+      ${codeBlock(highlight(`await createServer(specs, {
   staticDir: 'public',   // serves public/* at /*
   // manifest auto-detected from public/dist/manifest.json
 })`, 'js'))}
@@ -217,7 +223,7 @@ Cross-Origin-Resource-Policy: same-origin`, 'bash'))}
   form-action 'self'`, 'bash'))}
       <p>All inline scripts injected by the framework carry a matching <code>nonce</code> attribute. The nonce is also available as <code>ctx.nonce</code> so view functions can attach it to their own inline scripts.</p>
       <p>To load resources from external origins — Google Fonts, a CDN, an external API — pass a <code>csp</code> object to <code>createServer</code>. Sources are merged into the framework defaults; existing directives are not replaced:</p>
-      ${codeBlock(highlight(`createServer(specs, {
+      ${codeBlock(highlight(`await createServer(specs, {
   csp: {
     'style-src': ['https://fonts.googleapis.com'],
     'font-src':  ['https://fonts.gstatic.com'],
@@ -252,7 +258,7 @@ Cross-Origin-Resource-Policy: same-origin`, 'bash'))}
       ${codeBlock(highlight(`GET /healthz → 200 OK
 { "status": "ok", "uptime": 42.3 }`, 'json'))}
       <p>Configure the path or disable it entirely:</p>
-      ${codeBlock(highlight(`createServer(specs, {
+      ${codeBlock(highlight(`await createServer(specs, {
   healthCheck: '/ping',   // custom path
   // healthCheck: false,  // disable
 })`, 'js'))}
@@ -267,7 +273,7 @@ Cross-Origin-Resource-Policy: same-origin`, 'bash'))}
         <li>After <code>shutdownTimeout</code> ms (default 30 000 ms), the process force-exits to prevent a stuck request from blocking a deploy indefinitely.</li>
       </ol>
       <p>The <code>shutdown()</code> function is also returned from <code>createServer</code> so you can trigger it programmatically:</p>
-      ${codeBlock(highlight(`const { server, shutdown } = createServer(specs, {
+      ${codeBlock(highlight(`const { server, shutdown } = await createServer(specs, {
   port:            3000,
   shutdownTimeout: 10000,  // 10 s — override the 30 s default
 })

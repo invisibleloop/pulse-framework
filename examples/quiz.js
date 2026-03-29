@@ -62,7 +62,6 @@ export function scoreLabel(score, total) {
 
 export default {
   route:   '/quiz',
-  hydrate: '/examples/quiz.js',
 
   meta: {
     title:       'Quiz — Pulse',

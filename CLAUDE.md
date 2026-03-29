@@ -40,7 +40,6 @@ A spec is a plain JS object. Every property is optional except `route`, `state`,
 ```js
 export const mySpec = {
   route:   '/path',           // URL pattern, supports :params
-  hydrate: '/path/to/spec.js',// browser-importable path → enables hydration
 
   meta: {
     title:       'Page Title',
@@ -199,28 +198,40 @@ The server auto-detects the manifest from `staticDir/dist/manifest.json` when `s
 ```js
 import { createServer } from './src/server/index.js'
 
-createServer([specA, specB], {
-  port:         3000,
-  stream:       true,          // streaming SSR (default)
-  staticDir:    'public',      // serve static files + auto-load manifest
-  manifest:     null,          // explicit manifest path or object (overrides auto-detect)
-  defaultCache: 3600,          // default HTML cache TTL in seconds for all pages (prod only)
-                               // also accepts true (3600s + swr 86400s) or { public, maxAge, staleWhileRevalidate }
-                               // spec.cache overrides per-page; in-process + Cache-Control headers both set
-  fetcherTimeout:  5000,        // ms before any server fetcher times out (null = no limit)
-                                // spec.serverTimeout overrides per-page
-  shutdownTimeout: 30000,       // ms to wait for in-flight requests before force-exit on SIGTERM/SIGINT
-  healthCheck:     '/healthz',  // built-in health endpoint path, or false to disable
-  csp: {                        // extra sources merged into the framework's default CSP
-    'style-src': ['https://fonts.googleapis.com'],
-    'font-src':  ['https://fonts.gstatic.com'],
-  },
-  resolveBrand: async (host) => db.brands.findBySlug(host.split('.')[0]),
-                               // multi-brand: result cached 60s, attached to ctx.brand
-  onRequest:    (req, res) => { /* return false to short-circuit */ },
-  onError:      (err, req, res) => { /* custom error handling */ }
-})
+// Pass URL objects — hydrate is auto-derived, no need to set it in specs.
+// Specs with mutations/actions/persist are hydrated automatically.
+// Purely server-rendered specs get zero JavaScript.
+await createServer(
+  [
+    new URL('./src/pages/home.js',    import.meta.url),
+    new URL('./src/pages/contact.js', import.meta.url),
+  ],
+  {
+    port:         3000,
+    stream:       true,          // streaming SSR (default)
+    staticDir:    'public',      // serve static files + auto-load manifest
+    root:         new URL('.', import.meta.url),  // project root for deriving browser paths
+    manifest:     null,          // explicit manifest path or object (overrides auto-detect)
+    defaultCache: 3600,          // default HTML cache TTL in seconds for all pages (prod only)
+                                 // also accepts true (3600s + swr 86400s) or { public, maxAge, staleWhileRevalidate }
+                                 // spec.cache overrides per-page; in-process + Cache-Control headers both set
+    fetcherTimeout:  5000,        // ms before any server fetcher times out (null = no limit)
+                                  // spec.serverTimeout overrides per-page
+    shutdownTimeout: 30000,       // ms to wait for in-flight requests before force-exit on SIGTERM/SIGINT
+    healthCheck:     '/healthz',  // built-in health endpoint path, or false to disable
+    csp: {                        // extra sources merged into the framework's default CSP
+      'style-src': ['https://fonts.googleapis.com'],
+      'font-src':  ['https://fonts.gstatic.com'],
+    },
+    resolveBrand: async (host) => db.brands.findBySlug(host.split('.')[0]),
+                                 // multi-brand: result cached 60s, attached to ctx.brand
+    onRequest:    (req, res) => { /* return false to short-circuit */ },
+    onError:      (err, req, res) => { /* custom error handling */ }
+  }
+)
 ```
+
+`createServer` is async — always `await` it. Spec objects are still accepted alongside URL objects for backwards compatibility.
 
 All specs are validated at startup — bad specs throw before the server accepts connections.
 

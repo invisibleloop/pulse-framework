@@ -33,7 +33,6 @@ export function countByStatus(todos) {
 
 export default {
   route:   '/todos',
-  hydrate: '/examples/todos.js',
 
   meta: {
     title:       'Todos — Pulse',
