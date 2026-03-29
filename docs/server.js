@@ -1,7 +1,15 @@
+import fs                 from 'fs'
 import { createServer }   from '../src/server/index.js'
+import { initLayoutManifest } from './src/lib/layout.js'
 import { metrics }        from './src/lib/stats.js'
 import { metricsStore }   from './src/lib/metrics-store.js'
 metricsStore.current = metrics
+
+// Populate hashed asset paths in layout.js before any page renders
+try {
+  const raw = fs.readFileSync(new URL('./public/dist/manifest.json', import.meta.url), 'utf8')
+  initLayoutManifest(JSON.parse(raw))
+} catch { /* dev: no manifest yet, layout falls back to unhashed paths */ }
 import home               from './src/pages/home.js'
 import howItWorks        from './src/pages/how-it-works.js'
 import faq               from './src/pages/faq.js'

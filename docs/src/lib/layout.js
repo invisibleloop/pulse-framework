@@ -8,6 +8,12 @@
 import { NAV } from './nav.js'
 import pkg from '../../../package.json' with { type: 'json' }
 
+// Resolve static asset paths through the build manifest (hashed in prod, raw in dev).
+// Populated by initLayoutManifest() in server.js before the server starts.
+let _manifest = {}
+export function initLayoutManifest(m) { _manifest = m }
+const asset = href => _manifest[href] || href
+
 const { version } = pkg
 
 function esc(s) {
@@ -90,8 +96,8 @@ export function renderLayout({ currentHref, content, prev = null, next = null })
         ${prevNextBar(prev, next)}
       </main>
     </div>
-    <script src="/menu.js"></script>
-    <script src="/pulse-ui.js"></script>`
+    <script src="${asset('/menu.js')}" defer></script>
+    <script src="${asset('/pulse-ui.js')}" defer></script>`
 }
 
 /**

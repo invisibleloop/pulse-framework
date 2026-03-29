@@ -1315,6 +1315,13 @@ function resolveSpec(spec, hydrateMap) {
     }
   }
 
+  if (Array.isArray(spec.meta?.scripts)) {
+    const resolvedScripts = spec.meta.scripts.map(href => hydrateMap[href] || href)
+    if (resolvedScripts.some((s, i) => s !== spec.meta.scripts[i])) {
+      resolved = { ...resolved, meta: { ...resolved.meta, scripts: resolvedScripts } }
+    }
+  }
+
   return resolved
 }
 
