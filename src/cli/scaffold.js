@@ -168,6 +168,11 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
               type: 'command',
               command: `node .claude/coverage-check.js`,
               statusMessage: 'Checking test coverage...',
+            },
+            {
+              type: 'command',
+              command: `node -e "const fs=require('fs');const{execSync}=require('child_process');let specs=[];try{const out=execSync('git status --porcelain',{encoding:'utf8'});out.split('\\n').forEach(l=>{const f=l.slice(3).trim().split(' -> ').pop();if(f&&f.match(/^src\\/pages\\/.+\\.js$/)&&!f.endsWith('.test.js'))specs.push(f);});}catch{if(fs.existsSync('src/pages'))for(const f of fs.readdirSync('src/pages')){if(f.endsWith('.js')&&!f.endsWith('.test.js'))specs.push('src/pages/'+f);}}if(!specs.length)process.exit(0);const stamp='.pulse-verified';let stampMtime=0;try{stampMtime=fs.statSync(stamp).mtimeMs;}catch{}const stale=specs.filter(f=>{try{return fs.statSync(f).mtimeMs>stampMtime;}catch{return true;}});if(stale.length){process.stdout.write(JSON.stringify({decision:'block',reason:'VERIFY REQUIRED: These pages have not been verified since last edit:\\n'+stale.map(f=>'  '+f).join('\\n')+'\\n\\nRun /verify for each changed page. /verify runs Lighthouse (desktop + mobile), performance trace, console check, and code review — then writes the stamp that clears this check.'}));}"`,
+              statusMessage: 'Checking verification stamp...',
             }
           ]
         }

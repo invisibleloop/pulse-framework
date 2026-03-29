@@ -292,13 +292,19 @@ async function runUpdate(root) {
     updated.push(`public/${asset}`)
   }
 
-  // Sync agent checklist into .claude/
-  const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
-  const checklistDst = path.join(root, '.claude', 'pulse-checklist.md')
-  if (fs.existsSync(checklistSrc)) {
-    fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
-    fs.copyFileSync(checklistSrc, checklistDst)
-    updated.push('.claude/pulse-checklist.md')
+  // Sync agent files into .claude/
+  const agentFiles = [
+    ['../agent/checklist.md',      'pulse-checklist.md'],
+    ['../agent/coverage-check.js', 'coverage-check.js'],
+  ]
+  for (const [rel, dst] of agentFiles) {
+    const src = new URL(rel, import.meta.url).pathname
+    if (fs.existsSync(src)) {
+      const dstPath = path.join(root, '.claude', dst)
+      fs.mkdirSync(path.dirname(dstPath), { recursive: true })
+      fs.copyFileSync(src, dstPath)
+      updated.push(`.claude/${dst}`)
+    }
   }
 
   // Sync slash commands into .claude/commands/
