@@ -12,7 +12,6 @@ export default {
     description: 'Search input component with icon, debounce binding, and clear button.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/search',
     prev,

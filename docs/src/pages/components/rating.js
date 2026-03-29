@@ -12,7 +12,6 @@ export default {
     description: 'Star rating display and interactive input component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/rating',
     prev,

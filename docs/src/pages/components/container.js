@@ -12,7 +12,6 @@ export default {
     description: 'Container component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/container',
     prev,

@@ -11,7 +11,6 @@ export default {
     description: 'The img() and picture() helpers for optimised, CLS-free image markup.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/images',
     prev,
@@ -95,7 +94,6 @@ import { img, picture } from '@invisibleloop/pulse/image'`, 'js'))}
 
 export default {
   route: '/blog/:slug',
-  state: {},
   server: {
     data: async (ctx) => ({ post: await db.posts.findBySlug(ctx.params.slug) }),
   },

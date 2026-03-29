@@ -11,7 +11,6 @@ export default {
     description: 'Test Pulse view functions with renderSync and render — query the HTML output with CSS-like selectors, no DOM required.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/testing',
     prev,

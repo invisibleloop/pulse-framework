@@ -11,7 +11,6 @@ export default {
     description: 'Textarea component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/textarea',
     prev,

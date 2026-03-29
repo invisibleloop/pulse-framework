@@ -11,7 +11,6 @@ export default {
     description: 'Keyboard navigation, focus management, semantic HTML, and ARIA patterns in Pulse.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/accessibility',
     prev,

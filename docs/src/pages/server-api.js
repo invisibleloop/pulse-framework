@@ -11,7 +11,6 @@ export default {
     description: 'Complete reference for createServer — all options, hooks, and response behaviour.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/server-api',
     prev,
@@ -176,7 +175,6 @@ await createServer(specs, {
     }
   },
 
-  state: {},
   view: () => \`<form method="POST">...</form>\`,
 }`, 'js'))}
       ${callout('note', 'Raw response specs (<code>contentType</code> set) accept any HTTP method without <code>spec.methods</code> — they are always method-agnostic.')}

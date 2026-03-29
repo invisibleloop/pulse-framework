@@ -11,7 +11,6 @@ export default {
     description: 'Deploy a Pulse app to a VPS, Docker, Fly.io, Railway, or Render.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/deploy',
     prev,

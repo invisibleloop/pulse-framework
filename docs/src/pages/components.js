@@ -11,7 +11,6 @@ export default {
     description: 'Server-rendered UI components for Pulse — button, card, input, alert, stat, avatar, table and more. Fully accessible, mobile-ready, zero client JS.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/components',
     prev,

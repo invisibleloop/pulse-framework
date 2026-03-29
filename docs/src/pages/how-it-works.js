@@ -70,7 +70,6 @@ export default {
     description: 'How the Pulse MCP server gives an AI agent the knowledge and tools to build Pulse apps correctly.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/how-it-works',
     prev,

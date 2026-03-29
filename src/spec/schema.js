@@ -369,6 +369,11 @@ export function validateSpec(spec) {
     }
   }
 
+  // hydrate — auto-derived by the framework, should never be set manually
+  if (spec.hydrate !== undefined) {
+    warnings.push('spec.hydrate is set manually — it is auto-derived by the framework from the URL entry passed to createServer. Remove it from the spec.')
+  }
+
   // meta quality
   if (!spec.meta) {
     warnings.push('spec.meta is missing — add at minimum title and description for SEO')

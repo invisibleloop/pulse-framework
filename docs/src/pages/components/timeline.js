@@ -17,7 +17,6 @@ export default {
     description: 'Timeline component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/timeline',
     prev,

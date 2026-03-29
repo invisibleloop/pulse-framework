@@ -11,7 +11,6 @@ export default {
     description: 'How to configure page metadata, Open Graph tags, and structured data in Pulse.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/meta',
     prev,
@@ -28,7 +27,6 @@ export default {
     description: 'Learn about the team behind Acme Corp.',
     styles:      ['/app.css'],
   },
-  state: {},
   view: () => \`<h1>About Us</h1>\`,
 }`, 'js'))}
       <p>This generates:</p>

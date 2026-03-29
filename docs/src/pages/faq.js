@@ -21,7 +21,6 @@ export default {
     description: 'Frequently asked questions about the Pulse framework.',
     styles:      ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/faq',
     prev,

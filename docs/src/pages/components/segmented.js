@@ -12,7 +12,6 @@ export default {
     description: 'iOS-style segmented control component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/segmented',
     prev,

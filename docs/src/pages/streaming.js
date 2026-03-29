@@ -11,7 +11,6 @@ export default {
     description: 'How streaming server-side rendering works in Pulse — shell, deferred segments, and when to use it.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/streaming',
     prev,
@@ -28,7 +27,6 @@ export default {
       <p>To use streaming, the <code>view</code> is an <strong>object of named segment functions</strong> rather than a single function. The spec declares which segments are in the shell and which are deferred:</p>
       ${codeBlock(highlight(`export default {
   route: '/dashboard',
-  state: {},
   server: {
     data: async (ctx) => ({
       user:   await auth.getUser(ctx.cookies.sessionId),  // fast

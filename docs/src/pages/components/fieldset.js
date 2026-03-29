@@ -12,7 +12,6 @@ export default {
     description: 'Semantic grouping of related form fields with an accessible legend.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/fieldset',
     prev,

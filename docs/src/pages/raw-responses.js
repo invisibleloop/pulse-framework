@@ -11,7 +11,6 @@ export default {
     description: 'Return non-HTML responses from Pulse specs — RSS, XML, JSON, and other content types.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/raw-responses',
     prev,
@@ -25,7 +24,6 @@ export default {
       ${codeBlock(highlight(`export default {
   route: '/feed.xml',
   contentType: 'application/rss+xml',
-  state: {},
   server: {
     data: async () => ({
       posts: await db.posts.latest(20),
@@ -53,7 +51,6 @@ export default {
       ${codeBlock(highlight(`export default {
   route: '/api/products',
   contentType: 'application/json',
-  state: {},
   server: {
     data: async (ctx) => ({
       products: await db.products.list({
@@ -73,7 +70,6 @@ export default {
   route: '/sitemap.xml',
   contentType: 'application/xml',
   serverTtl:   3600,
-  state: {},
   server: {
     data: async () => ({
       pages: await db.pages.allPublished(),

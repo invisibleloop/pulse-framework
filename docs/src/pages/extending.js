@@ -11,7 +11,6 @@ export default {
     description: 'Escape hatches for features outside the Pulse spec — onRequest middleware, raw server access, WebSockets, SSE, and custom error handling.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/extending',
     prev,

@@ -11,7 +11,6 @@ export default {
     description: 'Declarative validation rules in Pulse — syntax, formats, dot-path notation, and error handling.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/validation',
     prev,

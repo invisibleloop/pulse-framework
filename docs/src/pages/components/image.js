@@ -12,7 +12,6 @@ export default {
     description: 'Responsive image component with optional aspect-ratio crop and caption for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/image',
     prev,

@@ -25,7 +25,6 @@ export default {
     description: 'Typography wrapper for CMS output and rich text content in Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/prose',
     prev,

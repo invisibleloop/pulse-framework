@@ -12,7 +12,6 @@ export default {
     description: 'Cluster component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/cluster',
     prev,

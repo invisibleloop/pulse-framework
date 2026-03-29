@@ -11,7 +11,6 @@ export default {
     description: 'Full reference for pulse.config.js — port, Lighthouse thresholds, load test config, environments, and per-route overrides.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/config',
     prev,

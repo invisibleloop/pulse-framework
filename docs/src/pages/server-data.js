@@ -11,7 +11,6 @@ export default {
     description: 'Fetch, transform, and combine data on the server before rendering — external APIs, multiple fetchers, parallel requests.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/server-data',
     prev,

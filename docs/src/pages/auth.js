@@ -11,7 +11,6 @@ export default {
     description: 'Integrating Auth0 OAuth authentication with Pulse using guard functions, ctx.setCookie, and raw response specs.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/auth',
     prev,
@@ -141,7 +140,6 @@ export default {
     profile: async (ctx) => fetchUserProfile(ctx.cookies.session),
   },
 
-  state: {},
   view: (state, server) => \`
     <main id="main-content">
       <h1>Welcome, \${server.profile.name}</h1>
