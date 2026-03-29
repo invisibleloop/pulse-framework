@@ -131,19 +131,34 @@ document.addEventListener('keydown', (e) => {
 function initNav(el) {
   const burger = el.querySelector('.ui-nav-burger')
   const mobile = el.querySelector('.ui-nav-mobile')
-  if (!burger || !mobile) return
 
-  const open  = () => { el.classList.add('ui-nav--open');    burger.setAttribute('aria-expanded', 'true') }
-  const close = () => { el.classList.remove('ui-nav--open'); burger.setAttribute('aria-expanded', 'false') }
-  const toggle = () => el.classList.contains('ui-nav--open') ? close() : open()
+  // Mobile burger
+  if (burger && mobile) {
+    const open   = () => { el.classList.add('ui-nav--open');    burger.setAttribute('aria-expanded', 'true') }
+    const close  = () => { el.classList.remove('ui-nav--open'); burger.setAttribute('aria-expanded', 'false') }
+    const toggle = () => el.classList.contains('ui-nav--open') ? close() : open()
 
-  burger.addEventListener('click', toggle)
+    burger.addEventListener('click', toggle)
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close() })
+    document.addEventListener('click',   (e) => { if (!el.contains(e.target)) close() })
+    mobile.querySelectorAll('.ui-nav-link').forEach(a => a.addEventListener('click', close))
+  }
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close() })
-  document.addEventListener('click',   (e) => { if (!el.contains(e.target)) close() })
+  // Mega nav dropdowns
+  el.querySelectorAll('.ui-nav-mega-wrap').forEach(wrap => {
+    const trigger = wrap.querySelector('.ui-nav-mega-trigger')
+    const panel   = wrap.querySelector('.ui-nav-mega-panel')
+    if (!trigger || !panel) return
 
-  // Close when a mobile link is clicked (navigating away)
-  mobile.querySelectorAll('.ui-nav-link').forEach(a => a.addEventListener('click', close))
+    const openMega  = () => { panel.hidden = false; wrap.classList.add('ui-nav-mega-wrap--open');    trigger.setAttribute('aria-expanded', 'true') }
+    const closeMega = () => { panel.hidden = true;  wrap.classList.remove('ui-nav-mega-wrap--open'); trigger.setAttribute('aria-expanded', 'false') }
+    const toggleMega = () => panel.hidden ? openMega() : closeMega()
+
+    trigger.addEventListener('click', (e) => { e.stopPropagation(); toggleMega() })
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMega() })
+    document.addEventListener('click',   (e) => { if (!wrap.contains(e.target)) closeMega() })
+    panel.querySelectorAll('.ui-nav-mega-item').forEach(a => a.addEventListener('click', closeMega))
+  })
 }
 
 function runNavs() { document.querySelectorAll('.ui-nav').forEach(initNav) }

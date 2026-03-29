@@ -1280,6 +1280,82 @@ hr.ui-divider {
 }
 .ui-nav-mobile .ui-nav-link:last-child { border-bottom: none; }
 .ui-nav-mobile-action { padding-top: .75rem; }
+.ui-nav-mobile-section {
+  font-size:      .7rem;
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color:          var(--ui-muted, var(--muted, #6b6b80));
+  margin:         .75rem 0 .25rem;
+  padding:        0;
+}
+
+/* ─── Mega nav ───────────────────────────────────────────────────────────── */
+.ui-nav-mega-wrap { position: relative; }
+
+.ui-nav-mega-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: 0;
+  font: inherit;
+  font-size: .875rem;
+}
+
+.ui-nav-mega-chevron { transition: transform .2s ease; flex-shrink: 0; }
+.ui-nav-mega-wrap--open .ui-nav-mega-chevron { transform: rotate(180deg); }
+
+.ui-nav-mega-panel {
+  position: absolute;
+  top: calc(100% + .875rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ui-bg, var(--bg, #0d0d10));
+  border: 1px solid var(--ui-border, var(--border, #232329));
+  border-radius: var(--ui-radius, 8px);
+  box-shadow: 0 8px 40px rgba(0,0,0,.35);
+  padding: 1.5rem;
+  z-index: 200;
+  min-width: 360px;
+}
+.ui-nav-mega-panel[hidden] { display: none !important; }
+
+.ui-nav-mega-inner { display: flex; gap: 2rem; }
+
+.ui-nav-mega-col { flex: 1; min-width: 140px; }
+
+.ui-nav-mega-heading {
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--ui-muted, var(--muted, #6b6b80));
+  margin: 0 0 .5rem;
+  padding: 0 .5rem;
+}
+
+.ui-nav-mega-item {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+  padding: .5rem;
+  border-radius: calc(var(--ui-radius, 8px) * .65);
+  transition: background .15s;
+}
+.ui-nav-mega-item:hover { background: var(--ui-surface, var(--surface, #111116)); }
+.ui-nav-mega-item-label {
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--ui-text, var(--text, #e2e2ea));
+  text-decoration: none;
+}
+.ui-nav-mega-item-label:hover { color: var(--ui-accent, var(--accent, #9b8dff)); }
+.ui-nav-mega-item-desc  { font-size: .75rem; color: var(--ui-muted, var(--muted, #6b6b80)); }
+
+[data-theme="light"] .ui-nav-mega-panel { box-shadow: 0 8px 40px rgba(0,0,0,.12); }
 
 /* ─── App Badge ──────────────────────────────────────────────────────────── */
 .ui-app-badge {

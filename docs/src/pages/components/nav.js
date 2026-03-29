@@ -41,6 +41,47 @@ export default {
 })`
       )}
 
+      <h2 class="doc-h2" id="mega">Mega nav</h2>
+      <p>Replace a link's <code>href</code> with a <code>mega</code> array to render a dropdown panel. Each entry is a column with an optional heading and a list of items. Items support an optional <code>description</code> line.</p>
+      ${demo(
+        uiNav({
+          logo:     '<strong>MyApp</strong>',
+          logoHref: '/',
+          links: [
+            { label: 'Products', mega: [
+              { heading: 'Platform', items: [
+                { label: 'Analytics',   href: '#',   description: 'Dashboards and usage metrics' },
+                { label: 'Automation',  href: '#',   description: 'Scheduled jobs and webhooks' },
+                { label: 'Storage',     href: '#',   description: 'Files, blobs, and databases' },
+              ]},
+              { heading: 'Integrations', items: [
+                { label: 'Supabase',  href: '#' },
+                { label: 'Stripe',    href: '#' },
+                { label: 'Auth0',     href: '#' },
+              ]},
+            ]},
+            { label: 'Pricing', href: '#pricing' },
+            { label: 'Docs',    href: '#docs'    },
+          ],
+          action: button({ label: 'Get started', size: 'sm' }),
+        }),
+        `nav({
+  links: [
+    { label: 'Products', mega: [
+      { heading: 'Platform', items: [
+        { label: 'Analytics',  href: '/analytics',  description: 'Dashboards and usage metrics' },
+        { label: 'Automation', href: '/automation', description: 'Scheduled jobs and webhooks' },
+      ]},
+      { heading: 'Integrations', items: [
+        { label: 'Supabase', href: '/supabase' },
+        { label: 'Stripe',   href: '/stripe'   },
+      ]},
+    ]},
+    { label: 'Pricing', href: '/pricing' },
+  ],
+})`
+      )}
+
       <h2 class="doc-h2" id="mobile">Mobile view</h2>
       <p>At &lt; 640px the links and action are hidden and replaced with a burger button. The panel opens as an overlay — no layout shift.</p>
 
@@ -73,12 +114,21 @@ export default {
       ${table(
         ['Prop', 'Type', 'Default', 'Description'],
         [
-          ['<code>logo</code>',     'string (HTML)', '—',     'Raw HTML slot — SVG, img, or text'],
-          ['<code>logoHref</code>', 'string',        "'/'",   ''],
-          ['<code>links</code>',   'array',          '[]',    '<code>{ label, href }[]</code>'],
-          ['<code>action</code>',  'string (HTML)',  '—',     'Raw HTML slot — shown in desktop bar and mobile menu'],
-          ['<code>sticky</code>',      'boolean', 'false',   'position: sticky with backdrop blur'],
-          ['<code>burgerAlign</code>', 'string',  "'right'", "'right' or 'left' — mobile burger position"],
+          ['<code>logo</code>',        'string (HTML)', '—',       'Raw HTML slot — SVG, img, or text'],
+          ['<code>logoHref</code>',    'string',        "'/'",     ''],
+          ['<code>links</code>',       'array',         '[]',      '<code>{ label, href }[]</code> or <code>{ label, mega: Column[] }</code>'],
+          ['<code>action</code>',      'string (HTML)', '—',       'Raw HTML slot — shown in desktop bar and mobile menu'],
+          ['<code>sticky</code>',      'boolean',       'false',   'position: sticky with backdrop blur'],
+          ['<code>burgerAlign</code>', 'string',        "'right'", "'right' or 'left' — mobile burger position"],
+        ]
+      )}
+
+      <h3 class="doc-h3" style="margin-top:2rem">Mega nav column</h3>
+      ${table(
+        ['Prop', 'Type', 'Description'],
+        [
+          ['<code>heading</code>', 'string', 'Optional column heading (uppercase label)'],
+          ['<code>items</code>',   'array',  '<code>{ label, href, description? }[]</code>'],
         ]
       )}
     `,
