@@ -63,14 +63,6 @@ export const NAV = [
     ],
   },
   {
-    section: 'Integrations',
-    items: [
-      { label: 'Supabase',          href: '/supabase' },
-      { label: 'Auth (Auth0)',      href: '/auth'     },
-      { label: 'Payments (Stripe)', href: '/stripe'   },
-    ],
-  },
-  {
     section: 'Reference',
     items: [
       { label: 'Metadata & SEO',  href: '/meta'          },
@@ -145,6 +137,14 @@ export const NAV = [
       { label: 'Media',       href: '/components/media'       },
       { label: 'Section',     href: '/components/section'     },
       { label: 'Stack',       href: '/components/stack'       },
+    ],
+  },
+  {
+    section: 'Integrations',
+    items: [
+      { label: 'Supabase',          href: '/supabase' },
+      { label: 'Auth (Auth0)',      href: '/auth'     },
+      { label: 'Payments (Stripe)', href: '/stripe'   },
     ],
   },
 ]
