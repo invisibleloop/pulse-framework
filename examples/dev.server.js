@@ -18,12 +18,6 @@ import fs   from 'fs'
 import path from 'path'
 import { createServer } from '../src/server/index.js'
 import { themeScript }  from './shared.js'
-import counter  from './counter.js'
-import todos    from './todos.js'
-import contact  from './contact.js'
-import quiz     from './quiz.js'
-import products from './products.js'
-import pricing  from './pricing.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
 
@@ -79,12 +73,20 @@ function staticHandler(req, res) {
   return false
 }
 
-createServer(
-  [counter, todos, contact, quiz, products, pricing],
+await createServer(
+  [
+    new URL('./counter.js',  import.meta.url),
+    new URL('./todos.js',    import.meta.url),
+    new URL('./contact.js',  import.meta.url),
+    new URL('./quiz.js',     import.meta.url),
+    new URL('./products.js', import.meta.url),
+    new URL('./pricing.js',  import.meta.url),
+  ],
   {
     port:       3001,
     stream:     true,
     staticDir:  path.join(ROOT, 'public'),
+    root:       new URL('..', import.meta.url),  // pulse2/ — specs served at /examples/*
     onRequest:  staticHandler,
     extraBody:  themeScript,
   }

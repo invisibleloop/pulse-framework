@@ -386,14 +386,70 @@ const MIME_TYPES = {
  *                                                Return false to short-circuit routing
  */
 
+// ---------------------------------------------------------------------------
+// Spec entry resolution — URL objects are imported and get hydrate auto-set
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if the spec needs a client-side hydration script.
+ * Specs with no mutations, actions, or persist are purely server-rendered.
+ */
+function needsHydration(spec) {
+  return !!(spec.mutations && Object.keys(spec.mutations).length) ||
+         !!(spec.actions   && Object.keys(spec.actions).length)   ||
+         !!spec.persist
+}
+
+/**
+ * Accept mixed arrays of spec objects and URL objects.
+ * URL entries are dynamically imported; hydrate is auto-derived from the file
+ * URL by stripping the project root, so developers never need to set it.
+ *
+ * root — a file: URL string or URL object for the project root directory.
+ *        Defaults to process.cwd(). Pass `new URL('.', import.meta.url)` from
+ *        your server.js for a CWD-independent alternative.
+ */
+async function resolveSpecEntries(entries, root) {
+  // Normalise root to a href string ending with /
+  let rootHref
+  if (root instanceof URL) {
+    rootHref = root.href.endsWith('/') ? root.href : root.href + '/'
+  } else if (typeof root === 'string' && root.startsWith('file://')) {
+    rootHref = root.endsWith('/') ? root : root + '/'
+  } else {
+    // Default: process.cwd() converted to a file URL
+    rootHref = 'file://' + process.cwd().replace(/\\/g, '/') + '/'
+  }
+
+  const resolved = []
+  for (const entry of entries) {
+    if (!(entry instanceof URL)) {
+      resolved.push(entry)
+      continue
+    }
+    const mod  = await import(entry.href)
+    const spec = mod.default ?? mod
+    if (!spec.hydrate && needsHydration(spec)) {
+      // Strip project root to get the browser-importable path
+      const browserPath = entry.href.startsWith(rootHref)
+        ? '/' + entry.href.slice(rootHref.length)
+        : entry.pathname  // fallback: use pathname as-is
+      resolved.push({ ...spec, hydrate: browserPath })
+    } else {
+      resolved.push(spec)
+    }
+  }
+  return resolved
+}
+
 /**
  * Create and start a Pulse HTTP server.
  *
- * @param {import('../spec/schema.js').PulseSpec[]} specs
+ * @param {Array<import('../spec/schema.js').PulseSpec|URL>} entries
  * @param {ServerOptions} [options]
- * @returns {http.Server}
+ * @returns {Promise<{server: http.Server, shutdown: Function, updateSpecs: Function}>}
  */
-export function createServer(specs, options = {}) {
+export async function createServer(entries, options = {}) {
   const {
     port          = 3000,
     stream        = true,
@@ -403,6 +459,7 @@ export function createServer(specs, options = {}) {
     extraBody     = '',            // extra HTML injected before </body> on every page
     dev           = false,         // dev mode — show detailed error pages
     store         = null,          // global store definition (pulse.store.js default export)
+    root          = null,          // URL/string — project root for deriving browser paths from file: URLs
     resolveBrand   = null,          // async (host) => brandConfig — keyed by domain
     defaultCache   = null,          // default page cache: true | seconds | { public, maxAge, swr }
     fetcherTimeout  = null,          // ms before any server fetcher times out (null = no limit)
@@ -413,6 +470,9 @@ export function createServer(specs, options = {}) {
     onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
     onRequest
   } = options
+
+  // Resolve URL entries → spec objects, auto-setting hydrate where needed
+  const specs = await resolveSpecEntries(entries, root)
 
   const healthPath = healthCheck === true ? '/healthz' : (healthCheck || null)
 

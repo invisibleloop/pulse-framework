@@ -8,7 +8,7 @@ export default {
   route: '/hydration',
   meta: {
     title: 'Hydration — Pulse Docs',
-    description: 'How Pulse hydrates server-rendered HTML on the client — the hydrate field, mount(), and production bundles.',
+    description: 'How Pulse hydrates server-rendered HTML on the client — automatic hydration, mount(), and production bundles.',
     styles: ['/docs.css'],
   },
   state: {},
@@ -18,13 +18,22 @@ export default {
     next,
     content: `
       ${h1('Hydration')}
-      ${lead('Hydration in Pulse is opt-in and minimal. Omit <code>hydrate</code> and zero JavaScript is sent to the browser. Add it and Pulse binds events to the server-rendered HTML without re-rendering it — the SSR-painted content is preserved exactly as the server sent it.')}
+      ${lead('Hydration in Pulse is automatic. Specs with <code>mutations</code>, <code>actions</code>, or <code>persist</code> are hydrated automatically — Pulse binds events to the server-rendered HTML without re-rendering it. Purely server-rendered specs get zero JavaScript sent to the browser.')}
 
-      ${section('enabling', 'Enabling hydration')}
-      <p>Set the <code>hydrate</code> field to a browser-importable path to your spec file. Pulse uses this to generate the bootstrap script that mounts the client runtime:</p>
-      ${codeBlock(highlight(`export default {
+      ${section('enabling', 'How hydration works')}
+      <p>Pass spec files as <code>URL</code> objects to <code>createServer</code>. Pulse detects whether each spec needs client-side interactivity and, if so, derives the browser-importable path automatically — no <code>hydrate</code> field needed in the spec:</p>
+      ${codeBlock(highlight(`// server.js
+await createServer(
+  [
+    new URL('./src/pages/counter.js', import.meta.url),  // has mutations → auto-hydrated
+    new URL('./src/pages/about.js',   import.meta.url),  // no mutations  → zero JS
+  ],
+  { port: 3000, root: new URL('.', import.meta.url) }
+)
+
+// src/pages/counter.js — no hydrate field needed
+export default {
   route: '/counter',
-  hydrate: '/src/pages/counter.js',   // browser path to this file
   state: { count: 0 },
   mutations: {
     increment: (state) => ({ count: state.count + 1 }),
@@ -40,7 +49,7 @@ export default {
 }`, 'js'))}
 
       ${section('dev-bootstrap', 'Development bootstrap')}
-      <p>In development (when <code>hydrate</code> is a source file path, not a <code>/dist/</code> bundle), Pulse emits an inline bootstrap script:</p>
+      <p>In development Pulse emits an inline bootstrap script that imports the spec and runtime source files directly — no build step required:</p>
       ${codeBlock(highlight(`<script type="module">
   import spec from '/src/pages/counter.js'
   import { mount } from '/src/runtime/index.js'
@@ -57,7 +66,7 @@ public/dist/
   runtime-abc123.js          # shared runtime (~3.8 kB brotli)
   counter.boot-def456.js     # per-page spec bundle (~0.4–0.9 kB brotli)
   manifest.json              # { '/src/pages/counter.js': '/dist/counter.boot-def456.js' }`, 'bash'))}
-      <p>When Pulse detects a manifest (via <code>staticDir</code> auto-detection or explicit <code>manifest</code> option), it resolves the <code>hydrate</code> path to the bundle path and emits a single <code>&lt;script src&gt;</code> tag instead of the inline bootstrap:</p>
+      <p>When Pulse detects a manifest (via <code>staticDir</code> auto-detection or explicit <code>manifest</code> option), it resolves the auto-derived hydrate path to the bundle path and emits a single <code>&lt;script src&gt;</code> tag instead of the inline bootstrap:</p>
       ${codeBlock(highlight(`<script type="module" src="/dist/counter.boot-def456.js"></script>`, 'html'))}
 
       ${section('ssr-true', 'The { ssr: true } option')}
@@ -78,14 +87,14 @@ mount(
       <p>After mount, all <code>data-event</code> and <code>data-action</code> attributes in the DOM are wired to the spec's mutations and actions. State updates trigger a full view re-render via <code>innerHTML</code> replacement.</p>
 
       ${section('no-hydrate', 'Pages without hydration')}
-      <p>Omit <code>hydrate</code> and Pulse sends zero JavaScript to the browser — no runtime overhead, no hydration cost. This is the correct default for:</p>
+      <p>Specs with no <code>mutations</code>, <code>actions</code>, or <code>persist</code> automatically get zero JavaScript — no runtime overhead, no hydration cost. This is the correct default for:</p>
       <ul>
         <li>Documentation pages</li>
         <li>Marketing/landing pages</li>
         <li>Blog posts and articles</li>
         <li>Any page with no client-side interactivity</li>
       </ul>
-      ${callout('tip', 'Start without <code>hydrate</code> and only add it when actual client interactivity is needed. Many pages that appear to need JavaScript can be handled server-side with <a href="/routing">routing</a> and <a href="/server-data">server data</a>.')}
+      ${callout('tip', 'Many pages that appear to need JavaScript can be handled server-side with <a href="/routing">routing</a> and <a href="/server-data">server data</a>. Keep specs free of mutations and actions wherever possible.')}
 
       ${section('server-state', 'Passing server state to the client')}
       <p>Server data fetched via <code>server.data()</code> is serialised into the page HTML as <code>window.__PULSE_SERVER__</code>. The client runtime reads this on mount, making server data available to the view during client re-renders without an additional network request.</p>

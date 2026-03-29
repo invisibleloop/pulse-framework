@@ -72,7 +72,6 @@ export function applyFilters(products, search, category, sort) {
 
 export default {
   route:   '/products',
-  hydrate: '/examples/products.js',
 
   meta: {
     title:       'Products — Pulse',

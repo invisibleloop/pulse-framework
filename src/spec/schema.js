@@ -371,13 +371,6 @@ export function validateSpec(spec) {
     }
   }
 
-  // hydrate — required whenever there is any client interactivity
-  if (!spec.hydrate && !spec.contentType) {
-    if (spec.mutations || spec.actions || spec.persist) {
-      warnings.push('spec.hydrate is missing — pages with mutations, actions, or persist need hydrate set to their browser-importable path, or client interactivity will silently do nothing')
-    }
-  }
-
   // meta quality
   if (!spec.meta) {
     warnings.push('spec.meta is missing — add at minimum title and description for SEO')

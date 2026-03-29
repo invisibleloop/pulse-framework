@@ -129,7 +129,6 @@ export const FAQ = [
 
 export default {
   route:   '/pricing',
-  hydrate: '/examples/pricing.js',
 
   meta: {
     title:       'Pricing — Pulse',

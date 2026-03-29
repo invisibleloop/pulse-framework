@@ -28,7 +28,7 @@ export default {
           ['<code>state</code>', '<code>object</code>', 'Yes', 'Initial client-side state. Deep-cloned on mount.'],
           ['<code>view</code>', '<code>function</code>', 'Yes', 'Returns an HTML string. Receives <code>(state, serverState)</code>.'],
           ['<code>meta</code>', '<code>object</code>', 'No', 'Page metadata: title, description, styles, OG tags, schema.'],
-          ['<code>hydrate</code>', '<code>string</code>', 'No', 'Browser-importable path to this spec file. Enables client hydration.'],
+          ['<code>hydrate</code>', '<code>string</code>', 'Auto', 'Auto-derived from the URL entry in <code>createServer</code>. Do not set manually.'],
           ['<code>mutations</code>', '<code>object</code>', 'No', 'Synchronous state updaters keyed by name.'],
           ['<code>actions</code>', '<code>object</code>', 'No', 'Async operations with full lifecycle hooks.'],
           ['<code>validation</code>', '<code>object</code>', 'No', 'Declarative validation rules keyed by dot-path state keys.'],
@@ -84,10 +84,8 @@ route: '/blog/:year/:slug'`, 'js'))}
       <p>See <a href="/meta">Metadata &amp; SEO</a> for the full reference.</p>
 
       ${section('hydrate', 'hydrate')}
-      <p>A browser-importable path to this spec file. Setting this enables client-side hydration — Pulse emits a bootstrap script that imports the spec bundle and calls <code>mount()</code>. In production, the path is resolved automatically via <code>manifest.json</code>.</p>
-      ${codeBlock(highlight(`hydrate: '/src/pages/counter.js'   // dev: source file path
-// Production: resolved automatically via manifest.json`, 'js'))}
-      ${callout('note', 'Omit <code>hydrate</code> for purely server-rendered pages with no client interactivity. Pulse sends zero JavaScript to the browser — no runtime overhead, no hydration cost.')}
+      <p>Auto-derived by the framework — do not set this in your spec. When a spec is registered via a <code>URL</code> entry in <code>createServer</code>, Pulse detects whether it needs hydration (has <code>mutations</code>, <code>actions</code>, or <code>persist</code>) and sets the browser path automatically. Purely server-rendered specs get zero JavaScript.</p>
+      ${callout('note', 'See <a href="/hydration">Hydration</a> for how this works and how to register specs via URL entries.')}
 
       ${section('mutations', 'mutations')}
       <p>Synchronous state updaters. Each mutation is a function <code>(state, event) =&gt; partialState</code>. The returned partial object is merged into state. See <a href="/mutations">Mutations</a>.</p>

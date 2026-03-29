@@ -28,7 +28,6 @@ function infoDetail(icon, label, value, href) {
 
 export default {
   route:   '/contact',
-  hydrate: '/examples/contact.js',
 
   meta: {
     title:       'Contact — Pulse',

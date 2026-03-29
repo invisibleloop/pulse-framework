@@ -15,7 +15,6 @@ import { examplesNav } from './shared.js'
 
 export default {
   route:   '/counter',
-  hydrate: '/examples/counter.js',
 
   meta: {
     title:       'Counter — Pulse',

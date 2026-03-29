@@ -134,7 +134,7 @@ let nextPort = 13337
 
 async function withServer(specs, options, fn) {
   const port = nextPort++
-  const { server } = createServer(specs, { ...options, port })
+  const { server } = await createServer(specs, { ...options, port })
   await new Promise(resolve => server.once('listening', resolve))
   try {
     await fn(port)
@@ -345,7 +345,7 @@ console.log('\nStartup validation\n')
 await test('throws on invalid spec at startup', async () => {
   let threw = false
   try {
-    createServer([{ route: '/bad' }], { port: 19999 })
+    await createServer([{ route: '/bad' }], { port: 19999 })
   } catch (e) {
     threw = true
     assert(e.message.includes('/bad'), `Expected route in error: ${e.message}`)
@@ -1250,7 +1250,7 @@ console.log('\nGraceful shutdown\n')
 
 await test('shutdown() is returned from createServer', async () => {
   const port = nextPort++
-  const result = createServer([helloSpec], { port, stream: false })
+  const result = await createServer([helloSpec], { port, stream: false })
   assert(typeof result.shutdown === 'function', 'Expected shutdown to be a function')
   result.server.closeAllConnections?.()
   await new Promise(resolve => result.server.close(resolve))
@@ -1258,7 +1258,7 @@ await test('shutdown() is returned from createServer', async () => {
 
 await test('shutdown() stops the server from accepting new connections', async () => {
   const port = nextPort++
-  const { server, shutdown } = createServer([helloSpec], { port, stream: false })
+  const { server, shutdown } = await createServer([helloSpec], { port, stream: false })
   await new Promise(resolve => server.once('listening', resolve))
 
   // Confirm server is up
@@ -1276,7 +1276,7 @@ await test('shutdown() stops the server from accepting new connections', async (
 
 await test('shutdown() is idempotent — calling twice does not throw', async () => {
   const port = nextPort++
-  const { server, shutdown } = createServer([helloSpec], { port, stream: false })
+  const { server, shutdown } = await createServer([helloSpec], { port, stream: false })
   await new Promise(resolve => server.once('listening', resolve))
   shutdown()
   shutdown() // second call is a no-op
@@ -1295,7 +1295,7 @@ await test('in-flight request completes after shutdown() is called', async () =>
     view: (_s, server) => `<p>${server.data}</p>`
   }
 
-  const { server, shutdown } = createServer([slowSpec], { port, stream: false })
+  const { server, shutdown } = await createServer([slowSpec], { port, stream: false })
   await new Promise(resolve => server.once('listening', resolve))
 
   // Start a request but don't resolve its server fetch yet
