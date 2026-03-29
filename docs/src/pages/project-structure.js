@@ -11,7 +11,6 @@ export default {
     description: 'Recommended directory layout for a Pulse application.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/project-structure',
     prev,
@@ -77,7 +76,6 @@ import { card } from '../components/card.js'
 
 export default {
   route: '/',
-  state: {},
   view: () => card({ title: 'Hello', body: 'Welcome to Pulse' }),
 }`, 'js'), 'src/pages/home.js')}
 

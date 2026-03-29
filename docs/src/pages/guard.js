@@ -11,7 +11,6 @@ export default {
     description: 'Per-route authorization in Pulse. Guard functions run before server data fetchers and redirect unauthorized requests.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/guard',
     prev,
@@ -33,7 +32,6 @@ export default {
     user: async (ctx) => getCurrentUser(ctx.cookies.session),
   },
 
-  state: {},
   view: (state, server) => \`
     <main id="main-content">
       <h1>Welcome, \${server.user.name}</h1>
@@ -87,7 +85,6 @@ export default {
     if (ctx.cookies.session) return { redirect: '/dashboard' }
   },
 
-  state: {},
   view: () => \`<main id="main-content">...</main>\`,
 }`, 'js'))}
 

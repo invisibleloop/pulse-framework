@@ -11,7 +11,6 @@ export default {
     description: 'Install Pulse and build your first page with an AI agent in minutes.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/getting-started',
     prev,

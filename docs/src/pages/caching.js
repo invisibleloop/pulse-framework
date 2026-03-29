@@ -11,7 +11,6 @@ export default {
     description: 'HTTP cache headers, in-process server data caching, and asset caching in Pulse.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/caching',
     prev,

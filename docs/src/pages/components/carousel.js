@@ -16,7 +16,6 @@ export default {
     description: 'Carousel / slider component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/carousel',
     prev,

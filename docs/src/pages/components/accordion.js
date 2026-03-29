@@ -12,7 +12,6 @@ export default {
     description: 'Accordion component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/accordion',
     prev,

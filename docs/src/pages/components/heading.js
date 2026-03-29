@@ -12,7 +12,6 @@ export default {
     description: 'Styled semantic heading component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/heading',
     prev,

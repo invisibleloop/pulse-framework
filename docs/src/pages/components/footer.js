@@ -12,7 +12,6 @@ export default {
     description: 'Accessible site footer with logo slot, navigation links, and legal text.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/footer',
     prev,

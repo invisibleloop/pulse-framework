@@ -35,6 +35,7 @@ export default {
           ['<code>constraints</code>', '<code>object</code>', 'No', 'Min/max bounds enforced after every mutation.'],
           ['<code>persist</code>', '<code>string[]</code>', 'No', 'State keys to save in <code>localStorage</code>.'],
           ['<code>server</code>', '<code>object</code>', 'No', 'Server-side data fetcher. Result passed to <code>view</code> as second arg.'],
+          ['<code>guard</code>', '<code>function</code>', 'No', 'Async pre-render hook. Return <code>{ redirect }</code> or <code>{ status, json }</code> to short-circuit. See <a href="/guard">Guard</a>.'],
           ['<code>store</code>', '<code>string[]</code>', 'No', 'Global store keys this page subscribes to. See <a href="/store">Global Store</a>.'],
           ['<code>methods</code>', '<code>string[]</code>', 'No', 'HTTP methods this page accepts. Default <code>[\'GET\', \'HEAD\']</code>. Add <code>\'POST\'</code> etc. to opt in.'],
           ['<code>stream</code>', '<code>object</code>', 'No', 'Streaming SSR config: <code>shell</code> + <code>deferred</code> segment names.'],

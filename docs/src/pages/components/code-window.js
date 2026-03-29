@@ -12,7 +12,6 @@ export default {
     description: 'macOS-style window chrome around a code block. Accepts pre-highlighted HTML as the content slot.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/code-window',
     prev,

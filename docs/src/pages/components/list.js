@@ -12,7 +12,6 @@ export default {
     description: 'Styled ordered and unordered list component for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/list',
     prev,

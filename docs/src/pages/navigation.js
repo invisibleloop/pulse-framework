@@ -11,7 +11,6 @@ export default {
     description: 'Client-side navigation in Pulse — how link interception, JSON responses, and spec re-mounting work.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/navigation',
     prev,

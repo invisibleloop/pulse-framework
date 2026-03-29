@@ -12,7 +12,6 @@ export default {
     description: 'Radio button and radio group components for Pulse UI.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/radio',
     prev,

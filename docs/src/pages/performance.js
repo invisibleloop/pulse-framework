@@ -11,7 +11,6 @@ export default {
     description: 'Performance targets, techniques, and built-in optimisations in Pulse.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/performance',
     prev,
@@ -85,7 +84,6 @@ export default {
 export default {
   route: '/about',
   meta:  { title: 'About', styles: ['/app.css'] },
-  state: {},
   view:  () => \`<main><h1>About us</h1></main>\`,
 }`, 'js'))}
 

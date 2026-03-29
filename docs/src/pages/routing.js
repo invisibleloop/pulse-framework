@@ -11,7 +11,6 @@ export default {
     description: 'How Pulse routes requests to page specs — static and dynamic routes, params, and conventions.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/routing',
     prev,
@@ -24,7 +23,6 @@ export default {
       <p>Every spec has a <code>route</code> field. This is the URL pattern the spec handles:</p>
       ${codeBlock(highlight(`export default {
   route: '/about',
-  state: {},
   view: () => \`<h1>About</h1>\`,
 }`, 'js'))}
       <p>Pulse matches the exact path. By default, trailing slashes are removed — <code>/about/</code> redirects to <code>/about</code> with a 301. This is controlled by the <code>trailingSlash</code> option in <code>createServer</code>:</p>

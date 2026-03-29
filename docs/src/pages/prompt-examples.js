@@ -29,7 +29,6 @@ export default {
     description: 'Real prompts for building Pulse pages with your AI agent — from creating pages to authentication, performance audits, and integrations.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/prompt-examples',
     prev,

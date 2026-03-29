@@ -12,7 +12,6 @@ export default {
     description: 'Vertical padding wrapper with optional background. Compose with container() for full-width background with constrained content.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
-  state: {},
   view: () => renderComponentPage({
     currentHref: '/components/section',
     prev,

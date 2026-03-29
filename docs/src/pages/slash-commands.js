@@ -11,7 +11,6 @@ export default {
     description: 'The built-in slash commands available in the Pulse AI agent session.',
     styles: ['/docs.css'],
   },
-  state: {},
   view: () => renderLayout({
     currentHref: '/slash-commands',
     prev,
