@@ -117,7 +117,7 @@ export function barChart({
   const ariaLabel = `Bar chart: ${data.map(d => `${d.label ?? ''} ${d.value}`).join(', ')}`
   const clsAttr   = cls ? ` class="${e(cls)}"` : ''
 
-  return `<svg${clsAttr} viewBox="0 0 ${IW} ${height}" preserveAspectRatio="none" height="${height}" style="display:block;width:100%" role="img" aria-label="${e(ariaLabel)}">${grid}${baseline}${bars}</svg>`
+  return `<div${clsAttr} style="width:100%;aspect-ratio:${IW}/${height}"><svg viewBox="0 0 ${IW} ${height}" width="100%" height="100%" style="display:block" role="img" aria-label="${e(ariaLabel)}">${grid}${baseline}${bars}</svg></div>`
 }
 
 // ─── Line chart ───────────────────────────────────────────────────────────────
@@ -193,7 +193,7 @@ export function lineChart({
   const ariaLabel = `Line chart: ${data.map(d => `${d.label ?? ''} ${d.value}`).join(', ')}`
   const clsAttr   = cls ? ` class="${e(cls)}"` : ''
 
-  return `<svg${clsAttr} viewBox="0 0 ${IW} ${height}" preserveAspectRatio="none" height="${height}" style="display:block;width:100%" role="img" aria-label="${e(ariaLabel)}">${grid}${areaPath}${line}${dots}${xlabels}</svg>`
+  return `<div${clsAttr} style="width:100%;aspect-ratio:${IW}/${height}"><svg viewBox="0 0 ${IW} ${height}" width="100%" height="100%" style="display:block" role="img" aria-label="${e(ariaLabel)}">${grid}${areaPath}${line}${dots}${xlabels}</svg></div>`
 }
 
 // ─── Donut chart ──────────────────────────────────────────────────────────────
@@ -321,7 +321,9 @@ export function sparkline({
   }
 
   const clsAttr = cls ? ` class="${e(cls)}"` : ''
-  const dims    = fluid ? `preserveAspectRatio="none" height="${height}" style="display:block;width:100%"` : `width="${width}" height="${height}"`
+  if (fluid) {
+    return `<div${clsAttr} style="width:100%;aspect-ratio:${width}/${height}"><svg viewBox="0 0 ${width} ${height}" width="100%" height="100%" style="display:block" aria-hidden="true">${areaPath}<polyline points="${points}" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+  }
 
-  return `<svg${clsAttr} viewBox="0 0 ${width} ${height}" ${dims} aria-hidden="true">${areaPath}<polyline points="${points}" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+  return `<svg${clsAttr} viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true">${areaPath}<polyline points="${points}" fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
 }

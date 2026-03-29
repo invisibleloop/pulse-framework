@@ -405,6 +405,12 @@ fs.rmSync(TMP_DIR, { recursive: true })
 await purgeCssStep(pages, manifest, ROOT, OUT_DIR)
 
 // ---------------------------------------------------------------------------
+// JS static assets — minify + hash any .js files directly in public/
+// ---------------------------------------------------------------------------
+
+await jsAssetsStep(ROOT, OUT_DIR, manifest)
+
+// ---------------------------------------------------------------------------
 // Report
 // ---------------------------------------------------------------------------
 
@@ -419,6 +425,39 @@ for (const [src, bundle] of Object.entries(manifest)) {
   }
 }
 console.log('\n✓ manifest written to public/dist/manifest.json\n')
+
+// ---------------------------------------------------------------------------
+// JS static assets implementation
+// ---------------------------------------------------------------------------
+
+async function jsAssetsStep(root, outDir, manifest) {
+  const publicDir = path.join(root, 'public')
+  if (!fs.existsSync(publicDir)) return
+
+  const jsFiles = fs.readdirSync(publicDir).filter(f => f.endsWith('.js'))
+  if (jsFiles.length === 0) return
+
+  console.log('⚡ Hashing static JS assets...\n')
+
+  for (const file of jsFiles) {
+    const srcPath = path.join(publicDir, file)
+    const source  = fs.readFileSync(srcPath, 'utf8')
+    const { code } = await esbuild.transform(source, { minify: true, target: 'es2018' })
+    const hash    = createHash('sha256').update(code).digest('hex').slice(0, 8)
+    const name    = path.basename(file, '.js')
+    const outName = `${name}-${hash}.js`
+
+    fs.writeFileSync(path.join(outDir, outName), code)
+    manifest[`/${file}`] = `/dist/${outName}`
+
+    const origKb = (Buffer.byteLength(source) / 1024).toFixed(1)
+    const minKb  = (Buffer.byteLength(code)   / 1024).toFixed(1)
+    console.log(`  /${file.padEnd(24)} → /dist/${outName}  (${minKb} kB from ${origKb} kB)`)
+  }
+
+  fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
+  console.log('\n✓ JS asset entries added to manifest\n')
+}
 
 // ---------------------------------------------------------------------------
 // CSS Purge implementation
