@@ -7,11 +7,47 @@
 // Inline the scanner functions (duplicated here to keep test self-contained)
 // ---------------------------------------------------------------------------
 
-const SERVER_ONLY_KEYS = ['server', 'guard', 'serverTimeout', 'contentType', 'render']
+const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render']
+const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md']
 
 function stripServerOnlyKeys(source) {
   for (const key of SERVER_ONLY_KEYS) source = removeObjectKey(source, key)
   return source
+}
+
+function stripServerOnlyImports(source) {
+  for (const mod of SERVER_ONLY_IMPORTS) {
+    const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const importRe = new RegExp(
+      `^[ \\t]*import\\s+(?:\\{[^}]*\\}|[\\w*]+(?:\\s+as\\s+\\w+)?)\\s+from\\s+['"]${escaped}['"]\\s*;?[ \\t]*\\n?`,
+      'gm'
+    )
+    const importedNames = new Set()
+    for (const m of source.matchAll(importRe)) {
+      const named = m[0].match(/\{\s*([^}]*)\s*\}/)
+      if (named) {
+        for (const part of named[1].split(',')) {
+          const name = part.trim().split(/\s+as\s+/).pop().trim()
+          if (name) importedNames.add(name)
+        }
+      }
+      const def = m[0].match(/import\s+([\w]+)\s+from/)
+      if (def) importedNames.add(def[1])
+    }
+    source = source.replace(importRe, '')
+    for (const name of importedNames) {
+      const declRe = new RegExp(
+        `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\s*\\([^\\n]*\\)\\s*;?[ \\t]*\\n?`,
+        'gm'
+      )
+      source = source.replace(declRe, '')
+    }
+  }
+  return source
+}
+
+function strip(source) {
+  return stripServerOnlyImports(stripServerOnlyKeys(source))
 }
 
 function isInsideString(source, pos) {
@@ -124,7 +160,7 @@ function scanTemplateLiteral(src, pos) {
 let pass = 0, fail = 0
 
 function test(label, input, expected) {
-  const got = stripServerOnlyKeys(input).trim()
+  const got = strip(input).trim()
   const exp = expected.trim()
   if (got === exp) {
     console.log('  \u2713 ' + label)
@@ -219,6 +255,42 @@ test('render: inside a template literal string (docs code example) is not stripp
 test('server: inside a double-quoted string is not stripped',
   'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}',
   'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}'
+)
+
+test('meta object is stripped (client runtime never reads spec.meta)',
+  `export default {\n  route: '/blog',\n  meta: {\n    title: async (ctx) => fetchPost(ctx).frontmatter.title,\n    styles: ['/pulse-ui.css'],\n  },\n  view: () => ''\n}`,
+  `export default {\n  route: '/blog',\n  view: () => ''\n}`
+)
+
+test('meta: inside a template literal string is not stripped',
+  'export default {\n  view: () => `<pre>meta: { title: \'Home\' }</pre>`\n}',
+  'export default {\n  view: () => `<pre>meta: { title: \'Home\' }</pre>`\n}'
+)
+
+// ---------------------------------------------------------------------------
+// Server-only import stripping
+// ---------------------------------------------------------------------------
+
+console.log('\nServer-only import stripping\n')
+
+test('strips @invisibleloop/pulse/md import and const declaration',
+  `import { md } from '@invisibleloop/pulse/md'\nconst fetchPost = md('src/content/blog.md')\nexport default {\n  route: '/blog',\n  view: () => ''\n}`,
+  `export default {\n  route: '/blog',\n  view: () => ''\n}`
+)
+
+test('strips named import with multiple bindings',
+  `import { md, parseMd } from '@invisibleloop/pulse/md'\nconst post = md('src/content/post.md')\nconst result = parseMd('# Hello')\nexport default {\n  view: () => ''\n}`,
+  `export default {\n  view: () => ''\n}`
+)
+
+test('strips import + const then strips meta that used the const',
+  `import { md } from '@invisibleloop/pulse/md'\nconst fetchPost = md('src/content/trees.md')\nexport default {\n  route: '/blog',\n  meta: {\n    title: async (ctx) => (await fetchPost(ctx)).frontmatter.title,\n    styles: ['/pulse-ui.css'],\n  },\n  server: { post: fetchPost },\n  view: () => ''\n}`,
+  `export default {\n  route: '/blog',\n  view: () => ''\n}`
+)
+
+test('does not strip non-server imports',
+  `import { nav, footer } from '@invisibleloop/pulse/ui'\nexport default {\n  view: () => nav({})\n}`,
+  `import { nav, footer } from '@invisibleloop/pulse/ui'\nexport default {\n  view: () => nav({})\n}`
 )
 
 // ---------------------------------------------------------------------------

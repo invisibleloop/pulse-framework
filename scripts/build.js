@@ -32,7 +32,14 @@ import { renderToString } from '../src/runtime/ssr.js'
  *     from being shipped to and evaluated in the browser
  *   - avoids bundling errors when server imports use Node-only modules
  */
-const SERVER_ONLY_KEYS = ['server', 'guard', 'serverTimeout', 'contentType', 'render']
+const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render']
+
+/**
+ * Pulse subpath exports that are server-only (use Node built-ins).
+ * Imports from these paths are removed from client bundles along with any
+ * top-level variable declarations whose right-hand side calls the imported names.
+ */
+const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md']
 
 /**
  * Strip all server-only property declarations from a spec source string.
@@ -42,6 +49,50 @@ const SERVER_ONLY_KEYS = ['server', 'guard', 'serverTimeout', 'contentType', 're
 function stripServerOnlyKeys(source) {
   for (const key of SERVER_ONLY_KEYS) {
     source = removeObjectKey(source, key)
+  }
+  return source
+}
+
+/**
+ * Strip import statements for known server-only modules and any top-level
+ * variable declarations that called those imported functions.
+ *
+ * Handles patterns like:
+ *   import { md } from '@invisibleloop/pulse/md'
+ *   const fetchPost = md('src/content/blog/:slug.md')
+ */
+function stripServerOnlyImports(source) {
+  for (const mod of SERVER_ONLY_IMPORTS) {
+    const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const importRe = new RegExp(
+      `^[ \\t]*import\\s+(?:\\{[^}]*\\}|[\\w*]+(?:\\s+as\\s+\\w+)?)\\s+from\\s+['"]${escaped}['"]\\s*;?[ \\t]*\\n?`,
+      'gm'
+    )
+
+    // Collect imported binding names before removing the statement
+    const importedNames = new Set()
+    for (const m of source.matchAll(importRe)) {
+      const named = m[0].match(/\{\s*([^}]*)\s*\}/)
+      if (named) {
+        for (const part of named[1].split(',')) {
+          const name = part.trim().split(/\s+as\s+/).pop().trim()
+          if (name) importedNames.add(name)
+        }
+      }
+      const def = m[0].match(/import\s+([\w]+)\s+from/)
+      if (def) importedNames.add(def[1])
+    }
+
+    source = source.replace(importRe, '')
+
+    // Remove top-level: const/let/var X = importedFn(...)
+    for (const name of importedNames) {
+      const declRe = new RegExp(
+        `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\s*\\([^\\n]*\\)\\s*;?[ \\t]*\\n?`,
+        'gm'
+      )
+      source = source.replace(declRe, '')
+    }
   }
   return source
 }
@@ -265,7 +316,7 @@ function createStripServerPlugin(pagesDir) {
             args.path !== pagesDir.replace(/\/$/, '') + '.js') return undefined
 
         const source   = fs.readFileSync(args.path, 'utf8')
-        const stripped = stripServerOnlyKeys(source)
+        const stripped = stripServerOnlyImports(stripServerOnlyKeys(source))
         return { contents: stripped, loader: 'js' }
       })
     }

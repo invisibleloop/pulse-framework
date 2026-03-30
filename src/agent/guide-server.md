@@ -256,3 +256,65 @@ shutdown()
 ```
 
 `shutdown()` is idempotent — calling it multiple times is safe.
+
+## Markdown
+
+Pulse has a built-in markdown parser. Use it for any content written in `.md` files — blog posts, documentation, static pages. All parsing happens server-side. Zero browser JS.
+
+### `md(pathPattern)` — file helper
+
+```js
+import { md }    from '@invisibleloop/pulse/md'
+import { prose } from '@invisibleloop/pulse/ui'
+
+const page = md('content/about.md')
+
+export default {
+  route:  '/about',
+  server: { page },
+  view:   (state, { page }) => prose({ content: page.html }),
+}
+```
+
+Returns `{ html, frontmatter }`. `html` goes into `prose()`. `frontmatter` is the parsed `---` block.
+
+### Frontmatter for meta tags
+
+The same fetcher can be called in both `meta` and `server` — the file is only read once per request (cached on `ctx._mdCache`):
+
+```js
+const post = md('content/blog/:slug.md')
+
+export default {
+  route: '/blog/:slug',
+  meta: {
+    title:       async (ctx) => (await post(ctx)).frontmatter.title,
+    description: async (ctx) => (await post(ctx)).frontmatter.description,
+  },
+  server: { post },
+  view: (state, { post }) => `
+    <main id="main-content">
+      ${prose({ content: post.html })}
+    </main>
+  `,
+  onViewError: () => `<main id="main-content"><p>Post not found.</p></main>`,
+}
+```
+
+Always add `onViewError` on dynamic markdown routes — if the file does not exist the fetcher throws `{ status: 404 }`.
+
+### `parseMd(source)` — string parser
+
+For markdown from a database or API rather than a file:
+
+```js
+import { parseMd } from '@invisibleloop/pulse/md'
+
+server: {
+  post: async (ctx) => {
+    const record = await db.posts.find(ctx.params.id)
+    const { html, frontmatter } = parseMd(record.body)
+    return { html, title: frontmatter.title ?? record.title }
+  }
+}
+```

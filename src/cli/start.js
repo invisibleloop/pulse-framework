@@ -18,6 +18,7 @@ const rootArg = args.indexOf('--root')
 const portArg = args.indexOf('--port')
 
 const ROOT = rootArg !== -1 ? path.resolve(args[rootArg + 1]) : process.cwd()
+if (process.cwd() !== ROOT) process.chdir(ROOT)
 const PUBLIC_DIR = path.join(ROOT, 'public')
 const DIST_DIR   = path.join(PUBLIC_DIR, 'dist')
 

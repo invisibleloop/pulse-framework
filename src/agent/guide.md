@@ -874,8 +874,8 @@ import { prose } from '@invisibleloop/pulse/ui'
 // CMS rich text field — output directly, fully styled
 prose({ content: server.article.bodyHtml })
 
-// Markdown rendered to HTML
-prose({ content: renderMarkdown(server.post.body) })
+// Markdown rendered to HTML (use md() helper — see Markdown section below)
+prose({ content: server.page.html })
 
 // Larger text (e.g. hero intro)
 prose({ content: server.page.intro, size: 'lg' })
@@ -884,6 +884,109 @@ prose({ content: server.page.intro, size: 'lg' })
 **When to use `prose()` vs `heading()` / `list()`:**
 - **`prose()`** — when the HTML comes from outside your spec (CMS, database, markdown). You don't control the tags.
 - **`heading()` / `list()`** — when you're writing the content yourself inside the view template.
+
+---
+
+## Markdown
+
+Pulse has a built-in markdown parser. Use it for static-site content, blog posts, documentation pages, or any content written in `.md` files. Zero browser JS — all parsing happens server-side.
+
+### `md(pathPattern)` — file helper
+
+Import from `@invisibleloop/pulse/md`. Returns an async server fetcher. Use it in `server` and optionally `meta`:
+
+```js
+import { md }    from '@invisibleloop/pulse/md'
+import { prose } from '@invisibleloop/pulse/ui'
+
+const page = md('content/about.md')
+
+export default {
+  route:  '/about',
+  server: { page },
+  view:   (state, { page }) => prose({ content: page.html }),
+}
+```
+
+The fetcher returns `{ html, frontmatter }`. `html` is ready to pass to `prose()`. `frontmatter` is the parsed `---` block.
+
+### Frontmatter for meta tags
+
+**`meta` must be a plain object — never a function.** Individual fields can be `async (ctx) => value`. This is the correct pattern for pulling frontmatter into meta:
+
+```js
+// WRONG — meta cannot be a function factory
+meta: async (ctx) => {
+  const post = await fetchPost(ctx)
+  return { title: post.frontmatter.title, styles: ['/app.css'] }
+}
+
+// CORRECT — meta is a plain object; each field is a function
+meta: {
+  title:       async (ctx) => (await post(ctx)).frontmatter.title,
+  description: async (ctx) => (await post(ctx)).frontmatter.description,
+  styles:      ['/pulse-ui.css', '/app.css'],  // static fields stay as values
+}
+```
+
+Call the same fetcher in both `meta` and `server` — it reads the file only once per request (cached on `ctx._mdCache`):
+
+```js
+const page = md('content/about.md')
+
+export default {
+  route: '/about',
+  meta: {
+    title:       async (ctx) => (await page(ctx)).frontmatter.title,
+    description: async (ctx) => (await page(ctx)).frontmatter.description,
+  },
+  server: { page },
+  view:   (state, { page }) => prose({ content: page.html }),
+}
+```
+
+### Dynamic routes — `:param` placeholders
+
+```js
+const post = md('content/blog/:slug.md')
+
+export default {
+  route: '/blog/:slug',
+  meta: {
+    title:       async (ctx) => (await post(ctx)).frontmatter.title,
+    description: async (ctx) => (await post(ctx)).frontmatter.description,
+  },
+  server: { post },
+  view: (state, { post }) => `
+    <main id="main-content">
+      ${prose({ content: post.html })}
+    </main>
+  `,
+  onViewError: () => `<main id="main-content"><p>Post not found.</p></main>`,
+}
+```
+
+Always add `onViewError` on dynamic markdown routes — if the file doesn't exist the fetcher throws `{ status: 404 }`.
+
+### `parseMd(source)` — string parser
+
+For markdown that comes from a database or API rather than a file:
+
+```js
+import { parseMd } from '@invisibleloop/pulse/md'
+
+server: {
+  post: async (ctx) => {
+    const record = await db.posts.find(ctx.params.id)
+    const { html, frontmatter } = parseMd(record.body)
+    return { html, title: frontmatter.title ?? record.title }
+  }
+}
+```
+
+### What the parser supports
+
+Headings (with auto anchor IDs), bold/italic/strikethrough, inline code, fenced code blocks with syntax highlighting (js/ts/html/css/bash/json), links, images, ordered + unordered lists (nested), blockquotes, GFM tables, horizontal rules, frontmatter.
 
 ### Attaching Pulse events to components
 

@@ -4,11 +4,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 ### Critical
 
-- **`hydrate` is set on every interactive page.** Without it, `data-event` / `data-action` bindings do nothing, `persist` never runs, and client-side navigation cannot re-mount the page. Every spec with `mutations`, `actions`, or `persist` must include:
-  ```js
-  hydrate: '/src/pages/my-page.js',  // browser-importable path to this file
-  ```
-  Omit `hydrate` only for purely server-rendered pages with zero client interactivity.
+- **Do not set `hydrate` in specs.** It is auto-derived by the framework from the URL entry passed to `createServer`. Specs with `mutations`, `actions`, or `persist` are hydrated automatically. Purely server-rendered specs get zero JavaScript — no configuration needed.
 
 ### Components first
 
@@ -80,6 +76,12 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   assert.equal(result.attr('img', 'src'), mockProduct.image)
   ```
   Supported selectors: `tag`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations (`button.primary[disabled]`).
+
+### Markdown
+
+- **Use `md()` from `@invisibleloop/pulse/md` for `.md` file content.** Never read and parse markdown manually. Pass the result's `html` to `prose()`.
+- **Call the same `md()` fetcher in both `meta` and `server`** — it caches on `ctx._mdCache` so the file is only read once per request. Do not create two separate fetchers for the same file.
+- **Always add `onViewError` on dynamic markdown routes** (routes with `:param` segments loading `.md` files). A missing file throws `{ status: 404 }` which must be caught gracefully.
 
 ### View error handling
 

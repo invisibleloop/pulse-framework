@@ -33,6 +33,7 @@ await createServer(
     new URL('./src/pages/persist.js',           import.meta.url),
     // Server
     new URL('./src/pages/server-data.js',       import.meta.url),
+    new URL('./src/pages/markdown.js',          import.meta.url),
     new URL('./src/pages/store.js',             import.meta.url),
     new URL('./src/pages/routing.js',           import.meta.url),
     new URL('./src/pages/streaming.js',         import.meta.url),

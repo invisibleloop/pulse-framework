@@ -448,6 +448,42 @@ Pulse views are plain JS template literals, not JSX. These React patterns are **
 
 Also: mutations must be pure (no fetch, no DOM access). Only `actions` can be async.
 
+## Markdown
+
+Pulse has a built-in markdown parser. Use it for blog posts, docs pages, and any static content written in `.md` files. Import from `@invisibleloop/pulse/md`. All parsing is server-side — zero browser JS.
+
+```js
+import { md }    from '@invisibleloop/pulse/md'
+import { prose } from '@invisibleloop/pulse/ui'
+
+// Static path
+const page = md('content/about.md')
+
+// Dynamic route — :param resolved from ctx.params
+const post = md('content/blog/:slug.md')
+
+export default {
+  route: '/blog/:slug',
+  meta: {
+    title:       async (ctx) => (await post(ctx)).frontmatter.title,
+    description: async (ctx) => (await post(ctx)).frontmatter.description,
+  },
+  server: { post },
+  view: (state, { post }) => `
+    <main id="main-content">
+      ${prose({ content: post.html })}
+    </main>
+  `,
+  onViewError: () => `<main id="main-content"><p>Post not found.</p></main>`,
+}
+```
+
+- `md(path)` returns an async fetcher — call it in both `meta` and `server`, the file is read only once per request
+- Result is `{ html, frontmatter }` — `html` goes into `prose()`, `frontmatter` holds the `---` key/value pairs
+- Missing file throws `{ status: 404 }` — always add `onViewError` on dynamic markdown routes
+- For markdown from a database/API use `parseMd(source)` directly: `import { parseMd } from '@invisibleloop/pulse/md'`
+- Use `new URL('./content/file.md', import.meta.url)` to resolve relative to the spec file rather than `process.cwd()`
+
 ## Check Components Before Building
 
 Before writing any UI HTML by hand, check `src/ui/index.js` — there are 50+ components available. Use them. Do not reinvent `button`, `card`, `alert`, `modal`, `spinner`, `badge`, `input`, etc.
