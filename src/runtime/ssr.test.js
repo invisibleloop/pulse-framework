@@ -61,7 +61,8 @@ const counterSpec = {
 }
 
 const serverDataSpec = {
-  route: '/products',
+  route:   '/products',
+  hydrate: '/src/pages/products.js',
   state: {},
   server: {
     products: async (ctx) => [
@@ -314,7 +315,8 @@ await test('stream.scope: shell does not wait for deferred-only fetchers', async
 
 await test('stream.scope: __PULSE_SERVER__ includes state from all scoped fetchers', async () => {
   const spec = {
-    route: '/scoped-state',
+    route:   '/scoped-state',
+    hydrate: '/src/pages/scoped-state.js',
     stream: {
       shell:    ['header'],
       deferred: ['feed'],
@@ -366,6 +368,7 @@ await test('sets og:title meta tag', async () => {
 await test('serialises server state into page', async () => {
   const { html } = wrapDocument({
     content:     '',
+    spec:        { hydrate: '/src/pages/products.js' },
     serverState: { products: [{ id: 1 }] }
   })
   assert(html.includes('__PULSE_SERVER__'), `Expected server state script: ${html}`)
