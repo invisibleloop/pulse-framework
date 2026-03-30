@@ -146,7 +146,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
         ? Object.fromEntries(await Promise.all([...fetcherCache.entries()].map(async ([k, p]) => [k, await p])))
         : {}
       const mergedAllState = mergeStoreKeys(spec, allServerState, ctx.store)
-      if (Object.keys(mergedAllState).length > 0) {
+      if (spec.hydrate && Object.keys(mergedAllState).length > 0) {
         controller.enqueue(encode(
           `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(mergedAllState)};</script>`
         ))
@@ -314,8 +314,9 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     : ''
 
   // Serialise server state into the page so the client runtime can read it
-  // without making a second request
-  const serverStateScript = Object.keys(serverState).length > 0
+  // without making a second request. Only needed when the page is hydrated —
+  // purely server-rendered pages have no JS to read it.
+  const serverStateScript = spec.hydrate && Object.keys(serverState).length > 0
     ? `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(serverState)};</script>`
     : ''
 
