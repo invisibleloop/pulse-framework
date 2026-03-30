@@ -25,6 +25,10 @@ const ROOT = rootArg !== -1
   ? path.resolve(args[rootArg + 1])
   : process.cwd()
 
+// Ensure process.cwd() === ROOT so relative paths in specs (e.g. md('src/content/foo.md'))
+// resolve to the project root, not wherever the parent process was launched from.
+if (process.cwd() !== ROOT) process.chdir(ROOT)
+
 let _config = {}
 const configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(configPath)) {

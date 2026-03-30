@@ -34,7 +34,7 @@ export default {
           ['<code>validation</code>', '<code>object</code>', 'No', 'Declarative validation rules keyed by dot-path state keys.'],
           ['<code>constraints</code>', '<code>object</code>', 'No', 'Min/max bounds enforced after every mutation.'],
           ['<code>persist</code>', '<code>string[]</code>', 'No', 'State keys to save in <code>localStorage</code>.'],
-          ['<code>server</code>', '<code>object</code>', 'No', 'Server-side data fetcher. Result passed to <code>view</code> as second arg.'],
+          ['<code>server</code>', '<code>object</code>', 'No', 'Server-side data fetchers. Result passed to <code>view</code> as second arg. Use the <a href="/markdown"><code>md()</code> helper</a> to load <code>.md</code> files.'],
           ['<code>guard</code>', '<code>function</code>', 'No', 'Async pre-render hook. Return <code>{ redirect }</code> or <code>{ status, json }</code> to short-circuit. See <a href="/guard">Guard</a>.'],
           ['<code>store</code>', '<code>string[]</code>', 'No', 'Global store keys this page subscribes to. See <a href="/store">Global Store</a>.'],
           ['<code>methods</code>', '<code>string[]</code>', 'No', 'HTTP methods this page accepts. Default <code>[\'GET\', \'HEAD\']</code>. Add <code>\'POST\'</code> etc. to opt in.'],

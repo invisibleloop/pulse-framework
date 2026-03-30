@@ -2806,6 +2806,26 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   color:         var(--ui-text);
 }
 
+/* ─── Syntax highlighting tokens ────────────────────────────────────────────
+   Used by ui-prose pre code blocks rendered via @invisibleloop/pulse/md.
+   Dark theme defaults; light theme overrides below.                          */
+:root {
+  --tok-kw:    #c792ea;
+  --tok-str:   #c3e88d;
+  --tok-cmt:   #7a8a9a;
+  --tok-num:   #f78c6c;
+  --tok-fn:    #82aaff;
+  --tok-op:    #89ddff;
+  --tok-punct: #7e8899;
+}
+.tok-kw    { color: var(--tok-kw);    }
+.tok-str   { color: var(--tok-str);   }
+.tok-cmt   { color: var(--tok-cmt);   font-style: italic; }
+.tok-num   { color: var(--tok-num);   }
+.tok-fn    { color: var(--tok-fn);    }
+.tok-op    { color: var(--tok-op);    }
+.tok-punct { color: var(--tok-punct); }
+
 /* ─── Light theme ────────────────────────────────────────────────────────────
    Apply to any ancestor element: <body data-theme="light"> or .ui-theme-light
    All --ui-* tokens are overridden; component markup stays identical.        */
@@ -2829,4 +2849,11 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   --ui-blue:            #1e40af;
   --ui-blue-dim:        rgba( 30,  64, 175, .12);
   --ui-nav-sticky-bg:   rgba(255, 255, 255, .85);
+  --tok-kw:             #7c3aed;
+  --tok-str:            #15803d;
+  --tok-cmt:            #6b7280;
+  --tok-num:            #c2410c;
+  --tok-fn:             #1d4ed8;
+  --tok-op:             #0891b2;
+  --tok-punct:          #6b7280;
 }

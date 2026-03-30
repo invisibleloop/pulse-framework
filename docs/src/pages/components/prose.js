@@ -42,8 +42,8 @@ export default {
 // CMS rich text field — output directly, fully styled
 prose({ content: server.article.bodyHtml })
 
-// Markdown rendered to HTML
-prose({ content: renderMarkdown(server.post.body) })`,
+// Markdown file via md() helper
+prose({ content: server.post.html })  // see /markdown`,
         { col: true }
       )}
 

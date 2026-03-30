@@ -48,6 +48,10 @@
     "./testing": {
       "types": "./types/testing.d.ts",
       "default": "./src/testing/index.js"
+    },
+    "./md": {
+      "types":   "./types/md.d.ts",
+      "default": "./src/md/index.js"
     }
   },
   "scripts": {

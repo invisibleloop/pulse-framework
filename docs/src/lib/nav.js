@@ -38,6 +38,7 @@ export const NAV = [
     section: 'Server',
     items: [
       { label: 'Server Data',    href: '/server-data'   },
+      { label: 'Markdown',       href: '/markdown'      },
       { label: 'Global Store',   href: '/store'         },
       { label: 'Routing',        href: '/routing'       },
       { label: 'Streaming SSR',  href: '/streaming'     },

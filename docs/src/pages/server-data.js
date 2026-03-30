@@ -179,6 +179,24 @@ view: (state, server) => server.notFound
     featured: async () => fetch('https://api.example.com/featured').then(r => r.json()),
   },
 }`, 'js'))}
+
+      ${section('markdown', 'Markdown files')}
+      <p>Use the built-in <code>md()</code> helper to load and parse <code>.md</code> files as server data. The result (<code>{ html, frontmatter }</code>) is ready to pass to the <code>prose</code> component — no external dependencies, no client JS. See <a href="/markdown">Markdown</a> for the full reference.</p>
+      ${codeBlock(highlight(`import { md }    from '@invisibleloop/pulse/md'
+import { prose } from '@invisibleloop/pulse/ui'
+
+const post = md('content/blog/:slug.md')
+
+export default {
+  route: '/blog/:slug',
+  meta: {
+    title:       async (ctx) => (await post(ctx)).frontmatter.title,
+    description: async (ctx) => (await post(ctx)).frontmatter.description,
+  },
+  server: { post },
+  view: (state, { post }) => prose({ content: post.html }),
+  onViewError: () => \`<p>Post not found.</p>\`,
+}`, 'js'))}
     `,
   }),
 }

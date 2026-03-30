@@ -220,8 +220,6 @@ import { button, heading, iconMinus, iconPlus } from '@invisibleloop/pulse/ui'
 export default {
   route: '/',
 
-  hydrate: '/src/pages/home.js',
-
   meta: {
     title:       '${appName}',
     description: '${appName} — built with Pulse.',

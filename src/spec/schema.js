@@ -324,7 +324,9 @@ export function validateSpec(spec) {
 
   // meta
   if (spec.meta) {
-    if (typeof spec.meta !== 'object') {
+    if (typeof spec.meta === 'function') {
+      errors.push('spec.meta must be a plain object, not a function. Individual fields (title, description, styles) can be async (ctx) => value functions, but meta itself must be {}')
+    } else if (typeof spec.meta !== 'object') {
       errors.push('spec.meta must be a plain object')
     } else if (spec.meta.schema !== undefined && typeof spec.meta.schema !== 'object') {
       errors.push('spec.meta.schema must be a plain object (JSON-LD)')
