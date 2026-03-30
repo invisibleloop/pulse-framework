@@ -1,6 +1,6 @@
 {
   "name": "@invisibleloop/pulse",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "description": "AI-first frontend framework. The spec is the source of truth.",
   "license": "MIT",
@@ -50,7 +50,7 @@
       "default": "./src/testing/index.js"
     },
     "./md": {
-      "types":   "./types/md.d.ts",
+      "types": "./types/md.d.ts",
       "default": "./src/md/index.js"
     }
   },
