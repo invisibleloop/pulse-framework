@@ -410,7 +410,11 @@ export function validateSpec(spec) {
  * @throws {Error}
  */
 export function assertValidSpec(spec) {
-  const { valid, errors, warnings } = validateSpec(spec)
+  // Strip framework-injected `hydrate` before validating — the hydrate check is only
+  // meaningful on raw source files (MCP validate tool). At render time hydrate is always
+  // set by the framework, so validating it here produces a false positive warning.
+  const { hydrate: _h, ...specToValidate } = spec
+  const { valid, errors, warnings } = validateSpec(specToValidate)
   if (!valid) {
     throw new Error(
       `Invalid Pulse spec${spec?.route ? ` for route "${spec.route}"` : ''}:\n` +

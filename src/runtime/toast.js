@@ -80,6 +80,9 @@ function injectStyles() {
   if (_stylesInjected) return
   _stylesInjected = true
   const style = document.createElement('style')
+  // Apply the page nonce so the style tag passes the style-src CSP directive.
+  const nonce = typeof window !== 'undefined' && window.__PULSE_NONCE__
+  if (nonce) style.setAttribute('nonce', nonce)
   style.textContent = TOAST_CSS
   document.head.appendChild(style)
 }

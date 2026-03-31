@@ -16,32 +16,32 @@ function stripServerOnlyKeys(source) {
 }
 
 function stripServerOnlyImports(source) {
-  for (const mod of SERVER_ONLY_IMPORTS) {
-    const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const importRe = new RegExp(
-      `^[ \\t]*import\\s+(?:\\{[^}]*\\}|[\\w*]+(?:\\s+as\\s+\\w+)?)\\s+from\\s+['"]${escaped}['"]\\s*;?[ \\t]*\\n?`,
+  const extraPattern = SERVER_ONLY_IMPORTS
+    .map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')
+  const combinedRe = new RegExp(
+    `^[ \\t]*import\\s+(?:\\{[^}]*\\}|[\\w*]+(?:\\s+as\\s+\\w+)?)\\s+from\\s+['"](?:node:[^'"]+|${extraPattern})['"]\\s*;?[ \\t]*\\n?`,
+    'gm'
+  )
+  const importedNames = new Set()
+  for (const m of source.matchAll(combinedRe)) {
+    const named = m[0].match(/\{\s*([^}]*)\s*\}/)
+    if (named) {
+      for (const part of named[1].split(',')) {
+        const name = part.trim().split(/\s+as\s+/).pop().trim()
+        if (name) importedNames.add(name)
+      }
+    }
+    const def = m[0].match(/import\s+([\w]+)\s+from/)
+    if (def) importedNames.add(def[1])
+  }
+  source = source.replace(combinedRe, '')
+  for (const name of importedNames) {
+    const declRe = new RegExp(
+      `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\b[^\\n]*;?[ \\t]*\\n?`,
       'gm'
     )
-    const importedNames = new Set()
-    for (const m of source.matchAll(importRe)) {
-      const named = m[0].match(/\{\s*([^}]*)\s*\}/)
-      if (named) {
-        for (const part of named[1].split(',')) {
-          const name = part.trim().split(/\s+as\s+/).pop().trim()
-          if (name) importedNames.add(name)
-        }
-      }
-      const def = m[0].match(/import\s+([\w]+)\s+from/)
-      if (def) importedNames.add(def[1])
-    }
-    source = source.replace(importRe, '')
-    for (const name of importedNames) {
-      const declRe = new RegExp(
-        `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\s*\\([^\\n]*\\)\\s*;?[ \\t]*\\n?`,
-        'gm'
-      )
-      source = source.replace(declRe, '')
-    }
+    source = source.replace(declRe, '')
   }
   return source
 }
@@ -291,6 +291,82 @@ test('strips import + const then strips meta that used the const',
 test('does not strip non-server imports',
   `import { nav, footer } from '@invisibleloop/pulse/ui'\nexport default {\n  view: () => nav({})\n}`,
   `import { nav, footer } from '@invisibleloop/pulse/ui'\nexport default {\n  view: () => nav({})\n}`
+)
+
+test('strips node:fs default import',
+  `import fs from 'node:fs'\nexport default {\n  server: { data: async () => fs.readFileSync('x') },\n  view: () => ''\n}`,
+  `export default {\n  view: () => ''\n}`
+)
+
+test('strips node:fs/promises named import',
+  `import { readFile } from 'node:fs/promises'\nexport default {\n  server: { data: async () => readFile('x') },\n  view: () => ''\n}`,
+  `export default {\n  view: () => ''\n}`
+)
+
+test('strips node:path and node:url together',
+  `import path from 'node:path'\nimport { fileURLToPath } from 'node:url'\nexport default {\n  server: { data: async (ctx) => path.join('a', 'b') },\n  view: () => ''\n}`,
+  `export default {\n  view: () => ''\n}`
+)
+
+test('strips node:fs default import and top-level const using it',
+  `import fs from 'node:fs'\nconst DIR = fs.readdirSync('.')\nexport default {\n  view: () => ''\n}`,
+  `export default {\n  view: () => ''\n}`
+)
+
+// ---------------------------------------------------------------------------
+// Dev-mode node:* import stripping (same regex used in src/cli/dev.js serveFile)
+// ---------------------------------------------------------------------------
+
+console.log('\nDev-mode node:* import stripping\n')
+
+const DEV_NODE_RE = /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"]node:[^'"]+['"]\s*;?[ \t]*\n?/gm
+
+function devStrip(source) {
+  return source.replace(DEV_NODE_RE, '')
+}
+
+function devTest(label, input, expected) {
+  const got = devStrip(input).trim()
+  const exp = expected.trim()
+  if (got === exp) {
+    console.log('  \u2713 ' + label)
+    pass++
+  } else {
+    console.log('  \u2717 ' + label)
+    console.log('    expected: ' + JSON.stringify(exp))
+    console.log('    got:      ' + JSON.stringify(got))
+    fail++
+  }
+}
+
+devTest('strips default import (node:fs)',
+  `import fs from 'node:fs'\nconst DIR = '/journal'\nexport default { view: () => '' }`,
+  `const DIR = '/journal'\nexport default { view: () => '' }`
+)
+
+devTest('strips named import (node:path)',
+  `import { join, resolve } from 'node:path'\nexport default { view: () => '' }`,
+  `export default { view: () => '' }`
+)
+
+devTest('strips multiple node: imports',
+  `import fs from 'node:fs'\nimport path from 'node:path'\nexport default { view: () => '' }`,
+  `export default { view: () => '' }`
+)
+
+devTest('strips node:fs/promises named import',
+  `import { readFile } from 'node:fs/promises'\nexport default { view: () => '' }`,
+  `export default { view: () => '' }`
+)
+
+devTest('does not strip non-node imports',
+  `import { nav } from '@invisibleloop/pulse/ui'\nexport default { view: () => '' }`,
+  `import { nav } from '@invisibleloop/pulse/ui'\nexport default { view: () => '' }`
+)
+
+devTest('leaves module-level constants intact',
+  `import fs from 'node:fs'\nconst JOURNAL_DIR = '/Users/andy/journal'\nexport default { view: () => '' }`,
+  `const JOURNAL_DIR = '/Users/andy/journal'\nexport default { view: () => '' }`
 )
 
 // ---------------------------------------------------------------------------

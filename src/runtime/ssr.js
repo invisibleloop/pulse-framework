@@ -323,9 +323,11 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   // Serialise store state so the client store singleton can be initialised.
   // Also exposes window.__updatePulseStore__ so navigate.js can refresh the
   // singleton with fresh server data on client-side navigations.
+  // window.__PULSE_NONCE__ lets the toast runtime inject a nonce'd <style> tag
+  // to satisfy the style-src CSP directive.
   const storeStateScript = storeState && Object.keys(storeState).length > 0
-    ? `<script nonce="${nonce}">window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
-    : ''
+    ? `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
+    : `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
 
   // Hydration bootstrap — makes the server-rendered HTML interactive.
   // When hydrate points to a self-executing bundle (/dist/…) a single <script>

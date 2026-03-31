@@ -245,8 +245,18 @@ function renderBlocks(blocks) {
         return '<hr>'
       case 'blockquote':
         return `<blockquote>${markdownToHtml(block.content)}</blockquote>`
-      case 'ul':
-        return `<ul>\n${block.items.map(item => `<li>${renderListItem(item)}</li>`).join('\n')}\n</ul>`
+      case 'ul': {
+        const isTaskList = block.items.some(item => /^\[[ xX]\] /.test(item))
+        const items = block.items.map(item => {
+          const task = item.match(/^\[([ xX])\] (.*)/)
+          if (task) {
+            const checked = task[1].toLowerCase() === 'x' ? ' checked' : ''
+            return `<li class="task-list-item"><input type="checkbox" disabled${checked}> ${renderListItem(task[2])}</li>`
+          }
+          return `<li>${renderListItem(item)}</li>`
+        })
+        return `<ul${isTaskList ? ' class="contains-task-list"' : ''}>\n${items.join('\n')}\n</ul>`
+      }
       case 'ol':
         return `<ol>\n${block.items.map(item => `<li>${renderListItem(item)}</li>`).join('\n')}\n</ol>`
       case 'table':

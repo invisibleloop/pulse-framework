@@ -38,6 +38,7 @@ const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentTy
  * Pulse subpath exports that are server-only (use Node built-ins).
  * Imports from these paths are removed from client bundles along with any
  * top-level variable declarations whose right-hand side calls the imported names.
+ * All `node:*` built-ins are also stripped automatically via the import regex.
  */
 const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md']
 
@@ -54,46 +55,60 @@ function stripServerOnlyKeys(source) {
 }
 
 /**
- * Strip import statements for known server-only modules and any top-level
- * variable declarations that called those imported functions.
+ * Strip import statements for server-only modules and any top-level
+ * variable declarations whose right-hand side calls the imported names.
  *
- * Handles patterns like:
- *   import { md } from '@invisibleloop/pulse/md'
- *   const fetchPost = md('src/content/blog/:slug.md')
+ * Strips:
+ *   - All `node:*` built-in imports (fs, path, url, crypto, …)
+ *   - Named entries in SERVER_ONLY_IMPORTS (@invisibleloop/pulse/md, …)
+ *
+ * Also removes associated top-level declarations, e.g.:
+ *   import fs   from 'node:fs'          → removed
+ *   import { md } from '@invisibleloop/pulse/md'  → removed
+ *   const fetchPost = md('src/content/blog.md')   → removed
  */
 function stripServerOnlyImports(source) {
-  for (const mod of SERVER_ONLY_IMPORTS) {
-    const escaped = mod.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const importRe = new RegExp(
-      `^[ \\t]*import\\s+(?:\\{[^}]*\\}|[\\w*]+(?:\\s+as\\s+\\w+)?)\\s+from\\s+['"]${escaped}['"]\\s*;?[ \\t]*\\n?`,
+  // Match any import whose specifier starts with `node:` OR is in SERVER_ONLY_IMPORTS.
+  // Covers: default imports, named imports, namespace imports.
+  const importRe =
+    /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"](?:node:[^'"]+|__SERVER_ONLY__)['"]\s*;?[ \t]*\n?/gm
+
+  // Build a combined pattern for SERVER_ONLY_IMPORTS entries
+  const extraPattern = SERVER_ONLY_IMPORTS
+    .map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')
+
+  // Single regex covering node:* and every listed server-only module
+  const combinedRe = new RegExp(
+    importRe.source.replace('__SERVER_ONLY__', extraPattern),
+    'gm'
+  )
+
+  // Collect all imported binding names before stripping
+  const importedNames = new Set()
+  for (const m of source.matchAll(combinedRe)) {
+    const named = m[0].match(/\{\s*([^}]*)\s*\}/)
+    if (named) {
+      for (const part of named[1].split(',')) {
+        const name = part.trim().split(/\s+as\s+/).pop().trim()
+        if (name) importedNames.add(name)
+      }
+    }
+    const def = m[0].match(/import\s+([\w]+)\s+from/)
+    if (def) importedNames.add(def[1])
+  }
+
+  source = source.replace(combinedRe, '')
+
+  // Remove top-level: const/let/var X = importedName... (call, method call, or property)
+  for (const name of importedNames) {
+    const declRe = new RegExp(
+      `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\b[^\\n]*;?[ \\t]*\\n?`,
       'gm'
     )
-
-    // Collect imported binding names before removing the statement
-    const importedNames = new Set()
-    for (const m of source.matchAll(importRe)) {
-      const named = m[0].match(/\{\s*([^}]*)\s*\}/)
-      if (named) {
-        for (const part of named[1].split(',')) {
-          const name = part.trim().split(/\s+as\s+/).pop().trim()
-          if (name) importedNames.add(name)
-        }
-      }
-      const def = m[0].match(/import\s+([\w]+)\s+from/)
-      if (def) importedNames.add(def[1])
-    }
-
-    source = source.replace(importRe, '')
-
-    // Remove top-level: const/let/var X = importedFn(...)
-    for (const name of importedNames) {
-      const declRe = new RegExp(
-        `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\s*\\([^\\n]*\\)\\s*;?[ \\t]*\\n?`,
-        'gm'
-      )
-      source = source.replace(declRe, '')
-    }
+    source = source.replace(declRe, '')
   }
+
   return source
 }
 
