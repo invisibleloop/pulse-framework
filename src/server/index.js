@@ -79,7 +79,11 @@ function serializeCsp(directives) {
  * @param {Record<string,string[]>} [ext]  Extra sources to merge in per directive.
  */
 function buildCsp(nonce, ext = {}) {
-  const d = { ...BASE_CSP, 'script-src': ["'self'", `'nonce-${nonce}'`] }
+  const d = {
+    ...BASE_CSP,
+    'script-src': ["'self'", `'nonce-${nonce}'`],
+    'style-src':  ["'self'", `'nonce-${nonce}'`],  // allows toast's runtime-injected <style nonce>
+  }
   for (const [k, sources] of Object.entries(ext)) {
     d[k] = [...(d[k] || []), ...sources]
   }
@@ -317,7 +321,8 @@ function devImportMap(nonce) {
 {
   "imports": {
     "@invisibleloop/pulse/image": "/@pulse/runtime/image.js",
-    "@invisibleloop/pulse/ui": "/@pulse/ui/index.js"
+    "@invisibleloop/pulse/ui": "/@pulse/ui/index.js",
+    "@invisibleloop/pulse/md": "/@pulse/md/browser-stub.js"
   }
 }
 </script>`
@@ -499,7 +504,10 @@ export async function createServer(entries, options = {}) {
 
   // Validate all specs upfront — fail at startup, not at request time
   for (const spec of specs) {
-    const { valid, errors } = validateSpec(spec)
+    // Strip framework-injected `hydrate` before validation — the check for manually-set
+    // hydrate only makes sense on raw source files (MCP validate tool), not here.
+    const { hydrate: _h, ...specToValidate } = spec
+    const { valid, errors } = validateSpec(specToValidate)
     const routeErrors = []
     if (!spec.route || typeof spec.route !== 'string') {
       routeErrors.push('spec.route is required and must be a string (e.g. "/contact")')
@@ -992,9 +1000,11 @@ ${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + 
 
   // Emit window.__PULSE_STORE__ so the client store singleton can be initialised.
   // Also exposes __updatePulseStore__ for navigate.js to refresh store on navigation.
+  // window.__PULSE_NONCE__ lets the toast runtime inject a nonce'd <style> tag to
+  // satisfy the style-src CSP directive (which disallows uninonce'd inline styles).
   const storeScript = ctx.store && Object.keys(ctx.store).length > 0
-    ? `\n  <script nonce="${nonce}">window.__PULSE_STORE__=${JSON.stringify(ctx.store)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
-    : ''
+    ? `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(ctx.store)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
+    : `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
 
   const docClose = `
   </div>

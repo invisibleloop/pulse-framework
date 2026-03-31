@@ -36,6 +36,19 @@ if (!valid) {
 
 // Render the view and run additional HTML checks
 const warnings = [...schemaWarnings]
+
+// Raw-response specs (contentType + render) produce non-HTML output —
+// skip all view rendering and HTML-specific checks for them.
+const isRawResponse = typeof spec.render === 'function' ||
+  (spec.contentType && !spec.contentType.startsWith('text/html'))
+
+if (isRawResponse) {
+  process.stdout.write(warnings.length > 0
+    ? 'Valid ✓ — but fix these issues:\n' + warnings.map(w => `  ⚠ ${w}`).join('\n')
+    : 'Valid ✓')
+  process.exit(0)
+}
+
 try {
   // Pass null for every declared server key so views that check `=== null`
   // degrade gracefully (showing error branches) rather than throwing on

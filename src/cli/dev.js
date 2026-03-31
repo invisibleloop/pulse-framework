@@ -187,11 +187,18 @@ const { updateSpecs } = createServer(specs, {
 
     const serveFile = (filePath) => {
       if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false
+      // Strip node:* imports — they don't resolve in the browser. Server-only imports
+      // are only used inside spec.server functions which the client runtime never calls.
+      let content = fs.readFileSync(filePath, 'utf-8')
+      content = content.replace(
+        /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"]node:[^'"]+['"]\s*;?[ \t]*\n?/gm,
+        ''
+      )
       res.writeHead(200, {
         'Content-Type':  'application/javascript',
         'Cache-Control': 'no-store',
       })
-      fs.createReadStream(filePath).pipe(res)
+      res.end(content)
       return true
     }
 

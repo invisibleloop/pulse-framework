@@ -1,7 +1,7 @@
 /**
  * Spec schema tests — run with: node src/spec/schema.test.js
  */
-import { validateSpec, getStreamOrder, getViewSegments } from './schema.js'
+import { validateSpec, assertValidSpec, getStreamOrder, getViewSegments } from './schema.js'
 
 let passed = 0
 let failed = 0
@@ -343,6 +343,45 @@ test('rejects guard that is an object', () => {
     { route: '/admin', state: {}, view: () => '', guard: { redirect: '/login' } },
     'spec.guard must be a function'
   )
+})
+
+// ---------------------------------------------------------------------------
+// assertValidSpec — framework-injected hydrate must not produce a warning
+// ---------------------------------------------------------------------------
+
+console.log('\nassertValidSpec\n')
+
+test('does not warn when hydrate is framework-injected', () => {
+  // The server injects hydrate onto specs that need it. assertValidSpec is called
+  // on every render — it must not print a false-positive warning about hydrate.
+  const warnings = []
+  const orig = console.warn
+  console.warn = (...args) => warnings.push(args.join(' '))
+  try {
+    assertValidSpec({
+      route:    '/entry',
+      hydrate:  '/src/pages/entry.js',
+      state:    { editing: false },
+      view:     () => '<main id="main-content"></main>',
+      mutations: { startEdit: () => ({ editing: true }) },
+      meta:     { title: 'Entry', description: 'A page' },
+    })
+  } finally {
+    console.warn = orig
+  }
+  const hydrateWarning = warnings.some(w => w.includes('hydrate'))
+  assert(!hydrateWarning, `Unexpected hydrate warning: ${warnings.join('; ')}`)
+})
+
+test('validateSpec still warns when hydrate is set manually in source', () => {
+  // validateSpec (used by the MCP tool on raw source files) should still warn.
+  const { warnings } = validateSpec({
+    route:   '/entry',
+    hydrate: '/src/pages/entry.js',
+    view:    () => '<main id="main-content"></main>',
+    meta:    { title: 'Entry', description: 'A page' },
+  })
+  assert(warnings.some(w => w.includes('hydrate')), 'Expected hydrate warning from validateSpec')
 })
 
 // ---------------------------------------------------------------------------
