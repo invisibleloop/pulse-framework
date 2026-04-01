@@ -145,7 +145,38 @@ function isInsideString(source, pos) {
       if (c === '"' || c === "'" || c === '`') { stack.push(c); i++; continue }
       i++; continue
     }
-    // top-level
+    // Top level — handle comments and regex literals before string delimiters.
+    // Without this, a `"` inside a regex literal (e.g. /"/g) or a comment would
+    // be mistaken for an opening string delimiter, causing all subsequent keys to
+    // be treated as "inside a string" and never stripped.
+    if (c === '/') {
+      if (source[i + 1] === '/') {          // line comment — skip to end of line
+        while (i < pos && source[i] !== '\n') i++
+        continue
+      }
+      if (source[i + 1] === '*') {           // block comment — skip to */
+        const end = source.indexOf('*/', i + 2)
+        i = end < 0 ? pos : end + 2
+        continue
+      }
+      // Regex literal heuristic: / is a regex when not preceded by ) ] or alnum.
+      // Division (a / b) always follows one of those; regex follows operators, keywords, etc.
+      let prev = ''
+      for (let k = i - 1; k >= 0; k--) {
+        if (source[k] !== ' ' && source[k] !== '\t') { prev = source[k]; break }
+      }
+      if (!/[a-zA-Z0-9_$)\]]/.test(prev)) {
+        i++  // skip opening /
+        while (i < pos) {
+          if (source[i] === '\\') { i += 2; continue }
+          if (source[i] === '/') { i++; break }   // closing /
+          if (source[i] === '\n') break            // regex can't span lines
+          i++
+        }
+        while (i < pos && /[gimsuy]/.test(source[i])) i++  // skip flags
+        continue
+      }
+    }
     if (c === '"' || c === "'" || c === '`') { stack.push(c) }
     i++
   }
@@ -379,7 +410,15 @@ const NAVIGATE_PATH = new URL('../src/runtime/navigate.js', import.meta.url).pat
 
 const PAGES_DIR = path.join(ROOT, 'src', 'pages')
 
-const bootstrapFiles = pages.map(({ filePath }) => {
+const bootstrapFiles = pages.flatMap(({ filePath }) => {
+  // Strip server-only keys/imports to check what's left for the client.
+  // Skip specs with no view — these are API routes or raw content specs
+  // (using render: instead of view:) that have no client-side code. Including
+  // them in the bundle fragments the shared runtime chunk unnecessarily.
+  const source   = fs.readFileSync(filePath, 'utf8')
+  const stripped = stripServerOnlyImports(stripServerOnlyKeys(source))
+  if (!/\bview\s*:/.test(stripped)) return []
+
   // Use the path relative to src/pages/ so nested pages get unique names.
   // e.g. src/pages/api/products.js → 'api--products' (not 'products')
   const relToPages    = path.relative(PAGES_DIR, filePath)
@@ -404,7 +443,7 @@ if (root && !root.dataset.pulseMounted) {
 export default spec
 `)
 
-  return { filePath, bootstrapPath, name }
+  return [{ filePath, bootstrapPath, name }]
 })
 
 // ---------------------------------------------------------------------------

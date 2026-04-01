@@ -30,23 +30,31 @@ console.log('\nTask list (checkbox) rendering\n')
 
 test('unchecked item renders disabled checkbox', () => {
   const { html } = parseMd('- [ ] Buy milk')
-  assert(html.includes('<input type="checkbox" disabled>'), `Got: ${html}`)
+  assert(html.includes('<input type="checkbox" class="ui-checkbox-input" disabled>'), `Got: ${html}`)
   assert(html.includes('Buy milk'), `Got: ${html}`)
 })
 
 test('checked item renders checked disabled checkbox', () => {
   const { html } = parseMd('- [x] Done')
-  assert(html.includes('<input type="checkbox" disabled checked>'), `Got: ${html}`)
+  assert(html.includes('<input type="checkbox" class="ui-checkbox-input" disabled checked>'), `Got: ${html}`)
 })
 
 test('uppercase X is also treated as checked', () => {
   const { html } = parseMd('- [X] Done')
-  assert(html.includes('<input type="checkbox" disabled checked>'), `Got: ${html}`)
+  assert(html.includes('<input type="checkbox" class="ui-checkbox-input" disabled checked>'), `Got: ${html}`)
 })
 
 test('task list items get task-list-item class', () => {
   const { html } = parseMd('- [ ] Item')
   assert(html.includes('class="task-list-item"'), `Got: ${html}`)
+})
+
+test('task item checkbox is wrapped in a label for accessibility', () => {
+  const { html } = parseMd('- [ ] Buy milk')
+  assert(html.includes('class="ui-checkbox ui-checkbox--disabled"'), `Got: ${html}`)
+  assert(html.includes('<input type="checkbox" class="ui-checkbox-input" disabled>'), `Got: ${html}`)
+  assert(html.includes('<span class="ui-checkbox-box" aria-hidden="true">'), `Got: ${html}`)
+  assert(html.includes('<span class="ui-checkbox-label">Buy milk</span>'), `Got: ${html}`)
 })
 
 test('task list ul gets contains-task-list class', () => {
@@ -73,8 +81,8 @@ test('task item label text is rendered as inline markdown', () => {
 
 test('multiple items preserve checked state independently', () => {
   const { html } = parseMd('- [ ] Unchecked\n- [x] Checked\n- [ ] Also unchecked')
-  const checkedCount   = (html.match(/checked>/g) || []).length
-  const uncheckedCount = (html.match(/<input type="checkbox" disabled>/g) || []).length
+  const checkedCount   = (html.match(/disabled checked>/g) || []).length
+  const uncheckedCount = (html.match(/disabled>/g) || []).length
   assert(checkedCount === 1,   `Expected 1 checked, got ${checkedCount}`)
   assert(uncheckedCount === 2, `Expected 2 unchecked, got ${uncheckedCount}`)
 })

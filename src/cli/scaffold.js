@@ -95,6 +95,9 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
 
   // settings.json — hooks that enforce correct agent behaviour
   write(targetDir, '.claude/settings.json', JSON.stringify({
+    enabledPlugins: {
+      'frontend-design@claude-plugins-official': true,
+    },
     hooks: {
       SessionStart: [
         {
@@ -345,6 +348,19 @@ public/app.css   ← global stylesheet
 2. Read \`pulse://guide\` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns
 
 The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
+
+## Design — do this before writing any HTML
+
+Before planning any new page or component, use the \`frontend-design\` plugin to establish the visual direction:
+
+1. Call the plugin's design tools with the page brief (what it does, who it's for, the tone)
+2. The plugin will return decisions — colour palette, typography, spacing scale, component variants, layout approach
+3. **Apply those decisions as CSS custom property overrides in \`public/app.css\`** — not as inline styles or class hacks
+4. Document the chosen tokens at the top of \`public/app.css\` so every page stays consistent
+
+The plugin informs *what* to build visually. The Pulse component library is *how* you build it. Use both — the plugin gives direction, the components implement it.
+
+**Do not default to stock component styles.** If the design plugin gives you a colour, use it. If it suggests a layout pattern, follow it. Every page should reflect deliberate design decisions, not the component library defaults.
 
 ## Before writing any code
 
