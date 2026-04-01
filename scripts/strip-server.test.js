@@ -73,6 +73,18 @@ function isInsideString(source, pos) {
       if (c === '"' || c === "'" || c === '`') { stack.push(c); i++; continue }
       i++; continue
     }
+    if (c === '/') {
+      if (source[i + 1] === '/') { while (i < pos && source[i] !== '\n') i++; continue }
+      if (source[i + 1] === '*') { const end = source.indexOf('*/', i + 2); i = end < 0 ? pos : end + 2; continue }
+      let prev = ''
+      for (let k = i - 1; k >= 0; k--) { if (source[k] !== ' ' && source[k] !== '\t') { prev = source[k]; break } }
+      if (!/[a-zA-Z0-9_$)\]]/.test(prev)) {
+        i++
+        while (i < pos) { if (source[i] === '\\') { i += 2; continue } if (source[i] === '/') { i++; break } if (source[i] === '\n') break; i++ }
+        while (i < pos && /[gimsuy]/.test(source[i])) i++
+        continue
+      }
+    }
     if (c === '"' || c === "'" || c === '`') { stack.push(c) }
     i++
   }
@@ -255,6 +267,21 @@ test('render: inside a template literal string (docs code example) is not stripp
 test('server: inside a double-quoted string is not stripped',
   'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}',
   'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}'
+)
+
+test('server/meta not fooled by regex literal containing double quote (/"/g)',
+  'const esc = s => s.replace(/"/g, \'&quot;\')\nexport default {\n  meta: { title: \'Page\', description: \'Desc\' },\n  server: { data: async () => [] },\n  view: () => \'\'\n}',
+  'const esc = s => s.replace(/"/g, \'&quot;\')\nexport default {\n  view: () => \'\'\n}'
+)
+
+test('server not fooled by line comment containing double quote',
+  'export default {\n  // server: "comment"\n  server: { data: async () => [] },\n  view: () => \'\'\n}',
+  'export default {\n  // server: "comment"\n  view: () => \'\'\n}'
+)
+
+test('server not fooled by block comment containing double quote',
+  'export default {\n  /* server: "comment" */\n  server: { data: async () => [] },\n  view: () => \'\'\n}',
+  'export default {\n  /* server: "comment" */\n  view: () => \'\'\n}'
 )
 
 test('meta object is stripped (client runtime never reads spec.meta)',

@@ -251,7 +251,7 @@ function renderBlocks(blocks) {
           const task = item.match(/^\[([ xX])\] (.*)/)
           if (task) {
             const checked = task[1].toLowerCase() === 'x' ? ' checked' : ''
-            return `<li class="task-list-item"><input type="checkbox" disabled${checked}> ${renderListItem(task[2])}</li>`
+            return `<li class="task-list-item"><label class="ui-checkbox ui-checkbox--disabled"><input type="checkbox" class="ui-checkbox-input" disabled${checked}><span class="ui-checkbox-box" aria-hidden="true"></span><span class="ui-checkbox-label">${renderListItem(task[2])}</span></label></li>`
           }
           return `<li>${renderListItem(item)}</li>`
         })
