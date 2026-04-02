@@ -37,7 +37,7 @@ export default {
   route: '/',
   meta: {
     title: 'Pulse — The spec-first web framework',
-    description: 'Pulse is a server-first web framework with streaming SSR, zero client JS by default, and Lighthouse 100 built into the architecture. One spec format. One way to build. Production quality by design.',
+    description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
     styles: ['/pulse-ui.css', '/docs.css'],
   },
   state: {},
@@ -67,9 +67,9 @@ export default {
           </svg>
         </div>
         <div class="hero-badge">v${version} — EARLY ACCESS</div>
-        <p class="hero-kicker">A Node.js framework for building server-rendered web apps</p>
-        <h1 class="hero-title">Describe the outcome. Pulse guarantees it.</h1>
-        <p class="hero-subtitle">One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the framework, not left to configuration.<br><strong>Designed for AI agents.</strong></p>
+        <p class="hero-kicker">A server-first Node.js framework. Zero runtime dependencies.</p>
+        <h1 class="hero-title">One spec. One way to build. Production quality by design.</h1>
+        <p class="hero-subtitle">Each page is a single plain JS object — server data, client state, mutations, and view co-located in one place. Streaming SSR, security headers, and production caching are enforced by the framework, not left to configuration.<br><strong>Designed for AI agents. Simple enough to write yourself.</strong></p>
         <div class="hero-ctas">
           <a href="/getting-started" class="btn-primary">Get Started</a>
           <a href="/spec" class="btn-secondary">Read the Spec</a>
@@ -94,30 +94,30 @@ export default {
         <div class="home-stat-divider"></div>
         <div class="home-stat">
           <span class="home-stat-value">100</span>
-          <span class="home-stat-label">Lighthouse score</span>
+          <span class="home-stat-label">Lighthouse score, by design</span>
         </div>
       </section>
 
       <section class="how">
         <div class="how-inner">
-        <h2 class="section-label">How it works</h2>
+        <h2 class="section-label">The idea</h2>
         <div class="how-steps">
           <div class="how-step">
             <div class="how-step-num">1</div>
-            <h3>Write a spec</h3>
-            <p>Everything for a page lives in one object: server data, state, mutations, view. One format, no conventions to learn.</p>
+            <h3>The spec is the page</h3>
+            <p>Everything a page needs lives in one plain JS object — server data, client state, mutations, and view. One format, no split files, no hidden conventions.</p>
           </div>
           <div class="how-connector" aria-hidden="true"></div>
           <div class="how-step">
             <div class="how-step-num">2</div>
-            <h3>Validate automatically</h3>
-            <p>The schema enforces a single, correct structure. Either the spec is valid, or it’s rejected — no ambiguity, no runtime surprises.</p>
+            <h3>The schema is the contract</h3>
+            <p>Every spec is validated at startup. Either it's correct or it's rejected — no ambiguity, no misconfiguration that surfaces later in production.</p>
           </div>
           <div class="how-connector" aria-hidden="true"></div>
           <div class="how-step">
             <div class="how-step-num">3</div>
-            <h3>Production quality, built in</h3>
-            <p>Streaming SSR, security headers, and immutable caching come from the framework — not your config. Follow the spec, and the results follow.</p>
+            <h3>The framework is the guarantee</h3>
+            <p>Streaming SSR, security headers, and production caching come from the architecture. You write the product logic. The framework ships the quality.</p>
           </div>
         </div>
         </div>
@@ -126,8 +126,8 @@ export default {
       <section class="home-code">
         <div class="home-code-inner">
           <div class="home-code-header">
-            <h2>Everything in one object</h2>
-            <p>Server data, state, mutations, and view are co-located. No split files. No hidden conventions. The spec <strong>is</strong> the page.</p>
+            <h2>Everything a page needs. Nothing it doesn't.</h2>
+            <p>Server fetchers, client state, mutations, and view are co-located in one object. No split files. No magic exports. The spec <strong>is</strong> the page — readable, predictable, complete.</p>
           </div>
           <div class="home-code-block">
             ${codeWindow({ content: exampleSpec, filename: 'src/pages/dashboard.js', lang: 'JavaScript' })}
@@ -136,26 +136,26 @@ export default {
       </section>
 
       <section class="ai-first">
-        <div class="section-label">Why Pulse + AI</div>
-        <h2 class="ai-first-title">Designed for AI agents. Enforced by the framework.</h2>
-        <p class="ai-first-lead"><strong>Traditional frameworks</strong> were built for humans — multiple valid patterns, optional decisions, enough surface area for output to drift. Pulse is different.</p>
+        <div class="section-label">AI + Pulse</div>
+        <h2 class="ai-first-title">The constraint is the point. For humans and agents&nbsp;alike.</h2>
+        <p class="ai-first-lead">Pulse was designed around a simple observation: when there is only one correct way to build a page, every page is built correctly — whether you wrote it or an AI did. The spec format is the advantage. The schema is the enforcement.</p>
         <div class="ai-cols">
           <div class="ai-col">
-            <h3 class="ai-col-title ai-col-title--bad">AI + existing frameworks</h3>
+            <h3 class="ai-col-title">For developers</h3>
             <ul class="ai-col-list">
-              <li>Multiple valid patterns per page — the agent picks one, the next picks another.</li>
-              <li>Security headers, SSR config, and caching are optional decisions the agent can miss.</li>
-              <li>Output drifts over time as different agents make different choices.</li>
-              <li>Reviewing AI output requires knowing every pattern it could have used.</li>
+              <li>One format to learn — server, state, mutations, view in one place.</li>
+              <li>Production quality is the starting point, not a final audit.</li>
+              <li>Specs are short, self-contained, and easy to review.</li>
+              <li>Nothing to misconfigure — the framework doesn't give you the choice.</li>
             </ul>
           </div>
           <div class="ai-col ai-col--pulse">
-            <h3 class="ai-col-title ai-col-title--good">Pulse + AI enforces structure</h3>
+            <h3 class="ai-col-title ai-col-title--good">For AI agents</h3>
             <ul class="ai-col-list">
-              <li>One spec format per page.</li>
-              <li>Architecture enforces SSR, security, and caching.</li>
-              <li>Agents fill in the contract, never off-pattern.</li>
-              <li>Reading AI output means reading one JS object — nothing hidden.</li>
+              <li>One valid structure per page — agents can't pick the wrong pattern.</li>
+              <li>The schema rejects bad output at startup, not in production.</li>
+              <li>Security, SSR, and caching can't be accidentally omitted.</li>
+              <li>Consistent output across agents, sessions, and team members.</li>
             </ul>
           </div>
         </div>
@@ -164,7 +164,7 @@ export default {
       <section class="versus">
         <div class="section-label">How Pulse compares</div>
         <h2 class="versus-title">Constraints enforced. Not recommended.</h2>
-        <p class="versus-sub">Pulse enforces constraints and correctness out of the box; other frameworks leave it to the developer.</p>
+        <p class="versus-sub">Pulse enforces correctness out of the box. Other frameworks leave production quality to the developer.</p>
         <div class="versus-table-wrap table-sticky-col">
           <table class="versus-table">
             <thead>
@@ -195,13 +195,13 @@ export default {
               <tr>
                 <th scope="row">SSR out of the box</th>
                 <td class="v-yes">Streaming SSR, zero config</td>
-                <td class="v-partial">Yes, but client hydration adds JS overhead on every page</td>
+                <td class="v-partial">Yes, but client hydration adds JS on every page</td>
                 <td class="v-partial">Yes, but requires an adapter and client runtime on every page</td>
               </tr>
               <tr>
                 <th scope="row">Client JS shipped</th>
-                <td class="v-yes">~4 kB brotli (shared runtime, first visit)</td>
-                <td class="v-no">50-200 kB+ depending on features</td>
+                <td class="v-yes">~4 kB brotli on first visit; 0 kB on static pages</td>
+                <td class="v-no">50–200 kB+ depending on features used</td>
                 <td class="v-partial">~15 kB brotli</td>
               </tr>
               <tr>
@@ -224,7 +224,7 @@ export default {
               </tr>
               <tr>
                 <th scope="row">Production build step</th>
-                <td class="v-yes">None — <code>node server.js</code> is production</td>
+                <td class="v-yes">Server needs none — <code>node server.js</code> is production. Client bundles are optional.</td>
                 <td class="v-no">Required — <code>next build</code></td>
                 <td class="v-no">Required — <code>vite build</code></td>
               </tr>
@@ -243,24 +243,24 @@ export default {
               </svg>
             </div>
             <h2>Performance by design</h2>
-            <p>Pulse does not offer performance as an option — it enforces it structurally. A high Lighthouse score is the baseline. There is nothing to configure because there is nothing to get wrong.</p>
+            <p>Performance is not a Pulse feature — it is a structural outcome. A high Lighthouse score is the baseline. There is nothing to configure because the architecture makes the right choices automatically.</p>
           </div>
           <ul class="usp-points">
             <li>
               <strong>Fast LCP by design.</strong>
-              The shell renders and streams instantly. Deferred segments arrive as data resolves — no blocking, no flash.
+              The shell streams to the browser instantly. Deferred segments arrive as data resolves — no blocking, no flash, no placeholder juggling.
             </li>
             <li>
               <strong>~4 kB of JS on first visit.</strong>
-              The shared runtime is brotli-compressed and cached across all navigations. Subsequent pages cost 0.4–0.9 kB.
+              The shared runtime is brotli-compressed and cached across all navigations. Subsequent pages cost 0.4–0.9 kB. Static pages ship zero JS.
             </li>
             <li>
               <strong>Zero CLS.</strong>
-              The shell occupies the correct layout before data arrives. No placeholder juggling, no layout shift.
+              The shell occupies the correct layout before data arrives. No layout shift because there is no placeholder to replace.
             </li>
             <li>
               <strong>Immutable bundle caching.</strong>
-              Production bundles are content-hashed and served with <code>immutable, max-age=31536000</code>. Browsers cache them forever — deploys are instant for returning visitors.
+              Production bundles are content-hashed and served with <code>immutable, max-age=31536000</code>. Returning visitors pay no JS cost on deploy.
             </li>
           </ul>
         </div>
@@ -274,20 +274,20 @@ export default {
               </svg>
             </div>
             <h2>Safe by design</h2>
-            <p>Security is not a plugin or a checklist in Pulse — it is part of the response pipeline. Every page ships the headers most frameworks leave to the developer to remember.</p>
+            <p>Security is not a plugin in Pulse — it is part of the response pipeline. Every response ships the headers most frameworks leave to the developer to remember to add.</p>
           </div>
           <ul class="usp-points">
             <li>
               <strong>Security headers on every response.</strong>
-              <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>, <code>Cross-Origin-Opener-Policy</code> — all set automatically, including on 404 and 500 pages.
+              <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>, <code>Cross-Origin-Opener-Policy</code> — set automatically, including on 404 and 500 pages.
             </li>
             <li>
               <strong>Declarative state constraints.</strong>
-              <code>constraints</code> enforce min/max bounds on state after every mutation. The value can never go out of range regardless of what the client sends.
+              <code>constraints</code> enforce min/max bounds on state after every mutation. Values can never go out of range regardless of what the client sends.
             </li>
             <li>
               <strong>Co-located validation.</strong>
-              Validation rules live next to the state they guard. The agent can see what is being validated and why, in one place.
+              Validation rules live next to the state they guard. Easy to read, easy to review, impossible to misplace.
             </li>
             <li>
               <strong>Guard before data.</strong>
@@ -314,16 +314,16 @@ export default {
               The server is pure Node.js HTTP. No Express, no Fastify, no React. Nothing to add to <code>package.json</code> to run a production server.
             </li>
             <li>
-              <strong>No production build step.</strong>
-              <code>node server.js</code> is production. The build step is only needed to generate content-hashed client bundles — the server runs without it in dev.
+              <strong>No server build step.</strong>
+              <code>node server.js</code> is production. The optional build step generates content-hashed client bundles — the server runs without it.
             </li>
             <li>
               <strong>esbuild only in development.</strong>
-              The one dev dependency that compiles client bundles is esbuild. Fast, no plugins to configure, never part of the production runtime.
+              The one dev dependency that compiles client bundles is esbuild. Fast, zero plugins to configure, never part of the production runtime.
             </li>
             <li>
-              <strong>No framework upgrades breaking your app.</strong>
-              Because the spec is a plain JS object with no framework imports in page files, there is no framework API surface to break across versions.
+              <strong>No breaking upgrades.</strong>
+              Page files have no framework imports. The spec is a plain JS object. There is no framework API surface in your code to break across versions.
             </li>
           </ul>
         </div>
@@ -381,15 +381,15 @@ export default {
       </section>` : ''}
 
       <section class="home-cta">
-        <h2>The spec is the contract.<br>Your agent fills it in.</h2>
+        <h2>One format. Every page. Production ready.</h2>
         <ul class="home-cta-checks">
-          <li>Writes the spec</li>
-          <li>Validates against the schema</li>
-          <li>Checks Lighthouse — desktop and mobile</li>
-          <li>Runs the tests</li>
-          <li>Ships production quality</li>
+          <li>One spec object per page — always valid, always readable</li>
+          <li>Streaming SSR and security headers, zero configuration</li>
+          <li>100 Lighthouse built into the architecture</li>
+          <li>Works with AI agents — and without them</li>
+          <li>MIT licensed, zero runtime dependencies</li>
         </ul>
-        <p>MIT licensed and available now. Production quality is not the goal. It is the starting point.</p>
+        <p>Pulse is in early access. The goal is not to compete on features — it is to eliminate the class of problems that come from having too many of them.</p>
         <div class="home-cta-actions">
           <a href="/getting-started" class="btn-primary">Get Started</a>
           <a href="/spec" class="btn-secondary">Read the Spec</a>

@@ -683,6 +683,7 @@ a:hover {
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0.75rem 0 1.25rem;
+  text-align: center;
 }
 
 .ai-first-lead {
@@ -691,6 +692,9 @@ a:hover {
   line-height: 1.75;
   max-width: 72ch;
   margin-bottom: 3rem;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .ai-cols {
@@ -751,10 +755,10 @@ a:hover {
 }
 
 .ai-col-list li::before {
-  content: "–";
+  content: "✓";
   position: absolute;
   left: 0;
-  color: var(--muted-2);
+  color: var(--accent);
 }
 
 .ai-col--pulse .ai-col-list li {
