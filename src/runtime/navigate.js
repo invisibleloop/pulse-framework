@@ -104,10 +104,13 @@ export function initNavigation(root, mountFn) {
         document.dispatchEvent(new CustomEvent('pulse:navigate'))
 
         if (hydratePath && mountFn) {
+          const { default: spec } = await import(/* @vite-ignore */ hydratePath)
+          // A newer navigation may have started while the import was in flight —
+          // bail out rather than destroying the already-mounted next page.
+          if (controller.signal.aborted) return
           currentMount?.destroy()
           root.dataset.pulseMounted = '1'
           window.__PULSE_SERVER__ = finalServerState
-          const { default: spec } = await import(/* @vite-ignore */ hydratePath)
           if (spec) currentMount = mountFn(spec, root, finalServerState)
         }
 
@@ -130,10 +133,11 @@ export function initNavigation(root, mountFn) {
         if (push) history.pushState({ pulse: true, path }, '', path)
 
         if (hydrate && mountFn) {
+          const { default: spec } = await import(/* @vite-ignore */ hydrate)
+          if (controller.signal.aborted) return
           currentMount?.destroy()
           root.dataset.pulseMounted = '1'
           window.__PULSE_SERVER__ = serverState || {}
-          const { default: spec } = await import(/* @vite-ignore */ hydrate)
           if (spec) currentMount = mountFn(spec, root, serverState || {})
         }
 
