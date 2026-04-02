@@ -327,7 +327,9 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   // to satisfy the style-src CSP directive.
   const storeStateScript = storeState && Object.keys(storeState).length > 0
     ? `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
-    : `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
+    : spec.hydrate
+      ? `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
+      : ''
 
   // Hydration bootstrap — makes the server-rendered HTML interactive.
   // When hydrate points to a self-executing bundle (/dist/…) a single <script>
