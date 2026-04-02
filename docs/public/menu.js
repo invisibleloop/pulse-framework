@@ -52,8 +52,10 @@
     }
   }
 
-  // After client-side navigation — sidebar DOM is replaced, so re-query and re-centre
+  // After client-side navigation — #pulse-root is replaced, so the original
+  // navSidebar reference is detached. Re-query for the fresh sidebar element.
   document.addEventListener('pulse:navigate', function () {
+    navSidebar = document.querySelector('.docs-sidebar')
     var newActive = navSidebar && navSidebar.querySelector('.nav-link.active')
     centerNavLink(newActive)
   })

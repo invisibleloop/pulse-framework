@@ -258,8 +258,47 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Page HTML wrapper
+// Page HTML wrapper — shared script builders
 // ---------------------------------------------------------------------------
+
+/**
+ * Build the inline script that exposes window.__PULSE_NONCE__ and (optionally)
+ * window.__PULSE_STORE__ to the client runtime.
+ *
+ * Only emitted for hydrated pages. Purely server-rendered pages have no JS to
+ * read these globals, and omitting the inline script keeps cached HTML nonce-free
+ * so it can be served with a nonce-free CSP without a CSP violation.
+ */
+export function buildStoreScript(spec, storeState, nonce) {
+  if (!spec.hydrate) return ''
+  if (storeState && Object.keys(storeState).length > 0) {
+    return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
+  }
+  return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
+}
+
+/**
+ * Build the hydration <script> tag that mounts the spec client-side.
+ *
+ * Bundle paths (/dist/) → a single external <script type="module" src="..."> tag.
+ * Dev source paths       → an inline module block with explicit imports (nonce required).
+ */
+export function buildHydrateScript(spec, storeDef, nonce) {
+  if (!spec.hydrate) return ''
+  if (isBundle(spec.hydrate)) {
+    return `<script type="module" src="${esc(spec.hydrate)}"></script>`
+  }
+  const storeImport = storeDef?.hydrate ? `\n  import store from '${esc(storeDef.hydrate)}'` : ''
+  const storeArg    = storeDef?.hydrate ? ', { ssr: true, store }' : ', { ssr: true }'
+  return `<script type="module" nonce="${nonce}">
+  import spec from '${esc(spec.hydrate)}'
+  import { mount } from '/@pulse/runtime/index.js'
+  import { initNavigation } from '/@pulse/runtime/navigate.js'${storeImport}
+  const root = document.getElementById('pulse-root')
+  mount(spec, root, window.__PULSE_SERVER__ || {}${storeArg})
+  initNavigation(root, mount)
+</script>`
+}
 
 /**
  * Wrap rendered content in a full HTML document.
@@ -320,40 +359,8 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     ? `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(serverState)};</script>`
     : ''
 
-  // Serialise store state so the client store singleton can be initialised.
-  // Also exposes window.__updatePulseStore__ so navigate.js can refresh the
-  // singleton with fresh server data on client-side navigations.
-  // window.__PULSE_NONCE__ lets the toast runtime inject a nonce'd <style> tag
-  // to satisfy the style-src CSP directive.
-  const storeStateScript = storeState && Object.keys(storeState).length > 0
-    ? `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
-    : spec.hydrate
-      ? `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
-      : ''
-
-  // Hydration bootstrap — makes the server-rendered HTML interactive.
-  // When hydrate points to a self-executing bundle (/dist/…) a single <script>
-  // tag is enough; the bundle imports spec + runtime and calls mount() itself.
-  // In dev mode (source file path) we emit the explicit inline import block.
-  const storeImport  = spec.hydrate && !isBundle(spec.hydrate) && storeDef?.hydrate
-    ? `\n  import store from '${esc(storeDef.hydrate)}'`
-    : ''
-  const storeArg     = spec.hydrate && !isBundle(spec.hydrate) && storeDef?.hydrate
-    ? ', { ssr: true, store }'
-    : ', { ssr: true }'
-
-  const hydrateScript = spec.hydrate
-    ? isBundle(spec.hydrate)
-      ? `<script type="module" src="${esc(spec.hydrate)}"></script>`
-      : `<script type="module" nonce="${nonce}">
-  import spec from '${esc(spec.hydrate)}'
-  import { mount } from '/@pulse/runtime/index.js'
-  import { initNavigation } from '/@pulse/runtime/navigate.js'${storeImport}
-  const root = document.getElementById('pulse-root')
-  mount(spec, root, window.__PULSE_SERVER__ || {}${storeArg})
-  initNavigation(root, mount)
-</script>`
-    : ''
+  const storeStateScript = buildStoreScript(spec, storeState, nonce)
+  const hydrateScript    = buildHydrateScript(spec, storeDef, nonce)
 
   // Server-Timing header value (caller is responsible for setting the header)
   const serverTimingValue = timing.total !== undefined

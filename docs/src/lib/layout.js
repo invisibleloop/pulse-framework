@@ -14,7 +14,7 @@ let _manifest = {}
 export function initLayoutManifest(m) { _manifest = m }
 const asset = href => _manifest[href] || href
 
-const { version } = pkg
+const version = typeof pkg !== 'undefined' ? (pkg?.version ?? '') : ''
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

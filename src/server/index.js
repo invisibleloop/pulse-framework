@@ -21,7 +21,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 
@@ -92,8 +92,8 @@ function buildCsp(nonce, ext = {}) {
 
 /**
  * Build the nonce-free CSP for cached responses.
- * Safe because cached pages (no spec.server, no spec.store) are only cached
- * when they have no spec.hydrate — so no inline nonce scripts are present.
+ * Safe because isCacheablePage() only returns true when spec.server, spec.store,
+ * and spec.hydrate are all absent — guaranteeing no inline nonce scripts in the HTML.
  * @param {Record<string,string[]>} [ext]  Extra sources to merge in per directive.
  */
 function buildCachedCsp(ext = {}) {
@@ -305,6 +305,26 @@ function pageCacheTtl(spec, dev, defaultCache) {
   return cfg?.maxAge || 0
 }
 
+/** Build the in-process page cache key scoped to route + request parameters. */
+function buildCacheKey(spec, ctx) {
+  return spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
+}
+
+/**
+ * True when a page's rendered HTML is safe to cache in-process.
+ *
+ * A page is NOT cacheable if it has any of:
+ *   - spec.server  — embeds a nonce'd __PULSE_SERVER__ inline script
+ *   - spec.store   — same
+ *   - spec.hydrate — embeds a nonce'd __PULSE_NONCE__ inline script (for toasts)
+ *
+ * In all three cases the cached HTML would contain a nonce that doesn't match
+ * the nonce-free CSP used for cached responses, causing a CSP violation.
+ */
+function isCacheablePage(spec) {
+  return !spec.server && !spec.store?.length && !spec.hydrate
+}
+
 // ---------------------------------------------------------------------------
 // Dev import map — lets browser resolve @invisibleloop/pulse/* bare specifiers
 // ---------------------------------------------------------------------------
@@ -350,8 +370,7 @@ async function cachedRenderToString(spec, ctx, dev) {
     return renderToString(spec, ctx)
   }
 
-  // Build a cache key scoped to this route + request parameters
-  const key = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
+  const key = buildCacheKey(spec, ctx)
 
   const cached = serverDataCache.get(key)
   if (cached) return cached
@@ -841,9 +860,8 @@ async function handleNavStreamResponse(spec, ctx, req, res) {
  * Checks the in-process page cache before rendering; stores result after.
  */
 async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
-  const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
-  // Pages with server data or store data embed a nonce'd __PULSE_SERVER__ script — don't cache them
-  const ttl      = (!spec.server && !spec.store?.length) ? pageCacheTtl(spec, dev, defaultCache) : 0
+  const cacheKey = buildCacheKey(spec, ctx)
+  const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
 
   let html, serverTimingValue, fromCache = false
 
@@ -892,9 +910,8 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
  */
 async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
   // Serve from in-process page cache when available — skip streaming overhead.
-  // Pages with spec.server or spec.store embed a nonce'd __PULSE_SERVER__ script so are never cached.
-  const cacheKey = spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
-  const ttl      = (!spec.server && !spec.store?.length) ? pageCacheTtl(spec, dev, defaultCache) : 0
+  const cacheKey = buildCacheKey(spec, ctx)
+  const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
   const cached   = ttl > 0 ? pageHtmlCache.get(cacheKey) : null
 
   if (cached) {
@@ -973,45 +990,19 @@ ${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + 
 <body${bodyAttr}>
   <div id="pulse-root">`
 
-  const storeImport  = !spec.hydrate?.startsWith('/dist/') && store?.hydrate
-    ? `\n  import store from '${escHtml(store.hydrate)}'`
-    : ''
-  const storeArg     = !spec.hydrate?.startsWith('/dist/') && store?.hydrate
-    ? ', { ssr: true, store }'
-    : ', { ssr: true }'
-
-  const hydrateScript = spec.hydrate
-    ? spec.hydrate.startsWith('/dist/')
-      ? `\n  <script type="module" src="${escHtml(spec.hydrate)}"></script>`
-      : `\n  <script type="module" nonce="${nonce}">
-  import spec from '${escHtml(spec.hydrate)}'
-  import { mount } from '/@pulse/runtime/index.js'
-  import { initNavigation } from '/@pulse/runtime/navigate.js'${storeImport}
-  const root = document.getElementById('pulse-root')
-  mount(spec, root, window.__PULSE_SERVER__ || {}${storeArg})
-  initNavigation(root, mount)
-</script>`
-    : ''
-
-  const scriptTags = (meta.scripts || [])
+  const scriptTags    = (meta.scripts || [])
     .map(src => `  <script src="${escHtml(src)}" defer></script>`)
     .join('\n')
+  const storeScript   = buildStoreScript(spec, ctx.store || null, nonce)
+  const hydrateScript = buildHydrateScript(spec, store, nonce)
 
   const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
 
-  // Emit window.__PULSE_STORE__ so the client store singleton can be initialised.
-  // Also exposes __updatePulseStore__ for navigate.js to refresh store on navigation.
-  // window.__PULSE_NONCE__ lets the toast runtime inject a nonce'd <style> tag to
-  // satisfy the style-src CSP directive (which disallows uninonce'd inline styles).
-  const storeScript = ctx.store && Object.keys(ctx.store).length > 0
-    ? `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(ctx.store)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
-    : spec.hydrate
-      ? `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
-      : ''
-
   const docClose = `
   </div>
-  ${scriptTags}${storeScript}${hydrateScript}
+  ${scriptTags}
+  ${storeScript}
+  ${hydrateScript}
   ${resolvedExtraBody}
 </body>
 </html>`
