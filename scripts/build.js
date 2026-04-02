@@ -476,7 +476,9 @@ const result = await esbuild.build({
 const manifest = {}
 
 for (const [outFile, meta] of Object.entries(result.metafile.outputs)) {
-  const bundlePath = '/' + path.relative(path.join(ROOT, 'public'), path.join(ROOT, outFile))
+  // outFile is relative to process.cwd(), not ROOT — use path.resolve to get the
+  // true absolute path before computing the URL-relative bundle path.
+  const bundlePath = '/' + path.relative(path.join(ROOT, 'public'), path.resolve(outFile))
 
   // Shared runtime chunk — esbuild generates this via splitting, no entryPoint
   if (!meta.entryPoint && path.basename(outFile).startsWith('runtime-')) {

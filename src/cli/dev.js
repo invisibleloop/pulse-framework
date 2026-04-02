@@ -187,11 +187,14 @@ const { updateSpecs } = createServer(specs, {
 
     const serveFile = (filePath) => {
       if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) return false
-      // Strip node:* imports — they don't resolve in the browser. Server-only imports
-      // are only used inside spec.server functions which the client runtime never calls.
+      // Strip server-only imports that can't resolve in the browser:
+      //   - node:* built-ins (fs, path, etc.)
+      //   - JSON files imported with `with { type: 'json' }` (e.g. package.json for version)
+      // These are only used inside spec.server functions or module-level server init;
+      // the client runtime never calls those code paths.
       let content = fs.readFileSync(filePath, 'utf-8')
       content = content.replace(
-        /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"]node:[^'"]+['"]\s*;?[ \t]*\n?/gm,
+        /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"](?:node:[^'"]+|[^'"]*\.json)['"]\s*(?:with\s*\{[^}]*\})?\s*;?[ \t]*\n?/gm,
         ''
       )
       res.writeHead(200, {
