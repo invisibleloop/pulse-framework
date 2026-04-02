@@ -86,4 +86,9 @@ export {
   iconHandPointUp, iconHandPointDown, iconHandPointLeft, iconHandPointRight,
   iconGlobe, iconShield, iconZap, iconTrendingUp, iconTrendingDown, iconLoader, iconGrid, iconBug, iconMapPin,
   iconSun, iconMoon,
+  iconShoppingCart, iconShoppingBag, iconCreditCard, iconPackage, iconGift,
+  iconWallet, iconTruck, iconReceipt, iconStore, iconPercent, iconTicket, iconBanknote,
+  iconUtensils, iconCoffee, iconPizza, iconApple, iconCarrot,
+  iconWine, iconCakeSlice, iconFish, iconCherry, iconEgg,
+  iconCookie, iconIceCream, iconCroissant, iconSalad, iconWheat,
 } from './icons.js'

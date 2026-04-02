@@ -1,6 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
+import { modal } from '../../../../src/ui/index.js'
 import {
   button, feature,
   iconArrowLeft, iconArrowRight, iconArrowUp, iconArrowDown,
@@ -17,8 +18,12 @@ import {
   iconPhone, iconGamepad,
   iconHandPointUp, iconHandPointDown, iconHandPointLeft, iconHandPointRight,
   iconGlobe, iconShield, iconZap, iconTrendingUp, iconTrendingDown, iconLoader, iconGrid, iconBug,
-  iconMapPin,
-  iconSun, iconMoon,
+  iconMapPin, iconSun, iconMoon,
+  iconShoppingCart, iconShoppingBag, iconCreditCard, iconPackage, iconGift,
+  iconWallet, iconTruck, iconReceipt, iconStore, iconPercent, iconTicket, iconBanknote,
+  iconUtensils, iconCoffee, iconPizza, iconApple, iconCarrot,
+  iconWine, iconCakeSlice, iconFish, iconCherry, iconEgg,
+  iconCookie, iconIceCream, iconCroissant, iconSalad, iconWheat,
 } from '../../../../src/ui/index.js'
 
 const { prev, next } = prevNext('/components/icons')
@@ -92,11 +97,11 @@ const ICONS = [
     { name: 'iconTag',      fn: iconTag      },
   ]},
   { group: 'Media & Rating', icons: [
-    { name: 'iconPlay',  fn: iconPlay  },
-    { name: 'iconPause', fn: iconPause },
+    { name: 'iconPlay',   fn: iconPlay   },
+    { name: 'iconPause',  fn: iconPause  },
     { name: 'iconVolume', fn: iconVolume },
-    { name: 'iconStar',  fn: iconStar  },
-    { name: 'iconHeart', fn: iconHeart },
+    { name: 'iconStar',   fn: iconStar   },
+    { name: 'iconHeart',  fn: iconHeart  },
   ]},
   { group: 'Devices', icons: [
     { name: 'iconPhone',   fn: iconPhone   },
@@ -122,20 +127,115 @@ const ICONS = [
     { name: 'iconSun',  fn: iconSun  },
     { name: 'iconMoon', fn: iconMoon },
   ]},
+  { group: 'Ecommerce', icons: [
+    { name: 'iconShoppingCart', fn: iconShoppingCart },
+    { name: 'iconShoppingBag',  fn: iconShoppingBag  },
+    { name: 'iconCreditCard',   fn: iconCreditCard   },
+    { name: 'iconPackage',      fn: iconPackage      },
+    { name: 'iconGift',         fn: iconGift         },
+    { name: 'iconWallet',       fn: iconWallet       },
+    { name: 'iconTruck',        fn: iconTruck        },
+    { name: 'iconReceipt',      fn: iconReceipt      },
+    { name: 'iconStore',        fn: iconStore        },
+    { name: 'iconPercent',      fn: iconPercent      },
+    { name: 'iconTicket',       fn: iconTicket       },
+    { name: 'iconBanknote',     fn: iconBanknote     },
+  ]},
+  { group: 'Food & Drink', icons: [
+    { name: 'iconUtensils',  fn: iconUtensils  },
+    { name: 'iconCoffee',    fn: iconCoffee    },
+    { name: 'iconPizza',     fn: iconPizza     },
+    { name: 'iconApple',     fn: iconApple     },
+    { name: 'iconCarrot',    fn: iconCarrot    },
+    { name: 'iconWine',      fn: iconWine      },
+    { name: 'iconCakeSlice', fn: iconCakeSlice },
+    { name: 'iconFish',      fn: iconFish      },
+    { name: 'iconCherry',    fn: iconCherry    },
+    { name: 'iconEgg',       fn: iconEgg       },
+    { name: 'iconCookie',    fn: iconCookie    },
+    { name: 'iconIceCream',  fn: iconIceCream  },
+    { name: 'iconCroissant', fn: iconCroissant },
+    { name: 'iconSalad',     fn: iconSalad     },
+    { name: 'iconWheat',     fn: iconWheat     },
+  ]},
 ]
+
+// Safe ID from icon name: iconArrowLeft → arrow-left
+const safeId = name => name.replace(/^icon/, '').replace(/([A-Z])/g, m => '-' + m.toLowerCase()).replace(/^-/, '')
+
+const PREVIEW_SIZES  = [12, 16, 20, 24, 32, 48]
+const PREVIEW_COLORS = [
+  { label: 'Default', style: ''                              },
+  { label: 'Accent',  style: 'color:var(--accent)'          },
+  { label: 'Green',   style: 'color:var(--color-green,#4ade80)'  },
+  { label: 'Yellow',  style: 'color:var(--color-yellow,#facc15)' },
+  { label: 'Red',     style: 'color:var(--color-red,#f87171)'    },
+  { label: 'Muted',   style: 'color:var(--muted)'           },
+]
+
+function iconPreviewModal({ name, fn }) {
+  const id = `icon-modal-${safeId(name)}`
+
+  const sizesHtml = PREVIEW_SIZES.map(size => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      ${fn({ size })}
+      <span style="font-size:0.6rem;color:var(--muted);font-family:var(--mono,monospace)">${size}</span>
+    </div>
+  `).join('')
+
+  const colorsHtml = PREVIEW_COLORS.map(({ label, style }) => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;${style}">
+      ${fn({ size: 28 })}
+      <span style="font-size:0.6rem;color:var(--muted);font-family:var(--mono,monospace)">${label}</span>
+    </div>
+  `).join('')
+
+  const bgHtml =
+    ['circle', 'square'].map(shape =>
+      ['accent', 'success', 'warning', 'error', 'muted'].map(bgColor =>
+        fn({ size: 20, bg: shape, bgColor })
+      ).join('')
+    ).join('<br style="display:block;margin:.5rem 0">')
+
+  return modal({
+    id,
+    title: name,
+    size:  'md',
+    content: `
+      <div style="display:flex;flex-direction:column;gap:1.5rem">
+        <div>
+          <p style="font-size:.75rem;color:var(--muted);margin:0 0 .75rem">Sizes</p>
+          <div style="display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap">${sizesHtml}</div>
+        </div>
+        <div>
+          <p style="font-size:.75rem;color:var(--muted);margin:0 0 .75rem">Colours</p>
+          <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">${colorsHtml}</div>
+        </div>
+        <div>
+          <p style="font-size:.75rem;color:var(--muted);margin:0 0 .75rem">Backgrounds</p>
+          <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">${bgHtml}</div>
+        </div>
+      </div>
+    `,
+  })
+}
 
 function iconGrid_() {
   return ICONS.map(({ group, icons }) => `
     <h3 class="doc-h3" style="margin-top:2rem">${group}</h3>
     <div class="icon-grid">
       ${icons.map(({ name, fn }) => `
-        <div class="icon-grid-item">
+        <button type="button" class="icon-grid-item" style="cursor:pointer;font:inherit;color:inherit" data-dialog-open="icon-modal-${safeId(name)}" aria-label="Preview ${name}">
           <div class="icon-grid-preview">${fn({ size: 20 })}</div>
           <span class="icon-grid-name">${name}</span>
-        </div>
+        </button>
       `).join('')}
     </div>
   `).join('')
+}
+
+function iconModals_() {
+  return ICONS.flatMap(({ icons }) => icons).map(iconPreviewModal).join('')
 }
 
 export default {
@@ -150,7 +250,7 @@ export default {
     prev,
     next,
     name: 'icons',
-    description: '55 curated icons. All are pure functions returning an SVG string — no external library, no DOM dependency, tree-shakeable. Style: 24×24 viewBox, <code>stroke="currentColor"</code>, compatible with any colour token.',
+    description: '100 curated icons. All are pure functions returning an SVG string — no external library, no DOM dependency, tree-shakeable. Style: 24×24 viewBox, <code>stroke="currentColor"</code>, compatible with any colour token.',
     content: `
 
       <h2 class="doc-h2" id="usage">Usage</h2>
@@ -266,9 +366,11 @@ feature({ icon: iconCode({   size: 22, bg: 'square', bgColor: 'muted'   }), titl
       )}
 
       <h2 class="doc-h2" id="all-icons">All icons</h2>
-      <p>Click any icon name to copy the import.</p>
+      <p>Click any icon to preview sizes, colours, and backgrounds.</p>
 
       ${iconGrid_()}
+
+      ${iconModals_()}
 
       ${table(
         ['Prop', 'Type', 'Default', 'Description'],
@@ -279,6 +381,8 @@ feature({ icon: iconCode({   size: 22, bg: 'square', bgColor: 'muted'   }), titl
           ['<code>bgColor</code>', 'string', "'accent'", "'accent' · 'success' · 'warning' · 'error' · 'muted'"],
         ]
       )}
+
+      <p style="margin-top:2rem;font-size:.8rem;color:var(--muted)">SVG paths derived from <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer">Lucide</a> (ISC License, Copyright © 2022 Lucide Contributors) and <a href="https://feathericons.com" target="_blank" rel="noopener noreferrer">Feather Icons</a> (MIT License, Copyright © 2013–2017 Cole Bemis). Phosphor hand-pointer icons MIT License, Copyright © 2020 Phosphor Icons.</p>
     `,
   }),
 }

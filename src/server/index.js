@@ -92,7 +92,8 @@ function buildCsp(nonce, ext = {}) {
 
 /**
  * Build the nonce-free CSP for cached responses.
- * Safe because cached pages have no inline scripts.
+ * Safe because cached pages (no spec.server, no spec.store) are only cached
+ * when they have no spec.hydrate — so no inline nonce scripts are present.
  * @param {Record<string,string[]>} [ext]  Extra sources to merge in per directive.
  */
 function buildCachedCsp(ext = {}) {
@@ -1004,7 +1005,9 @@ ${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + 
   // satisfy the style-src CSP directive (which disallows uninonce'd inline styles).
   const storeScript = ctx.store && Object.keys(ctx.store).length > 0
     ? `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(ctx.store)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
-    : `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
+    : spec.hydrate
+      ? `\n  <script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
+      : ''
 
   const docClose = `
   </div>

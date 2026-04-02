@@ -2729,6 +2729,8 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
 .ui-prose ul { list-style-type: disc;    }
 .ui-prose ol { list-style-type: decimal; }
 .ui-prose ul ul { list-style-type: circle; }
+.ui-prose ul.contains-task-list { list-style: none; padding-left: 0; }
+.ui-prose li.task-list-item input[type="checkbox"] { margin-right: .4em; }
 .ui-prose li { margin-bottom: .375em; }
 .ui-prose li > ul,
 .ui-prose li > ol { margin-top: .375em; margin-bottom: .375em; }

@@ -4,6 +4,20 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 ### Critical
 
+- **`meta` must be a plain object — never a function.** Individual fields (`title`, `description`, `styles`) can be `async (ctx) => value` functions, but `meta` itself is always `{}`.
+
+  ```js
+  // WRONG — meta is not a function factory
+  meta: async (ctx) => ({ title: '...', styles: [...] })
+
+  // CORRECT — meta is a plain object; individual fields are functions
+  meta: {
+    title:       async (ctx) => (await post(ctx)).frontmatter.title,
+    description: async (ctx) => (await post(ctx)).frontmatter.description,
+    styles:      ['/pulse-ui.css', '/app.css'],
+  }
+  ```
+
 - **Do not set `hydrate` in specs.** It is auto-derived by the framework from the URL entry passed to `createServer`. Specs with `mutations`, `actions`, or `persist` are hydrated automatically. Purely server-rendered specs get zero JavaScript — no configuration needed.
 
 ### Components first
