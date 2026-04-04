@@ -644,6 +644,17 @@ Work through every item. Fix anything that fails.
 - [ ] \`aria-live\` and \`aria-label\` are NOT on the same element
 - [ ] Heading hierarchy is correct — no skipped levels, starts at h1
 - [ ] Disabled state uses the \`disabled\` attribute, not just CSS or opacity
+- [ ] **Keyboard focusability** — every element carrying \`data-event\`, \`data-store-event\`, \`data-dialog-open\`, or \`data-dialog-close\` is either a natively interactive element (\`button\`, \`a\`, \`input\`, \`select\`, \`textarea\`, \`summary\`) or has \`tabindex="0"\`. Scan the rendered HTML above — a \`<div>\`, \`<span>\`, \`<li>\`, or any other non-interactive tag with one of these attributes is a keyboard accessibility failure. Prefer \`<button>\` over a div + tabindex.
+- [ ] **Purpose** — every interactive element has a clear accessible name. Buttons have visible text or \`aria-label\`. Links use descriptive text — flag generic labels ("click here", "here", "read more", "more"). Form inputs have an associated \`<label for="id">\` or \`aria-label\` — \`placeholder\` alone is not a label (it disappears on focus and is not read by all screen readers).
+- [ ] **State** — interactive elements communicate their current state via ARIA:
+  - Toggle controls (open/close, show/hide, expand/collapse) have \`aria-expanded="true|false"\` or \`aria-pressed="true|false"\`
+  - While an action is running, the trigger button has \`aria-busy="true"\` or its visible label changes (e.g. "Saving…") — a spinner alone is not sufficient
+  - Active navigation items have \`aria-current="page"\`
+  - Selected items in a list, tab set, or option group have \`aria-selected="true"\`
+- [ ] **Tab order** — scan the rendered HTML for these failures:
+  - No \`tabindex\` value greater than 0. \`tabindex="1"\` and above override the natural DOM order and almost always create a broken, unpredictable tab sequence. The only valid values are \`0\` (add to natural order) and \`-1\` (remove from order). If you find a positive tabindex, remove it and reorder the DOM instead.
+  - Off-screen or visually hidden interactive content is removed from the tab order. Elements that are hidden via CSS alone (e.g. \`opacity:0\`, \`visibility:hidden\` without \`display:none\`, off-canvas menus, collapsed panels) but remain in the DOM must have \`tabindex="-1"\` or \`inert\` so keyboard users cannot tab into invisible controls.
+  - DOM order matches the visual reading order. When CSS flexbox \`order\` or grid placement is used to visually reposition elements, the tab sequence follows the DOM — not the visual layout. Ensure the DOM is authored in the order a sighted user would read and interact with the page.
 
 ### Defensive coding
 - [ ] Any \`fetch\` in actions or server fetchers checks \`res.ok\` before calling \`.json()\`
