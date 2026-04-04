@@ -39,6 +39,18 @@ export default {
     title: 'Pulse — The spec-first web framework',
     description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
     styles: ['/pulse-ui.css', '/docs.css'],
+    schema: {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      name: 'Pulse',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Node.js ≥ 22',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      license: 'https://opensource.org/licenses/MIT',
+      description: 'Spec-first Node.js web framework. Zero runtime dependencies. Streaming SSR, built-in security headers, and production caching enforced by the architecture.',
+      url: 'https://pulse.invisibleloop.com',
+      codeRepository: 'https://github.com/invisibleloop/pulse-framework',
+    },
   },
   state: {},
   server: {

@@ -63,10 +63,12 @@ const BASE_CSP = {
   'img-src':        ["'self'", 'data:'],
   'font-src':       ["'self'"],
   'connect-src':    ["'self'"],
-  'object-src':     ["'none'"],
-  'frame-ancestors':["'none'"],
-  'base-uri':       ["'self'"],
-  'form-action':    ["'self'"],
+  'object-src':                  ["'none'"],
+  'frame-ancestors':             ["'none'"],
+  'base-uri':                    ["'self'"],
+  'form-action':                 ["'self'"],
+  'require-trusted-types-for':   ["'script'"],
+  'trusted-types':               ['pulse'],
 }
 
 function serializeCsp(directives) {
@@ -81,8 +83,8 @@ function serializeCsp(directives) {
 function buildCsp(nonce, ext = {}) {
   const d = {
     ...BASE_CSP,
-    'script-src': ["'self'", `'nonce-${nonce}'`],
-    'style-src':  ["'self'", `'nonce-${nonce}'`],  // allows toast's runtime-injected <style nonce>
+    'script-src': ["'self'", `'nonce-${nonce}'`, "'unsafe-inline'"],  // 'unsafe-inline' ignored by nonce-aware browsers; fallback for CSP1-only browsers
+    'style-src':  ["'self'", `'nonce-${nonce}'`, "'unsafe-inline'"],  // same — nonce takes precedence; allows toast's runtime-injected <style> in older browsers
   }
   for (const [k, sources] of Object.entries(ext)) {
     d[k] = [...(d[k] || []), ...sources]

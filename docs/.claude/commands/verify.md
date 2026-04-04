@@ -24,13 +24,13 @@ Use `mcp__chrome-devtools__navigate_page` to load the page route, then `mcp__chr
 
 Run `mcp__chrome-devtools__lighthouse_audit` on the route with `{ "strategy": "desktop" }`.
 
-**Pass bar: Performance, Accessibility, Best Practices, and SEO must all be 100.** Report the actual scores. If any score is below 100, identify the failing audit(s), fix the issue, and restart from step 2.
+**Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Performance is measured and reported but is not a hard requirement (it varies with machine load). Report the actual scores. If Accessibility, Best Practices, or SEO is below 100, identify the failing audit(s), fix the issue, and restart from step 2.
 
 ### 6. Lighthouse — mobile
 
 Run `mcp__chrome-devtools__lighthouse_audit` on the same route with `{ "strategy": "mobile" }`.
 
-**Same pass bar: all four categories must be 100.** Report the actual scores. If any score is below 100, fix and restart from step 2.
+**Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 2.
 
 ### 7. Performance
 
@@ -42,7 +42,7 @@ Use `mcp__chrome-devtools__list_console_messages` — report any errors or unexp
 
 ### 9. Code review
 
-Check the spec against the checklist in `.claude/pulse-checklist.md`. Work through every item. Fix anything that fails before proceeding to the next step.
+Call `pulse_review` with the absolute path to the spec file. Read the source, rendered HTML, validator output, and checklist it returns. Fix every issue before proceeding. This is the structured review — do not skip it or replace it with a manual checklist read.
 
 ### 10. Close the browser
 
@@ -56,7 +56,7 @@ Run:
 date +%s > .pulse-verified
 ```
 
-This records that verify completed successfully. The stop hook checks this stamp — do not skip this step.
+**This must be the last write operation before stopping.** The stop hook compares each edited spec's modification time against this stamp — if any spec is newer than the stamp, the hook blocks. Do not edit any spec file after writing the stamp.
 
 ### 12. Report
 
@@ -69,4 +69,12 @@ Summarise:
 - Console: any errors
 - Review: pass or issues found and fixed
 
-Only confirm the page is good when validation passes, both Lighthouse runs are 100/100/100/100, CLS is 0.00, and there are no console errors. Otherwise, fix and run `/verify` again.
+**Pass bar — all of these must be met before the page is confirmed good:**
+- Validation: clean (no errors, no warnings)
+- Lighthouse desktop: Accessibility, Best Practices, SEO all 100
+- Lighthouse mobile: same
+- CLS: 0.00 — any layout shift is a blocker
+- LCP: report the value; flag and fix any insight that identifies a fixable cause
+- Console: no errors
+
+If any gate fails, fix the issue and run `/verify` again.

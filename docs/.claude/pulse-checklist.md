@@ -66,6 +66,11 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 - **Validate FormData fields before use.** `formData.get('email')` returns `null` if the field is missing. Check for null/empty before passing to an API or database.
 - **Do not trust URL params.** `ctx.params.id` is a raw string from the URL. Validate it before use — check it exists, is the right type, and refers to a real resource. Return a 404 or redirect if it doesn't.
 
+### CSS
+
+- **`app.css` must contain no hex values or raw colour values.** A lint hook enforces this and will block the build. Hex values belong in `public/theme.css` as token definitions; `app.css` references them via `var()` only.
+- **Load order in `meta.styles`:** `pulse-ui.css` → `theme.css` → `app.css`. Theme tokens must be defined before `app.css` references them.
+
 ### Security
 
 - Any value from user input (URL params, form fields, external APIs) interpolated into view HTML must be escaped.
