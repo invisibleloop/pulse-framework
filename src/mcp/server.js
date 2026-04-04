@@ -281,19 +281,24 @@ Rules for the spec you write:
 server.registerTool(
   'pulse_create_component',
   {
-    description: `Create a reusable view component in src/components/. Components export named functions that return HTML strings.
+    description: `Register a component you have already written to disk with the Write tool.
 
-IMPORTANT rules for component content:
+Workflow — always in this order:
+1. Write the component file to src/components/<name>.js using the Write tool (user sees the diff)
+2. Call pulse_create_component with just the name to confirm it was created correctly
+
+Do NOT pass content here — write the file first, then call this tool.
+
+Rules for the component you write:
 - Import Pulse UI components from '@invisibleloop/pulse/ui' where applicable
 - Use u- utility classes for spacing/layout — never inline styles
 - Use var(--ui-*) CSS tokens for any colour references — never hardcode hex values
 - Export named functions only (no default export needed)`,
     inputSchema: {
-      name:    z.string().describe('Component name, e.g. "hero" or "nav"'),
-      content: z.string().describe('JS — export named functions that return HTML strings'),
+      name: z.string().describe('Component filename without extension, e.g. "hero" or "nav"'),
     },
   },
-  async ({ name, content }) => {
+  ({ name }) => {
     const safeName = name.replace(/\.js$/, '')
     const fullPath = path.join(COMPONENTS_DIR, `${safeName}.js`)
 
@@ -301,10 +306,15 @@ IMPORTANT rules for component content:
       return text('Error: component name must not escape src/components/')
     }
 
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true })
-    fs.writeFileSync(fullPath, content, 'utf8')
+    if (!fs.existsSync(fullPath)) {
+      return text(`Error: ${path.relative(ROOT, fullPath)} does not exist — write the file with the Write tool first, then call pulse_create_component.`)
+    }
 
-    return text(`Created ${path.relative(ROOT, fullPath)}`)
+    const content = fs.readFileSync(fullPath, 'utf8')
+    const exports = [...content.matchAll(/^export\s+(?:function|const|async function)\s+(\w+)/gm)].map(m => m[1])
+    const exportNote = exports.length > 0 ? `Exports: ${exports.join(', ')}` : 'Warning: no named exports found — check the file exports at least one function.'
+
+    return text(`Registered ${path.relative(ROOT, fullPath)}\n${exportNote}`)
   }
 )
 
@@ -315,42 +325,59 @@ IMPORTANT rules for component content:
 server.registerTool(
   'pulse_create_store',
   {
-    description: `Create a pulse.store.js global store at the project root. The store defines server fetchers and client mutations that are shared across pages.
+    description: `Register a pulse.store.js global store that you have already written to disk with the Write tool.
 
-IMPORTANT rules:
+Workflow — always in this order:
+1. Write pulse.store.js to the project root using the Write tool (user sees the diff)
+2. Call pulse_create_store to validate the file you just wrote
+
+Do NOT pass content here — write the file first, then call this tool.
+
+Rules for the store you write:
 - server fetchers must be async functions: async (ctx) => value
 - mutations must be pure functions: (storeState, payload?) => partialState — no fetch, no side effects
 - hydrate is required if the store has mutations (enables client-side store mutation dispatch)
 - Register the store in your server file by passing it to createServer({ store })
 - Pages subscribe to store keys via spec.store: ['user', 'settings']`,
-    inputSchema: {
-      content: z.string().describe('Complete pulse.store.js content — must export default a valid store object'),
-    },
+    inputSchema: {},
   },
-  async ({ content }) => {
+  () => {
     const storePath = path.join(ROOT, 'pulse.store.js')
 
-    // Basic structure check before writing
-    if (!content.includes('export default')) {
-      return text('Invalid: store must contain "export default { ... }"')
+    if (!fs.existsSync(storePath)) {
+      return text('Error: pulse.store.js does not exist — write the file with the Write tool first, then call pulse_create_store.')
     }
 
-    fs.writeFileSync(storePath, content, 'utf8')
+    const content = fs.readFileSync(storePath, 'utf8')
 
-    return text(`Created pulse.store.js
+    if (!content.includes('export default')) {
+      return text('Invalid: pulse.store.js must contain "export default { ... }"')
+    }
 
+    const hasServer    = content.includes('server:')
+    const hasMutations = content.includes('mutations:')
+    const hasHydrate   = content.includes('hydrate:')
+
+    const warnings = []
+    if (hasMutations && !hasHydrate) {
+      warnings.push('Warning: store has mutations but no hydrate — add hydrate: \'/pulse.store.js\' to enable client-side store dispatch.')
+    }
+
+    const lines = ['Validated pulse.store.js']
+    if (hasServer)    lines.push('  ✓ server fetchers defined')
+    if (hasMutations) lines.push('  ✓ mutations defined')
+    if (hasHydrate)   lines.push('  ✓ hydrate set')
+    if (warnings.length) lines.push('', ...warnings)
+    lines.push(`
 Next steps:
 1. Import and register it in your server file:
    import store from './pulse.store.js'
    createServer(specs, { store })
 
 2. Declare which keys each page uses:
-   export default { route: '/dashboard', store: ['user', 'settings'], ... }
+   export default { route: '/dashboard', store: ['user', 'settings'], ... }`)
 
-3. If you added mutations, set hydrate in pulse.store.js:
-   hydrate: '/pulse.store.js'
-
-Store data is available in the view as the second argument alongside page server data.`)
+    return text(lines.join('\n'))
   }
 )
 
@@ -447,9 +474,12 @@ server.registerTool(
     const proc = spawn(process.execPath, [devScript, '--root', ROOT], { detached: true, stdio: 'ignore' })
     proc.unref()
 
-    // Give it a moment to bind the port
-    await new Promise(r => setTimeout(r, 1500))
-    return text(`Dev server restarted on port ${port}`)
+    // Wait until the server is actually accepting requests
+    const ready = await waitForServer(port)
+    return text(ready
+      ? `Dev server restarted on port ${port}`
+      : `Dev server started on port ${port} (did not respond within 10 s — check for errors)`
+    )
   }
 )
 
@@ -491,11 +521,12 @@ server.registerTool(
     const proc = spawn(process.execPath, [startScript, '--root', ROOT, '--port', String(prodPort)], { detached: true, stdio: 'ignore' })
     proc.unref()
 
-    // Wait for it to bind
-    setTimeout(() => resolve(text(
-      `Production build complete. Server running at http://localhost:${prodPort}/\n` +
-      `Run Lighthouse against this URL, then call pulse_restart_server to return to dev.`
-    )), 2000)
+    // Wait until the prod server is actually accepting requests
+    waitForServer(prodPort, 15_000).then(ready => resolve(text(
+      ready
+        ? `Production build complete. Server running at http://localhost:${prodPort}/\nRun Lighthouse against this URL, then call pulse_restart_server to return to dev.`
+        : `Build complete but prod server on port ${prodPort} did not respond within 15 s — check for startup errors.`
+    )))
   })
 )
 
@@ -587,7 +618,7 @@ Work through every item. Fix anything that fails.
 
 ### Structure
 - [ ] \`route\` is set explicitly — not left to auto-discovery
-- [ ] \`hydrate\` is set if the page has mutations, actions, or persist
+- [ ] \`hydrate\` is NOT set manually — the framework injects it automatically. Remove it if present.
 - [ ] \`state\` shape is consistent — no fields that flip between null/string/boolean
 - [ ] \`meta.title\` is meaningful and unique to this page
 - [ ] \`meta.description\` is a real description, not "Built with Pulse"
@@ -634,6 +665,38 @@ Fix every issue you find. Then confirm what was changed.
 
 **After confirming fixes: you are back in builder mode. Continue to the verification workflow — navigate to the page in the browser, take a screenshot, run Lighthouse desktop audit, run Lighthouse mobile audit. Do not stop at the review.**`)
   }
+)
+
+// ---------------------------------------------------------------------------
+// pulse_run_tests
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_run_tests',
+  {
+    description: 'Run the project test suite (npm test). Returns the full output. Use after writing or editing specs to verify nothing is broken.',
+    inputSchema: {},
+  },
+  () => new Promise(resolve => {
+    const result = spawnSync('npm', ['test'], {
+      cwd:      ROOT,
+      encoding: 'utf8',
+      timeout:  120_000,
+    })
+
+    const output   = (result.stdout || '') + (result.stderr || '')
+    const exitCode = result.status ?? 1
+
+    if (exitCode === 0) {
+      // Surface just the per-suite summary lines — enough to confirm all passed
+      const summaryLines = output.split('\n').filter(l => /\d+ tests?:/.test(l) || /passed|failed/.test(l))
+      const summary = summaryLines.length ? summaryLines.join('\n') : output.slice(-2000)
+      resolve(text(`All tests passed.\n\n${summary}`))
+    } else {
+      // Return the tail of the output where failures are reported
+      resolve(text(`Tests failed (exit ${exitCode}):\n\n${output.slice(-4000)}`))
+    }
+  })
 )
 
 // ---------------------------------------------------------------------------
@@ -734,6 +797,24 @@ server.registerTool(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Poll until the HTTP server on the given port accepts a connection, or timeout. */
+async function waitForServer(port, maxMs = 10_000) {
+  const deadline = Date.now() + maxMs
+  while (Date.now() < deadline) {
+    const alive = await new Promise(resolve => {
+      const req = http.get(`http://localhost:${port}/`, { timeout: 500 }, res => {
+        res.resume()
+        resolve(true)
+      })
+      req.on('error',   () => resolve(false))
+      req.on('timeout', () => { req.destroy(); resolve(false) })
+    })
+    if (alive) return true
+    await new Promise(r => setTimeout(r, 300))
+  }
+  return false
+}
 
 async function validateContent(content) {
   // Write into PAGES_DIR so relative imports (e.g. '../components/nav.js') resolve correctly
@@ -843,9 +924,10 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 - \`pulse_validate\` — validate spec content. Call after every write. Fix all errors AND warnings.
 - \`pulse_review\` — switch into reviewer mode and critically examine a spec you just built. Returns the source, rendered HTML, validator output, and a full review checklist. **Call this only after validate, Lighthouse (desktop + mobile), and tests all pass — it is the final phase before declaring done.**
 - \`pulse_create_page\` — validate a page spec you already wrote to disk. **Always write the file with the Write tool first, then call this.** Never pass content to this tool.
-- \`pulse_create_component\` — create a reusable component.
-- \`pulse_create_store\` — create the pulse.store.js global store.
+- \`pulse_create_component\` — register a component you wrote with the Write tool. Write the file first, then call this.
+- \`pulse_create_store\` — register a pulse.store.js you wrote with the Write tool. Write the file first, then call this.
 - \`pulse_create_action\` — generate a correctly-structured action snippet.
+- \`pulse_run_tests\` — run the project test suite (npm test). Use after writing or editing specs.
 - \`pulse_fetch_page(url)\` — HTTP GET the dev server URL. Use to verify SSR output.
 - \`pulse_restart_server\` — stop and restart the dev server.
 - \`pulse_build\` — production build + starts prod server on devPort+1 for Lighthouse. Returns the URL. Call \`pulse_restart_server\` after to return to dev. **Slow — takes 30–60 s. Tell the user before calling.**
@@ -863,32 +945,15 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 
 ## MANDATORY: Verify every build
 
-**RULE: NEVER run \`lighthouse_audit\` against the dev server. Dev mode serves unminified source files — scores are meaningless. Lighthouse MUST always run against the production build.**
+**After writing or editing any page spec, you MUST run \`/verify\` before declaring done.**
 
-**Before calling any slow tool (\`pulse_build\`, \`lighthouse_audit\`), output a short status message to the user explaining what you are about to do and that it may take a moment.** Example: "Building for production — this takes ~30 s…" or "Running Lighthouse desktop audit — may take up to a minute…". Do not call the tool silently.
+\`/verify\` is the single canonical verification workflow. It runs: validate → screenshot → console check → network check → SSR check → production build → Lighthouse desktop → Lighthouse mobile → performance trace → code review → writes the \`.pulse-verified\` stamp. The stop hook checks this stamp — if it is missing or older than the last spec edit, the hook will block and make you run verification again.
 
-After writing or editing any page, run ALL of the following steps in order before telling the user you are done:
+**Do not replicate \`/verify\` steps manually.** Running the individual tools yourself does not write the stamp. The agent will be blocked at the end regardless.
 
-1. \`pulse_validate\` — validate the spec. Fix all errors and warnings before continuing.
-2. \`pulse_review\` — **switch into reviewer mode**. Read the source, rendered HTML, and checklist returned by the tool. Fix every issue found before moving on. This is mandatory — do not skip it.
-3. \`pulse_restart_server\` — only if you added a new page or changed imports.
-2. \`mcp__chrome-devtools__navigate_page\` — navigate to the dev server URL. After any CSS or asset change, follow immediately with \`mcp__chrome-devtools__evaluate_script\` running \`location.reload(true)\` to force a hard refresh.
-3. \`mcp__chrome-devtools__take_screenshot\` — check layout, spacing, content visibility, no overflow. Also check headings for orphans (a single short word stranded on the last line). To detect them programmatically, run \`mcp__chrome-devtools__evaluate_script\` with:
-   \`\`\`js
-   Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6')).filter(h=>{const r=document.createRange();r.selectNodeContents(h);const rects=r.getClientRects();if(rects.length<2)return false;const last=rects[rects.length-1];return last.width/h.getBoundingClientRect().width<0.4;}).map(h=>h.tagName+': '+h.textContent.trim())
-   \`\`\`
-   Any heading returned has a last line shorter than 40% of its width — fix it with \`balance: true\` on the \`heading()\` component.
-4. \`mcp__chrome-devtools__list_console_messages\` (errors) — fix every JS error.
-5. \`mcp__chrome-devtools__list_network_requests\` (failed) — fix every 404 or failed fetch.
-6. \`pulse_fetch_page\` — pass the full URL e.g. \`{ url: "http://localhost:3000/" }\`. Confirm SSR renders expected content, no blank body.
-7. \`pulse_build\` — this builds for production AND starts a prod server on devPort+1. Wait for it to return the prod URL.
-8. \`mcp__chrome-devtools__navigate_page\` — navigate to the production URL returned by \`pulse_build\` (e.g. \`http://localhost:3001/\`).
-9. \`mcp__chrome-devtools__lighthouse_audit\` with \`{ "strategy": "desktop" }\` — run against the production URL. All four scores (Performance, Accessibility, Best Practices, SEO) must be 100. Report the actual scores and fix every failing audit before continuing.
-10. \`mcp__chrome-devtools__lighthouse_audit\` with \`{ "strategy": "mobile" }\` — run the same audit for mobile. All four scores must also be 100. Fix any failures before continuing.
-11. \`pulse_restart_server\` — shut down the prod server and return to dev.
-12. \`mcp__chrome-devtools__list_pages\` then \`mcp__chrome-devtools__close_page\` — close **every** page returned by \`list_pages\` to shut the browser down entirely. \`pageId\` must be a number: \`{ pageId: 2 }\` ✓ — NOT \`{ pageId: "2" }\` ✗ (string will fail). Loop through all page IDs and close each one.
+**RULE: NEVER run \`lighthouse_audit\` against the dev server.** Dev mode serves unminified source files — scores are meaningless. \`/verify\` handles this correctly by calling \`pulse_build\` first.
 
-Do not declare success until all steps pass (step 12 is cleanup — always run it). If any step reveals a problem, fix it and repeat from step 2.
+**Before calling any slow tool (\`pulse_build\`, \`lighthouse_audit\`), output a short status message to the user.** Example: "Building for production — this takes ~30 s…". Do not call slow tools silently.
 
 ${CHECKLIST}`
 

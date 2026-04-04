@@ -57,8 +57,9 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
   write(targetDir, 'src/pages/home.js',      homePage(name))
   write(targetDir, 'src/pages/home.test.js', homePageTest(name))
 
-  // Minimal stylesheet
-  write(targetDir, 'public/app.css', baseCSS())
+  // Stylesheets — theme.css holds hex token definitions, app.css uses only var() references
+  write(targetDir, 'public/theme.css', themeCSS())
+  write(targetDir, 'public/app.css',   baseCSS())
 
   // Copy pulse-ui assets from the package into public/ so they're served immediately
   const pkgPublic = new URL('../../public', import.meta.url).pathname
@@ -95,9 +96,6 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
 
   // settings.json — hooks that enforce correct agent behaviour
   write(targetDir, '.claude/settings.json', JSON.stringify({
-    enabledPlugins: {
-      'frontend-design@claude-plugins-official': true,
-    },
     hooks: {
       SessionStart: [
         {
@@ -148,7 +146,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}}
             },
             {
               type: 'command',
-              command: `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const f=(i.tool_input||{}).file_path||'';if(!f.endsWith('.css')){return;}const fs=require('fs');let c;try{c=fs.readFileSync(f,'utf8');}catch(e){return;}const m=c.match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}/g);if(m&&m.length){const u=[...new Set(m)];process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'HARDCODED HEX in '+f+': '+u.join(', ')+'. Use var(--ui-*) tokens instead — hardcoded colours break theming.'}}));}})"`,
+              command: `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const f=(i.tool_input||{}).file_path||'';if(!f.endsWith('.css')){return;}if(f.endsWith('theme.css')){return;}const fs=require('fs');let c;try{c=fs.readFileSync(f,'utf8');}catch(e){return;}const m=c.match(/#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}/g);if(m&&m.length){const u=[...new Set(m)];process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'HARDCODED HEX in '+f+': '+u.join(', ')+'. Hex values belong in public/theme.css as token definitions — '+f+' should use var(--token-name) references only.'}}));}})"`,
               statusMessage: 'Checking for hardcoded colours...',
             },
             {
@@ -226,7 +224,7 @@ export default {
   meta: {
     title:       '${appName}',
     description: '${appName} — built with Pulse.',
-    styles:      ['/pulse-ui.css', '/app.css'],
+    styles:      ['/pulse-ui.css', '/theme.css', '/app.css'],
   },
 
   state: {
@@ -313,6 +311,22 @@ test('decrement mutation subtracts 1', () => {
 `
 }
 
+function themeCSS() {
+  return `\
+/*
+ * theme.css — token definitions
+ * Hex values and raw colours live here. app.css references these via var().
+ * Override pulse-ui tokens by targeting [data-theme="light"] (higher specificity than :root).
+ */
+
+/* Example — uncomment and edit to set a custom accent colour:
+[data-theme="light"] {
+  --color-accent: #0066cc;
+}
+*/
+`
+}
+
 function baseCSS() {
   return `\
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -337,9 +351,10 @@ function claudeMd(appName) {
 ## Project
 
 \`\`\`
-src/pages/       ← one .js file per page, auto-discovered
-src/components/  ← shared view fragments (JS functions returning HTML strings)
-public/app.css   ← global stylesheet
+src/pages/        ← one .js file per page, auto-discovered
+src/components/   ← shared view fragments (JS functions returning HTML strings)
+public/theme.css  ← token definitions (hex values, colour overrides) — hex allowed here only
+public/app.css    ← layout and component overrides — var() references only, no hex
 \`\`\`
 
 ## Start of every session
@@ -349,18 +364,13 @@ public/app.css   ← global stylesheet
 
 The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
 
-## Design — do this before writing any HTML
+## CSS and theming
 
-Before planning any new page or component, use the \`frontend-design\` plugin to establish the visual direction:
+- Hex values and colour token definitions go in \`public/theme.css\` — that is the only file where hex is allowed. The hex lint hook will fire on any other CSS file.
+- \`public/app.css\` must not contain hex colour values. Use \`var(--ui-space-N)\` spacing tokens (\`--ui-space-1\` = 4px through \`--ui-space-24\` = 96px) for padding, margin, and gap. Use \`var(--ui-text-*)\` tokens (\`--ui-text-xs\` through \`--ui-text-4xl\`) for font sizes. Plain values like \`1rem\` are also fine when no token fits.
+- Load order in \`meta.styles\`: \`/pulse-ui.css\` → \`/theme.css\` → \`/app.css\`.
 
-1. Call the plugin's design tools with the page brief (what it does, who it's for, the tone)
-2. The plugin will return decisions — colour palette, typography, spacing scale, component variants, layout approach
-3. **Apply those decisions as CSS custom property overrides in \`public/app.css\`** — not as inline styles or class hacks
-4. Document the chosen tokens at the top of \`public/app.css\` so every page stays consistent
-
-The plugin informs *what* to build visually. The Pulse component library is *how* you build it. Use both — the plugin gives direction, the components implement it.
-
-**Do not default to stock component styles.** If the design plugin gives you a colour, use it. If it suggests a layout pattern, follow it. Every page should reflect deliberate design decisions, not the component library defaults.
+When the user asks for layout or spacing changes, apply them directly — do not ask for confirmation on small CSS tweaks. Only pause for confirmation before large structural changes (new pages, major layout reworks).
 
 ## Before writing any code
 
@@ -376,7 +386,7 @@ Run these steps in order — do not declare work done without them:
 2. \`pulse_review\` — switch into reviewer mode, read the source and rendered HTML critically, fix every issue before continuing
 3. Write tests for every page you created or changed, run \`npm test\` (all pass), then \`npm run test:coverage\` — fix any untested branches
 4. Navigate to the page in the browser and take a screenshot
-5. Run Lighthouse (desktop then mobile) — all four scores must be 100
+5. Run Lighthouse (desktop then mobile) — Accessibility, Best Practices, and SEO must all be 100
 
 ## Writing tests
 
