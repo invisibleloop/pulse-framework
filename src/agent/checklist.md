@@ -130,3 +130,14 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 - Interactive elements without visible text have an `aria-label`.
 - Disabled state is reflected with the `disabled` attribute, not just CSS.
 - The page has a `<main id="main-content">` landmark.
+- **Every element with `data-event`, `data-store-event`, `data-dialog-open`, or `data-dialog-close` is natively interactive (`button`, `a`, `input`, `select`, `textarea`, `summary`) or has `tabindex="0"`.** Non-interactive tags (`div`, `span`, `li`, `td`, etc.) with these attributes are not keyboard reachable. Prefer `<button>` — it is focusable, fires on Enter/Space, and carries the correct ARIA role for free. Only use `tabindex="0"` on a non-interactive element when a `<button>` genuinely cannot be used.
+- **Every interactive element communicates its purpose and state:**
+  - Buttons have visible text or `aria-label`. Links use descriptive text — "click here", "here", "read more" are failures.
+  - Form inputs have an associated `<label for="id">` or `aria-label`. `placeholder` alone is not a label.
+  - Toggle controls (open/close, show/hide, expand/collapse) carry `aria-expanded="true|false"` or `aria-pressed="true|false"`.
+  - While an action is in flight, the trigger button has `aria-busy="true"` or its label changes (e.g. "Saving…"). A spinner alone is not enough.
+  - Active nav items have `aria-current="page"`. Selected items in a list, tab set, or option group have `aria-selected="true"`.
+- **The page has a logical tab order:**
+  - No `tabindex` value greater than 0. Positive tabindex values override the natural DOM order and create a broken tab sequence. Remove them and reorder the DOM instead.
+  - Visually hidden interactive content (off-canvas menus, collapsed panels, `opacity:0` elements) is removed from the tab order with `tabindex="-1"` or the `inert` attribute — CSS alone does not remove an element from tab order.
+  - DOM order matches the visual reading order. When flexbox `order` or CSS grid placement visually reposition elements, the tab sequence still follows the DOM — author the DOM in the order a user would read and interact with the page.
