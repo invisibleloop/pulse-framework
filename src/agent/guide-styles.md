@@ -61,7 +61,11 @@ meta: {
 }
 ```
 
-Token list: --ui-bg, --ui-surface, --ui-surface-2, --ui-border, --ui-text, --ui-muted, --ui-accent, --ui-accent-hover, --ui-green, --ui-red, --ui-yellow, --ui-blue, --ui-radius, --ui-radius-sm, --ui-font, --ui-mono. Never hardcode hex values — override the tokens.
+**Colour tokens:** `--ui-bg`, `--ui-surface`, `--ui-surface-2`, `--ui-border`, `--ui-text`, `--ui-muted`, `--ui-accent`, `--ui-accent-hover`, `--ui-accent-dim`, `--ui-accent-text`, `--ui-green`, `--ui-red`, `--ui-yellow`, `--ui-blue`, `--ui-radius`, `--ui-radius-sm`, `--ui-font`, `--ui-mono`. Never hardcode hex values — override the tokens.
+
+**Spacing tokens** (`--ui-space-N`): `--ui-space-1` (4px), `--ui-space-2` (8px), `--ui-space-3` (12px), `--ui-space-4` (16px), `--ui-space-5` (20px), `--ui-space-6` (24px), `--ui-space-8` (32px), `--ui-space-10` (40px), `--ui-space-12` (48px), `--ui-space-16` (64px), `--ui-space-20` (80px), `--ui-space-24` (96px). Use these for `padding`, `margin`, and `gap`.
+
+**Type-scale tokens** (`--ui-text-*`): `--ui-text-xs` (12px), `--ui-text-sm` (14px), `--ui-text-base` (16px), `--ui-text-lg` (18px), `--ui-text-xl` (20px), `--ui-text-2xl` (24px), `--ui-text-3xl` (30px), `--ui-text-4xl` (36px). Use these for `font-size`.
 
 ## Custom fonts
 

@@ -33,7 +33,39 @@ Wait for the user to confirm or adjust the plan before writing any code.
 
 ## Phase 3 — Build
 
-Write the spec and any related files using the **Write tool** — not `pulse_create_page`. This shows the user a readable diff of the file content. After writing, call `pulse_create_page(name)` to validate the file you just wrote. After each file is written, output a one-line status: `✓ Page written — validating...`
+### 3a — Announce before writing
+
+Before writing any file, output a build brief so the user can see what is being constructed and catch misunderstandings before minutes of work are lost. Format:
+
+```
+Building: <page name> (<route>)
+State:     <fields and types, or "none">
+Mutations: <list, or "none">
+Actions:   <list with brief description, or "none">
+Server:    <fetcher names and what they fetch, or "none">
+View:      <key sections / landmarks>
+Files:     <list of files that will be written>
+```
+
+Output this before making any tool calls. Do not skip it for "simple" pages — a one-liner is fine for simple pages, but always output something.
+
+### 3b — Write
+
+Write each file using the **Write tool** — not `pulse_create_page`. This shows the user a readable diff. Before each file write, output a one-line status (present-progressive, no tick — the work hasn't happened yet):
+
+```
+Writing src/pages/my-page.js...
+```
+
+After the Write tool completes, call `pulse_create_page(name)` to register the page. Only after that call succeeds output:
+
+```
+✓ src/pages/my-page.js written and registered.
+```
+
+**Rule: never output `✓` before the tool call that confirms the result. Use present-progressive (`Writing...`, `Running...`, `Checking...`) for pre-tool announcements.**
+
+If multiple files are needed (spec + shared component, spec + test stub, etc.), announce and write them one at a time with a status line before each.
 
 ---
 
@@ -48,15 +80,21 @@ Run `pulse_validate` on the spec file.
 
 ## Phase 5 — Browser check (pass gate)
 
-1. Navigate to the page route in the browser.
-2. Take a screenshot. Check it visually — layout, content, spacing, no raw unstyled HTML.
-3. Check the browser console for errors (JS errors, failed network requests).
-4. Run Lighthouse with `strategy: 'desktop'`. All three scores must be 100: Accessibility, Best Practices, SEO. The tool does not return a Performance score — use `performance_start_trace` separately if performance profiling is needed. Tell the user before calling Lighthouse — it takes 30–60 s.
-5. Run Lighthouse with `strategy: 'mobile'`. Same pass bar.
+**Run `/verify` now — as soon as the first build is working.** Do not defer it to the end. Do not execute these steps manually.
 
-**If any score is below 100:** fix the issue, reload, re-run Lighthouse. Repeat until both strategies pass 100/100/100. Do not continue until both pass.
+`/verify` is the canonical implementation of phases 4–7: it validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and — critically — **writes the `.pulse-verified` stamp** at the end. Running the steps manually without writing the stamp will cause the stop hook to block.
 
-Output after passing: `✓ Lighthouse 100/100/100 desktop + mobile — writing tests...`
+Pass gates (all must be met before continuing to Phase 6):
+- Screenshot: no layout or rendering issues
+- Lighthouse desktop: Accessibility, Best Practices, SEO all 100
+- Lighthouse mobile: same pass bar
+- **CLS: 0.00** — any layout shift is a blocker; fix it before proceeding
+- LCP: measured and reported; flag any fixable insight (render-blocking resources, large image delay)
+- No console errors
+
+**If any gate fails:** fix the issue and run `/verify` again. Repeat until all gates pass.
+
+Output after passing: `✓ Verified — writing tests...`
 
 ---
 
@@ -80,15 +118,13 @@ Output after passing: `✓ Tests passing — ready for review.`
 
 The Review Agent checks the code for correctness, security, accessibility, DRY violations, and adherence to the checklist. It returns a list of issues.
 
+> Note: `/verify` includes the review step (`pulse_review`) — if you ran `/verify` and it passed cleanly, the Review Agent has already run. You do not need to invoke it again separately.
+
 ---
 
 ## Phase 8 — Fix review issues
 
-Fix every issue raised by the Review Agent. If the fixes touch the spec or view:
-
-- Re-run `pulse_validate`
-- Re-run Lighthouse if visual or structural changes were made
-- Re-run tests
+Fix every issue raised by the Review Agent. If the fixes touch the spec or view, run `/verify` again — it re-runs validation, Lighthouse, the performance trace, console check, and review in one pass and writes a fresh stamp.
 
 Only declare the task done after phase 8 is complete and all gates still pass.
 
@@ -99,9 +135,9 @@ Only declare the task done after phase 8 is complete and all gates still pass.
 ```
 Phase 1  Understand          (no gate — always run)
 Phase 2  Plan                gate: user confirmation
-Phase 3  Build               (no gate — write the code)
+Phase 3  Build               announce brief → write files (no gate, but always narrate)
 Phase 4  Validate            gate: pulse_validate clean
-Phase 5  Browser             gate: Lighthouse 100/100/100 (Accessibility/Best Practices/SEO) desktop + mobile
+Phase 5  Browser             gate: Lighthouse 100/100/100 (A/BP/SEO) + CLS 0.00, desktop + mobile
 Phase 6  Tests               gate: all tests pass
 Phase 7  Review Agent        (only reached after phases 4–6 all pass)
 Phase 8  Fix + re-verify     gate: all gates still pass
