@@ -8,6 +8,8 @@
  * Falls back to full page load on any error.
  */
 
+import { trustedHTML } from './tt.js'
+
 /**
  * Initialise navigation for a Pulse app.
  * Call once after the initial mount().
@@ -61,7 +63,7 @@ export function initNavigation(root, mountFn) {
             await applyScripts(msg.scripts)
 
           } else if (msg.type === 'html') {
-            root.innerHTML = msg.html
+            root.innerHTML = trustedHTML(msg.html)
             // Index <pulse-deferred> placeholders so deferred chunks land in the right spot
             for (const id of (msg.deferred || [])) {
               const el = root.querySelector(`[id="pd-${id}"]`)
@@ -74,7 +76,7 @@ export function initNavigation(root, mountFn) {
             const slot = deferredSlots.get(msg.id)
             if (slot) {
               const tmp = document.createElement('div')
-              tmp.innerHTML = msg.html
+              tmp.innerHTML = trustedHTML(msg.html)
               slot.replaceWith(...tmp.childNodes)
               deferredSlots.delete(msg.id)
             }
@@ -124,7 +126,7 @@ export function initNavigation(root, mountFn) {
           window.__updatePulseStore__(storeState)
         }
 
-        root.innerHTML = html
+        root.innerHTML = trustedHTML(html)
         document.title = title || document.title
         applyStyles(styles)
         await applyScripts(scripts)

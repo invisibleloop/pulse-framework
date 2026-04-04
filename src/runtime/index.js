@@ -8,6 +8,7 @@
  */
 
 import { initClientStore, getStoreState, subscribe, updateStore, registerStoreMutations, dispatchStoreMutation } from './store.js'
+import { trustedHTML } from './tt.js'
 
 // Toast is lazy-loaded on first use — pages that never use _toast pay zero bytes
 const showToast = (opts) => import('./toast.js').then(m => m.showToast(opts))
@@ -227,7 +228,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
     refresh: render,
 
     /** Tear down — remove event listeners, unsubscribe from store, clear element */
-    destroy: () => { _unsubStore?.(); _eventAbort.abort(); el.innerHTML = '' }
+    destroy: () => { _unsubStore?.(); _eventAbort.abort(); el.innerHTML = trustedHTML('') }
   }
 }
 
@@ -363,7 +364,7 @@ function morph(el, newHtml) {
     return
   }
   const temp = document.createElement('div')
-  temp.innerHTML = newHtml
+  temp.innerHTML = trustedHTML(newHtml)
   morphNodes(el, temp)
 }
 
