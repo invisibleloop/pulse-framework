@@ -106,6 +106,7 @@ await createServer(
     // Templates
     new URL('./src/pages/templates.js',              import.meta.url),
     new URL('./src/pages/templates/mobile-app.js',   import.meta.url),
+    new URL('./src/pages/templates/blog-post.js',    import.meta.url),
     // Layout Components
     new URL('./src/pages/components/banner.js',      import.meta.url),
     new URL('./src/pages/components/cluster.js',     import.meta.url),

@@ -154,6 +154,7 @@ export const NAV = [
     items: [
       { label: 'All Templates',        href: '/templates'            },
       { label: 'Mobile App Landing',   href: '/templates/mobile-app' },
+      { label: 'Blog Post',            href: '/templates/blog-post'  },
     ],
   },
 ]

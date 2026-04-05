@@ -19,7 +19,7 @@ import {
   iconHandPointUp, iconHandPointDown, iconHandPointLeft, iconHandPointRight,
   iconGlobe, iconShield, iconZap, iconTrendingUp, iconTrendingDown, iconLoader, iconGrid, iconBug,
   iconMapPin, iconSun, iconMoon,
-  iconFeather, iconAi, iconSmile, iconBarChart,
+  iconFeather, iconTelescope, iconAi, iconSmile, iconBarChart,
   iconShoppingCart, iconShoppingBag, iconCreditCard, iconPackage, iconGift,
   iconWallet, iconTruck, iconReceipt, iconStore, iconPercent, iconTicket, iconBanknote,
   iconUtensils, iconCoffee, iconPizza, iconApple, iconCarrot,
@@ -58,6 +58,9 @@ const ICONS = [
   { group: 'AI & Data', icons: [
     { name: 'iconAi',       fn: iconAi       },
     { name: 'iconBarChart', fn: iconBarChart },
+  ]},
+  { group: 'Astronomy', icons: [
+    { name: 'iconTelescope', fn: iconTelescope },
   ]},
   { group: 'Actions', icons: [
     { name: 'iconPlus',     fn: iconPlus     },
