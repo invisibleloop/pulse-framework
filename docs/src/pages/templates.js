@@ -111,6 +111,53 @@ const mobileAppPreview = `
     </div>
   </div>`
 
+const blogPostPreview = `
+  <div style="display:flex;flex-direction:column;gap:6px;font-size:0;background:#0a2239;border-radius:4px;padding:8px">
+
+    <!-- nav -->
+    <div style="display:flex;align-items:center;gap:6px">
+      ${bar('20px', 6, '#53a2be')}
+      ${bar('36px', 4, '#53a2be', 2)}
+      <div style="flex:1"></div>
+      ${bar('28px', 4)}  ${bar('28px', 4)}  ${bar('28px', 4)}
+    </div>
+
+    <!-- hero -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0 6px;background:linear-gradient(160deg,#0a2239 0%,#132e32 100%);border-radius:3px;margin-top:2px">
+      ${bar('40px', 3, '#53a2be')}
+      ${bar('90%', 8, 'rgba(255,255,255,0.7)', 2)}
+      ${bar('75%', 8, 'rgba(255,255,255,0.7)', 2)}
+      ${bar('65%', 4, 'rgba(83,162,190,0.6)', 2)}
+      ${bar('50%', 3, 'rgba(83,162,190,0.4)', 2)}
+    </div>
+
+    <!-- article + aside -->
+    <div style="display:flex;gap:6px;margin-top:2px">
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+        ${bar('100%', 48, 'rgba(83,162,190,0.15)', 3)}
+        ${bar('100%', 4, 'rgba(255,255,255,0.5)', 1)}
+        ${bar('90%',  4, 'rgba(255,255,255,0.5)', 1)}
+        ${bar('95%',  4, 'rgba(255,255,255,0.5)', 1)}
+        ${bar('60%',  4, 'rgba(255,255,255,0.5)', 1)}
+        ${bar('55%',  6, 'rgba(255,255,255,0.7)', 1)}
+        ${bar('100%', 3, 'rgba(255,255,255,0.4)', 1)}
+        ${bar('85%',  3, 'rgba(255,255,255,0.4)', 1)}
+      </div>
+      <div style="width:38px;display:flex;flex-direction:column;gap:3px">
+        ${bar('100%', 4, 'rgba(255,255,255,0.5)', 1)}
+        ${bar('100%', 3, 'rgba(83,162,190,0.6)', 1)}
+        ${bar('100%', 3, 'rgba(83,162,190,0.6)', 1)}
+        ${bar('100%', 3, 'rgba(83,162,190,0.6)', 1)}
+        <div style="margin-top:3px;background:#132e32;border-radius:3px;padding:3px;display:flex;flex-direction:column;gap:2px">
+          ${bar('60%', 3, '#53a2be')}
+          ${bar('100%', 5, 'rgba(255,255,255,0.6)', 1)}
+          ${bar('100%', 5, 'rgba(255,255,255,0.6)', 1)}
+          ${bar('100%', 10, 'rgba(83,162,190,0.5)', 2)}
+        </div>
+      </div>
+    </div>
+  </div>`
+
 const TEMPLATES = [
   {
     name:        'Mobile App Landing Page',
@@ -118,6 +165,20 @@ const TEMPLATES = [
     description: 'A complete marketing site for a mobile app — nav, hero with phone mockup, feature grid, social proof stats, testimonials, pricing cards, FAQ accordion, download CTA, and footer.',
     tags:        ['Landing Page', 'Marketing'],
     preview:     mobileAppPreview,
+    stats: {
+      'Accessibility': '100',
+      'Best Practices': '100',
+      'SEO':           '100',
+      'CLS':           '0.00',
+      'JS':            '~4.2 kB',
+    },
+  },
+  {
+    name:        'Blog Post',
+    route:       '/templates/blog-post',
+    description: 'A full editorial article page — sticky nav, article hero, prose with image, two-column layout with table-of-contents sidebar, newsletter signup, and footer. Dark astronomy theme.',
+    tags:        ['Blog', 'Editorial'],
+    preview:     blogPostPreview,
     stats: {
       'Accessibility': '100',
       'Best Practices': '100',
