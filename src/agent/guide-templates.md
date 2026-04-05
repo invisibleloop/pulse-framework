@@ -11,6 +11,7 @@ Read the user's request and match against the triggers below. If it matches, use
 | Template | Route | Triggers |
 |---|---|---|
 | Mobile App Landing | `docs/src/pages/templates/mobile-app.js` | "landing page for a mobile app", "app marketing site", "app homepage", "SaaS landing page" |
+| Blog Post          | `docs/src/pages/templates/blog-post.js`  | "blog post", "article page", "publication", "editorial site", "newsletter with blog" |
 
 ---
 
@@ -142,6 +143,97 @@ All HTML outside `phoneScreen` must use utility classes, not inline `style=""` a
 - Nav and footer logo links must go to the same `href` (both `/`). Identical accessible name + different destination = WCAG failure.
 - Skip link: `<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;...">Skip to main content</a>` — always include it at the top of the view.
 - `phoneFrame` has `role="img" aria-label="Phone screen preview"` built in.
+
+---
+
+## Blog Post
+
+### What it includes
+
+| Section | Component(s) |
+|---|---|
+| Sticky nav | `nav` with logo, links |
+| Article header | `hero` (size `sm`, centered) — eyebrow category, title, subtitle/deck, byline in `actions` slot |
+| Article body | `section` + `container(size: 'sm')` + `prose` |
+| Newsletter signup | `section(variant: 'alt')` + `input` + `button` — subscribe action with loading/success states |
+| Footer | `footer` with logo, links, legal |
+
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `src/pages/[name].js` | The page spec |
+| `public/themes/[name].css` | Brand theme |
+
+### State and action
+
+The page needs minimal state — only the newsletter form requires hydration:
+
+```js
+state: { status: 'idle' },
+
+actions: {
+  subscribe: {
+    onStart:   (state) => ({ status: 'loading' }),
+    run:       async (state, serverState, formData) => {
+                 const email = formData.get('email')
+                 if (!email) throw new Error('Email address is required')
+                 await yourEmailApi(email)
+                 return { email }
+               },
+    onSuccess: (state) => ({
+                 status: 'success',
+                 _toast: { message: 'Subscribed! Welcome aboard.', variant: 'success' },
+               }),
+    onError:   (state, err) => ({
+                 status: 'error',
+                 _toast: { message: err.message || 'Something went wrong.', variant: 'error' },
+               }),
+  },
+},
+```
+
+### Newsletter form — view pattern
+
+The form is state-driven. Show success confirmation once subscribed:
+
+```js
+state.status === 'success'
+  ? `<div class="u-flex u-items-center u-justify-center u-gap-2">
+       ${iconCheckCircle({ size: 20 })}
+       <span>You're subscribed. Clear skies ahead.</span>
+     </div>`
+  : `<form data-action="subscribe" novalidate>
+       <div class="u-flex u-gap-3 u-flex-wrap u-justify-center u-items-end">
+         ${input({ label: 'Email address', name: 'email', type: 'email', placeholder: 'your@email.com', required: true })}
+         ${button({
+           label: state.status === 'loading' ? 'Subscribing\u2026' : 'Subscribe',
+           type:  'submit',
+           attrs: state.status === 'loading' ? { 'aria-busy': 'true', disabled: '' } : {},
+         })}
+       </div>
+     </form>`
+```
+
+### Dark theme CSS pattern
+
+Dark theme overrides go in `:root` (not `[data-theme="light"]`):
+
+```css
+:root {
+  --ui-bg:          #hex;   /* darkest background */
+  --ui-surface:     #hex;   /* card / panel background */
+  --ui-surface-2:   #hex;   /* nested surface */
+  --ui-border:      rgba(..., 0.18);
+  --ui-accent:      #hex;   /* MUST pass 4.5:1 on --ui-bg */
+  --ui-accent-hover:#hex;
+  --ui-accent-dim:  rgba(..., 0.12);
+  --ui-accent-text: #hex;   /* text on accent-coloured backgrounds */
+  --ui-muted:       rgba(..., 0.7);
+}
+```
+
+Do NOT set `meta.theme: 'light'` on dark templates — the default pulse-ui theme is already dark.
 
 ---
 

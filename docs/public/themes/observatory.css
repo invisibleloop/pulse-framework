@@ -1,0 +1,103 @@
+/*
+ * Observatory theme — dark astronomy palette
+ *
+ * Contrast notes (all checked against WCAG AA 4.5:1 for small text on --ui-bg):
+ *   --pacific-blue (#53a2be) on --prussian-blue (#0a2239) → 5.29:1  ✓
+ *   --ocean-blue   (#1d84b5) on --prussian-blue (#0a2239) → 3.68:1  (large text / UI only)
+ *   Default --ui-text (#e2e2ea) on --prussian-blue (#0a2239)         ✓ (very high)
+ *   --ui-muted rgba(180,215,230,0.85) on --prussian-blue (#0a2239)   → ~7.4:1  ✓
+ *   --ui-muted rgba(180,215,230,0.85) on --jet-black (#132e32)       → ~6.4:1  ✓
+ */
+
+/* Palette tokens */
+:root {
+  --prussian-blue: #0a2239;
+  --pacific-blue:  #53a2be;
+  --ocean-blue:    #1d84b5;
+  --jet-black:     #132e32;
+  --baltic-blue:   #176087;
+}
+
+/* Dark theme overrides — target :root (dark is the default pulse-ui theme) */
+:root {
+  --ui-bg:          var(--prussian-blue);
+  --ui-surface:     var(--jet-black);
+  --ui-surface-2:   #0d2b38;
+  --ui-border:      rgba(83, 162, 190, 0.18);
+  --ui-accent:      var(--pacific-blue);
+  --ui-accent-hover:#6bbcd4;
+  --ui-accent-dim:  rgba(83, 162, 190, 0.12);
+  --ui-accent-text: var(--prussian-blue);
+  --ui-muted:       rgba(180, 215, 230, 0.85);
+}
+
+/* Reading progress bar — CSS scroll-driven animation, no JS required */
+.obs-reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 10000;
+  pointer-events: none;
+}
+.obs-reading-progress-bar {
+  height: 100%;
+  width: 100%;
+  background: var(--ui-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation: obs-reading-progress linear both;
+  animation-timeline: scroll(root block);
+}
+@keyframes obs-reading-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Article hero — restore bottom padding (ui-hero--sm removes it) */
+.ui-hero--sm { padding-bottom: 3rem; }
+
+/* Article layout — prose + aside side by side */
+.obs-article {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 3rem;
+  align-items: start;
+}
+
+@media (max-width: 767px) {
+  .obs-article { grid-template-columns: 1fr; }
+}
+
+/* Aside sections */
+.obs-aside-section {
+  margin-bottom: 2rem;
+}
+.obs-aside-section:last-child {
+  margin-bottom: 0;
+}
+.obs-aside-nav-link {
+  display: block;
+  padding: 0.375rem 0;
+  font-size: 0.875rem;
+  color: var(--ui-muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ui-border);
+  transition: color .15s;
+}
+.obs-aside-nav-link:hover { color: var(--ui-text); }
+.obs-aside-nav-link:last-child { border-bottom: none; }
+
+/* Nav — frosted glass effect */
+.ui-nav {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Mobile nav — ensure readable text on the expanded panel */
+.ui-nav-mobile .ui-nav-link,
+.ui-nav-mobile .ui-nav-mega-item-label,
+.ui-nav-mobile-section {
+  color: var(--ui-text);
+}

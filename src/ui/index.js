@@ -88,6 +88,7 @@ export {
   iconGlobe, iconShield, iconZap, iconTrendingUp, iconTrendingDown, iconLoader, iconGrid, iconBug, iconMapPin,
   iconSun, iconMoon,
   iconFeather,
+  iconTelescope,
   iconAi, iconSmile, iconBarChart,
   iconShoppingCart, iconShoppingBag, iconCreditCard, iconPackage, iconGift,
   iconWallet, iconTruck, iconReceipt, iconStore, iconPercent, iconTicket, iconBanknote,
