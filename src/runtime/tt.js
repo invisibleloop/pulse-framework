@@ -8,6 +8,16 @@
 
 let _policy = null
 
+function getPolicy() {
+  if (!_policy) {
+    _policy = window.trustedTypes.createPolicy('pulse', {
+      createHTML:      s => s,
+      createScriptURL: s => s,
+    })
+  }
+  return _policy
+}
+
 /**
  * Return a TrustedHTML object (Chromium) or the raw string (all other browsers).
  * @param {string} html
@@ -15,6 +25,16 @@ let _policy = null
  */
 export function trustedHTML(html) {
   if (typeof window === 'undefined' || !window.trustedTypes) return html
-  if (!_policy) _policy = window.trustedTypes.createPolicy('pulse', { createHTML: s => s })
-  return _policy.createHTML(html)
+  return getPolicy().createHTML(html)
+}
+
+/**
+ * Return a TrustedScriptURL object (Chromium) or the raw string (all other browsers).
+ * Used when setting the `src` attribute on <script> elements during DOM morphing.
+ * @param {string} url
+ * @returns {TrustedScriptURL|string}
+ */
+export function trustedScriptURL(url) {
+  if (typeof window === 'undefined' || !window.trustedTypes) return url
+  return getPolicy().createScriptURL(url)
 }

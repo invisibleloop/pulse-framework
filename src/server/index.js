@@ -317,14 +317,17 @@ function buildCacheKey(spec, ctx) {
  *
  * A page is NOT cacheable if it has any of:
  *   - spec.server  — embeds a nonce'd __PULSE_SERVER__ inline script
- *   - spec.store   — same
- *   - spec.hydrate — embeds a nonce'd __PULSE_NONCE__ inline script (for toasts)
+ *   - spec.store              — same
+ *   - spec.hydrate            — embeds a nonce'd __PULSE_NONCE__ inline script (for toasts)
+ *   - spec.stream.deferred    — deferred segments inject content via inline <script nonce="...">
+ *                               tags; caching bakes in one nonce while subsequent CSP headers
+ *                               carry a different nonce, causing a violation
  *
- * In all three cases the cached HTML would contain a nonce that doesn't match
+ * In all these cases the cached HTML would contain a nonce that doesn't match
  * the nonce-free CSP used for cached responses, causing a CSP violation.
  */
 function isCacheablePage(spec) {
-  return !spec.server && !spec.store?.length && !spec.hydrate
+  return !spec.server && !spec.store?.length && !spec.hydrate && !spec.stream?.deferred?.length
 }
 
 // ---------------------------------------------------------------------------
