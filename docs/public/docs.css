@@ -1375,7 +1375,7 @@ a:hover {
   top: 0;
   left: 0;
   width: var(--sidebar-w);
-  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   background: var(--surface);
   border-right: 1px solid var(--border);
@@ -1939,6 +1939,10 @@ hr.doc-hr {
 
   .docs-content {
     padding: 2rem 1.25rem 4rem;
+  }
+
+  .sidebar-nav {
+    padding-bottom: 6rem;
   }
 
   .doc-h1 {

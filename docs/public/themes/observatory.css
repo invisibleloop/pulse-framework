@@ -68,6 +68,7 @@
 
 @media (max-width: 767px) {
   .obs-article { grid-template-columns: 1fr; }
+  .obs-aside-section:first-child { display: none; } /* ToC not useful below article on mobile */
 }
 
 /* Aside sections */
