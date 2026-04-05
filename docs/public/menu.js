@@ -67,20 +67,30 @@
     input.style.setProperty('--slider-fill', pct)
   }
 
-  document.querySelectorAll('.ui-slider').forEach(function (input) {
-    input.addEventListener('input', function () { updateSliderFill(this) })
-  })
-
-  // ── Demo theme toggles ────────────────────────────────────────────────────
-  document.querySelectorAll('.demo-theme-toggle').forEach(function (toggle) {
-    var preview = toggle.closest('.demo-preview')
-    if (!preview) return
-    toggle.addEventListener('click', function () {
-      var isLight = preview.classList.toggle('is-light')
-      var inner   = preview.querySelector('.demo-preview-inner')
-      if (inner) {
-        inner.classList.toggle('ui-theme-light', isLight)
-      }
+  function bindDemoControls() {
+    document.querySelectorAll('.ui-slider').forEach(function (input) {
+      input.addEventListener('input', function () { updateSliderFill(this) })
     })
-  })
+
+    // ── Demo theme toggles ──────────────────────────────────────────────────
+    document.querySelectorAll('.demo-theme-toggle').forEach(function (toggle) {
+      var preview = toggle.closest('.demo-preview')
+      if (!preview) return
+      toggle.addEventListener('click', function () {
+        var isLight = preview.classList.toggle('is-light')
+        var inner   = preview.querySelector('.demo-preview-inner')
+        if (inner) {
+          inner.classList.toggle('ui-theme-light', isLight)
+        }
+      })
+    })
+  }
+
+  document.addEventListener('pulse:navigate', bindDemoControls)
+
+  if (document.readyState === 'complete') {
+    setTimeout(bindDemoControls, 50)
+  } else {
+    window.addEventListener('load', bindDemoControls)
+  }
 })()

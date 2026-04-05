@@ -238,21 +238,7 @@ function iconModals_() {
   return ICONS.flatMap(({ icons }) => icons).map(iconPreviewModal).join('')
 }
 
-export default {
-  route: '/components/icons',
-  meta: {
-    title: 'Icons — Pulse Docs',
-    description: 'Built-in icon set for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
-  },
-  view: () => renderComponentPage({
-    currentHref: '/components/icons',
-    prev,
-    next,
-    name: 'icons',
-    description: '100 curated icons. All are pure functions returning an SVG string — no external library, no DOM dependency, tree-shakeable. Style: 24×24 viewBox, <code>stroke="currentColor"</code>, compatible with any colour token.',
-    content: `
-
+const pageContent = `
       <h2 class="doc-h2" id="usage">Usage</h2>
       <p>Import the icon functions you need alongside other components. Call each as a function — optionally pass <code>size</code> and <code>class</code>.</p>
       ${demo(
@@ -370,8 +356,6 @@ feature({ icon: iconCode({   size: 22, bg: 'square', bgColor: 'muted'   }), titl
 
       ${iconGrid_()}
 
-      ${iconModals_()}
-
       ${table(
         ['Prop', 'Type', 'Default', 'Description'],
         [
@@ -383,6 +367,33 @@ feature({ icon: iconCode({   size: 22, bg: 'square', bgColor: 'muted'   }), titl
       )}
 
       <p style="margin-top:2rem;font-size:.8rem;color:var(--muted)">SVG paths derived from <a href="https://lucide.dev" target="_blank" rel="noopener noreferrer">Lucide</a> (ISC License, Copyright © 2022 Lucide Contributors) and <a href="https://feathericons.com" target="_blank" rel="noopener noreferrer">Feather Icons</a> (MIT License, Copyright © 2013–2017 Cole Bemis). Phosphor hand-pointer icons MIT License, Copyright © 2020 Phosphor Icons.</p>
-    `,
-  }),
+    `
+
+export default {
+  route: '/components/icons',
+  meta: {
+    title: 'Icons — Pulse Docs',
+    description: 'Built-in icon set for Pulse UI.',
+    styles: ['/pulse-ui.css', '/docs.css'],
+  },
+
+  // Shell: all visible content (nav, examples, icon grid) — sends immediately.
+  // Modals: 100 hidden <dialog> elements — streamed after. Users never see them
+  // arrive since dialogs are display:none until opened.
+  stream: {
+    shell:    ['page'],
+    deferred: ['modals'],
+  },
+
+  view: {
+    page: () => renderComponentPage({
+      currentHref: '/components/icons',
+      prev,
+      next,
+      name: 'icons',
+      description: '100 curated icons. All are pure functions returning an SVG string — no external library, no DOM dependency, tree-shakeable. Style: 24×24 viewBox, <code>stroke="currentColor"</code>, compatible with any colour token.',
+      content: pageContent,
+    }),
+    modals: () => iconModals_(),
+  },
 }

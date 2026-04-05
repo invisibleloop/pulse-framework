@@ -8,7 +8,7 @@
  */
 
 import { initClientStore, getStoreState, subscribe, updateStore, registerStoreMutations, dispatchStoreMutation } from './store.js'
-import { trustedHTML } from './tt.js'
+import { trustedHTML, trustedScriptURL } from './tt.js'
 
 // Toast is lazy-loaded on first use — pages that never use _toast pay zero bytes
 const showToast = (opts) => import('./toast.js').then(m => m.showToast(opts))
@@ -456,7 +456,13 @@ function morphKeyed(cur, nxtEls) {
 
 function morphAttrs(cur, nxt) {
   for (const { name, value } of Array.from(nxt.attributes)) {
-    if (cur.getAttribute(name) !== value) cur.setAttribute(name, value)
+    if (cur.getAttribute(name) !== value) {
+      // Trusted Types: script[src] is a TrustedScriptURL sink
+      const safeValue = (cur.tagName === 'SCRIPT' && name === 'src')
+        ? trustedScriptURL(value)
+        : value
+      cur.setAttribute(name, safeValue)
+    }
   }
   for (const { name } of Array.from(cur.attributes)) {
     if (!nxt.hasAttribute(name)) cur.removeAttribute(name)
