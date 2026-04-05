@@ -6,6 +6,7 @@
  * Built entirely from Pulse UI components, zero custom HTML.
  */
 
+import { asset } from '../../lib/layout.js'
 import {
   nav        as uiNav,
   hero,
@@ -339,5 +340,5 @@ export default {
       ${downloadCta}
     </main>
     ${pageFooter}
-    <script src="/pulse-ui.js" defer></script>`,
+    <script src="${asset('/pulse-ui.js')}" defer></script>`,
 }

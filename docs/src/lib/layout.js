@@ -12,7 +12,7 @@ import pkg from '../../../package.json' with { type: 'json' }
 // Populated by initLayoutManifest() in server.js before the server starts.
 let _manifest = {}
 export function initLayoutManifest(m) { _manifest = m }
-const asset = href => _manifest[href] || href
+export const asset = href => _manifest[href] || href
 
 const version = typeof pkg !== 'undefined' ? (pkg?.version ?? '') : ''
 
