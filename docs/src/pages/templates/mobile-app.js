@@ -304,7 +304,7 @@ const downloadCta = section({
 
 const pageFooter = footer({
   logo:     `${iconFeather({ size: 18 })}<span class="u-font-bold" style="letter-spacing:-0.02em">Lumio</span>`,
-  logoHref: '#',
+  logoHref: '/',
   links: [
     { label: 'Privacy',  href: '#' },
     { label: 'Terms',    href: '#' },
