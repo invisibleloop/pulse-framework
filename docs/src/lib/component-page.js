@@ -8,11 +8,12 @@
 import { renderLayout, h1, lead, codeBlock } from './layout.js'
 import { highlight } from './highlight.js'
 
-export function demo(previewHtml, codeStr, { col = false, scroll = false } = {}) {
+export function demo(previewHtml, codeStr, { col = false, scroll = false, bleed = false } = {}) {
   const previewClass = [
     'demo-preview',
     col    ? 'demo-preview--col'    : '',
     scroll ? 'demo-preview--scroll' : '',
+    bleed  ? 'demo-preview--bleed'  : '',
   ].filter(Boolean).join(' ')
   const toggle = `<button class="demo-theme-toggle" aria-label="Toggle light/dark theme" title="Toggle theme">
     <svg class="demo-theme-toggle__dark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/></svg>

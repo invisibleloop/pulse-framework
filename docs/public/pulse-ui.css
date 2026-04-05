@@ -24,7 +24,7 @@
   --ui-accent:       var(--accent,        #9b8dff);
   --ui-accent-hover: var(--accent-hover,  #b5aaff);
   --ui-accent-dim:   var(--accent-dim,    rgba(155,141,255,.12));
-  --ui-accent-text:  var(--accent-text,   #ffffff);
+  --ui-accent-text:  var(--accent-text,   #0d0a20);
   --ui-green:        var(--green,         #3dd68c);
   --ui-green-dim:    rgba(61, 214, 140, .12);
   --ui-red:          var(--red,           #ff6b6b);
@@ -525,6 +525,7 @@ html, body {
 .ui-stat-change--neutral { color: var(--ui-muted);  }
 
 .ui-stat--center { align-items: center; text-align: center; }
+.ui-stat--center .ui-stat-change { margin-inline: auto; }
 
 /* ─── Avatar ─────────────────────────────────────────────────────────────── */
 .ui-avatar {
@@ -758,11 +759,46 @@ hr.ui-divider {
 }
 
 /* ─── Hero ───────────────────────────────────────────────────────────────── */
-.ui-hero { padding: 5rem 1.5rem; text-align: center; }
+.ui-hero { padding: 5rem 0; text-align: center; }
 .ui-hero--left { text-align: left; }
 .ui-hero--sm   { padding-top: 2.5rem; padding-bottom: 0; }
+.ui-hero--gradient,
+.ui-hero--gradient--purple {
+  background:
+    radial-gradient(ellipse 70% 80% at 75% 50%, #2d1b6e 0%, #1a0f45 45%, transparent 75%),
+    radial-gradient(ellipse 60% 60% at 20% 80%, #1c1060 0%, transparent 65%),
+    #0d0a1e;
+}
 
-.ui-hero-inner { max-width: 720px; margin: 0 auto; }
+.ui-hero--gradient--blue {
+  background:
+    radial-gradient(ellipse 70% 80% at 75% 50%, #0e2d6b 0%, #071840 45%, transparent 75%),
+    radial-gradient(ellipse 60% 60% at 20% 80%, #0a1f5c 0%, transparent 65%),
+    #060d1e;
+}
+
+.ui-hero--gradient--green {
+  background:
+    radial-gradient(ellipse 70% 80% at 75% 50%, #0d3d28 0%, #052218 45%, transparent 75%),
+    radial-gradient(ellipse 60% 60% at 20% 80%, #083020 0%, transparent 65%),
+    #020e09;
+}
+
+.ui-hero--gradient--rose {
+  background:
+    radial-gradient(ellipse 70% 80% at 75% 50%, #6b0e35 0%, #400720 45%, transparent 75%),
+    radial-gradient(ellipse 60% 60% at 20% 80%, #5c0a2a 0%, transparent 65%),
+    #1e0610;
+}
+
+.ui-hero--gradient--orange {
+  background:
+    radial-gradient(ellipse 70% 80% at 75% 50%, #6b2e0e 0%, #401807 45%, transparent 75%),
+    radial-gradient(ellipse 60% 60% at 20% 80%, #5c2208 0%, transparent 65%),
+    #1e0e04;
+}
+
+.ui-hero-inner { max-width: 720px; margin: 0 auto; padding: 0 1.5rem; }
 .ui-hero--left .ui-hero-inner { margin: 0; }
 
 .ui-hero-eyebrow {
@@ -801,8 +837,9 @@ hr.ui-divider {
 /* Split (text + image) */
 .ui-hero--split { text-align: left; }
 .ui-hero--split .ui-hero-inner {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
+  padding: 0 1.5rem;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3rem;
@@ -1425,7 +1462,8 @@ hr.ui-divider {
   .ui-media { grid-template-columns: 1fr; }
   .ui-media--reverse { direction: ltr; }
 
-  .ui-hero { padding: 3rem 1.25rem; }
+  .ui-hero { padding: 3rem 0; }
+  .ui-hero-inner { padding: 0 1.25rem; }
   .ui-hero-title { font-size: 2rem; }
   .ui-hero-subtitle { font-size: 1rem; }
   .ui-hero--split .ui-hero-inner { grid-template-columns: 1fr; }
@@ -1767,6 +1805,88 @@ hr.ui-divider {
 
 .ui-code-window-code { font-family: inherit; }
 
+/* ─── Phone Frame ────────────────────────────────────────────────────────────
+   Realistic CSS mobile phone frame — body, dynamic island, side buttons,
+   home indicator. Drop any HTML into the content slot.                       */
+.ui-phone {
+  position: relative;
+  display: inline-flex;
+  width: 260px;
+  background: linear-gradient(160deg, #1e1e28 0%, #141418 100%);
+  border-radius: 3rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.8),
+    0 2px 0 1px rgba(255, 255, 255, 0.05) inset,
+    0 48px 96px rgba(0, 0, 0, 0.55),
+    0 12px 32px rgba(0, 0, 0, 0.4);
+  padding: 12px;
+}
+
+/* Side buttons */
+.ui-phone-btn {
+  position: absolute;
+  background: linear-gradient(90deg, #1a1a22 0%, #26262e 100%);
+  border-radius: 2px;
+}
+.ui-phone-btn--mute     { left: -3px; top: 88px;  width: 3px; height: 28px; }
+.ui-phone-btn--vol-up   { left: -3px; top: 128px; width: 3px; height: 48px; }
+.ui-phone-btn--vol-down { left: -3px; top: 186px; width: 3px; height: 48px; }
+.ui-phone-btn--power    { right: -3px; top: 140px; width: 3px; height: 64px; }
+
+/* Phone inner — holds screen + chrome */
+.ui-phone-inner {
+  width: 100%;
+  background: #000;
+  border-radius: 2.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dynamic island */
+.ui-phone-island {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  background: #000;
+}
+.ui-phone-camera {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 35%, #2a2a3a, #0a0a0a);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+}
+
+/* Screen */
+.ui-phone-screen {
+  flex: 1;
+  min-height: 440px;
+  overflow: hidden;
+}
+
+/* Home indicator */
+.ui-phone-home {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  background: #000;
+}
+.ui-phone-home::after {
+  content: '';
+  display: block;
+  width: 80px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+}
+
 /* ─── Footer ─────────────────────────────────────────────────────────────────
    Site footer — logo, nav links, legal text. Stacks on mobile.              */
 .ui-footer {
@@ -1789,6 +1909,9 @@ hr.ui-divider {
   color:           var(--ui-text);
   text-decoration: none;
   flex-shrink:     0;
+  display:         flex;
+  align-items:     center;
+  gap:             .5rem;
   transition:      color .15s;
 }
 

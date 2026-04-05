@@ -32,6 +32,7 @@ export { avatar }      from './avatar.js'
 export { empty }       from './empty.js'
 export { table }       from './table.js'
 export { hero }        from './hero.js'
+export { phoneFrame }  from './phone-frame.js'
 export { testimonial } from './testimonial.js'
 export { feature }     from './feature.js'
 export { pricing }     from './pricing.js'
@@ -86,6 +87,8 @@ export {
   iconHandPointUp, iconHandPointDown, iconHandPointLeft, iconHandPointRight,
   iconGlobe, iconShield, iconZap, iconTrendingUp, iconTrendingDown, iconLoader, iconGrid, iconBug, iconMapPin,
   iconSun, iconMoon,
+  iconFeather,
+  iconAi, iconSmile, iconBarChart,
   iconShoppingCart, iconShoppingBag, iconCreditCard, iconPackage, iconGift,
   iconWallet, iconTruck, iconReceipt, iconStore, iconPercent, iconTicket, iconBanknote,
   iconUtensils, iconCoffee, iconPizza, iconApple, iconCarrot,

@@ -1160,6 +1160,18 @@ a:hover {
   width: 100%;
 }
 
+.demo-preview--bleed {
+  padding-inline: 0;
+}
+
+.demo-preview--bleed .demo-preview-inner {
+  gap: 0;
+}
+
+.demo-preview--bleed .demo-preview-inner > * {
+  width: 100%;
+}
+
 .demo-preview--col .demo-preview-inner {
   display: block;
 }

@@ -24,6 +24,8 @@
  * @param {string}  opts.action     - Raw HTML slot — typically a button()
  * @param {boolean} opts.sticky     - Position sticky with backdrop blur
  * @param {'right'|'left'} opts.burgerAlign - Mobile burger position (default: 'right')
+ * @param {string}  opts.background - Any CSS background value — overrides the default surface colour
+ * @param {string}  opts.color     - Foreground colour for links and text — use when background has low contrast with defaults
  * @param {string}  opts.class
  */
 
@@ -79,10 +81,17 @@ export function nav({
   action        = '',
   sticky        = false,
   burgerAlign   = 'right',
+  background    = '',
+  color         = '',
   class: cls    = '',
 } = {}) {
   const id      = `ui-nav-${++_navId}`
   const classes = ['ui-nav', sticky && 'ui-nav--sticky', burgerAlign === 'left' && 'ui-nav--burger-left', cls].filter(Boolean).join(' ')
+  const styles  = [
+    background && `background:${background.replace(/"/g, "'")}`,
+    color      && `color:${color.replace(/"/g, "'")};--ui-muted:${color.replace(/"/g, "'")}`,
+  ].filter(Boolean).join(';')
+  const bgStyle = styles ? ` style="${styles}"` : ''
 
   const linksHtml       = links.map((l, i) => renderLink(l, id, i)).join('')
   const mobileLinksHtml = links.map(renderMobileLink).join('')
@@ -98,7 +107,7 @@ export function nav({
     <nav>${mobileLinksHtml}</nav>
   </div>` : ''
 
-  return `<header class="${e(classes)}">
+  return `<header class="${e(classes)}"${bgStyle}>
   <div class="ui-nav-inner">
     <a href="${e(logoHref)}" class="ui-nav-logo">${logo}</a>
     ${links.length ? `<nav class="ui-nav-links" aria-label="Site navigation">${linksHtml}</nav>` : ''}

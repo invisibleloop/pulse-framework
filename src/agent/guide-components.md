@@ -146,8 +146,9 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 
 | Component | Key props |
 |-----------|-----------|
-| `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky` |
-| `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `align` (center/left), `size` (md/sm) |
+| `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky`, `background` (any CSS value — overrides default surface colour), `color` (foreground colour — set when custom background doesn't contrast with default muted text) |
+| `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates split layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value — solid colour or custom gradient, overrides gradient preset), `eyebrowColor` (overrides eyebrow text colour — always set when using a custom background to ensure WCAG contrast) |
+| `phoneFrame` | `content` (HTML slot — rendered inside the phone screen). Pure CSS phone mockup with dynamic island, side buttons, home indicator. Use as the `image` slot in `hero()` for app landing pages. |
 | `feature` | `icon` (HTML slot), `title`, `level` (1–6, default 3), `description`, `center` |
 | `testimonial` | `quote`, `name`, `role`, `src`, `rating` (1–5) |
 | `pricing` | `name`, `level` (1–6, default 3), `price`, `period`, `features` ([strings]), `action` (HTML slot), `highlighted` |
