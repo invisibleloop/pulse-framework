@@ -121,6 +121,7 @@ export const NAV = [
       { label: 'Feature',     href: '/components/feature'     },
       { label: 'Hero',        href: '/components/hero'        },
       { label: 'Nav',         href: '/components/nav'         },
+      { label: 'Phone Frame', href: '/components/phone-frame' },
       { label: 'Pricing',     href: '/components/pricing'     },
       { label: 'Testimonial', href: '/components/testimonial' },
     ],
@@ -146,6 +147,13 @@ export const NAV = [
       { label: 'Supabase',          href: '/supabase' },
       { label: 'Auth (Auth0)',      href: '/auth'     },
       { label: 'Payments (Stripe)', href: '/stripe'   },
+    ],
+  },
+  {
+    section: 'Templates',
+    items: [
+      { label: 'All Templates',        href: '/templates'            },
+      { label: 'Mobile App Landing',   href: '/templates/mobile-app' },
     ],
   },
 ]

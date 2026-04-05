@@ -1,0 +1,50 @@
+/* ─── Lumio brand theme ───────────────────────────────────────────────────────
+   Palette tokens + light-theme overrides for the Lumio mobile-app template.
+   Load after pulse-ui.css so these override the framework defaults.          */
+
+/* Palette tokens — available in any rule */
+:root {
+  --cotton-rose: #e5c1bd;
+  --bone:        #d2d0ba;
+  --dry-sage:    #b6be9c;
+  --muted-teal:  #7b9e87;
+  --blue-slate:  #5e747f;
+}
+
+/* Override light-theme semantic tokens */
+[data-theme="light"],
+.ui-theme-light {
+  --ui-bg:           #f7f4ed;
+  --ui-surface:      #edeae0;
+  --ui-surface-2:    #e4e1d6;
+  --ui-border:       #cbc8b8;
+  /* Deep teal — darker than --muted-teal so it passes WCAG AA on both bg surfaces */
+  --ui-accent:       #3d6650;
+  --ui-accent-hover: #2e5040;
+  --ui-accent-dim:   rgba(61, 102, 80, 0.14);
+  --ui-accent-text:  #ffffff;
+  --ui-muted:        #5a574e;
+}
+
+/* Nav: frosted glass effect */
+[data-theme="light"] .ui-nav {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Mobile menu: dark text on light dropdown background */
+[data-theme="light"] .ui-nav-mobile .ui-nav-link,
+[data-theme="light"] .ui-nav-mobile .ui-nav-mega-item-label,
+[data-theme="light"] .ui-nav-mobile-section {
+  color: var(--ui-text);
+}
+
+/* Pricing: show the Pro (highlighted) card first on mobile */
+@media (max-width: 639px) {
+  #pricing .ui-grid > div:nth-child(2) { order: -1; }
+}
+
+/* Primary buttons: white text on the deep teal accent background (6.5:1) */
+[data-theme="light"] .ui-btn--primary {
+  color: #fff;
+}

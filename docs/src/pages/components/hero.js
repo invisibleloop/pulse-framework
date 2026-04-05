@@ -51,7 +51,8 @@ export default {
   subtitle: 'Beautifully simple. Ridiculously fast.',
   actions:  appBadge({ store: 'apple',  href: appStoreUrl }) +
             appBadge({ store: 'google', href: playStoreUrl }),
-})`
+})`,
+        { bleed: true }
       )}
 
       ${demo(
@@ -69,7 +70,8 @@ export default {
   actions:  appBadge({ store: 'apple',  href: appStoreUrl }) +
             appBadge({ store: 'google', href: playStoreUrl }),
   image:    \`<img src="\${screenshotUrl}" alt="Product screenshot">\`,
-})`
+})`,
+        { bleed: true }
       )}
 
       ${demo(
@@ -86,7 +88,31 @@ export default {
   subtitle:   'Set imageAlign to swap sides.',
   image:      \`<img src="\${screenshotUrl}" alt="Product screenshot">\`,
   imageAlign: 'left',
-})`
+})`,
+        { bleed: true }
+      )}
+
+      ${demo(
+        `<div style="display:flex;flex-direction:column;gap:0">` +
+          hero({ eyebrow: 'Purple (default)', title: 'gradient: true', gradient: 'purple', size: 'sm' }) +
+          hero({ eyebrow: 'Blue',             title: "gradient: 'blue'",   gradient: 'blue',   size: 'sm' }) +
+          hero({ eyebrow: 'Green',            title: "gradient: 'green'",  gradient: 'green',  size: 'sm' }) +
+          hero({ eyebrow: 'Rose',             title: "gradient: 'rose'",   gradient: 'rose',   size: 'sm' }) +
+          hero({ eyebrow: 'Orange',           title: "gradient: 'orange'", gradient: 'orange', size: 'sm' }) +
+        `</div>`,
+        `hero({ title: 'Headline', gradient: 'purple' })  // or 'blue' | 'green' | 'rose' | 'orange'`,
+        { bleed: true }
+      )}
+
+      ${demo(
+        `<div style="display:flex;flex-direction:column;gap:0">` +
+          hero({ eyebrow: 'Solid colour', title: 'background: color', background: '#0f172a', size: 'sm' }) +
+          hero({ eyebrow: 'Custom gradient', title: 'background: CSS gradient', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)', size: 'sm' }) +
+        `</div>`,
+        `// Any valid CSS background value
+hero({ title: 'Headline', background: '#0f172a' })
+hero({ title: 'Headline', background: 'linear-gradient(135deg, #1e1b4b, #312e81)' })`,
+        { bleed: true }
       )}
 
       ${demo(
@@ -99,7 +125,8 @@ export default {
   title:    'Blog',
   subtitle: 'Thoughts on building for the web.',
   size:     'sm',
-})`
+})`,
+        { bleed: true }
       )}
 
       ${table(
@@ -113,6 +140,8 @@ export default {
           ['<code>imageAlign</code>',  'string',        "'right'",    "'right' (text left) or 'left' (text right) — only applies when image is set"],
           ['<code>align</code>',       'string',        "'center'",   "'center' or 'left' — text alignment when no image"],
           ['<code>size</code>',        'string',        "'md'",       "'md' (5rem padding) or 'sm' (2.5rem top, no bottom) — use sm for inner-page headers"],
+          ['<code>gradient</code>',    "boolean | 'purple' | 'blue' | 'green' | 'rose' | 'orange'", 'false', 'Named gradient preset. true and \'purple\' are identical.'],
+          ['<code>background</code>', 'string',        '—',          'Any CSS background value — solid colour or custom gradient. Overrides gradient preset.'],
         ]
       )}
     `,

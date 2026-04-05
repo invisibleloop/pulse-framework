@@ -173,6 +173,16 @@ export const iconGrid           = (o) => s('<rect x="3" y="3" width="7" height="
 export const iconBug            = (o) => s('<rect x="8" y="6" width="8" height="14" rx="4"/><path d="m19 7-3 2"/><path d="m5 7 3 2"/><path d="m19 19-3-2"/><path d="m5 19 3-2"/><path d="M20 13h-4"/><path d="M4 13h4"/><path d="m10 4 1 2"/><path d="m14 4-1 2"/>', opts(o))
 export const iconMapPin         = (o) => s('<path d="M20 10c0 6-8 13-8 13s-8-7-8-13a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>', opts(o))
 
+// ─── AI & Data ───────────────────────────────────────────────────────────────
+
+export const iconAi       = (o) => s('<path d="M12 2a2 2 0 012 2v1a7 7 0 017 7 7 7 0 01-7 7v1a2 2 0 01-4 0v-1A7 7 0 012 12a7 7 0 017-7V4a2 2 0 012-2z"/><circle cx="12" cy="12" r="2"/>', opts(o))
+export const iconSmile    = (o) => s('<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>', opts(o))
+export const iconBarChart = (o) => s('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>', opts(o))
+
+// ─── Writing ─────────────────────────────────────────────────────────────────
+
+export const iconFeather      = (o) => s('<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>', opts(o))
+
 // ─── Ecommerce ───────────────────────────────────────────────────────────────
 
 export const iconShoppingCart = (o) => s('<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>', opts(o))
