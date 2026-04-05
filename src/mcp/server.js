@@ -103,6 +103,13 @@ const GUIDE_RESOURCES = [
     description: 'Full working page examples including contact form with actions, validation, and error handling.',
     content:     () => GUIDE_EXAMPLES,
   },
+  {
+    name:        'guide-templates',
+    uri:         'pulse://guide/templates',
+    title:       'Pulse Guide — Templates & Scaffolding',
+    description: 'Ready-made page templates. Fetch this when the user asks to build a landing page, marketing site, or branded template — it lists triggers, pre-build questions, and adaptation rules for each template.',
+    content:     () => GUIDE_TEMPLATES,
+  },
 ]
 
 for (const { name, uri, title, description, content } of GUIDE_RESOURCES) {
@@ -887,7 +894,8 @@ const GUIDE_SERVER    = fs.readFileSync(new URL('../agent/guide-server.md',     
 const GUIDE_STYLES    = fs.readFileSync(new URL('../agent/guide-styles.md',      import.meta.url), 'utf8')
 const GUIDE_ROUTING   = fs.readFileSync(new URL('../agent/guide-routing.md',     import.meta.url), 'utf8')
 const GUIDE_COMPONENTS = fs.readFileSync(new URL('../agent/guide-components.md', import.meta.url), 'utf8')
-const GUIDE_EXAMPLES  = fs.readFileSync(new URL('../agent/guide-examples.md',    import.meta.url), 'utf8')
+const GUIDE_EXAMPLES   = fs.readFileSync(new URL('../agent/guide-examples.md',   import.meta.url), 'utf8')
+const GUIDE_TEMPLATES  = fs.readFileSync(new URL('../agent/guide-templates.md', import.meta.url), 'utf8')
 
 // ---------------------------------------------------------------------------
 // The Persona — CLI-specific identity header + shared identity content
@@ -927,6 +935,7 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 | \`pulse://guide/routing\` | Navigation, page discovery, dynamic routes |
 | \`pulse://guide/components\` | All UI components, icons, charts, composition patterns |
 | \`pulse://guide/examples\` | Complete working page examples |
+| \`pulse://guide/templates\` | **Fetch when asked to build a landing page or branded template.** Pre-build questions, template inventory, adaptation rules, theme CSS patterns. |
 
 ## Tools available
 
