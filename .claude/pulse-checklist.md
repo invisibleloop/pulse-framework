@@ -4,15 +4,41 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 ### Critical
 
-- **`hydrate` is set on every interactive page.** Without it, `data-event` / `data-action` bindings do nothing, `persist` never runs, and client-side navigation cannot re-mount the page. Every spec with `mutations`, `actions`, or `persist` must include:
+- **`meta` must be a plain object — never a function.** Individual fields (`title`, `description`, `styles`) can be `async (ctx) => value` functions, but `meta` itself is always `{}`.
+
   ```js
-  hydrate: '/src/pages/my-page.js',  // browser-importable path to this file
+  // WRONG — meta is not a function factory
+  meta: async (ctx) => ({ title: '...', styles: [...] })
+
+  // CORRECT — meta is a plain object; individual fields are functions
+  meta: {
+    title:       async (ctx) => (await post(ctx)).frontmatter.title,
+    description: async (ctx) => (await post(ctx)).frontmatter.description,
+    styles:      ['/pulse-ui.css', '/app.css'],
+  }
   ```
-  Omit `hydrate` only for purely server-rendered pages with zero client interactivity.
+
+- **Do not set `hydrate` in specs.** It is auto-derived by the framework from the URL entry passed to `createServer`. Specs with `mutations`, `actions`, or `persist` are hydrated automatically. Purely server-rendered specs get zero JavaScript — no configuration needed.
+
+- **Always restart the server and reload the browser after every file edit — before checking the result.** The dev server restarts on file changes but the browser tab stays stale. The required sequence is: `pulse_restart_server` → `navigate_page`. Never attempt to debug a visual problem without doing both steps first.
 
 ### Components first
 
 - **Before writing any HTML by hand, check `src/ui/index.js`.** There are 50+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
+
+- **Never write App Store or Google Play download buttons by hand.** Always use `appBadge({ store: 'apple', href })` and `appBadge({ store: 'google', href })`. Raw `<a>` tags with badge images are incorrect — `appBadge` renders the correct accessible, styled badge for each store.
+
+  ```js
+  import { appBadge } from '@invisibleloop/pulse/ui'
+
+  // In a hero() actions slot:
+  ${hero({
+    actions: `
+      ${appBadge({ store: 'apple',  href: 'https://apps.apple.com/...' })}
+      ${appBadge({ store: 'google', href: 'https://play.google.com/...' })}
+    `,
+  })}
+  ```
 
 ### Reuse (DRY)
 
@@ -56,6 +82,11 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 - **Validate FormData fields before use.** `formData.get('email')` returns `null` if the field is missing. Check for null/empty before passing to an API or database.
 - **Do not trust URL params.** `ctx.params.id` is a raw string from the URL. Validate it before use — check it exists, is the right type, and refers to a real resource. Return a 404 or redirect if it doesn't.
 
+### CSS
+
+- **`app.css` must contain no hex values or raw colour values.** A lint hook enforces this and will block the build. Hex values belong in `public/theme.css` as token definitions; `app.css` references them via `var()` only.
+- **Load order in `meta.styles`:** `pulse-ui.css` → `theme.css` → `app.css`. Theme tokens must be defined before `app.css` references them.
+
 ### Security
 
 - Any value from user input (URL params, form fields, external APIs) interpolated into view HTML must be escaped.
@@ -80,6 +111,12 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   assert.equal(result.attr('img', 'src'), mockProduct.image)
   ```
   Supported selectors: `tag`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations (`button.primary[disabled]`).
+
+### Markdown
+
+- **Use `md()` from `@invisibleloop/pulse/md` for `.md` file content.** Never read and parse markdown manually. Pass the result's `html` to `prose()`.
+- **Call the same `md()` fetcher in both `meta` and `server`** — it caches on `ctx._mdCache` so the file is only read once per request. Do not create two separate fetchers for the same file.
+- **Always add `onViewError` on dynamic markdown routes** (routes with `:param` segments loading `.md` files). A missing file throws `{ status: 404 }` which must be caught gracefully.
 
 ### View error handling
 
@@ -109,3 +146,14 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 - Interactive elements without visible text have an `aria-label`.
 - Disabled state is reflected with the `disabled` attribute, not just CSS.
 - The page has a `<main id="main-content">` landmark.
+- **Every element with `data-event`, `data-store-event`, `data-dialog-open`, or `data-dialog-close` is natively interactive (`button`, `a`, `input`, `select`, `textarea`, `summary`) or has `tabindex="0"`.** Non-interactive tags (`div`, `span`, `li`, `td`, etc.) with these attributes are not keyboard reachable. Prefer `<button>` — it is focusable, fires on Enter/Space, and carries the correct ARIA role for free. Only use `tabindex="0"` on a non-interactive element when a `<button>` genuinely cannot be used.
+- **Every interactive element communicates its purpose and state:**
+  - Buttons have visible text or `aria-label`. Links use descriptive text — "click here", "here", "read more" are failures.
+  - Form inputs have an associated `<label for="id">` or `aria-label`. `placeholder` alone is not a label.
+  - Toggle controls (open/close, show/hide, expand/collapse) carry `aria-expanded="true|false"` or `aria-pressed="true|false"`.
+  - While an action is in flight, the trigger button has `aria-busy="true"` or its label changes (e.g. "Saving…"). A spinner alone is not enough.
+  - Active nav items have `aria-current="page"`. Selected items in a list, tab set, or option group have `aria-selected="true"`.
+- **The page has a logical tab order:**
+  - No `tabindex` value greater than 0. Positive tabindex values override the natural DOM order and create a broken tab sequence. Remove them and reorder the DOM instead.
+  - Visually hidden interactive content (off-canvas menus, collapsed panels, `opacity:0` elements) is removed from the tab order with `tabindex="-1"` or the `inert` attribute — CSS alone does not remove an element from tab order.
+  - DOM order matches the visual reading order. When flexbox `order` or CSS grid placement visually reposition elements, the tab sequence still follows the DOM — author the DOM in the order a user would read and interact with the page.
