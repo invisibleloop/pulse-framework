@@ -59,7 +59,8 @@
     "build": "node scripts/build.js",
     "test": "node src/spec/schema.test.js && node src/runtime/runtime.test.js && node src/runtime/navigate.test.js && node src/runtime/morph.test.js && node src/runtime/ssr.test.js && node src/runtime/image.test.js && node src/server/server.test.js && node src/cli/cli.test.js && node src/ui/ui.test.js && node src/testing/testing.test.js && node src/store/store.test.js && node src/md/md.test.js && node scripts/strip-server.test.js",
     "typecheck": "tsc --noEmit",
-    "docs": "node --watch src/cli/dev.js --root docs --port 4000",
+    "sync:docs": "cp public/pulse-ui.css docs/public/pulse-ui.css && cp public/pulse-ui.js docs/public/pulse-ui.js",
+    "docs": "npm run sync:docs && node --watch src/cli/dev.js --root docs --port 4000",
     "docs:start": "node docs/server.js"
   },
   "engines": {

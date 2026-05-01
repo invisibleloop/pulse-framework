@@ -1884,6 +1884,21 @@ hr.ui-divider {
   border-radius: 2px;
 }
 
+/* Hover tilt — enabled by .ui-phone--tilt */
+.ui-phone--tilt {
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease;
+  will-change: transform;
+}
+.ui-phone--tilt:hover {
+  transform: perspective(900px) rotateY(-8deg) rotateX(3deg);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.8),
+    0 2px 0 1px rgba(255, 255, 255, 0.07) inset,
+    8px 56px 120px rgba(0, 0, 0, 0.65),
+    4px 16px 40px rgba(0, 0, 0, 0.5);
+}
+
 /* ─── Footer ─────────────────────────────────────────────────────────────────
    Site footer — logo, nav links, legal text. Stacks on mobile.              */
 .ui-footer {
