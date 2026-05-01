@@ -80,6 +80,12 @@ Run `pulse_validate` on the spec file.
 
 ## Phase 5 — Browser check (pass gate)
 
+**After every file edit, restart the server and reload the browser before checking anything.** The dev server auto-restarts on file changes but the browser tab stays stale. Always:
+1. Call `pulse_restart_server` — waits for the server to be ready
+2. Call `navigate_page` with the page URL — reloads the browser tab
+
+Do this before every screenshot, console check, or visual inspection. Never debug a problem that might just be a stale tab.
+
 **Run `/verify` now — as soon as the first build is working.** Do not defer it to the end. Do not execute these steps manually.
 
 `/verify` is the canonical implementation of phases 4–7: it validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and — critically — **writes the `.pulse-verified` stamp** at the end. Running the steps manually without writing the stamp will cause the stop hook to block.

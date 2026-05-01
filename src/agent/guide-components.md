@@ -153,7 +153,7 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 | `testimonial` | `quote`, `name`, `role`, `src`, `rating` (1–5) |
 | `pricing` | `name`, `level` (1–6, default 3), `price`, `period`, `features` ([strings]), `action` (HTML slot), `highlighted` |
 | `accordion` | `items` ([{question,answer}]) — native `<details>`, no JS |
-| `appBadge` | `store` (apple/google), `href` |
+| `appBadge` | `store` (apple/google), `href` — **always use this for App Store / Google Play download buttons. Never write a raw `<a>` with an SVG badge image.** Designed to sit in a `hero()` `actions` slot or anywhere a download CTA is needed. |
 | `cta` | `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `actions` (HTML slot), `align` |
 
 ### Layout components

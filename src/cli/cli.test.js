@@ -8,6 +8,9 @@
  * run: node src/cli/cli.test.js
  */
 
+import { existsSync, readFileSync } from 'fs'
+import path from 'path'
+
 let passed = 0
 let failed = 0
 
@@ -75,6 +78,32 @@ test('discover: nested pages get unique names (collision prevention)', () => {
     throw new Error(`Route collision: both products.js and api/products.js derived '${r1}'`)
   }
 })
+
+// ---------------------------------------------------------------------------
+// Skill source files
+
+console.log('\nCopilot skill source files\n')
+
+const skillsDir = new URL('../agent/skills', import.meta.url).pathname
+const requiredSkills = ['build-page', 'verify', 'new-doc-page']
+
+for (const skill of requiredSkills) {
+  const skillMd = path.join(skillsDir, skill, 'SKILL.md')
+
+  test(`${skill}/SKILL.md exists`, () => {
+    if (!existsSync(skillMd)) throw new Error(`Missing: ${skillMd}`)
+  })
+
+  test(`${skill}/SKILL.md has valid frontmatter`, () => {
+    const content = readFileSync(skillMd, 'utf8')
+    if (!content.startsWith('---\n')) throw new Error('Missing opening YAML frontmatter ---')
+    const end = content.indexOf('\n---\n', 4)
+    if (end === -1) throw new Error('Missing closing YAML frontmatter ---')
+    const frontmatter = content.slice(4, end)
+    if (!frontmatter.includes('name:'))        throw new Error('Frontmatter missing name:')
+    if (!frontmatter.includes('description:')) throw new Error('Frontmatter missing description:')
+  })
+}
 
 // ---------------------------------------------------------------------------
 

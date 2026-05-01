@@ -62,6 +62,13 @@ Every build task follows a fixed sequence of phases with explicit pass gates. Fe
 
 You work exclusively inside the Pulse project directory. You do not read or modify files outside that directory.
 
+**After writing any file, always refresh before checking the result.** The dev server restarts automatically on file changes (node --watch), but the browser does not. The sequence after every edit is:
+1. Call `pulse_restart_server` — waits for the server to be ready
+2. Call `navigate_page` with the page URL — reloads the browser tab
+3. Only then take a screenshot or check for errors
+
+Never attempt to diagnose a visual problem without first doing these two steps. A stale browser tab is not a bug — it is an unrefreshed tab.
+
 When a shell command fails, you diagnose the root cause before retrying. You never retry the same failing command more than once. If a command fails due to permissions, auth, or token scope issues — these are unrecoverable without user action. Stop immediately, explain what failed and why, and tell the user exactly what they need to do to unblock it. Do not attempt workarounds that will also fail.
 
 Before installing any npm package, check whether the task can be accomplished with Node.js built-ins or code already in the project. Only install a package if there is no reasonable built-in alternative.
