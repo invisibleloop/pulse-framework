@@ -44,9 +44,11 @@ Use `mcp__chrome-devtools__list_console_messages` — report any errors or unexp
 
 Check the spec against the checklist in `.claude/pulse-checklist.md`. Work through every item. Fix anything that fails before proceeding to the next step.
 
-### 10. Close the browser
+### 10. Close extra browser tabs
 
-Use `mcp__chrome-devtools__list_pages` to get all open pages, then call `mcp__chrome-devtools__close_page` for every page ID returned. This closes the entire browser, not just the tab. `pageId` must be a number, not a string.
+Use `mcp__chrome-devtools__list_pages` to get all open pages. Close every page **except the last one** — `close_page` refuses to close the final tab. `pageId` must be a number, not a string.
+
+If there is only one page open, skip this step — there is nothing to close.
 
 ### 11. Write verification stamp
 

@@ -1,33 +1,112 @@
 # Build Workflow
 
-Every task follows this sequence exactly. Each phase has a pass gate — you do not move to the next phase until the gate is cleared. Do not skip phases. Do not reorder them.
+---
+
+## New project or new page? Start with Intake
+
+For any **new page, landing page, or branded site**, run the intake sequence first:
+
+```
+0. pulse_extract_inspiration(url/image) → structured design brief  [if user shares reference]
+1. pulse_intake(name, pitch, features, ...)   → product brief + contrast check
+2. pulse_sketch(brief, vibe?, antiStyle?)     → 3 layout directions to choose from
+3. pulse_intent(description)                  → archetype + scaffold + guide list
+```
+
+- **`pulse_extract_inspiration`** — call this first if the user shares a URL, site name, or image they like. Gives you a structured extraction template: visit the URL or analyse the image with your vision tools, extract colours, layout, typography, and feel, then feed those findings into pulse_intake. If no inspiration is shared, skip this step.
+- **`pulse_intake`** — captures the real content (name, pitch, features, palette, vibe, what it should NOT look like). Returns a brief with copy-ready content and early contrast warnings. Always ask the user one question at a time — never multi-choice for open-ended questions.
+- **`pulse_sketch`** — generates 3 structurally distinct layout directions (full-bleed, asymmetric split, typography-only, editorial, dense grid, story scroll, content-first). **Call this before writing any code.** Prevents defaulting to centred hero + three-column features every time.
+- **`pulse_intent`** — maps the chosen direction to a spec scaffold and tells you which guides to read.
+
+For **small edits, bug fixes, or "add X to existing Y"** — skip intake/sketch and go straight to Step 0 below.
 
 ---
 
-## Phase 1 — Understand
+## Step 0 — Intent (always first for non-trivial builds)
 
-Before writing a single line of code:
+After intake + sketch (or directly for targeted tasks), call `pulse_intent`:
 
-1. Fetch `pulse://guide` for the guide index.
-2. Fetch any topic sections you need (`pulse://guide/spec`, `pulse://guide/components`, etc.).
-3. Call `pulse_list_structure` to see what pages and components already exist.
+```
+pulse_intent("a settings page with profile editing and a save action")
+```
 
-Do not guess about props, patterns, or rules. If you are unsure, fetch the relevant guide section.
+It returns a matched archetype, recommended components, a starter spec scaffold, and which guide sections to read. This replaces hunting through guide sections manually.
+
+If the user's request is already very specific (a one-liner edit, a bug fix, "add X to the existing Y"), skip this and go straight to Understand.
 
 ---
 
-## Phase 2 — Plan (confirmation gate)
+## Step 1 — Understand
 
-Before building, output a concise plan:
+Call `pulse_list_structure` to see what already exists. Fetch only the guide sections relevant to your intent (the `pulse_intent` response tells you which ones).
 
-- What page(s) or component(s) you will create or modify
-- The route, state shape, mutations/actions, and server fetchers
+Do not fetch every guide section for every task. Fetch what you need.
+
+---
+
+## Step 2 — Plan
+
+Decide the complexity tier (see below) and confirm with the user if the task is non-trivial. Output a concise plan:
+
+- Route, state shape, mutations/actions, server fetchers
 - Which UI components you will use
-- Any shared components you will create or reuse
+- Files you will create or modify
 
-Wait for the user to confirm or adjust the plan before writing any code.
+**Skip confirmation for trivially small tasks** (add a button, fix a label, swap a component). When in doubt, confirm.
 
-**Skip this gate only if the task is unambiguous and small** (e.g. "add a delete button to the existing list page"). When in doubt, confirm.
+**When asking the user questions:** ask one question at a time. If you present choices, use at most 4 options — the `ask_user` tool enforces this limit and will error if exceeded. For open-ended questions (names, copy, features, hex colours), ask as plain prose with no choices at all.
+
+---
+
+## Complexity tiers
+
+Not every task needs all 8 phases. Match the tier to the task:
+
+### Tier 1 — Simple (static or read-only content)
+
+*Applies to:* landing pages, blog posts, profile pages, any page with no mutations or actions.
+
+| Phase | Action | Gate |
+|---|---|---|
+| 1 | Intent + Understand | — |
+| 2 | Build | announce brief → write files |
+| 3 | Validate | `pulse_validate` clean |
+| 4 | Browser | screenshot + Lighthouse desktop + mobile (100/100/100) |
+
+No tests required for pure view specs with no logic. Add tests if the view has non-trivial helper functions.
+
+### Tier 2 — Standard (interactive, single-purpose)
+
+*Applies to:* forms, CRUD pages, settings, auth flows, dashboards without complex state machines.
+
+| Phase | Action | Gate |
+|---|---|---|
+| 1 | Intent + Understand | — |
+| 2 | Plan | user confirmation (skip if unambiguous) |
+| 3 | Build | announce brief → write files |
+| 4 | Validate | `pulse_validate` clean |
+| 5 | Browser | screenshot + Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
+| 6 | Tests | mutations, view landmarks, any utility functions |
+| 7 | Review | `pulse_review` — only after 4–6 pass |
+
+### Tier 3 — Complex (multi-step, shared state, or security-sensitive)
+
+*Applies to:* multi-step wizards, pages with guards and auth, store-connected pages, anything touching sensitive data or complex branching state.
+
+All phases as originally defined — full 8-phase flow with every gate.
+
+| Phase | Action | Gate |
+|---|---|---|
+| 1 | Intent + Understand | — |
+| 2 | Plan | **user confirmation required** |
+| 3 | Build | announce brief → write files |
+| 4 | Validate | `pulse_validate` clean |
+| 5 | Browser | Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
+| 6 | Tests | full coverage: mutations, actions, guards, view |
+| 7 | Review | `pulse_review` |
+| 8 | Fix + re-verify | re-run all gates |
+
+**If in doubt, default to Tier 2.** Choosing a lower tier than the task warrants means you'll hit problems at gates — the tiers are a shortcut, not a way to skip quality.
 
 ---
 
@@ -35,7 +114,7 @@ Wait for the user to confirm or adjust the plan before writing any code.
 
 ### 3a — Announce before writing
 
-Before writing any file, output a build brief so the user can see what is being constructed and catch misunderstandings before minutes of work are lost. Format:
+Before writing any file, output a build brief:
 
 ```
 Building: <page name> (<route>)
@@ -47,11 +126,11 @@ View:      <key sections / landmarks>
 Files:     <list of files that will be written>
 ```
 
-Output this before making any tool calls. Do not skip it for "simple" pages — a one-liner is fine for simple pages, but always output something.
+One-liners are fine for simple pages, but always output something.
 
 ### 3b — Write
 
-Write each file using the **Write tool** — not `pulse_create_page`. This shows the user a readable diff. Before each file write, output a one-line status (present-progressive, no tick — the work hasn't happened yet):
+Write each file using the **Write tool** — not `pulse_create_page`. This shows the user a readable diff. Before each file write, output a one-line status (present-progressive):
 
 ```
 Writing src/pages/my-page.js...
@@ -63,9 +142,11 @@ After the Write tool completes, call `pulse_create_page(name)` to register the p
 ✓ src/pages/my-page.js written and registered.
 ```
 
-**Rule: never output `✓` before the tool call that confirms the result. Use present-progressive (`Writing...`, `Running...`, `Checking...`) for pre-tool announcements.**
+### 3c — Suggest (optional but recommended)
 
-If multiple files are needed (spec + shared component, spec + test stub, etc.), announce and write them one at a time with a status line before each.
+After writing the first draft, call `pulse_suggest(content)` before running the hard validator. It catches obvious omissions collaboratively — a second opinion, not a gate.
+
+**Rule: never output `✓` before the tool call that confirms the result.**
 
 ---
 
@@ -74,71 +155,72 @@ If multiple files are needed (spec + shared component, spec + test stub, etc.), 
 Run `pulse_validate` on the spec file.
 
 - **If it passes:** output `✓ Validation clean — checking browser...` and continue.
-- **If it fails:** fix every error and every warning, then re-run. Repeat until clean. Do not continue until validation is clean.
+- **If it fails:** fix every error and every warning, then re-run. Repeat until clean.
 
 ---
 
 ## Phase 5 — Browser check (pass gate)
 
-**Run `/verify` now — as soon as the first build is working.** Do not defer it to the end. Do not execute these steps manually.
+**Run `/verify` now.** Do not execute these steps manually.
 
-`/verify` is the canonical implementation of phases 4–7: it validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and — critically — **writes the `.pulse-verified` stamp** at the end. Running the steps manually without writing the stamp will cause the stop hook to block.
+`/verify` validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and writes the `.pulse-verified` stamp. Running steps manually does not write the stamp.
 
-Pass gates (all must be met before continuing to Phase 6):
+Pass gates:
 - Screenshot: no layout or rendering issues
 - Lighthouse desktop: Accessibility, Best Practices, SEO all 100
-- Lighthouse mobile: same pass bar
-- **CLS: 0.00** — any layout shift is a blocker; fix it before proceeding
-- LCP: measured and reported; flag any fixable insight (render-blocking resources, large image delay)
+- Lighthouse mobile: same
+- **CLS: 0.00** — any layout shift is a blocker
 - No console errors
 
-**If any gate fails:** fix the issue and run `/verify` again. Repeat until all gates pass.
-
-Output after passing: `✓ Verified — writing tests...`
+**If any gate fails:** fix and run `/verify` again.
 
 ---
 
-## Phase 6 — Tests (pass gate)
+## Phase 6 — Tests (pass gate, Tier 2+)
 
 Write tests for every spec you created or modified. At minimum:
 
-- Each mutation as a pure function (assert the returned state shape)
+- Each mutation as a pure function
 - View renders expected HTML landmarks
 - Any utility functions defined in the spec
 
-Run the tests. Fix every failure. Repeat until all tests pass.
-
-Output after passing: `✓ Tests passing — ready for review.`
+Run the tests. Fix every failure.
 
 ---
 
-## Phase 7 — Review
+## Phase 7 — Review (Tier 2+)
 
-**Only invoke the Review Agent after all of the above gates have passed.** The reviewer must receive: passing validation, passing Lighthouse (desktop + mobile), and passing tests. Never hand off code that has not cleared every gate.
+Only invoke `pulse_review` after phases 4–6 all pass. It checks the code for correctness, security, accessibility, DRY violations, and checklist adherence.
 
-The Review Agent checks the code for correctness, security, accessibility, DRY violations, and adherence to the checklist. It returns a list of issues.
-
-> Note: `/verify` includes the review step (`pulse_review`) — if you ran `/verify` and it passed cleanly, the Review Agent has already run. You do not need to invoke it again separately.
+> Note: `/verify` includes the review step — if you ran `/verify` and it passed, the Review Agent has already run.
 
 ---
 
-## Phase 8 — Fix review issues
+## Phase 8 — Fix review issues (Tier 3)
 
-Fix every issue raised by the Review Agent. If the fixes touch the spec or view, run `/verify` again — it re-runs validation, Lighthouse, the performance trace, console check, and review in one pass and writes a fresh stamp.
+Fix every issue raised. If fixes touch the spec or view, run `/verify` again.
 
-Only declare the task done after phase 8 is complete and all gates still pass.
+Only declare the task done after all gates still pass.
 
 ---
 
-## Gate summary
+## Summary
 
 ```
-Phase 1  Understand          (no gate — always run)
-Phase 2  Plan                gate: user confirmation
-Phase 3  Build               announce brief → write files (no gate, but always narrate)
-Phase 4  Validate            gate: pulse_validate clean
-Phase 5  Browser             gate: Lighthouse 100/100/100 (A/BP/SEO) + CLS 0.00, desktop + mobile
-Phase 6  Tests               gate: all tests pass
-Phase 7  Review Agent        (only reached after phases 4–6 all pass)
-Phase 8  Fix + re-verify     gate: all gates still pass
+New project / new page:
+  pulse_extract_inspiration  → (if user shares a URL or image) extract palette/layout/feel
+  pulse_intake               → capture real content, palette, vibe, anti-style
+  pulse_sketch               → choose 1 of 3 structural layout directions
+  pulse_intent               → get scaffold + guide list
+
+Targeted edit / bug fix:
+  pulse_intent    → (or skip entirely for trivial changes)
+
+Step 1   Understand        pulse_list_structure + relevant guides
+Step 2   Plan             confirm with user if non-trivial
+
+Tier 1  Simple     → phases 3 → 4 → 5
+Tier 2  Standard   → phases 3 → 4 → 5 → 6 → 7
+Tier 3  Complex    → phases 3 → 4 → 5 → 6 → 7 → 8
 ```
+

@@ -61,7 +61,46 @@ meta: {
 }
 ```
 
-**Colour tokens:** `--ui-bg`, `--ui-surface`, `--ui-surface-2`, `--ui-border`, `--ui-text`, `--ui-muted`, `--ui-accent`, `--ui-accent-hover`, `--ui-accent-dim`, `--ui-accent-text`, `--ui-green`, `--ui-red`, `--ui-yellow`, `--ui-blue`, `--ui-radius`, `--ui-radius-sm`, `--ui-font`, `--ui-mono`. Never hardcode hex values — override the tokens.
+**Colour tokens:** `--ui-bg`, `--ui-surface`, `--ui-surface-2`, `--ui-border`, `--ui-text`, `--ui-muted`, `--ui-accent`, `--ui-accent-hover`, `--ui-accent-dim`, `--ui-accent-text`, `--ui-green`, `--ui-red`, `--ui-yellow`, `--ui-blue`, `--ui-radius`, `--ui-radius-sm`, `--ui-font`, `--ui-font-display`, `--ui-mono`. Never hardcode hex values — override the tokens.
+
+**Display font token:** `--ui-font-display` is used for hero titles and section headings. By default it inherits `--ui-font`. Override it separately to get a display/heading face that differs from body text:
+```css
+/* app.css */
+:root { --font-display: 'Playfair Display', Georgia, serif; }
+```
+
+**Letter-spacing token:** `--ui-letter-spacing-display` (default `-0.025em`) controls heading tightness. Override in `:root` to match your typeface:
+```css
+:root { --letter-spacing-display: -0.04em; }  /* tighter for heavy condensed fonts */
+```
+
+## Visual personality — meta.vibe
+
+`meta.vibe` sets `data-vibe` on `<body>` and adjusts geometry + type tokens as a preset. It doesn't touch colour — pair it with a `theme.css` for full personality.
+
+```js
+meta: {
+  vibe:   'warm',   // warm | editorial | playful | minimal | bold
+  theme:  'light',
+  styles: ['/pulse-ui.css', '/theme.css', '/app.css'],
+}
+```
+
+| Vibe | Effect | Pairs well with |
+|---|---|---|
+| `warm` | radius 14px, softer letter-spacing | rounded photo cards, `section: paper`, warm palette |
+| `editorial` | radius 0, serif display font, tight letter-spacing | `hero layout: overlap`, `section: diagonal`, `pullquote` |
+| `playful` | radius 22px, neutral letter-spacing | `gallery` with rounded images, `marquee`, bright accent |
+| `minimal` | radius 2px, open letter-spacing, no shadows | left-aligned hero, `section: spotlight`, monochrome |
+| `bold` | radius 6px, very tight letter-spacing | `section: dark`, large `stat` components, gradient hero |
+
+Vibes affect `--ui-radius`, `--ui-font-display`, and `--ui-letter-spacing-display`. All component shapes, borders, and heading appearance change automatically.
+
+**Custom override:** Set vibe first, then fine-tune with CSS variable overrides in `public/theme.css`:
+```css
+/* Fine-tune the warm vibe */
+[data-vibe="warm"] { --ui-radius: 18px; }
+```
 
 **Spacing tokens** (`--ui-space-N`): `--ui-space-1` (4px), `--ui-space-2` (8px), `--ui-space-3` (12px), `--ui-space-4` (16px), `--ui-space-5` (20px), `--ui-space-6` (24px), `--ui-space-8` (32px), `--ui-space-10` (40px), `--ui-space-12` (48px), `--ui-space-16` (64px), `--ui-space-20` (80px), `--ui-space-24` (96px). Use these for `padding`, `margin`, and `gap`.
 
@@ -170,6 +209,33 @@ For multi-brand sites, keep `@font-face` declarations (or the font service URL) 
 ```
 
 ## CSS rules — where to put styles and when to use utilities
+
+### The hex colour rule — know this upfront
+
+There are three places you write colour values. The rules are different for each:
+
+| Where | Hex/raw values | `var(--ui-*)` tokens | Inline `style=""` |
+|---|---|---|---|
+| `public/theme.css` or `public/themes/*.css` | **✓ allowed** — this is where palette values live | ✓ allowed | — |
+| `app.css` or any `.css` file in `public/` | **✗ blocked by lint** | **✓ required** | — |
+| JS spec files (the `view` function) | **✓ allowed** (e.g. `color: '#fff'` on component props) | ✓ allowed | **✗ avoid** |
+
+The rule in plain English: **CSS files reference tokens; theme files define them.** JS spec files are exempt because component props like `hero({ background: '#1a1a2e' })` are intentional design overrides, not CSS authoring.
+
+**Common mistake:** Writing `--ui-accent: #e25;` directly in `app.css`. This trips the lint. Move it to `public/theme.css` (dark theme in `:root`) or `public/themes/brand.css` (light theme in `[data-theme="light"]`).
+
+```css
+/* public/theme.css — hex values live here ✓ */
+[data-theme="light"] { --ui-accent: #e25; }
+
+/* app.css — var() only ✓ */
+.hero { color: var(--ui-accent); }
+
+/* app.css — this will be blocked ✗ */
+.hero { color: #e25; }
+```
+
+Load order in `meta.styles` matters: `pulse-ui.css` → `theme.css` → `app.css`. Theme tokens must exist before `app.css` references them.
 
 RULE: Never use inline style attributes (style="...") in HTML. Always use classes.
 

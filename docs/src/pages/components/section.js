@@ -39,11 +39,50 @@ export default {
 })`
       )}
 
+      <h2 class="doc-h2" id="diagonal">Diagonal variant</h2>
+      <p>The <code>diagonal</code> variant clips the bottom edge to a slanted angle, creating a layered stacking effect when multiple sections follow each other. The section after it should start with no top gap.</p>
+      ${demo(
+        uiSection({
+          variant: 'diagonal',
+          eyebrow: 'Diagonal',
+          title: 'Slanted bottom edge.',
+          align: 'center',
+          content: container({ size: 'md', content: '<p style="text-align:center;color:var(--ui-muted)">Content here</p>' }),
+        }),
+        `section({ variant: 'diagonal', title: 'Slanted edge', align: 'center', content })`
+      )}
+
+      <h2 class="doc-h2" id="paper">Paper variant</h2>
+      <p>The <code>paper</code> variant applies a subtle off-white background and slight inset box shadow — useful for content sections that need to feel warmer and tactile.</p>
+      ${demo(
+        uiSection({
+          variant: 'paper',
+          eyebrow: 'Paper',
+          title: 'Warm and tactile.',
+          align: 'center',
+          content: container({ size: 'md', content: '<p style="text-align:center;color:var(--ui-muted)">Content here</p>' }),
+        }),
+        `section({ variant: 'paper', title: 'Warm and tactile', align: 'center', content })`
+      )}
+
+      <h2 class="doc-h2" id="spotlight">Spotlight variant</h2>
+      <p>The <code>spotlight</code> variant adds a radial gradient light source at the top centre — gives the section a dramatic, focused feeling.</p>
+      ${demo(
+        uiSection({
+          variant: 'spotlight',
+          eyebrow: 'Spotlight',
+          title: 'Dramatically focused.',
+          align: 'center',
+          content: container({ size: 'md', content: '<p style="text-align:center;color:var(--ui-muted)">Content here</p>' }),
+        }),
+        `section({ variant: 'spotlight', title: 'Dramatically focused', align: 'center', content })`
+      )}
+
       ${table(
         ['Prop', 'Type', 'Default', 'Description'],
         [
           ['<code>content</code>',  'string (HTML)', '—',         'Raw HTML slot'],
-          ['<code>variant</code>',  'string',        "'default'", "'default' · 'alt' · 'dark'"],
+          ['<code>variant</code>',  'string',        "'default'", "'default' · 'alt' · 'dark' · 'diagonal' · 'paper' · 'spotlight'"],
           ['<code>padding</code>',  'string',        "'md'",      "'sm' · 'md' · 'lg'"],
           ['<code>id</code>',       'string',        '—',         'Anchor id for nav links'],
           ['<code>eyebrow</code>',  'string',        '—',    'Small label above the title'],

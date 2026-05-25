@@ -11,10 +11,20 @@
  * @param {string}  opts.content - HTML string for the card body
  * @param {string}  opts.footer  - HTML string for the card footer (optional)
  * @param {boolean} opts.flush   - Remove internal padding (for full-bleed content)
+ * @param {'default'|'elevated'|'bordered'|'flat'|'glass'|'tinted'} opts.variant
+ *   Visual style:
+ *   - 'default'  — standard surface with subtle shadow (same as no variant)
+ *   - 'elevated' — stronger shadow, lifts above the page
+ *   - 'bordered' — no shadow, prominent border
+ *   - 'flat'     — no shadow, no border, background only
+ *   - 'glass'    — frosted-glass effect with backdrop blur
+ *   - 'tinted'   — accent-tinted background, no shadow
  * @param {string}  opts.class
  */
 
 import { escHtml as e } from '../html.js'
+
+const VARIANTS = new Set(['default', 'elevated', 'bordered', 'flat', 'glass', 'tinted'])
 
 export function card({
   title      = '',
@@ -22,9 +32,18 @@ export function card({
   content    = '',
   footer     = '',
   flush      = false,
+  variant    = 'default',
   class: cls = '',
 } = {}) {
-  const classes = ['ui-card', flush ? 'ui-card--flush' : '', cls].filter(Boolean).join(' ')
+  if (!VARIANTS.has(variant)) variant = 'default'
+
+  const classes = [
+    'ui-card',
+    variant !== 'default' ? `ui-card--${variant}` : '',
+    flush ? 'ui-card--flush' : '',
+    cls,
+  ].filter(Boolean).join(' ')
+
   const tag = `h${Math.min(Math.max(Math.floor(level), 1), 6)}`
 
   const titleHtml  = title  ? `<div class="ui-card-header"><${tag} class="ui-card-title">${e(title)}</${tag}></div>` : ''

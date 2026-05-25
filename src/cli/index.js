@@ -322,9 +322,16 @@ async function runUpdate(root) {
   const versionFile = path.join(publicDir, '.pulse-ui-version')
   const version     = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : '?'
 
-  console.log(`\n⚡ Pulse updated to ${version}\n`)
-  for (const f of updated) console.log(`  ✓ ${f}`)
-  for (const f of missing) console.log(`  ✗ ${f} not found in package`)
+  const { c, ok: fmtOk, fail: fmtFail, icon } = await import('./fmt.js').catch(() => ({
+    c: { dim: s => s, bold: s => s },
+    ok: s => `  ✓ ${s}`,
+    fail: s => `  ✗ ${s}`,
+    icon: { bolt: () => '⚡' },
+  }))
+
+  console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')} updated to ${c.bold(version)}\n`)
+  for (const f of updated) console.log(fmtOk(f))
+  for (const f of missing) console.log(fmtFail(`${f} not found in package`))
   console.log()
 }
 
@@ -358,24 +365,35 @@ switch (command) {
     process.exit(0)
   }
   case '--help':
-  case '-h':
+  case '-h': {
+    const { c, icon } = await import('./fmt.js').catch(() => ({
+      c: { bold: s => s, dim: s => s, cyan: s => s, purple: s => s, white: s => s },
+      icon: { bolt: () => '⚡' },
+    }))
     console.log(`
-  ⚡ Pulse — spec-first frontend framework
+  ${icon.bolt()} ${c.bold('Pulse')}  ${c.dim('— spec-first frontend framework')}
 
-  Usage: pulse [command]
+  ${c.bold('Usage:')}  pulse ${c.dim('[command] [options]')}
 
-  Commands:
-    (none)      detect project or start scaffold wizard
-    dev         start dev server
-    build       production build → public/dist/
-    start       production server (requires prior build)
-    update      re-copy pulse-ui assets from installed package → public/
+  ${c.bold('Commands:')}
+    ${c.cyan('(none)')}           detect project, or launch the scaffold wizard
+    ${c.cyan('dev')}              start the dev server
+    ${c.cyan('build')}            production build  ${c.dim('→ public/dist/')}
+    ${c.cyan('start')}            production server ${c.dim('(requires prior build)')}
+    ${c.cyan('update')}           re-copy pulse-ui assets from installed package
 
-  Options:
-    -v, --version   print version and exit
-    -h, --help      show this help
+  ${c.bold('Options:')}
+    ${c.cyan('-v')}, ${c.cyan('--version')}      print version and exit
+    ${c.cyan('-h')}, ${c.cyan('--help')}         show this help
+
+  ${c.bold('Examples:')}
+    ${c.dim('pulse                # new project wizard')}
+    ${c.dim('pulse dev            # dev server')}
+    ${c.dim('pulse build          # bundle for production')}
+    ${c.dim('pulse start          # serve production build')}
 `)
     process.exit(0)
+  }
   case 'dev':
     await runDev(CWD)
     break

@@ -18,7 +18,23 @@ let mod
 try {
   mod = await import(tmpFile)
 } catch (err) {
-  process.stdout.write(`Invalid: could not parse — ${err.message}`)
+  // Give a targeted message for common import-resolution failures
+  const msg = err.message || ''
+  if (msg.includes('Cannot find package') || msg.includes('Cannot find module') || msg.includes('ERR_MODULE_NOT_FOUND')) {
+    const bare = msg.match(/Cannot find (?:package|module) '([^']+)'/)?.[1]
+    if (bare && !bare.startsWith('.') && !bare.startsWith('/') && !bare.startsWith('@invisibleloop/pulse')) {
+      process.stdout.write(
+        `Invalid: spec has an unresolvable import — \`${bare}\` is not a valid module specifier.\n` +
+        `  • Use relative paths for project-local files: \`'../components/nav.js'\`\n` +
+        `  • Use \`'@invisibleloop/pulse/ui'\` for Pulse components\n` +
+        `  • Bare paths like \`'src/...' \` or \`'components/...'\` are not valid — they are not packages`
+      )
+    } else {
+      process.stdout.write(`Invalid: could not import spec — ${msg.split('\n')[0]}`)
+    }
+  } else {
+    process.stdout.write(`Invalid: could not parse — ${err.message}`)
+  }
   process.exit(0)
 }
 

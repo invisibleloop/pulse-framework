@@ -12,6 +12,57 @@ meta: { styles: ['/pulse-ui.css', '/app.css'] }
 
 Interactive components (carousel, tooltip) also need `/pulse-ui.js` in `meta.scripts`. Modal is handled natively by the Pulse runtime — no extra script needed.
 
+### Component root CSS classes
+
+Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The root class is the one to target — not an invented name.
+
+| Component fn | Root CSS class | Notes |
+|---|---|---|
+| `nav` | `.ui-nav` | |
+| `hero` | `.ui-hero` | |
+| `button` | `.ui-btn` | |
+| `card` | `.ui-card` | |
+| `input` / `select` / `textarea` / `search` / `slider` | `.ui-field` | Wrapper div; inner input has `.ui-input` |
+| `modal` | `.ui-modal` | |
+| `alert` | `.ui-alert` | |
+| `badge` | `.ui-badge` | |
+| `stat` | `.ui-stat` | |
+| `avatar` | `.ui-avatar` | |
+| `empty` | `.ui-empty` | |
+| `table` | `.ui-table-wrap` | Inner `<table>` has `.ui-table` |
+| `spinner` | `.ui-spinner` | |
+| `section` | `.ui-section` | |
+| `container` | `.ui-container` | |
+| `grid` | `.ui-grid` | |
+| `stack` | `.ui-stack` | |
+| `cluster` | `.ui-cluster` | |
+| `feature` | `.ui-feature` | |
+| `testimonial` | `.ui-testimonial` | |
+| `pricing` | `.ui-pricing` | |
+| `accordion` | `.ui-accordion` | |
+| `cta` | `.ui-cta` | |
+| `footer` | `.ui-footer` | |
+| `phoneFrame` | `.ui-phone` | **Not** `.ui-phone-frame` |
+| `prose` | `.ui-prose` | |
+| `progress` | `.ui-progress` | |
+| `breadcrumbs` | `.ui-breadcrumbs` | |
+| `stepper` | `.ui-stepper` | |
+| `timeline` | `.ui-timeline` | |
+| `carousel` | `.ui-carousel` | |
+| `tooltip` | `.ui-tooltip` | |
+| `appBadge` | `.ui-app-badge` | |
+| `banner` | `.ui-banner` | |
+| `uiImage` | `.ui-image` | |
+| `gallery` | `.ui-gallery` | |
+| `photoCard` | `.ui-photo-card` | |
+| `marquee` | `.ui-marquee` | |
+| `decorate` | `.ui-decorate` | Inline SVG — parent needs `position: relative` |
+| `codeWindow` | `.ui-code-window` | |
+| `segmented` | `.ui-segmented` | |
+| `rating` | `.ui-rating` | |
+
+
+
 ### Charts
 
 Server-rendered SVG charts — no JS, no dependencies. Drop into any card, section, or grid.
@@ -110,10 +161,10 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 
 | Component | Key props |
 |-----------|-----------|
-| `card` | `title`, `level` (1–6, default 3 — heading tag for title; visual style unchanged), `content` (HTML slot), `footer` (HTML slot), `flush` (full-bleed — removes body padding) |
+| `card` | `title`, `level` (1–6, default 3), `content` (HTML slot), `footer` (HTML slot), `flush` (full-bleed), `variant` (default/elevated/bordered/flat/glass/tinted) |
 | `alert` | `variant` (info/success/warning/error), `title`, `content` |
 | `badge` | `label`, `variant` (default/success/warning/error/info) |
-| `stat` | `label`, `value`, `change`, `trend` (up/down/neutral), `center` |
+| `stat` | `label`, `value`, `change`, `trend` (up/down/neutral), `size` (sm/md/lg — lg for hero KPIs), `center` |
 | `avatar` | `src`, `alt`, `size` (sm/md/lg/xl), `initials` |
 | `empty` | `title`, `description`, `action` ({label,href,variant}) |
 | `table` | `headers`, `rows` (2D array of HTML strings), `caption` |
@@ -122,6 +173,10 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | `breadcrumbs` | `items` ([{label,href}] — last item has no href), `separator` |
 | `stepper` | `steps` (array of label strings), `current` (0-based) |
 | `uiImage` | `src`, `alt`, `caption`, `ratio`, `rounded`, `pill`, `width`, `height`, `maxWidth` |
+| `gallery` | `images` ([{src,alt,caption?,href?}]), `layout` (grid/strip/masonry), `cols` (1–4), `gap` (sm/md/lg), `rounded`, `ratio` — responsive image grid |
+| `photoCard` | `src`, `alt`, `caption`, `tilt` (CSS rotate degrees, e.g. 2 or -1.5), `rounded`, `ratio` — polaroid-style card with optional tilt |
+| `marquee` | `items` (array of HTML strings), `speed` (seconds, default 30), `gap`, `direction` (left/right), `pause` (hover pause), `fade` — CSS-only infinite scroll strip. Ideal for logos, trust badges |
+| `decorate` | `pattern` (dots/grid/lines/zigzag/cross), `color`, `opacity`, `size` — inline SVG overlay. Parent needs `position: relative` (add class `u-relative`) |
 | `pullquote` | `quote`, `cite`, `size` (md/lg) |
 | `timeline` | `direction` (vertical/horizontal), `items` ([{dot,dotColor,label,content}]) |
 | `timelineItem` | `content`, `label`, `dot`, `dotColor` (accent/success/warning/error/muted) |
@@ -147,7 +202,7 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 | Component | Key props |
 |-----------|-----------|
 | `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky`, `background` (any CSS value — overrides default surface colour), `color` (foreground colour — set when custom background doesn't contrast with default muted text) |
-| `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates split layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value — solid colour or custom gradient, overrides gradient preset), `eyebrowColor` (overrides eyebrow text colour — always set when using a custom background to ensure WCAG contrast) |
+| `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates image layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `layout` (split/asymmetric/overlap — when image provided: 'split'=50/50, 'asymmetric'=60/40 text-heavy, 'overlap'=image fills section with text overlay), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value), `eyebrowColor` |
 | `phoneFrame` | `content` (HTML slot — rendered inside the phone screen). Pure CSS phone mockup with dynamic island, side buttons, home indicator. Use as the `image` slot in `hero()` for app landing pages. |
 | `feature` | `icon` (HTML slot), `title`, `level` (1–6, default 3), `description`, `center` |
 | `testimonial` | `quote`, `name`, `role`, `src`, `rating` (1–5) |
@@ -161,7 +216,7 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 | Component | Key props |
 |-----------|-----------|
 | `container` | `content`, `size` (sm/md/lg/xl) |
-| `section` | `content`, `variant` (default/alt/dark), `padding` (sm/md/lg), `id`, `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `align` |
+| `section` | `content`, `variant` (default/alt/dark/diagonal/paper/spotlight), `padding` (sm/md/lg), `id`, `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `align` — `diagonal`: tapered bottom edge; `paper`: dot-grid texture; `spotlight`: radial gradient focus |
 | `grid` | `content`, `cols` (1–4), `gap` (sm/md/lg) — responsive, collapses on mobile |
 | `stack` | `content`, `gap` (xs–xl), `align` — flex column |
 | `cluster` | `content`, `gap`, `justify`, `align` — flex row with wrap |

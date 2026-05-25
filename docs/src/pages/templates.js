@@ -163,7 +163,7 @@ const TEMPLATES = [
     name:        'Mobile App Landing Page',
     route:       '/templates/mobile-app',
     description: 'A complete marketing site for a mobile app — nav, hero with phone mockup, feature grid, social proof stats, testimonials, pricing cards, FAQ accordion, download CTA, and footer.',
-    tags:        ['Landing Page', 'Marketing'],
+    tags:        ['Landing Page', 'Marketing', 'SaaS'],
     preview:     mobileAppPreview,
     stats: {
       'Accessibility': '100',
@@ -187,15 +187,124 @@ const TEMPLATES = [
       'JS':            '~4.2 kB',
     },
   },
+  {
+    name:        'Local Business',
+    route:       '/templates/local-business',
+    description: 'A warm, photo-forward landing page for a local service business — dog groomer, bakery, physio, tradesperson. Services grid, about section, testimonials, hours, and booking contact form.',
+    tags:        ['Local Business', 'Services', 'Light Theme'],
+    preview:     `<div style="background:linear-gradient(135deg,#fdf6ee,#fdebd0);padding:1.5rem;border-radius:8px;font-family:system-ui,sans-serif">
+      <div style="height:10px;background:#e8956d;border-radius:6px;width:60%;margin-bottom:0.75rem"></div>
+      <div style="height:22px;background:rgba(61,43,30,0.85);border-radius:4px;width:85%;margin-bottom:0.5rem"></div>
+      <div style="height:10px;background:rgba(61,43,30,0.35);border-radius:4px;width:75%;margin-bottom:1rem"></div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem">
+        <div style="height:30px;background:#c4632a;border-radius:14px;width:100px;flex-shrink:0"></div>
+        <div style="height:30px;background:rgba(61,43,30,0.15);border:1px solid rgba(61,43,30,0.2);border-radius:14px;width:90px;flex-shrink:0"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
+        ${[1,2,3].map(() => `<div style="background:#fff;border-radius:10px;padding:0.5rem">
+          <div style="height:8px;background:#e8956d;border-radius:4px;width:70%;margin-bottom:0.35rem"></div>
+          <div style="height:6px;background:rgba(0,0,0,0.12);border-radius:3px;width:90%"></div>
+          <div style="height:6px;background:rgba(0,0,0,0.08);border-radius:3px;width:70%;margin-top:0.25rem"></div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'warm',
+      'Theme': 'light',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'Portfolio',
+    route:       '/templates/portfolio',
+    description: 'A minimal dark portfolio for a creative professional — designer, developer, photographer, or architect. Work grid, about section with skill badges, and a clean contact panel.',
+    tags:        ['Portfolio', 'Personal', 'Minimal'],
+    preview:     `<div style="background:#0d0d10;padding:1.5rem;border-radius:8px;font-family:system-ui,sans-serif">
+      <div style="height:12px;background:rgba(255,255,255,0.7);border-radius:3px;width:55%;margin-bottom:0.75rem;font-size:0;"></div>
+      <div style="height:20px;background:rgba(255,255,255,0.85);border-radius:3px;width:80%;margin-bottom:0.5rem"></div>
+      <div style="height:8px;background:rgba(255,255,255,0.25);border-radius:3px;width:65%;margin-bottom:1.25rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
+        ${[1,2,3].map(i => `<div style="background:rgba(255,255,255,0.05);border-radius:6px;overflow:hidden">
+          <div style="height:48px;background:rgba(255,255,255,0.08);"></div>
+          <div style="padding:0.4rem">
+            <div style="height:7px;background:rgba(255,255,255,0.4);border-radius:3px;width:80%;margin-bottom:0.3rem"></div>
+            <div style="height:6px;background:rgba(255,255,255,0.2);border-radius:3px;width:60%"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'minimal',
+      'Theme': 'dark',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'Event / Conference',
+    route:       '/templates/event',
+    description: 'A high-energy landing page for a conference, festival, or summit — speaker grid, day-by-day schedule accordion, venue section, sponsor logo marquee, and ticket CTA.',
+    tags:        ['Event', 'Conference', 'Bold'],
+    preview:     `<div style="background:linear-gradient(180deg,#05050a,#0d0829);padding:1.5rem;border-radius:8px;font-family:system-ui,sans-serif">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem">
+        <div style="height:10px;background:rgba(255,255,255,0.8);border-radius:3px;width:60px"></div>
+        <div style="height:24px;background:#6366f1;border-radius:6px;width:80px"></div>
+      </div>
+      <div style="height:8px;background:rgba(99,102,241,0.6);border-radius:4px;width:50%;margin-bottom:0.5rem"></div>
+      <div style="height:20px;background:rgba(255,255,255,0.9);border-radius:4px;width:85%;margin-bottom:0.75rem"></div>
+      <div style="height:8px;background:rgba(255,255,255,0.3);border-radius:4px;width:70%;margin-bottom:1.25rem"></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.4rem">
+        ${[1,2,3,4].map(() => `<div style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.4rem;text-align:center">
+          <div style="height:14px;background:rgba(99,102,241,0.8);border-radius:3px;width:70%;margin:0 auto 0.25rem"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.2);border-radius:3px;width:80%;margin:0 auto"></div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'bold',
+      'Theme': 'dark',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'Editorial / Magazine',
+    route:       '/templates/editorial',
+    description: 'A publication homepage — featured article hero, pullquote, article grid with category badges, newsletter signup, and footer. Serif typography throughout via the editorial vibe.',
+    tags:        ['Editorial', 'Publication', 'Blog'],
+    preview:     `<div style="background:#0a0a0c;padding:1.5rem;border-radius:8px;font-family:Georgia,serif">
+      <div style="height:8px;background:rgba(180,100,60,0.7);border-radius:2px;width:40%;margin-bottom:0.75rem"></div>
+      <div style="height:20px;background:rgba(255,255,255,0.9);border-radius:2px;width:90%;margin-bottom:0.35rem"></div>
+      <div style="height:20px;background:rgba(255,255,255,0.75);border-radius:2px;width:70%;margin-bottom:0.75rem"></div>
+      <div style="height:8px;background:rgba(255,255,255,0.3);border-radius:2px;width:80%;margin-bottom:1.25rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
+        ${[1,2,3].map(() => `<div style="background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden">
+          <div style="height:44px;background:rgba(255,255,255,0.08);"></div>
+          <div style="padding:0.4rem">
+            <div style="height:6px;background:rgba(180,100,60,0.6);border-radius:2px;width:40%;margin-bottom:0.3rem"></div>
+            <div style="height:8px;background:rgba(255,255,255,0.5);border-radius:2px;width:90%;margin-bottom:0.25rem"></div>
+            <div style="height:8px;background:rgba(255,255,255,0.3);border-radius:2px;width:70%"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'editorial',
+      'Theme': 'dark',
+      'CLS':   '0.00',
+    },
+  },
 ]
 
 const content = `
   ${h1('Templates')}
-  ${lead('Production-ready Pulse templates built entirely from the <a href="/components">UI component library</a>. Every template ships with 100/100/100 Lighthouse scores (Accessibility, Best Practices, SEO) and zero CLS.')}
+  ${lead('Production-ready Pulse templates built entirely from the <a href="/components">UI component library</a>. Six templates covering different design directions — from local business to editorial to event. Every template ships with 100/100/100 Lighthouse scores and zero CLS.')}
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;margin-top:2rem">
     ${TEMPLATES.map(templateCard).join('')}
   </div>
+
+  ${section('design-directions', 'Design directions')}
+  <p>Templates give you the structure. The <a href="/meta#vibe">meta.vibe</a> system gives you the personality. Combine a template with a vibe to get a page that feels right for the product — not just correct.</p>
+  <p style="margin-top:0.75rem">When building a new site, ask: <em>what kind of business is this?</em> A dog groomer and a SaaS dashboard have the same sections but completely different aesthetics. Use the design directions guide (<code>pulse://guide/design-references</code>) to make that decision consciously.</p>
 
   ${section('adding', 'Suggesting a template')}
   <p>Have an idea for a template? <a href="https://github.com/invisibleloop/pulse-framework/issues" target="_blank" rel="noopener noreferrer">Open an issue on GitHub</a> with the layout you have in mind and we'll consider adding it to the library.</p>

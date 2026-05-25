@@ -10,22 +10,60 @@ Read the user's request and match against the triggers below. If it matches, use
 
 | Template | Route | Triggers |
 |---|---|---|
-| Mobile App Landing | `docs/src/pages/templates/mobile-app.js` | "landing page for a mobile app", "app marketing site", "app homepage", "SaaS landing page" |
-| Blog Post          | `docs/src/pages/templates/blog-post.js`  | "blog post", "article page", "publication", "editorial site", "newsletter with blog" |
+| Mobile App Landing  | `docs/src/pages/templates/mobile-app.js`       | "landing page for a mobile app", "app marketing site", "app homepage", "SaaS landing page" |
+| Blog Post           | `docs/src/pages/templates/blog-post.js`        | "blog post", "article page", "publication", "editorial site", "newsletter with blog" |
+| Local Business      | `docs/src/pages/templates/local-business.js`   | "local business", "dog groomer", "bakery", "physio", "plumber", "florist", "salon", "restaurant", "tradesperson", "small business" |
+| Portfolio           | `docs/src/pages/templates/portfolio.js`        | "portfolio", "personal site", "freelancer site", "creative professional", "photographer", "designer site", "developer portfolio" |
+| Event / Conference  | `docs/src/pages/templates/event.js`            | "conference", "event", "festival", "workshop", "concert", "meetup", "summit" |
+| Editorial / Magazine | `docs/src/pages/templates/editorial.js`       | "magazine", "publication", "news site", "editorial", "online journal", "newsletter homepage" |
+
+**Always fetch `pulse://guide/design-references` after matching a template** — it tells you which vibe and component combinations suit the product's aesthetic, so you don't default to the same SaaS geometry every time.
 
 ---
 
-## Before writing any code — mandatory pre-build questions
+## Template-mode: lighter planning
 
-Ask these **before** presenting a plan. Do not skip them.
+When using a template, skip the full plan-and-confirm ceremony. Instead, output a single compact confirmation before writing:
 
-1. **Colour palette** — "Do you have a colour palette, or should I choose one?"
-2. **Brand fonts** — "Any brand fonts, or system-ui is fine?"
-3. **Theme** — "Light or dark theme preference?"
+```
+Template:      Mobile App Landing
+App name:      Nova
+Substitutions: name, tagline, 5 features, 3 pricing tiers, palette, font
+Theme:         light  (palette: #6366f1 primary, #f8fafc bg)
+Files:         src/pages/nova.js, public/themes/nova.css
+Confirm to proceed — or reply with changes.
+```
 
-Record the answers. If the user provides palette colours, note which are light/mid/dark toned so you can plan contrast strategy before writing any CSS.
+Wait one turn for confirmation. This replaces the full plan/build/confirm cycle. It is enough — the user can see exactly what will change.
 
-**Why this matters:** Building with placeholder colours and retrofitting a palette requires rebuilding components, fixing WCAG contrast failures, and touching multiple files. Getting the palette upfront avoids that loop entirely.
+**Do not skip the confirmation.** Even for templates, one turn of "does this look right?" prevents throwing away a completed build because the app name or palette was wrong.
+
+---
+
+## Before writing any code — mandatory product intake
+
+Run `pulse_intake` before presenting the confirmation. It collects the product details that make template content directionally right instead of fiction.
+
+**How to gather the intake information** — ask questions one at a time as plain prose, never as a batch with multiple-choice options. Product details are open-ended and free-form; preset choice lists don't fit and cause tool errors. Ask the simplest possible version of each question:
+
+1. "What's the name of the app or product?"
+2. "One sentence — what does it do?"
+3. "What are its main features? Give me 3–6."
+4. "Who's it for?" *(optional — skip if obvious from context)*
+5. "Do you have brand colours? If so, paste the hex values."
+6. "Any specific font, or system-ui?"
+7. "Light or dark theme preference?"
+8. "How should it feel visually? (e.g. warm and friendly, editorial and sharp, playful, minimal, bold — or describe in your own words)"
+
+Ask each question and wait for the answer before asking the next. Do not present a list of preset choices for any of these — the answers are arbitrary text.
+
+Once you have the answers, call `pulse_intake` with the collected details. It returns a product brief + early contrast warnings.
+
+**If `pulse_intake` is unavailable**, gather the answers via the questions above and use them directly when adapting the template — replace every placeholder with real content.
+
+**Do not invent app content.** Placeholder copy ("Lorem ipsum", "Feature A", "Benefit here") is thrown away immediately and makes the build feel broken. Real answers mean the first build is shippable copy.
+
+Record the intake answers. If the user provides palette hex values, note which are light/mid/dark toned before writing any CSS — this is when to spot contrast problems, not after Lighthouse runs.
 
 ---
 
@@ -237,7 +275,144 @@ Do NOT set `meta.theme: 'light'` on dark templates — the default pulse-ui them
 
 ---
 
-## Adding a new template
+## Local Business Landing Page
+
+**Design direction:** Warm Local Business · **Vibe:** `warm` · **Theme:** `light`
+
+### What it includes
+
+| Section | Component(s) |
+|---|---|
+| Sticky nav | `nav` with logo, links, Book Now CTA |
+| Hero | `hero(layout:'split')` with real photo of the business |
+| Stats strip | `stat` × 4 in `grid` — clients, rating, years, availability |
+| Services | `card` × 6 in `grid` with name, description, and price |
+| About | Two-column: photo + team bio with trust badges |
+| Reviews | `testimonial` × 3 in `grid` |
+| Contact / Hours | Two-column: address/phone/hours + booking form |
+| CTA banner | `cta` with offer (e.g. 10% off first visit) |
+| Footer | `footer` with address in `legal` |
+
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `src/pages/[name].js` | The page spec |
+| `public/themes/[name].css` | Brand theme — warm palette, `[data-theme="light"]` |
+
+### Adapting the template
+
+1. **Business name** — replace "Pawfect Grooming" everywhere.
+2. **Service type** — update service names, descriptions, and prices to match the business.
+3. **Photo** — the hero image and about section both use real photos; provide Unsplash URLs or placeholder paths.
+4. **Palette** — earthy, warm tones work best. Terracotta, sage, cream, amber — avoid corporate blues.
+5. **Contact details** — update address, phone, and opening hours in the contact section.
+6. **Vibe** — always `warm` for local business; pairs with rounded cards and soft section dividers.
+
+---
+
+## Portfolio / Personal Site
+
+**Design direction:** Minimal Portfolio · **Vibe:** `minimal` · **Theme:** dark (default)
+
+### What it includes
+
+| Section | Component(s) |
+|---|---|
+| Nav | Minimal nav — name as logo, text links, no CTA |
+| Hero | `hero(layout:'centered', align:'left')` — title and short bio |
+| Work grid | `card` × 6 with image, project name, description, skill badges |
+| About | Single-column `container(size:'sm')` with `prose`-style paragraphs + skill badges |
+| Contact | Centered section with email link, GitHub link, CV download |
+| Footer | Minimal — name, 3 links, legal |
+
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `src/pages/[name].js` | The page spec |
+
+Portfolio templates rarely need a separate theme CSS — the default dark palette with a single accent colour is sufficient. If the user has a brand colour, add it as a one-liner: `--ui-accent: #hex;` in `:root`.
+
+### Adapting the template
+
+1. **Name** — replace "Alex Mercer" everywhere, including the nav logo.
+2. **Profession** — update the eyebrow and hero subtitle.
+3. **Work grid** — replace with real project images, names, and descriptions. Use Unsplash or actual project screenshots.
+4. **Skills badges** — update to match the person's actual disciplines.
+5. **Contact** — replace email, GitHub handle, and CV download link.
+6. **Vibe** — `minimal` keeps the focus on the work; do not add excess decoration.
+
+---
+
+## Event / Conference Landing Page
+
+**Design direction:** Event / Conference · **Vibe:** `bold` · **Theme:** dark (default)
+
+### What it includes
+
+| Section | Component(s) |
+|---|---|
+| Nav | `nav` with event logo, links, Get Tickets CTA |
+| Hero | `hero(size:'xl', align:'center')` with gradient background |
+| Stats strip | `stat` × 4 — days, speakers, attendees, tracks |
+| Sponsor logos | `marquee` with sponsor names/logos |
+| Speakers | `card` × 8 in `grid` with photo, name, role, topic |
+| Schedule | `accordion` — one item per day with time/session/location |
+| Venue | Two-column: venue info + photo |
+| Tickets CTA | `cta` with prominent ticket button |
+| Footer | `footer` with event links and company legal |
+
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `src/pages/[name].js` | The page spec |
+| `public/themes/[name].css` | Optional — if brand has a specific accent colour |
+
+### Adapting the template
+
+1. **Event name and dates** — replace "SIGNAL", "14–16 October 2026", and "London" everywhere.
+2. **Speakers** — replace with real speaker names, roles, photos, and talk topics.
+3. **Schedule** — update accordion items with real session titles and times.
+4. **Venue** — update name, address, capacity, and photo.
+5. **Ticket price and URL** — update the ticket CTA with real link and price.
+6. **Gradient hero** — adjust the gradient colours to match the event brand.
+7. **Vibe** — `bold` for impact; consider `neon` for gaming/tech events.
+
+---
+
+## Editorial / Magazine Landing Page
+
+**Design direction:** Editorial / Publication · **Vibe:** `editorial` · **Theme:** dark (default)
+
+### What it includes
+
+| Section | Component(s) |
+|---|---|
+| Nav | `nav` with publication name + category links + Subscribe CTA |
+| Hero | `hero` with featured article title, deck, and author byline |
+| Pullquote | `pullquote` from the featured article |
+| Article grid | `card` × 6 with image, category badge, title, deck, author, date, read time |
+| Newsletter signup | `section(variant:'spotlight')` with email input and subscribe button |
+| Footer | `footer` with publication logo, category links, legal |
+
+### Files to create
+
+| File | Purpose |
+|---|---|
+| `src/pages/[name].js` | The page spec |
+
+### Adapting the template
+
+1. **Publication name** — replace "The Signal" everywhere.
+2. **Navigation categories** — update section names to match the publication's editorial categories.
+3. **Featured article** — replace hero title and subtitle with the actual lead story.
+4. **Article grid** — replace all 6 article stubs with real or representative articles.
+5. **Newsletter copy** — update the newsletter description and subscriber count.
+6. **Vibe** — `editorial` applies serif display font and zero-radius geometry; critical for the right feel. Do not change it.
+
+---
 
 When you build a new template and want it available for future scaffolding:
 

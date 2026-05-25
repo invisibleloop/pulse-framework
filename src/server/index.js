@@ -779,7 +779,23 @@ export async function createServer(entries, options = {}) {
   process.on('SIGINT',  shutdown)
 
   server.listen(port, () => {
-    console.log(`⚡ Pulse running at http://localhost:${port}`)
+    import('../cli/fmt.js').then(({ c, table, icon }) => {
+      const url  = `http://localhost:${port}`
+      const rows = specs.map(s => {
+        const hydrated = s.hydrate ? c.green('✓') : c.dim('—')
+        const method   = s.method?.toUpperCase() || 'GET'
+        const route    = s.route || '?'
+        return [c.cyan(route), c.dim(method), hydrated]
+      })
+      console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')}  ${c.dim(`→  ${url}`)}\n`)
+      if (rows.length > 0) {
+        const tbl = table(['Route', 'Method', 'Hydrated'], rows)
+        console.log(tbl.split('\n').map(l => '  ' + l).join('\n'))
+        console.log()
+      }
+    }).catch(() => {
+      console.log(`⚡ Pulse running at http://localhost:${port}`)
+    })
   })
 
   return {
@@ -981,7 +997,10 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     meta.schema ? `  <script type="application/ld+json">${JSON.stringify(meta.schema)}</script>` : '',
   ].filter(Boolean).join('\n')
 
-  const bodyAttr = meta.theme ? ` data-theme="${escHtml(meta.theme)}"` : ''
+  const bodyAttr = [
+    meta.theme ? `data-theme="${escHtml(meta.theme)}"` : '',
+    meta.vibe  ? `data-vibe="${escHtml(meta.vibe)}"` : '',
+  ].filter(Boolean).map(a => ` ${a}`).join('')
 
   const docOpen = `<!DOCTYPE html>
 <html lang="en">
