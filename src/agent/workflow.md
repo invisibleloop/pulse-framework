@@ -16,6 +16,7 @@ For any **new page, landing page, or branded site**, run the intake sequence fir
 - **`pulse_extract_inspiration`** — call this first if the user shares a URL, site name, or image they like. Gives you a structured extraction template: visit the URL or analyse the image with your vision tools, extract colours, layout, typography, and feel, then feed those findings into pulse_intake. If no inspiration is shared, skip this step.
 - **`pulse_intake`** — captures the real content (name, pitch, features, palette, vibe, what it should NOT look like). Returns a brief with copy-ready content and early contrast warnings. Always ask the user one question at a time — never multi-choice for open-ended questions.
 - **`pulse_sketch`** — generates 3 structurally distinct layout directions (full-bleed, asymmetric split, typography-only, editorial, dense grid, story scroll, content-first). **Call this before writing any code.** Prevents defaulting to centred hero + three-column features every time.
+- **Skip `pulse_sketch` only** when the vibe is `corporate` or `minimal` AND the user hasn't expressed any structural preference. For `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes, `pulse_sketch` is mandatory — templates have default section orders that actively fight these vibes.
 - **`pulse_intent`** — maps the chosen direction to a spec scaffold and tells you which guides to read.
 
 For **small edits, bug fixes, or "add X to existing Y"** — skip intake/sketch and go straight to Step 0 below.

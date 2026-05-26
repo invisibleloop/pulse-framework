@@ -53,13 +53,21 @@ When you choose a design direction, tell the user which one you're using and why
 ---
 
 ### 5. Playful / Consumer App
-**Feels like:** Duolingo, Headspace, Loom, Figma landing page  
+**Feels like:** Duolingo, Headspace, Loom, Figma landing page, pop-art toy brand  
 **vibe:** `playful`  
 **Geometry:** very rounded (18–24px), friendly icons, colourful  
 **Typography:** rounded or friendly sans, loose spacing, emoji-friendly  
 **Palette pattern:** bright bg (coral / mint / lavender) + dark text  
-**Signature moves:** illustrated phone mockup, animated badge counts, colourful feature cards, social proof strip  
-**Components to lead with:** `phoneFrame`, `hero(layout:'split')`, `appBadge`, `feature`, `testimonial`
+**Signature moves (use these, not 3-col feature grids):**
+- **Full-colour section blocks** — each section has its own bg colour (yellow stats strip, cyan testimonials, hot-pink CTA). Palette is structure, not accent.
+- **Oversized hero element** — the product's key visual (a game board, an illustration, an icon) fills most of the hero viewport. `phoneFrame` is one option, not the default.
+- **Marquee strip** — giant repeated glyphs, emoji, or product icons scrolling across the page between sections (`marquee` component)
+- **Tilted `photoCard`s** — testimonial or feature cards at ±2–4° with `photoCard` or CSS `transform: rotate()`
+- **Memphis-style geometric shapes** between sections — use `decorate(pattern:'circles')` or CSS background shapes
+- **Social proof as ticker** — a `marquee` of short quotes or star ratings, not a 3-col grid
+
+**Components to lead with:** `hero`, `appBadge`, `marquee`, `photoCard`, `section` with flat-colour backgrounds, `stat`  
+**What NOT to do:** 3-column `feature()` grids, centred hero + three columns, phone mockup when the product is a game/board/visual thing
 
 ---
 

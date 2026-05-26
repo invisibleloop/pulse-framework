@@ -2,6 +2,8 @@
 
 Templates are complete, production-ready page specs you can adapt for a new brand. Always start from a template when the user's request matches one — do not build from scratch.
 
+**A template gives you the right *components and content slots* — not a mandatory section order.** The structural skeleton (hero → features → testimonials → CTA) suits corporate and minimal vibes. For playful, bold, brutalist, retro, and neon vibes, the template is a parts list, not a blueprint. Run `pulse_sketch` to find a layout that matches the emotional intent before you write a line of code.
+
 ---
 
 ## When to use a template
@@ -18,6 +20,25 @@ Read the user's request and match against the triggers below. If it matches, use
 | Editorial / Magazine | `docs/src/pages/templates/editorial.js`       | "magazine", "publication", "news site", "editorial", "online journal", "newsletter homepage" |
 
 **Always fetch `pulse://guide/design-references` after matching a template** — it tells you which vibe and component combinations suit the product's aesthetic, so you don't default to the same SaaS geometry every time.
+
+---
+
+## Creative-override rule — when to ignore the template structure
+
+When the vibe is **playful, bold, brutalist, retro, or neon**, run `pulse_sketch` before writing any code and **treat the template section order as optional**. These vibes require structural decisions that the template's default skeleton actively works against.
+
+| Signal | What to do |
+|---|---|
+| Vibe is playful / bold / brutalist / retro / neon | Run `pulse_sketch` — pick one of 3 layout directions |
+| User says "fun", "pop-art", "loud", "unexpected", "editorial", "raw" | Run `pulse_sketch` — section order is your call |
+| User says "professional", "clean", "trustworthy", "corporate", "minimal" | Template structure is fine — adapt content only |
+
+**What this means in practice for expressive vibes:**
+
+- The template tells you *what to include* (a hero, features, social proof, CTA). It does **not** tell you how to arrange them or what shape they take.
+- Full-colour section blocks, oversized typography heroes, marquee strips, dense grids, and palette-as-structure are all fair game.
+- The `phoneFrame` in Mobile App Landing is **not mandatory** — a full-bleed game board, an oversized illustration, or a typography-only hero may serve the brief better.
+- `feature()` in a 3-column grid is the most predictable layout on the web. If the brief is "fun and bold", use a marquee strip of features, a zigzag alternating layout, or full-bleed feature sections instead.
 
 ---
 
