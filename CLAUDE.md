@@ -342,10 +342,10 @@ There are two CSS files and they have distinct roles — do not mix them:
 
 | File | Purpose | Allowed content |
 |---|---|---|
-| `public/theme.css` | Token definitions — hex values, raw colours, font URLs | Hex values, `rgb()`, raw values, `@font-face`, `@import` |
-| `app.css` (or per-page) | Layout and component overrides | `var()` tokens **only** — no hex, no raw colour values |
+| `public/theme.css` | Token definitions — hex values, raw colours, font URLs | Hex values, `rgb()`, `rgba()`, `hsl()`, `hsla()`, raw values, `@font-face`, `@import` |
+| `app.css` (or per-page) | Layout and component overrides | `var()` tokens **only** — no hex values |
 
-**`app.css` must never contain hex values or raw colour values.** A lint hook enforces this. If you need to define or override a colour token, put it in `public/theme.css` and reference it via `var()` in `app.css`.
+**`app.css` must never contain hex values.** `rgba()` and `hsla()` are allowed for translucency — but if the same translucent colour is used more than once, extract it as a token in `theme.css` (e.g. `--brand-overlay-12: rgba(0,0,0,0.12)`). If you need to define or override a colour token, put it in `public/theme.css` and reference it via `var()` in `app.css`.
 
 ```css
 /* public/theme.css — hex values live here */

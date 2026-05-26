@@ -3669,3 +3669,175 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   color:      var(--ui-muted);
   font-style: italic;
 }
+
+/* ------------------------------------------------------------------ */
+/* ServiceCard                                                         */
+/* ------------------------------------------------------------------ */
+
+.ui-service-card {
+  display:        block;
+  padding:        var(--ui-space-5, 1.25rem);
+  border:         1px solid var(--ui-border);
+  border-radius:  var(--ui-radius-md);
+  background:     var(--ui-surface);
+  text-decoration: none;
+  color:          inherit;
+}
+
+.ui-service-card--linked {
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ui-service-card--linked:hover {
+  border-color: var(--ui-accent);
+  box-shadow:   0 2px 12px var(--ui-shadow, rgba(0,0,0,.08));
+}
+
+.ui-service-card-icon {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  width:           2.5rem;
+  height:          2.5rem;
+  border-radius:   var(--ui-radius);
+  background:      var(--ui-accent-tint);
+  color:           var(--ui-accent);
+  margin-block-end: var(--ui-space-4, 1rem);
+}
+
+.ui-service-card-title {
+  font-size:   var(--ui-text-md, 1rem);
+  font-weight: 600;
+  margin:      0 0 var(--ui-space-2, 0.5rem);
+  color:       var(--ui-text);
+}
+
+.ui-service-card-desc {
+  margin:      0;
+  font-size:   var(--ui-text-sm, 0.875rem);
+  color:       var(--ui-muted);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ */
+/* ContactRow                                                          */
+/* ------------------------------------------------------------------ */
+
+.ui-contact-row {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       var(--ui-space-3, 0.75rem) var(--ui-space-6, 1.5rem);
+  list-style: none;
+  margin:    0;
+  padding:   0;
+}
+
+.ui-contact-row--sm { font-size: var(--ui-text-sm, 0.875rem); }
+
+.ui-contact-row-item {
+  display:     flex;
+  align-items: center;
+  gap:         var(--ui-space-2, 0.5rem);
+  color:       var(--ui-muted);
+}
+
+.ui-contact-row-item a {
+  color:           inherit;
+  text-decoration: none;
+}
+
+.ui-contact-row-item a:hover { color: var(--ui-accent); }
+
+.ui-contact-row-icon {
+  flex-shrink: 0;
+  color:       var(--ui-accent);
+  line-height: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* TrustList                                                           */
+/* ------------------------------------------------------------------ */
+
+.ui-trust-list {
+  display:   flex;
+  flex-wrap: wrap;
+  gap:       var(--ui-space-2, 0.5rem) var(--ui-space-5, 1.25rem);
+  list-style: none;
+  margin:    0;
+  padding:   0;
+}
+
+.ui-trust-list--md { font-size: var(--ui-text-md, 1rem); }
+
+.ui-trust-list-item {
+  display:     flex;
+  align-items: center;
+  gap:         var(--ui-space-2, 0.5rem);
+  font-size:   var(--ui-text-sm, 0.875rem);
+  color:       var(--ui-muted);
+}
+
+.ui-trust-list-icon {
+  flex-shrink: 0;
+  color:       var(--ui-accent);
+  line-height: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* TopStrip                                                            */
+/* ------------------------------------------------------------------ */
+
+.ui-top-strip {
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         var(--ui-space-2, 0.5rem) var(--ui-space-6, 1.5rem);
+  background:      var(--ui-surface-raised, var(--ui-surface));
+  font-size:       var(--ui-text-xs, 0.75rem);
+  color:           var(--ui-muted);
+  gap:             var(--ui-space-4, 1rem);
+}
+
+.ui-top-strip-content,
+.ui-top-strip-left,
+.ui-top-strip-right {
+  display:     flex;
+  align-items: center;
+  gap:         var(--ui-space-4, 1rem);
+  flex-wrap:   wrap;
+}
+
+@media (max-width: 640px) {
+  .ui-top-strip {
+    flex-direction: column;
+    align-items:    flex-start;
+    gap:            var(--ui-space-1, 0.25rem);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* StatGrid                                                            */
+/* ------------------------------------------------------------------ */
+
+.ui-stat-grid {
+  display:               grid;
+  gap:                   var(--ui-space-4, 1rem);
+  grid-template-columns: repeat(var(--stat-cols, 2), 1fr);
+  padding:               var(--ui-space-6, 1.5rem);
+  border-radius:         var(--ui-radius-md);
+}
+
+.ui-stat-grid .ui-stat-value {
+  font-size:   clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.1;
+}
+
+/* Stat suffix — icon/rating appended to the value */
+.ui-stat-suffix {
+  display:     inline-flex;
+  align-items: center;
+  margin-left: 0.2em;
+  font-size:   0.6em;
+  vertical-align: middle;
+  line-height: 0;
+}

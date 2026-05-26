@@ -41,27 +41,17 @@ body {
 }
 
 /* ── Top utility strip ─────────────────────────────────────────────────── */
-.top-strip {
-  background: var(--brand-navy-deep);
-  color: var(--brand-white);
-  font-size: var(--ui-text-sm);
+/* top-strip rendered via topStrip() component — background/color set inline */
+.ui-top-strip {
+  max-width: none;
+  padding-inline: var(--ui-space-6);
 }
-.top-strip__inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--ui-space-2) var(--ui-space-6);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ui-space-4);
-  flex-wrap: wrap;
-}
-.top-strip a {
-  color: var(--brand-white);
+.ui-top-strip a {
+  color: inherit;
   text-decoration: none;
   font-weight: 600;
 }
-.top-strip a:hover { text-decoration: underline; }
+.ui-top-strip a:hover { text-decoration: underline; }
 
 /* ── Hero ──────────────────────────────────────────────────────────────── */
 .hero-split {
@@ -115,10 +105,9 @@ body {
   color: var(--ui-muted);
   font-weight: 600;
 }
-.hero-split__trust span::before {
-  content: "✓ ";
-  color: var(--brand-amber);
-  font-weight: 800;
+/* trustList() inside trust slot — override default small size */
+.hero-split__trust .ui-trust-list-item {
+  font-weight: 600;
 }
 
 .hero-split__panel {
@@ -209,43 +198,22 @@ body {
   color: var(--ui-muted);
 }
 
-/* ── Services grid ─────────────────────────────────────────────────────── */
+/* ── Services grid — serviceCard() component ───────────────────────────── */
 .services {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--ui-space-5);
 }
-.service {
-  background: var(--ui-surface);
-  border: 1px solid var(--ui-border);
-  border-radius: var(--ui-radius);
-  padding: var(--ui-space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--ui-space-3);
-  transition: border-color 0.2s ease, transform 0.2s ease;
-}
-.service:hover {
-  border-color: var(--ui-accent);
-  transform: translateY(-2px);
-}
-.service__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--ui-radius);
-  background: var(--ui-accent-dim);
-  color: var(--ui-accent);
-  display: grid;
-  place-items: center;
-}
-.service__title {
+/* serviceCard() title size override */
+.services .ui-service-card-title {
   font-size: var(--ui-text-xl);
   font-weight: 700;
-  color: var(--ui-text);
 }
-.service__body {
-  color: var(--ui-muted);
+.services .ui-service-card-desc {
   font-size: var(--ui-text-base);
+}
+.services .ui-service-card--linked:hover {
+  transform: translateY(-2px);
 }
 
 /* ── Why grid ──────────────────────────────────────────────────────────── */
@@ -327,24 +295,25 @@ body {
   flex-direction: column;
   gap: var(--ui-space-3);
 }
-.contact-line {
-  display: flex;
-  align-items: center;
-  gap: var(--ui-space-3);
+.contact-strip__details .ui-contact-row {
+  flex-direction: column;
+}
+.contact-strip__details .ui-contact-row-item {
   color: var(--brand-white);
   font-weight: 600;
-  text-decoration: none;
   font-size: var(--ui-text-lg);
 }
-.contact-line:hover { color: var(--brand-amber-strong); }
-.contact-line__icon {
+.contact-strip__details .ui-contact-row-item a { color: var(--brand-white); }
+.contact-strip__details .ui-contact-row-item a:hover { color: var(--brand-amber-strong); }
+.contact-strip__details .ui-contact-row-icon {
   width: 36px;
   height: 36px;
   border-radius: 50%;
   background: var(--brand-overlay-12);
   display: grid;
   place-items: center;
-  flex-shrink: 0;
+  line-height: 0;
+  color: var(--brand-white);
 }
 
 /* ── Footer overrides ──────────────────────────────────────────────────── */

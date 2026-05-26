@@ -10,6 +10,7 @@
 
 import {
   nav, button, footer,
+  topStrip, serviceCard, trustList, contactRow,
   iconZap, iconShield, iconCheck, iconPhone, iconMail, iconHome, iconClock, iconSettings, iconAlertTriangle, iconStar,
 } from '../../../../src/ui/index.js'
 
@@ -65,13 +66,11 @@ const why = [
   },
 ]
 
-const service = (s) => `
-  <article class="service">
-    <div class="service__icon" aria-hidden="true">${s.icon}</div>
-    <h3 class="service__title">${s.title}</h3>
-    <p class="service__body">${s.body}</p>
-  </article>
-`
+const service = (s) => serviceCard({
+  icon:        s.icon,
+  title:       s.title,
+  description: s.body,
+})
 
 const whyItem = (w) => `
   <div class="why__item">
@@ -106,12 +105,12 @@ export default {
   },
 
   view: () => `
-    <div class="top-strip">
-      <div class="top-strip__inner">
-        <span>Mon–Sat 7am–7pm · 24/7 emergency line</span>
-        <a href="${PHONE_HREF}">Call ${PHONE}</a>
-      </div>
-    </div>
+    ${topStrip({
+      left:       'Mon–Sat 7am–7pm · 24/7 emergency line',
+      right:      `<a href="${PHONE_HREF}">Call ${PHONE}</a>`,
+      background: 'var(--brand-navy-deep)',
+      color:      'var(--brand-white)',
+    })}
 
     ${nav({
       logo:     '<strong class="brand-mark">Sparkys</strong>',
@@ -153,9 +152,7 @@ export default {
             })}
           </div>
           <div class="hero-split__trust">
-            <span>Part P registered</span>
-            <span>NICEIC approved</span>
-            <span>£10m insured</span>
+            ${trustList({ items: ['Part P registered', 'NICEIC approved', '£10m insured'] })}
           </div>
         </div>
         <aside class="hero-split__panel" aria-label="Sparkys at a glance">
@@ -224,18 +221,13 @@ export default {
             <p class="contact-strip__lead">Free, no-obligation quotes for homes and businesses across Ashfield, Mansfield and the wider NG postcodes.</p>
           </div>
           <div class="contact-strip__details">
-            <a class="contact-line" href="${PHONE_HREF}">
-              <span class="contact-line__icon" aria-hidden="true">${iconPhone({ size: 18 })}</span>
-              ${PHONE}
-            </a>
-            <a class="contact-line" href="mailto:${EMAIL}">
-              <span class="contact-line__icon" aria-hidden="true">${iconMail({ size: 18 })}</span>
-              ${EMAIL}
-            </a>
-            <span class="contact-line">
-              <span class="contact-line__icon" aria-hidden="true">${iconClock({ size: 18 })}</span>
-              Mon–Sat 7am–7pm · 24/7 emergencies
-            </span>
+            ${contactRow({
+              items: [
+                { icon: iconPhone({ size: 18 }), label: PHONE,    href: PHONE_HREF },
+                { icon: iconMail({ size: 18 }),  label: EMAIL,    href: `mailto:${EMAIL}` },
+                { icon: iconClock({ size: 18 }), label: 'Mon–Sat 7am–7pm · 24/7 emergencies' },
+              ],
+            })}
           </div>
         </div>
       </section>
