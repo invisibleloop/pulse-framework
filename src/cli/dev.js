@@ -146,10 +146,15 @@ let reloadTimer = null
 fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(async () => {
+    console.log('  ⟳ File changed, reloading specs...')
     try {
       const fresh = await loadPages(ROOT, Date.now())
       updateSpecs(fresh)
-    } catch { /* spec error — browser will show the old page, not crash */ }
+      console.log('  ✓ Specs reloaded')
+    } catch (err) {
+      console.error('  ✗ Spec reload failed:', err.message)
+      /* spec error — browser will show the old page, not crash */
+    }
     notifyReload()
   }, 50)
 })

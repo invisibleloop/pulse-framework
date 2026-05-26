@@ -738,25 +738,7 @@ any feature build.`,
 
     return text(`# Pulse Code Review
 
-You are now a **senior code reviewer**. You did not write this code. Read it with fresh eyes and find every problem — no matter how small.
-
-Work through each section of the checklist below. For every issue you find, fix it immediately before moving on. Do not report issues without fixing them. When you have fixed everything, confirm what you changed.
-
----
-
-## Spec source
-
-\`\`\`js
-${source}
-\`\`\`
-
----
-
-## Rendered HTML (initial state) ${renderNote}
-
-\`\`\`html
-${renderedHtml || '(empty)'}
-\`\`\`
+You are now a **senior code reviewer**. Read the spec, find every problem, and fix them all before reporting back.
 
 ---
 
@@ -764,11 +746,29 @@ ${renderedHtml || '(empty)'}
 
 ${validationResult}
 
+${validationResult.includes('✓') ? '' : `
+## Spec source (validation failed — showing for debugging)
+
+\`\`\`js
+${source}
+\`\`\`
+`}
+
+${renderNote.includes('could not') ? `
+## Render error
+
+${renderNote}
+
+\`\`\`js
+${source}
+\`\`\`
+` : ''}
+
 ---
 
 ## Review checklist
 
-Work through every item. Fix anything that fails.
+Work through every item. Fix anything that fails. Refer to the spec source at ${file} as needed — do not ask me to paste it.
 
 ### Structure
 - [ ] \`route\` is set explicitly — not left to auto-discovery
@@ -2226,6 +2226,48 @@ function contrastRatio(lum1, lum2) {
   return (hi + 0.05) / (lo + 0.05)
 }
 
+/**
+ * Given a hex foreground, background luminance, and target contrast ratio,
+ * suggest a corrected hex value that achieves the target ratio.
+ * Strategy: adjust foreground luminance toward darker/lighter as needed.
+ */
+function suggestContrastFix(fgHex, bgLum, targetRatio) {
+  const fgLum = hexToLuminance(fgHex)
+  if (fgLum === null) return null
+  
+  // Calculate target foreground luminance needed to achieve targetRatio
+  // (hi + 0.05) / (lo + 0.05) = targetRatio
+  // If bg is lighter: (bgLum + 0.05) / (fgLum + 0.05) = targetRatio
+  //   → fgLum = (bgLum + 0.05) / targetRatio - 0.05
+  // If bg is darker: (fgLum + 0.05) / (bgLum + 0.05) = targetRatio
+  //   → fgLum = targetRatio * (bgLum + 0.05) - 0.05
+  
+  let targetLum
+  if (bgLum > fgLum) {
+    // Background is lighter — darken foreground
+    targetLum = (bgLum + 0.05) / targetRatio - 0.05
+  } else {
+    // Background is darker — lighten foreground
+    targetLum = targetRatio * (bgLum + 0.05) - 0.05
+  }
+  
+  // Clamp to valid luminance range
+  targetLum = Math.max(0, Math.min(1, targetLum))
+  
+  // Convert target luminance to RGB (grayscale approximation for simplicity)
+  // Inverse of linearize: L = 0.2126*R + 0.7152*G + 0.0722*B
+  // For grayscale: L = R = G = B (simplified), so solve for sRGB value
+  const delinearize = l => {
+    return l <= 0.0031308 ? l * 12.92 : 1.055 * Math.pow(l, 1 / 2.4) - 0.055
+  }
+  
+  const srgb = delinearize(targetLum)
+  const val = Math.round(srgb * 255)
+  const clamp = Math.max(0, Math.min(255, val))
+  
+  return `#${clamp.toString(16).padStart(2, '0').repeat(3)}`
+}
+
 server.registerTool(
   'pulse_check_contrast',
   {
@@ -2277,6 +2319,16 @@ Run this immediately after writing a theme file — before production build and 
       }
       return null
     }
+    
+    const resolveToHex = (value, varMap) => {
+      if (!value) return null
+      if (value.startsWith('#')) return value
+      if (value.startsWith('var(')) {
+        const ref = value.match(/var\(--([\w-]+)\)/)?.[1]
+        if (ref && varMap[`--${ref}`]) return resolveToHex(varMap[`--${ref}`], varMap)
+      }
+      return null
+    }
 
     // Standard pairings to check — [foreground token, background token, label, isLargeText]
     const PAIRINGS = [
@@ -2300,6 +2352,9 @@ Run this immediately after writing a theme file — before production build and 
         const fgLum = resolveColor(fgVal, vars)
         const bgLum = resolveColor(bgVal, vars)
         if (fgLum === null || bgLum === null) continue
+        
+        const fgHex = resolveToHex(fgVal, vars)
+        const bgHex = resolveToHex(bgVal, vars)
 
         const ratio = contrastRatio(fgLum, bgLum)
         const threshold = isLarge ? 3.0 : 4.5
@@ -2310,6 +2365,9 @@ Run this immediately after writing a theme file — before production build and 
           context, label,
           fg: fg + ' (' + fgVal + ')',
           bg: bg + ' (' + bgVal + ')',
+          fgHex,
+          bgHex,
+          bgLum,
           ratio: ratio.toFixed(2),
           pass,
           level,
@@ -2347,6 +2405,14 @@ Run this immediately after writing a theme file — before production build and 
         lines.push(`**${r.label}** — ${r.context}`)
         lines.push(`  ${r.fg}  on  ${r.bg}`)
         lines.push(`  Ratio: ${r.ratio}:1  ·  Needed: ${r.threshold}:1  ·  Level: ${r.level}`)
+        
+        // Suggest a corrected hex value
+        if (r.fgHex && r.bgLum !== null) {
+          const suggested = suggestContrastFix(r.fgHex, r.bgLum, r.threshold)
+          if (suggested) {
+            lines.push(`  💡 Suggested fix: use ${suggested} instead of ${r.fgHex}`)
+          }
+        }
         lines.push('')
       }
     }
