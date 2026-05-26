@@ -212,6 +212,8 @@ Pass gates:
 
 **If any gate fails:** fix and run `/verify` again.
 
+**Troubleshooting browser profile lock:** If you see "browser already running" or chrome profile errors, another session is using the same Chrome profile. This is a `chrome-devtools-mcp` limitation — only one session can use the profile at a time. Ask the user to close other Claude sessions, or wait for the other session to finish.
+
 ---
 
 ## Phase 6 — Tests (pass gate, Tier 2+)

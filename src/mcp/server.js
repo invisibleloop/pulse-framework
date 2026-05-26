@@ -800,6 +800,7 @@ Work through every item. Fix anything that fails. Refer to the spec source at ${
 - [ ] No \`className\`, \`htmlFor\`, \`onClick=\`, or other React patterns
 - [ ] No hardcoded hex colours — only \`var(--ui-*)\` tokens
 - [ ] No emoji in the view HTML
+- [ ] **CTA must be wrapped in section/container** — grep the rendered HTML for \`<div class="ui-cta"\`. If it appears as a direct child of \`<main>\` or \`<div id="app">\` without a section or container wrapper, wrap it. CTA has no padding of its own.
 
 ### Accessibility
 - [ ] \`<main id="main-content">\` is present

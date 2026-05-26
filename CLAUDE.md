@@ -423,6 +423,9 @@ const result = await render(mySpec, { ctx: { params: { id: '1' } } }) // real fe
 ```
 
 **Supported selectors:** `button`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations: `button.primary[type="submit"]`.
+
+**Descendant selectors NOT supported:** `result.count('.parent li')` will silently return wrong results. Instead, use `result.find('.parent').findAll('li')` to search within a specific parent, or add a class to the target element.
+
 `Element` also has `.find()`, `.findAll()`, `.has()`, `.attr()`, `.text`, `.tag`, `.attrs`.
 
 ## Key Decisions (Do Not Reverse)

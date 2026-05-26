@@ -260,6 +260,10 @@ export function extractText(tokens) {
  * @returns {{ token, index } | null}
  */
 export function findFirst(tokens, selector) {
+  // Warn if selector contains a space (descendant combinator not supported)
+  if (selector.includes(' ') && selector.trim().includes(' ')) {
+    console.warn(`[Pulse testing] Descendant selectors not supported: "${selector}". Use a class on the target element instead, or call element.find() to search within a specific parent.`)
+  }
   const sel = parseSelector(selector)
   for (let i = 0; i < tokens.length; i++) {
     if (matchesToken(tokens[i], sel)) return { token: tokens[i], index: i }
@@ -274,6 +278,10 @@ export function findFirst(tokens, selector) {
  * @returns {Array<{ token, index }>}
  */
 export function findAll(tokens, selector) {
+  // Warn if selector contains a space (descendant combinator not supported)
+  if (selector.includes(' ') && selector.trim().includes(' ')) {
+    console.warn(`[Pulse testing] Descendant selectors not supported: "${selector}". Use a class on the target element instead, or call element.findAll() to search within a specific parent.`)
+  }
   const sel = parseSelector(selector)
   const results = []
   for (let i = 0; i < tokens.length; i++) {

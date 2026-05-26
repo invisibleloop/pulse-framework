@@ -19,6 +19,8 @@
  *   'overlap': image fills the section background, text overlaid with dark gradient.
  * @param {boolean|'purple'|'blue'|'green'|'rose'|'orange'} opts.gradient
  * @param {string}  opts.background    - Arbitrary CSS background value — overrides gradient preset
+ * @param {string}  opts.backgroundImage - CSS background-image value (url, gradient, etc) — enables full-bleed mode
+ * @param {boolean|number} opts.overlay - Dark overlay opacity for backgroundImage mode (0–1, or true for 0.4 default)
  * @param {string}  opts.eyebrowColor  - Overrides eyebrow text colour
  * @param {string}  opts.class
  */
@@ -40,11 +42,14 @@ export function hero({
   layout      = 'split',
   gradient     = false,
   background   = '',
+  backgroundImage = '',
+  overlay      = false,
   eyebrowColor = '',
   color        = '',
   class: cls   = '',
 } = {}) {
   const hasImage    = Boolean(image)
+  const hasBackgroundImage = Boolean(backgroundImage)
   const safeLayout  = (hasImage && LAYOUTS.has(layout)) ? layout : 'split'
 
   // Resolve gradient class
@@ -56,19 +61,37 @@ export function hero({
 
   const classes = [
     'ui-hero',
-    !hasImage && align === 'left' && 'ui-hero--left',
+    !hasImage && !hasBackgroundImage && align === 'left' && 'ui-hero--left',
     hasImage && `ui-hero--${safeLayout}`,
     hasImage && safeLayout !== 'overlap' && imageAlign === 'left' && 'ui-hero--media-left',
+    hasBackgroundImage && 'ui-hero--bg-image',
     size === 'sm' && 'ui-hero--sm',
     gradientClass,
     cls,
   ].filter(Boolean).join(' ')
 
-  const styles = [
-    background && `background:${background.replace(/"/g, "'")}`,
-    color      && `color:${color.replace(/"/g, "'")};--ui-muted:${color.replace(/"/g, "'")}`,
-  ].filter(Boolean).join(';')
+  // Build inline styles
+  const styleArr = []
+  if (background) styleArr.push(`background:${background.replace(/"/g, "'")}`)
+  if (backgroundImage) {
+    styleArr.push(`background-image:${backgroundImage.replace(/"/g, "'")}`)
+    styleArr.push(`background-size:cover`)
+    styleArr.push(`background-position:center`)
+    styleArr.push(`position:relative`)
+  }
+  if (color) {
+    styleArr.push(`color:${color.replace(/"/g, "'")}`)
+    styleArr.push(`--ui-muted:${color.replace(/"/g, "'")}`)
+  }
+  
+  const styles = styleArr.join(';')
   const bgStyle = styles ? ` style="${styles}"` : ''
+
+  // Overlay for background-image mode
+  const overlayOpacity = overlay === true ? 0.4 : (typeof overlay === 'number' ? overlay : 0)
+  const overlayHtml = hasBackgroundImage && overlay
+    ? `<div class="ui-hero-overlay" style="position:absolute;inset:0;background:rgba(0,0,0,${overlayOpacity});pointer-events:none;"></div>`
+    : ''
 
   const eyebrowStyle = eyebrowColor ? ` style="color:${eyebrowColor.replace(/"/g, "'")}"` : ''
   const content = `
@@ -76,6 +99,15 @@ export function hero({
     ${title    ? `<h1 class="ui-hero-title">${e(title)}</h1>` : ''}
     ${subtitle ? `<p class="ui-hero-subtitle">${e(subtitle)}</p>` : ''}
     ${actions  ? `<div class="ui-hero-actions">${actions}</div>` : ''}`
+
+  // Full-bleed background-image mode
+  if (hasBackgroundImage) {
+    return `<section class="${e(classes)}"${bgStyle}>
+  ${overlayHtml}
+  <div class="ui-hero-inner" style="position:relative;z-index:1;">${content}
+  </div>
+</section>`
+  }
 
   // No image — centered or left-aligned
   if (!hasImage) {

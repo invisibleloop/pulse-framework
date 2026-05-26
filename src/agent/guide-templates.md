@@ -325,7 +325,7 @@ Do NOT set `meta.theme: 'light'` on dark templates — the default pulse-ui them
 
 1. **Business name** — replace "Pawfect Grooming" everywhere.
 2. **Service type** — update service names, descriptions, and prices to match the business.
-3. **Photo** — the hero image and about section both use real photos; provide Unsplash URLs or placeholder paths.
+3. **Photo** — the hero image and about section both use real photos; provide Unsplash URLs or placeholder paths. **If using external images**, add the host to `csp` in `pulse.config.js` (see pulse://guide/styles for examples).
 4. **Palette** — earthy, warm tones work best. Terracotta, sage, cream, amber — avoid corporate blues.
 5. **Contact details** — update address, phone, and opening hours in the contact section.
 6. **Vibe** — always `warm` for local business; pairs with rounded cards and soft section dividers.
@@ -359,7 +359,7 @@ Portfolio templates rarely need a separate theme CSS — the default dark palett
 
 1. **Name** — replace "Alex Mercer" everywhere, including the nav logo.
 2. **Profession** — update the eyebrow and hero subtitle.
-3. **Work grid** — replace with real project images, names, and descriptions. Use Unsplash or actual project screenshots.
+3. **Work grid** — replace with real project images, names, and descriptions. Use Unsplash or actual project screenshots. **If using external images**, add the host to `csp` in `pulse.config.js` (see pulse://guide/styles).
 4. **Skills badges** — update to match the person's actual disciplines.
 5. **Contact** — replace email, GitHub handle, and CV download link.
 6. **Vibe** — `minimal` keeps the focus on the work; do not add excess decoration.
