@@ -21,6 +21,7 @@
  * @param {string}  opts.logo       - Raw HTML slot — SVG, img, or text
  * @param {string}  opts.logoHref   - Logo link destination (default: '/')
  * @param {Array<{label:string, href?:string, mega?:Array}>} opts.links
+ * @param {Array<{label:string, href?:string}>} opts.utilityLinks - Secondary links pushed to the far right
  * @param {string}  opts.action     - Raw HTML slot — typically a button()
  * @param {boolean} opts.sticky     - Position sticky with backdrop blur
  * @param {'right'|'left'} opts.burgerAlign - Mobile burger position (default: 'right')
@@ -78,6 +79,7 @@ export function nav({
   logo          = '',
   logoHref      = '/',
   links         = [],
+  utilityLinks  = [],
   action        = '',
   sticky        = false,
   burgerAlign   = 'right',
@@ -89,29 +91,35 @@ export function nav({
   const classes = ['ui-nav', sticky && 'ui-nav--sticky', burgerAlign === 'left' && 'ui-nav--burger-left', cls].filter(Boolean).join(' ')
   const styles  = [
     background && `background:${background.replace(/"/g, "'")}`,
-    color      && `color:${color.replace(/"/g, "'")};--ui-muted:${color.replace(/"/g, "'")}`,
+    color      && `color:${color.replace(/"/g, "'")};--ui-text:${color.replace(/"/g, "'")};--ui-muted:${color.replace(/"/g, "'")}`,
   ].filter(Boolean).join(';')
   const bgStyle = styles ? ` style="${styles}"` : ''
 
   const linksHtml       = links.map((l, i) => renderLink(l, id, i)).join('')
-  const mobileLinksHtml = links.map(renderMobileLink).join('')
+  const utilityHtml     = utilityLinks.map(l => `<a href="${e(l.href || '')}" class="ui-nav-link">${e(l.label || '')}</a>`).join('')
+  const mobileLinksHtml = [...links, ...utilityLinks].map(renderMobileLink).join('')
 
-  const burgerHtml = links.length ? `
+  const burgerHtml = (links.length || utilityLinks.length) ? `
   <button class="ui-nav-burger" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="${id}-mobile">
     ${iconMenu({ size: 20, class: 'ui-nav-burger-open' })}
     ${iconX({ size: 20, class: 'ui-nav-burger-close' })}
   </button>` : ''
 
-  const mobileMenuHtml = links.length ? `
+  const mobileMenuHtml = (links.length || utilityLinks.length) ? `
   <div class="ui-nav-mobile" id="${id}-mobile" aria-label="Mobile navigation">
     <nav>${mobileLinksHtml}</nav>
   </div>` : ''
 
+  const navContent = [
+    links.length        && `<nav class="ui-nav-links" aria-label="Site navigation">${linksHtml}</nav>`,
+    utilityLinks.length && `<nav class="ui-nav-links ui-nav-utility" aria-label="Utility navigation">${utilityHtml}</nav>`,
+    action              && `<div class="ui-nav-action">${action}</div>`,
+  ].filter(Boolean).join('')
+
   return `<header class="${e(classes)}"${bgStyle}>
   <div class="ui-nav-inner">
     <a href="${e(logoHref)}" class="ui-nav-logo">${logo}</a>
-    ${links.length ? `<nav class="ui-nav-links" aria-label="Site navigation">${linksHtml}</nav>` : ''}
-    ${action ? `<div class="ui-nav-action">${action}</div>` : ''}${burgerHtml}
+    ${navContent}${burgerHtml}
   </div>${mobileMenuHtml}
 </header>`
 }

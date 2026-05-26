@@ -788,6 +788,35 @@ hr.ui-divider {
   color:      #ffc107;
 }
 
+.ui-banner--bottom {
+  position: fixed;
+  bottom:   0;
+  left:     0;
+  right:    0;
+  z-index:  200;
+  display:  flex;
+  align-items: center;
+  justify-content: center;
+  gap:      1rem;
+}
+
+.ui-banner-close {
+  position:    absolute;
+  right:       1rem;
+  top:         50%;
+  transform:   translateY(-50%);
+  background:  none;
+  border:      none;
+  cursor:      pointer;
+  color:       inherit;
+  font-size:   1.1rem;
+  line-height: 1;
+  padding:     0.25rem 0.5rem;
+  opacity:     0.7;
+  transition:  opacity 0.15s;
+}
+.ui-banner-close:hover { opacity: 1; }
+
 /* ─── Media ──────────────────────────────────────────────────────────────── */
 .ui-media {
   display:               grid;
@@ -1390,6 +1419,7 @@ hr.ui-divider {
 .ui-nav-logo:hover { color: var(--ui-accent, var(--accent, #9b8dff)); }
 
 .ui-nav-links { display: flex; gap: 1.5rem; align-items: center; flex: 1; }
+.ui-nav-utility { flex: 0; margin-left: auto; }
 
 .ui-nav-link {
   font-size:       .875rem;
@@ -2058,6 +2088,105 @@ hr.ui-divider {
   .ui-footer-inner  { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
   .ui-footer-legal  { margin-left: 0; }
   .ui-footer-links  { gap: 1rem; }
+}
+
+/* ─── Footer — Rich variant ─────────────────────────────────────────────── */
+.ui-footer--rich {
+  padding:    0;
+  border-top: none;
+}
+
+.ui-footer--rich .ui-footer-top {
+  display:        flex;
+  justify-content: space-between;
+  align-items:    flex-start;
+  gap:            2rem;
+  padding:        3rem 2rem 2rem;
+  flex-wrap:      wrap;
+}
+
+.ui-footer--rich .ui-footer-logo {
+  font-size:  1.5rem;
+}
+
+.ui-footer--rich .ui-footer-subscribe {
+  max-width: 480px;
+  flex:      1;
+}
+
+.ui-footer-columns {
+  display:        grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap:            2rem;
+  padding:        2rem 2rem;
+  border-top:     1px solid currentcolor;
+  opacity-on-border: 0.15;
+}
+
+.ui-footer-col-title {
+  font-size:      0.6875rem;
+  font-weight:    600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin:         0 0 1rem;
+  opacity:        0.6;
+}
+
+.ui-footer-col-links {
+  list-style: none;
+  margin:     0;
+  padding:    0;
+  display:    flex;
+  flex-direction: column;
+  gap:        0.6rem;
+}
+
+.ui-footer-col-links a {
+  display:         block;
+  padding:         0.3rem 0;
+  min-height:      24px;
+  font-size:       0.9375rem;
+  color:           inherit;
+  text-decoration: none;
+  opacity:         0.75;
+  transition:      opacity 0.15s;
+}
+.ui-footer-col-links a:hover { opacity: 1; }
+
+.ui-footer-wordmark {
+  padding:         1rem 1.5rem 0;
+  overflow:        hidden;
+}
+.ui-footer-wordmark::after {
+  content:         attr(data-wordmark);
+  display:         block;
+  font-size:       clamp(4rem, 16vw, 14rem);
+  font-weight:     700;
+  letter-spacing:  -0.03em;
+  line-height:     0.9;
+  word-break:      break-all;
+}
+
+.ui-footer-legal-row {
+  display:     flex;
+  gap:         1.5rem;
+  align-items: center;
+  flex-wrap:   wrap;
+  padding:     1.5rem 2rem;
+  font-size:   0.8125rem;
+  opacity:     0.6;
+  border-top:  1px solid currentcolor;
+}
+
+.ui-footer-legal-row a {
+  color:           inherit;
+  text-decoration: none;
+}
+.ui-footer-legal-row a:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .ui-footer--rich .ui-footer-top { flex-direction: column; }
+  .ui-footer-columns { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* ─── Icon wrapper ───────────────────────────────────────────────────────────
@@ -2916,6 +3045,30 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   font-style: normal;
 }
 
+/* Editorial variant — centred large serif, no left border */
+.ui-pullquote--editorial {
+  border-left: none;
+  padding:     4rem 1.5rem;
+  text-align:  center;
+}
+.ui-pullquote--editorial .ui-pullquote-text {
+  font-size:      clamp(1.5rem, 3.5vw, 2.25rem);
+  line-height:    1.4;
+  font-style:     italic;
+  font-weight:    400;
+  max-width:      640px;
+  margin-left:    auto;
+  margin-right:   auto;
+}
+.ui-pullquote--editorial.ui-pullquote--lg .ui-pullquote-text {
+  font-size: clamp(1.75rem, 4vw, 3rem);
+}
+.ui-pullquote--editorial .ui-pullquote-cite {
+  text-align:  center;
+  margin-top:  1.25rem;
+  font-size:   0.9375rem;
+}
+
 /* ─── List ───────────────────────────────────────────────────────────────────
    Styled list component. Use instead of raw <ul>/<ol>.                        */
 .ui-list {
@@ -3282,3 +3435,237 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
 
 /* ─── Decorate (SVG pattern overlay) ────────────────────────────────────── */
 .ui-decorate { pointer-events: none; }
+
+/* ─── Product Card ───────────────────────────────────────────────────────── */
+.ui-product-card {
+  position:        relative;
+  display:         block;
+  overflow:        hidden;
+  text-decoration: none;
+  color:           inherit;
+}
+.ui-product-card-crop {
+  overflow: hidden;
+}
+.ui-product-card-img {
+  width:      100%;
+  height:     100%;
+  object-fit: cover;
+  display:    block;
+  transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.ui-product-card:hover .ui-product-card-img { transform: scale(1.04); }
+.ui-product-card:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+
+.ui-product-card-overlay {
+  position:    absolute;
+  inset:       0;
+  display:     flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding:     1.25rem;
+  background:  linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%);
+  opacity:     0;
+  transition:  opacity 0.3s ease;
+}
+.ui-product-card:hover .ui-product-card-overlay { opacity: 1; }
+
+/* Always-visible overlay for reduced-motion users */
+@media (prefers-reduced-motion: reduce) {
+  .ui-product-card-img    { transition: none; }
+  .ui-product-card-overlay { opacity: 1; }
+}
+
+.ui-product-card-name {
+  font-size:      1rem;
+  font-weight:    500;
+  color:          #fff;
+  margin:         0;
+  letter-spacing: 0.02em;
+}
+.ui-product-card-price {
+  font-size: 0.875rem;
+  color:     rgba(255,255,255,0.75);
+  margin:    0.3rem 0 0;
+}
+
+.ui-product-card-badge {
+  position:       absolute;
+  top:            1rem;
+  left:           1rem;
+  background:     var(--ui-text);
+  color:          var(--ui-bg);
+  font-size:      0.6875rem;
+  font-weight:    600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding:        0.2em 0.6em;
+  z-index:        1;
+}
+.ui-product-card--badge-right .ui-product-card-badge { left: auto; right: 1rem; }
+
+/* Below layout — caption sits under the image, always visible */
+.ui-product-card--below {
+  overflow: visible;
+}
+.ui-product-card-caption {
+  text-align: center;
+  padding:    0.75rem 0.5rem 0.25rem;
+  background: var(--ui-surface);
+}
+.ui-product-card--below .ui-product-card-name {
+  font-size:   1rem;
+  font-weight: 400;
+  color:       var(--ui-text);
+  margin:      0 0 0.25rem;
+  font-style:  normal;
+}
+.ui-product-card--below .ui-product-card-price {
+  font-size: 0.875rem;
+  color:     var(--ui-muted);
+  margin:    0;
+}
+
+/* ─── Editorial Hero ─────────────────────────────────────────────────────── */
+.ui-editorial-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.ui-editorial-hero-heading {
+  position: absolute;
+  width:    1px;
+  height:   1px;
+  overflow: hidden;
+  clip:     rect(0,0,0,0);
+  margin:   -1px;
+  padding:  0;
+  border:   0;
+}
+
+.ui-editorial-hero-images {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width:   100%;
+}
+.ui-editorial-hero-img {
+  overflow: hidden;
+}
+.ui-editorial-hero-img img {
+  width:      100%;
+  height:     100%;
+  object-fit: cover;
+  display:    block;
+}
+
+.ui-editorial-hero-overlay {
+  position:       absolute;
+  inset:          0;
+  display:        flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items:    center;
+  pointer-events: none;
+  color:          var(--ui-accent);
+  mix-blend-mode: multiply;
+}
+.ui-editorial-hero-overlay span {
+  display:        block;
+  font-size:      clamp(3rem, 12vw, 11rem);
+  font-weight:    700;
+  letter-spacing: -0.04em;
+  line-height:    0.9;
+  text-transform: uppercase;
+  white-space:    nowrap;
+}
+
+.ui-editorial-hero-cta {
+  position:        absolute;
+  bottom:          1.5rem;
+  left:            50%;
+  transform:       translateX(-50%);
+  font-size:       0.75rem;
+  letter-spacing:  0.1em;
+  text-transform:  uppercase;
+  text-decoration: none;
+  color:           var(--ui-text);
+  white-space:     nowrap;
+}
+
+@media (max-width: 640px) {
+  .ui-editorial-hero-overlay span { font-size: clamp(2rem, 10vw, 4rem); }
+}
+
+/* ─── Image Pair ─────────────────────────────────────────────────────────── */
+.ui-image-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width:   100%;
+}
+.ui-image-pair--gap-sm { gap: 0.5rem; }
+.ui-image-pair--gap-md { gap: 1.5rem; }
+
+.ui-image-pair-col  { overflow: hidden; }
+.ui-image-pair-img  { overflow: hidden; }
+.ui-image-pair-crop { overflow: hidden; }
+.ui-image-pair-crop img {
+  width:      100%;
+  height:     100%;
+  object-fit: cover;
+  display:    block;
+}
+.ui-image-pair--captioned .ui-image-pair-col { overflow: visible; }
+
+.ui-image-pair-link {
+  display:         inline-block;
+  margin-top:      0.75rem;
+  font-size:       0.9375rem;
+  text-decoration: none;
+  color:           var(--ui-text);
+}
+.ui-image-pair-link:hover { opacity: 0.6; }
+
+@media (max-width: 480px) {
+  .ui-image-pair { grid-template-columns: 1fr; }
+}
+
+/* ─── Brand Statement ────────────────────────────────────────────────────── */
+.ui-brand-statement {
+  padding:    5rem 1.5rem;
+  text-align: center;
+}
+.ui-brand-statement--left  { text-align: left; }
+.ui-brand-statement--right { text-align: right; }
+
+.ui-brand-statement-inner {
+  max-width:   860px;
+  margin:      0 auto;
+}
+
+.ui-brand-statement-text {
+  font-size:   clamp(1.5rem, 4vw, 2.5rem);
+  line-height: 1.25;
+  font-weight: 400;
+  font-style:  italic;
+  margin:      0;
+  color:       var(--ui-text);
+}
+
+.ui-brand-statement--display .ui-brand-statement-text {
+  font-style:  normal;
+  font-weight: 700;
+}
+
+.ui-brand-statement--sans .ui-brand-statement-text {
+  font-style: normal;
+}
+
+.ui-brand-statement--sm .ui-brand-statement-text { font-size: clamp(1.1rem, 2.5vw, 1.5rem); }
+.ui-brand-statement--lg .ui-brand-statement-text { font-size: clamp(2rem, 5vw, 3.5rem); }
+
+.ui-brand-statement-attr {
+  margin-top: 1.5rem;
+  font-size:  0.9375rem;
+  color:      var(--ui-muted);
+  font-style: italic;
+}

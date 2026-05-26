@@ -114,6 +114,7 @@ await createServer(
     new URL('./src/pages/templates/portfolio.js',           import.meta.url),
     new URL('./src/pages/templates/event.js',               import.meta.url),
     new URL('./src/pages/templates/editorial.js',           import.meta.url),
+    new URL('./src/pages/templates/coutumes.js',            import.meta.url),
     // Layout Components
     new URL('./src/pages/components/banner.js',      import.meta.url),
     new URL('./src/pages/components/cluster.js',     import.meta.url),
@@ -133,7 +134,9 @@ await createServer(
     root:         new URL('.', import.meta.url),
     defaultCache: true,
     csp: {
-      'img-src': ['https://picsum.photos', 'https://images.unsplash.com'],
+      'img-src':   ['https://picsum.photos', 'https://fastly.picsum.photos', 'https://images.unsplash.com'],
+      'style-src': ['https://fonts.googleapis.com'],
+      'font-src':  ['https://fonts.gstatic.com'],
     },
   }
 )
