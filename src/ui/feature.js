@@ -21,16 +21,30 @@ export function feature({
   title       = '',
   level       = 3,
   description = '',
+  body,  // alias for description
   center      = false,
   class: cls  = '',
+  ...rest
 } = {}) {
+  // Accept 'body' as alias for 'description'
+  const desc = description || body || ''
+  
+  // Warn about unknown props on the server
+  if (typeof window === 'undefined') {
+    const knownProps = new Set(['image', 'icon', 'title', 'level', 'description', 'body', 'center', 'class'])
+    const unknownProps = Object.keys(rest).filter(k => !knownProps.has(k))
+    if (unknownProps.length > 0) {
+      console.warn(`[Pulse feature] Unknown prop${unknownProps.length > 1 ? 's' : ''}: ${unknownProps.join(', ')}. Did you mean 'description' instead of '${unknownProps[0]}'?`)
+    }
+  }
+
   const classes = ['ui-feature', center && 'ui-feature--center', cls].filter(Boolean).join(' ')
   const tag = `h${Math.min(Math.max(Math.floor(level), 1), 6)}`
 
   return `<div class="${e(classes)}">
-  ${image       ? `<div class="ui-feature-image">${image}</div>` : ''}
-  ${icon        ? `<div class="ui-feature-icon" aria-hidden="true">${icon}</div>` : ''}
-  ${title       ? `<${tag} class="ui-feature-title">${e(title)}</${tag}>` : ''}
-  ${description ? `<p class="ui-feature-desc">${e(description)}</p>` : ''}
+  ${image ? `<div class="ui-feature-image">${image}</div>` : ''}
+  ${icon  ? `<div class="ui-feature-icon" aria-hidden="true">${icon}</div>` : ''}
+  ${title ? `<${tag} class="ui-feature-title">${e(title)}</${tag}>` : ''}
+  ${desc  ? `<p class="ui-feature-desc">${e(desc)}</p>` : ''}
 </div>`
 }

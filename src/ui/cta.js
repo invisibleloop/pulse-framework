@@ -21,17 +21,31 @@ export function cta({
   title      = '',
   level      = 2,
   subtitle   = '',
+  body,  // alias for subtitle
   actions    = '',
   align      = 'center',
   class: cls = '',
+  ...rest
 } = {}) {
+  // Accept 'body' as alias for 'subtitle'
+  const sub = subtitle || body || ''
+  
+  // Warn about unknown props on the server
+  if (typeof window === 'undefined') {
+    const knownProps = new Set(['eyebrow', 'title', 'level', 'subtitle', 'body', 'actions', 'align', 'class'])
+    const unknownProps = Object.keys(rest).filter(k => !knownProps.has(k))
+    if (unknownProps.length > 0) {
+      console.warn(`[Pulse cta] Unknown prop${unknownProps.length > 1 ? 's' : ''}: ${unknownProps.join(', ')}. Did you mean 'subtitle' instead of '${unknownProps[0]}'?`)
+    }
+  }
+
   const classes = ['ui-cta', align === 'left' && 'ui-cta--left', cls].filter(Boolean).join(' ')
   const tag = `h${Math.min(Math.max(Math.floor(level), 1), 6)}`
 
   return `<div class="${e(classes)}">
-  ${eyebrow  ? `<p class="ui-cta-eyebrow">${e(eyebrow)}</p>` : ''}
-  ${title    ? `<${tag} class="ui-cta-title">${e(title)}</${tag}>` : ''}
-  ${subtitle ? `<p class="ui-cta-subtitle">${e(subtitle)}</p>` : ''}
-  ${actions  ? `<div class="ui-cta-actions">${actions}</div>` : ''}
+  ${eyebrow ? `<p class="ui-cta-eyebrow">${e(eyebrow)}</p>` : ''}
+  ${title   ? `<${tag} class="ui-cta-title">${e(title)}</${tag}>` : ''}
+  ${sub     ? `<p class="ui-cta-subtitle">${e(sub)}</p>` : ''}
+  ${actions ? `<div class="ui-cta-actions">${actions}</div>` : ''}
 </div>`
 }

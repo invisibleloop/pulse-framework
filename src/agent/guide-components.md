@@ -204,12 +204,12 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 | `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky`, `background` (any CSS value — overrides default surface colour), `color` (foreground colour — set when custom background doesn't contrast with default muted text) |
 | `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates image layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `layout` (split/asymmetric/overlap — when image provided: 'split'=50/50, 'asymmetric'=60/40 text-heavy, 'overlap'=image fills section with text overlay), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value), `eyebrowColor` |
 | `phoneFrame` | `content` (HTML slot — rendered inside the phone screen). Pure CSS phone mockup with dynamic island, side buttons, home indicator. Use as the `image` slot in `hero()` for app landing pages. |
-| `feature` | `icon` (HTML slot), `title`, `level` (1–6, default 3), `description`, `center` |
+| `feature` | `image` (HTML slot — rendered above icon), `icon` (HTML slot), `title`, `level` (1–6, default 3), `description` (or `body` as alias), `center` |
 | `testimonial` | `quote`, `name`, `role`, `src`, `rating` (1–5) |
 | `pricing` | `name`, `level` (1–6, default 3), `price`, `period`, `features` ([strings]), `action` (HTML slot), `highlighted` |
 | `accordion` | `items` ([{question,answer}]) — native `<details>`, no JS |
 | `appBadge` | `store` (apple/google), `href` |
-| `cta` | `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `actions` (HTML slot), `align` |
+| `cta` | `eyebrow`, `title`, `level` (1–6, default 2), `subtitle` (or `body` as alias), `actions` (HTML slot), `align` (center/left) |
 
 ### Layout components
 
