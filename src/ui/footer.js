@@ -58,8 +58,8 @@ export function footer({
     if (columns.length && columns.some(c => c.items && !c.links)) {
       console.warn('[Pulse footer] Column shape should be { title, links: [...] } — found { items } instead. Did you mean links?')
     }
-    if (!columns.length && links.some(l => l.title || l.items)) {
-      console.warn('[Pulse footer] Simple footer expects links: [{ label, href }] — found title/items keys. For multi-column layout, use columns: [{ title, links: [...] }].')
+    if (!columns.length && links.some(l => l.title || l.items || l.heading)) {
+      console.warn('[Pulse footer] Simple footer expects links: [{ label, href }] — found grouped shape ({ title/heading/items } keys). For multi-column layout, use columns: [{ title, links: [...] }] instead of links.')
     }
   }
 

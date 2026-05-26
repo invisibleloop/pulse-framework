@@ -224,7 +224,7 @@ Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`l
 | `banner` | `content`, `variant` |
 | `media` | `image` (HTML slot), `content` (HTML slot), `reverse` — two-column image + text |
 | `codeWindow` | `content` (highlighted code HTML), `filename`, `lang` |
-| `footer` | `logo`, `logoHref`, `links`, `legal` |
+| `footer` | `logo`, `logoHref`, `links` (flat: `[{label,href}]`), `legal`, `background`, `color` — **Rich layout:** add `columns: [{title, links:[{label,href}]}]` to switch to multi-column mode; also accepts `subscribe` (HTML slot), `wordmark` (giant display text) |
 
 ### Modal / dialog
 

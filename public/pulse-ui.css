@@ -1617,7 +1617,9 @@ hr.ui-divider {
    Prefix: u-  (distinct from component classes which use ui-)              */
 
 /* Screen-reader only — visually hidden but accessible to assistive tech */
-.ui-sr-only {
+/* u-visually-hidden is an alias — use either */
+.ui-sr-only,
+.u-visually-hidden {
   position: absolute;
   width: 1px; height: 1px;
   padding: 0; margin: -1px;
