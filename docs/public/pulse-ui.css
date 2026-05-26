@@ -1386,6 +1386,7 @@ hr.ui-divider {
   position:      relative;
   background:    var(--ui-bg, var(--bg, #0d0d10));
   border-bottom: 1px solid var(--ui-border, var(--border, #222228));
+  padding-inline: 1.5rem;
 }
 
 .ui-nav--sticky {
@@ -1400,7 +1401,7 @@ hr.ui-divider {
 .ui-nav-inner {
   max-width: 1100px;
   margin:    0 auto;
-  padding:   .875rem 1.5rem;
+  padding:   .875rem 0;
   display:   flex;
   align-items: center;
   gap:       2rem;
