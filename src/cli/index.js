@@ -22,6 +22,13 @@ const args    = process.argv.slice(2)
 const command = args[0]
 const CWD     = process.cwd()
 
+// Parse --agent flag before routing to commands
+let agentFlag = null
+const agentIdx = args.indexOf('--agent')
+if (agentIdx !== -1 && args[agentIdx + 1]) {
+  agentFlag = args[agentIdx + 1]
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -80,7 +87,7 @@ function isDirEmpty(dir) {
   return fs.readdirSync(dir).length === 0
 }
 
-async function runDefault(root) {
+async function runDefault(root, agentFlag = null) {
   if (!isPulseProject(root)) {
     console.log(`\n⚡ No Pulse project found here.\n`)
 
@@ -126,21 +133,21 @@ async function runDefault(root) {
   }
 
   // Start dev server + AI session
-  await launchSession(root)
+  await launchSession(root, agentFlag)
 }
 
 // ---------------------------------------------------------------------------
 // Launch AI session (Claude by default)
 // ---------------------------------------------------------------------------
 
-async function launchSession(root) {
+async function launchSession(root, agentOverride = null) {
   const { spawn } = await import('child_process')
   const os        = await import('os')
 
   // Load project config for agent preference
   const configPath = path.join(root, 'pulse.config.js')
-  let agent = 'claude'
-  if (fs.existsSync(configPath)) {
+  let agent = agentOverride || 'claude'
+  if (!agentOverride && fs.existsSync(configPath)) {
     try {
       const mod = await import(configPath)
       agent = mod.default?.agent || 'claude'
@@ -183,7 +190,10 @@ function agentCommand(agent, mcpConfigPath) {
   if (agent === 'claude') {
     return { cmd: 'claude', args: ['--mcp-config', mcpConfigPath] }
   }
-  // Future: copilot, etc.
+  if (agent === 'copilot') {
+    return { cmd: 'copilot', args: ['--additional-mcp-config', `@${mcpConfigPath}`] }
+  }
+  // Unknown agent — fall back to claude
   console.warn(`Unknown agent "${agent}", falling back to claude`)
   return { cmd: 'claude', args: ['--mcp-config', mcpConfigPath] }
 }
@@ -383,11 +393,13 @@ switch (command) {
     ${c.cyan('update')}           re-copy pulse-ui assets from installed package
 
   ${c.bold('Options:')}
+    ${c.cyan('--agent')} ${c.dim('<name>')}     use specific agent ${c.dim('(claude | copilot)')}
     ${c.cyan('-v')}, ${c.cyan('--version')}      print version and exit
     ${c.cyan('-h')}, ${c.cyan('--help')}         show this help
 
   ${c.bold('Examples:')}
     ${c.dim('pulse                # new project wizard')}
+    ${c.dim('pulse --agent copilot   # launch with GitHub Copilot CLI')}
     ${c.dim('pulse dev            # dev server')}
     ${c.dim('pulse build          # bundle for production')}
     ${c.dim('pulse start          # serve production build')}
@@ -422,5 +434,5 @@ switch (command) {
     await runUpdate(CWD)
     break
   default:
-    await runDefault(CWD)
+    await runDefault(CWD, agentFlag)
 }
