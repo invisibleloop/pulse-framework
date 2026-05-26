@@ -308,3 +308,21 @@ Example — a centred hero block using only utilities, no custom CSS:
 ```
 
 When you DO need to write CSS, add it to public/app.css — never inline.
+
+
+## Placeholder images for prototypes
+
+**Use `picsum.photos` — not Unsplash direct IDs.** Unsplash photo IDs rotate and 404 without warning, breaking layouts during development.
+
+```html
+<!-- Reliable: picsum uses a seed, always returns the same image -->
+<img src="https://picsum.photos/seed/hero/1200/600" alt="..." width="1200" height="600">
+<img src="https://picsum.photos/seed/avatar1/80/80" alt="..." width="80" height="80">
+
+<!-- Also reliable: numbered picsum IDs (sequential, stable) -->
+<img src="https://picsum.photos/id/10/800/400" alt="..." width="800" height="400">
+```
+
+The seed string is arbitrary — use descriptive names (`hero`, `team-photo`, `product-shot`) to get consistent images across refreshes. Change the seed to get a different image.
+
+**Avoid:** `https://images.unsplash.com/photo-LONGID?...` — these are unstable for prototypes. If you use Unsplash, add `https://images.unsplash.com` to `csp.img-src` in `pulse.config.js`, and expect some IDs to rot.

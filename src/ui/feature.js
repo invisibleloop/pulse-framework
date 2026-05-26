@@ -4,6 +4,7 @@
  * Icon + title + description block. The standard "why us" grid card.
  *
  * @param {object} opts
+ * @param {string}  opts.image       - Raw HTML slot — rendered above the icon (e.g. `<img src="...">`)
  * @param {string}  opts.icon        - Raw HTML slot — SVG or emoji; displayed in an accent-tinted box
  * @param {string}  opts.title
  * @param {number}  opts.level       - Heading level 1–6 (default 3). Visual style is always ui-feature-title.
@@ -15,6 +16,7 @@
 import { escHtml as e } from '../html.js'
 
 export function feature({
+  image       = '',
   icon        = '',
   title       = '',
   level       = 3,
@@ -26,6 +28,7 @@ export function feature({
   const tag = `h${Math.min(Math.max(Math.floor(level), 1), 6)}`
 
   return `<div class="${e(classes)}">
+  ${image       ? `<div class="ui-feature-image">${image}</div>` : ''}
   ${icon        ? `<div class="ui-feature-icon" aria-hidden="true">${icon}</div>` : ''}
   ${title       ? `<${tag} class="ui-feature-title">${e(title)}</${tag}>` : ''}
   ${description ? `<p class="ui-feature-desc">${e(description)}</p>` : ''}

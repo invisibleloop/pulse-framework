@@ -1038,6 +1038,8 @@ hr.ui-divider {
 
 /* ─── Feature ────────────────────────────────────────────────────────────── */
 .ui-feature { display: flex; flex-direction: column; gap: .75rem; }
+.ui-feature-image { width: 100%; border-radius: var(--ui-radius-sm); overflow: hidden; }
+.ui-feature-image img { width: 100%; height: auto; display: block; }
 
 .ui-feature-icon {
   display:    block;
@@ -2132,7 +2134,7 @@ hr.ui-divider {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin:         0 0 1rem;
-  opacity:        0.6;
+  color:          var(--ui-muted, currentcolor);
 }
 
 .ui-footer-col-links {
@@ -2149,12 +2151,11 @@ hr.ui-divider {
   padding:         0.3rem 0;
   min-height:      24px;
   font-size:       0.9375rem;
-  color:           inherit;
+  color:           var(--ui-muted, inherit);
   text-decoration: none;
-  opacity:         0.75;
-  transition:      opacity 0.15s;
+  transition:      color 0.15s;
 }
-.ui-footer-col-links a:hover { opacity: 1; }
+.ui-footer-col-links a:hover { color: var(--ui-text, currentcolor); }
 
 .ui-footer-wordmark {
   padding:         1rem 1.5rem 0;
@@ -2177,8 +2178,8 @@ hr.ui-divider {
   flex-wrap:   wrap;
   padding:     1.5rem 2rem;
   font-size:   0.8125rem;
-  opacity:     0.6;
-  border-top:  1px solid currentcolor;
+  color:       var(--ui-muted, currentcolor);
+  border-top:  1px solid var(--ui-border, currentcolor);
 }
 
 .ui-footer-legal-row a {

@@ -39,6 +39,12 @@ When you choose a design direction, tell the user which one you're using and why
 **Signature moves:** article grid with issue number, pullquote, prose with drop cap, author byline as hero subtitle  
 **Components to lead with:** `prose`, `pullquote`, `hero(size:'sm')`, `grid`, `section` with column text
 
+> **Font note:** `vibe: 'editorial'` sets `--ui-font-display` to Georgia — this applies to hero headings and display text. Body copy and nav stay sans-serif (by design). For the full editorial look with Playfair Display or a similar web serif, load the font via `meta.styles` and set `--font-display` in your theme CSS:
+> ```css
+> [data-theme="light"] { --font-display: 'Playfair Display', Georgia, serif; }
+> ```
+> Without a loaded web font, the fallback Georgia is still visibly different from sans on hero headings.
+
 ---
 
 ### 4. Bold Agency / Creative Studio

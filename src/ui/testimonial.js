@@ -4,11 +4,12 @@
  * A customer quote with optional star rating, avatar, and attribution.
  *
  * @param {object} opts
- * @param {string} opts.quote   - The testimonial text
- * @param {string} opts.name    - Author full name
- * @param {string} opts.role    - Author role/company (e.g. "CEO at Acme")
- * @param {string} opts.src     - Avatar image URL; falls back to initials when omitted
- * @param {number} opts.rating  - Star rating 1–5; omit to hide stars
+ * @param {string} opts.quote    - The testimonial text
+ * @param {string} opts.name     - Author full name
+ * @param {string} opts.role     - Author role/company (e.g. "CEO at Acme")
+ * @param {string} opts.src      - Avatar image URL; falls back to initials when omitted
+ * @param {string} opts.initials - Override auto-derived initials (useful for names containing & or unusual characters)
+ * @param {number} opts.rating   - Star rating 1–5; omit to hide stars
  * @param {string} opts.class
  */
 
@@ -19,6 +20,7 @@ export function testimonial({
   name       = '',
   role       = '',
   src        = '',
+  initials:  initialsOverride = '',
   rating     = 0,
   class: cls = '',
 } = {}) {
@@ -28,7 +30,16 @@ export function testimonial({
     ? `<p class="ui-testimonial-rating" aria-label="${Math.round(rating)} out of 5 stars">${'★'.repeat(Math.min(5, Math.max(1, Math.round(rating))))}</p>`
     : ''
 
-  const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  // Filter to letter chars only so names like "Tomás & Ren Okabe" produce "TR" not "T&"
+  const derivedInitials = name
+    .split(/\s+/)
+    .map(w => w.replace(/[^a-zA-ZÀ-ÿ]/g, ''))
+    .filter(Boolean)
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+  const initials = initialsOverride || derivedInitials
 
   const avatarHtml = src
     ? `<img src="${e(src)}" alt="${e(name)}" class="ui-testimonial-avatar" loading="lazy" width="40" height="40">`
