@@ -1951,8 +1951,8 @@ const SKETCH_DIRECTIONS = {
       'Gradient overlay at bottom of hero — text readable without a stroke',
       'Below-fold uses a clean background for contrast reset',
     ],
-    useComponents: 'nav (transparent variant), footer, card (below-fold features)',
-    rawHtml: 'entire hero — position:relative + position:absolute overlay, no Pulse section wrapper',
+    useComponents: 'nav (transparent variant), hero (gradient overlay), footer, card (below-fold features)',
+    rawHtml: 'hero layout positioning — use hero() component with custom .hero-wrapper CSS for full-bleed background image',
   },
   'asymmetric-split': {
     name: 'Asymmetric Split',
@@ -1976,8 +1976,8 @@ const SKETCH_DIRECTIONS = {
       'Right column can hold image, testimonials, or a form',
       'Mobile: stacks vertically — image first, then text',
     ],
-    useComponents: 'nav (inside left column), footer, card (right-column content)',
-    rawHtml: 'outer grid (CSS grid-template-columns), hero section, optional sticky left panel',
+    useComponents: 'nav (left column), hero (split layout), media, card, footer',
+    rawHtml: 'page-level grid wrapper — wrap all sections in a two-column CSS grid container',
   },
   'typography-only': {
     name: 'Typography-Only',
@@ -2004,7 +2004,8 @@ const SKETCH_DIRECTIONS = {
       'Below-fold sections may introduce imagery, but type remains dominant',
     ],
     useComponents: 'nav, footer, stat (for numbers/proof below fold)',
-    rawHtml: 'hero section, main heading, supporting copy — no component wrappers on the headline',
+    useComponents: 'hero (size:lg, align:center), section, container, footer',
+    rawHtml: 'page-level typography overrides — custom font-size on hero title, tighter letter-spacing',
   },
   'editorial-flow': {
     name: 'Editorial Flow',
@@ -2031,8 +2032,8 @@ const SKETCH_DIRECTIONS = {
       'Section widths vary deliberately — not uniform padding throughout',
       'CTA lives at the end of the reading flow, not above the fold',
     ],
-    useComponents: 'nav, footer, pullquote, prose (body text), avatar (author bio)',
-    rawHtml: 'hero area, article header, custom section width transitions',
+    useComponents: 'nav, hero (image layout), prose, pullquote, footer, avatar (author bio)',
+    rawHtml: 'section width variations — use container(size) with different sizes for editorial flow',
   },
   'dense-grid': {
     name: 'Dense Grid',
@@ -2056,8 +2057,8 @@ const SKETCH_DIRECTIONS = {
       'No hero — jump straight into content',
       'Filtering visible on load — for sites where browsing/exploration is the UX',
     ],
-    useComponents: 'nav, card (flush:true), badge, grid',
-    rawHtml: 'outer three-column layout, sidebar, filter controls',
+    useComponents: 'nav, card (flush:true), badge, grid, footer',
+    rawHtml: 'three-column page wrapper — wrap entire page in CSS grid layout for sidebar + content + filters',
   },
   'story-scroll': {
     name: 'Story Scroll',
@@ -2085,8 +2086,8 @@ const SKETCH_DIRECTIONS = {
       'Sections alternate visual weight (light → dark → image-heavy)',
       'Best for short sites: 3–5 sections maximum',
     ],
-    useComponents: 'nav (minimal), footer, stat, cta',
-    rawHtml: 'each full-height section, image-cover panels, the scroll rhythm',
+    useComponents: 'nav (minimal), section (min-height: 100svh), hero, stat, cta, footer',
+    rawHtml: 'full-viewport section wrappers — use section() with custom CSS for 100svh height and scroll snap',
   },
   'content-first': {
     name: 'Content First',
@@ -2113,8 +2114,8 @@ const SKETCH_DIRECTIONS = {
       'CTA integrated inline with content — not a separate section',
       'Feels finished at 3 sections, not 8',
     ],
-    useComponents: 'nav, footer, prose, pullquote, avatar',
-    rawHtml: 'page wrapper width constraint, header, inline CTA styling',
+    useComponents: 'nav, hero (no image, size:lg), prose, pullquote, avatar, footer',
+    rawHtml: 'narrow content wrapper — use container(size:sm) for 65ch reading width',
   },
 }
 
@@ -2183,8 +2184,9 @@ After choosing a direction, fetch \`pulse://guide/explore\` for raw HTML pattern
       dir.decisions.forEach(d => lines.push(`- ${d}`))
       lines.push('')
       lines.push('**Component strategy:**')
-      lines.push(`- Use Pulse: ${dir.useComponents}`)
-      lines.push(`- Write raw HTML: ${dir.rawHtml}`)
+      lines.push(`- **Use Pulse components:** ${dir.useComponents}`)
+      lines.push(`- **Custom CSS/styling may be needed for:** ${dir.rawHtml}`)
+      lines.push(`- **Important:** Always use components first. Custom CSS is for styling overrides only, never for rewriting component HTML from scratch.`)
       lines.push('')
     })
 
