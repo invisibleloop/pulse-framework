@@ -188,6 +188,48 @@ const TEMPLATES = [
     },
   },
   {
+    name:        'Sparkys — Local Trades',
+    route:       '/templates/sparkys',
+    description: 'A sharp, trustworthy landing page for a local electrical contractor. Navy + amber palette with a split hero, stats panel, services grid, why-us section, testimonial, and contact strip.',
+    tags:        ['Local Business', 'Trades', 'Light Theme'],
+    preview:     `<div style="background:#f7f9fc;padding:1.5rem;border-radius:8px;font-family:system-ui,sans-serif">
+      <div style="height:8px;background:#062247;border-radius:3px;width:100%;margin-bottom:0.75rem"></div>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:0.75rem;min-height:80px">
+        <div style="display:flex;flex-direction:column;gap:5px;justify-content:center">
+          <div style="height:5px;background:#0a3160;border-radius:3px;width:50%"></div>
+          <div style="height:10px;background:rgba(15,23,42,0.8);border-radius:3px;width:90%"></div>
+          <div style="height:10px;background:rgba(15,23,42,0.8);border-radius:3px;width:75%"></div>
+          <div style="height:6px;background:rgba(15,23,42,0.3);border-radius:3px;width:80%;margin-bottom:4px"></div>
+          <div style="display:flex;gap:5px">
+            <div style="height:18px;background:#0a3160;border-radius:4px;width:60px"></div>
+            <div style="height:18px;background:rgba(10,49,96,0.15);border:1px solid rgba(10,49,96,0.3);border-radius:4px;width:50px"></div>
+          </div>
+        </div>
+        <div style="background:linear-gradient(160deg,#0a3160,#062247);border-radius:6px;padding:0.6rem;display:grid;grid-template-columns:1fr 1fr;gap:5px">
+          ${[1,2,3,4].map(() => `<div style="display:flex;flex-direction:column;gap:2px">
+            <div style="height:9px;background:rgba(255,255,255,0.7);border-radius:2px;width:70%"></div>
+            <div style="height:5px;background:rgba(244,167,33,0.5);border-radius:2px;width:90%"></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:0.75rem">
+        ${[1,2,3].map(() => `<div style="background:#fff;border:1px solid #d6deea;border-radius:5px;padding:0.4rem;display:flex;flex-direction:column;gap:3px">
+          <div style="width:18px;height:18px;background:#e3ecf7;border-radius:3px"></div>
+          <div style="height:5px;background:rgba(15,23,42,0.6);border-radius:2px;width:80%"></div>
+          <div style="height:4px;background:rgba(15,23,42,0.25);border-radius:2px;width:100%"></div>
+          <div style="height:4px;background:rgba(15,23,42,0.2);border-radius:2px;width:70%"></div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Accessibility': '100',
+      'Best Practices': '100',
+      'SEO':           '100',
+      'CLS':           '0.00',
+      'Theme':         'light',
+    },
+  },
+  {
     name:        'Local Business',
     route:       '/templates/local-business',
     description: 'A warm, photo-forward landing page for a local service business — dog groomer, bakery, physio, tradesperson. Services grid, about section, testimonials, hours, and booking contact form.',

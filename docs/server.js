@@ -115,6 +115,7 @@ await createServer(
     new URL('./src/pages/templates/event.js',               import.meta.url),
     new URL('./src/pages/templates/editorial.js',           import.meta.url),
     new URL('./src/pages/templates/coutumes.js',            import.meta.url),
+    new URL('./src/pages/templates/sparkys.js',             import.meta.url),
     // Layout Components
     new URL('./src/pages/components/banner.js',      import.meta.url),
     new URL('./src/pages/components/cluster.js',     import.meta.url),
