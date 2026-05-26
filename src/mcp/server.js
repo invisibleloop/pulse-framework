@@ -787,6 +787,15 @@ Work through every item. Fix anything that fails. Refer to the spec source at ${
 
 ### Components & HTML
 - [ ] Components from the UI library are used — no hand-written \`<button>\`, \`<input>\`, \`<table>\` etc where a component exists
+- [ ] **No reinvented component patterns** — if the view contains any of these class names, you MUST refactor to use the component:
+  - \`.hero\`, \`.-hero\`, \`__hero\` → use \`hero()\` component
+  - \`.card\`, \`.product-card\`, \`.service-card\` → use \`card()\` component  
+  - Any two-column image + text layout → use \`media()\` component
+  - \`.banner\`, \`.strip\`, \`.bar\` → use \`banner()\` component
+  - \`.feature\`, \`.feature-card\` → use \`feature()\` component
+  - \`.testimonial\` → use \`testimonial()\` component
+  
+  Grep the rendered HTML for these patterns. If found, rewrite using the component. Custom utility classes on top of components are fine (\`hero({ ... })\` + override CSS) — but do not write the entire structure from scratch.
 - [ ] No \`data-event\` on text inputs — this destroys focus on every keystroke
 - [ ] No \`className\`, \`htmlFor\`, \`onClick=\`, or other React patterns
 - [ ] No hardcoded hex colours — only \`var(--ui-*)\` tokens

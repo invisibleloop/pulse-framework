@@ -521,6 +521,18 @@ export default {
 
 Before writing any UI HTML by hand, check `src/ui/index.js` — there are 50+ components available. Use them. Do not reinvent `button`, `card`, `alert`, `modal`, `spinner`, `badge`, `input`, etc.
 
+**Common patterns with dedicated components — never write these from scratch:**
+
+- Hero sections → `hero({ title, subtitle, actions, image, layout })`
+- Product/service cards → `card({ title, body, image, footer })`
+- Image + text layouts → `media({ image, content, reverse })`
+- Horizontal strips → `banner({ content, variant })`
+- Feature tiles → `feature({ icon, title, description })`
+- Testimonials → `testimonial({ quote, name, role, src })`
+- Call-to-action sections → `cta({ title, subtitle, actions })`
+
+If you're about to write `class="hero"` or `class="product-card"`, stop — import the component instead. You can add custom CSS on top of components for brand-specific styling, but the structure and accessibility must come from the component.
+
 @src/agent/checklist.md
 
 ## Performance Baseline

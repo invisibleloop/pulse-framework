@@ -127,7 +127,27 @@ All phases as originally defined — full 8-phase flow with every gate.
 
 ## Phase 3 — Build
 
-### 3a — Announce before writing
+### 3a — Check components first
+
+**Before writing any view HTML**, grep `src/ui/index.js` for the components you need:
+
+```bash
+grep -E "^export" src/ui/index.js | head -20
+```
+
+Or use the guide-components table. Never write these patterns from scratch:
+
+- Hero section → `hero()`
+- Product/service cards → `card()`
+- Image + text layouts → `media()`
+- Horizontal strips → `banner()`
+- Feature tiles → `feature()`
+- Testimonials → `testimonial()`
+- CTAs → `cta()`
+
+If you're about to type `class="hero"` or `class="product-card"`, stop — use the component instead. Custom CSS on top of components is fine; rewriting the component from scratch is not.
+
+### 3b — Announce before writing
 
 Before writing any file, output a build brief:
 
@@ -137,13 +157,14 @@ State:     <fields and types, or "none">
 Mutations: <list, or "none">
 Actions:   <list with brief description, or "none">
 Server:    <fetcher names and what they fetch, or "none">
+Components: <which UI components you will use>
 View:      <key sections / landmarks>
 Files:     <list of files that will be written>
 ```
 
-One-liners are fine for simple pages, but always output something.
+One-liners are fine for simple pages, but always output something. **Listing components you plan to use** helps catch reinvention before writing.
 
-### 3b — Write
+### 3c — Write
 
 Write each file using the **Write tool** — not `pulse_create_page`. This shows the user a readable diff. Before each file write, output a one-line status (present-progressive):
 
@@ -157,7 +178,7 @@ After the Write tool completes, call `pulse_create_page(name)` to register the p
 ✓ src/pages/my-page.js written and registered.
 ```
 
-### 3c — Suggest (optional but recommended)
+### 3d — Suggest (optional but recommended)
 
 After writing the first draft, call `pulse_suggest(content)` before running the hard validator. It catches obvious omissions collaboratively — a second opinion, not a gate.
 

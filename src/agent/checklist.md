@@ -23,6 +23,18 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 ### Components first
 
 - **Before writing any HTML by hand, check `src/ui/index.js`.** There are 50+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
+- **Do not reinvent component patterns.** These patterns have dedicated components — never write custom HTML for them:
+  - Hero sections → `hero({ title, subtitle, actions, image, ... })`
+  - Product/service cards → `card({ title, body, image, footer, ... })`
+  - Image + text two-column layouts → `media({ image, content, reverse })`
+  - Horizontal strips/banners → `banner({ content, variant })`
+  - Feature tiles → `feature({ icon, title, description })`
+  - Testimonials → `testimonial({ quote, name, role, src })`
+  - CTAs → `cta({ title, subtitle, actions })`
+  - Navigation → `nav({ logo, links, actions })`
+  - Footers → `footer({ logo, links, columns, legal, ... })`
+  
+  If you find yourself writing `class="hero"` or `class="product-card"` or `class="testimonial"`, stop — import the component instead.
 
 ### Reuse (DRY)
 
