@@ -2,6 +2,20 @@
 
 ---
 
+## Quick decision tree
+
+| Situation | Start here |
+|---|---|
+| New site, new branded page, or "build me X from scratch" | `pulse_intake` → `pulse_sketch` → `pulse_intent` → build |
+| Editing an existing page, adding a section, fixing a bug | Go straight to Step 1 — Understand |
+| "Add X to the existing Y" (one-liner) | Read the relevant file, make the change, run `/verify` |
+| Stuck on which component to use | `pulse_intent("describe what I'm building")` |
+| Colours failing contrast / unsure about palette | `pulse_check_contrast` |
+| Something looks wrong in the browser | `pulse_restart_server`, then `/verify` |
+| Lighthouse < 100 | Fix the flagged audit, run `/verify` again — do not skip to commit |
+
+---
+
 ## New project or new page? Start with Intake
 
 For any **new page, landing page, or branded site**, run the intake sequence first:
@@ -165,6 +179,8 @@ Run `pulse_validate` on the spec file.
 **Run `/verify` now.** Do not execute these steps manually.
 
 `/verify` validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and writes the `.pulse-verified` stamp. Running steps manually does not write the stamp.
+
+> **Lighthouse pre-flight:** `/verify` calls `pulse_build` automatically before running Lighthouse, and audits against the production server on port 3001. If you ever call `lighthouse_audit` manually outside `/verify`, you must first run `pulse_build` and navigate to `http://localhost:3001/your-route`. Auditing the dev server (port 3000) will produce misleading results.
 
 Pass gates:
 - Screenshot: no layout or rendering issues

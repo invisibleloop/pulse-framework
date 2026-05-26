@@ -49,6 +49,48 @@ const PKG_VERSION = JSON.parse(
   fs.readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf8')
 ).version
 
+// Common synonym → canonical vibe normalisation
+// Prevents hard enum errors when agents use intuitive names like "modern-minimal"
+const VIBE_SYNONYMS = {
+  'modern':          'minimal',
+  'modern-minimal':  'minimal',
+  'clean':           'minimal',
+  'sleek':           'minimal',
+  'stark':           'minimal',
+  'newspaper':       'editorial',
+  'magazine':        'editorial',
+  'typographic':     'editorial',
+  'serif':           'editorial',
+  'fun':             'playful',
+  'playful-bold':    'playful',
+  'energetic':       'bold',
+  'impactful':       'bold',
+  'strong':          'bold',
+  'raw':             'brutalist',
+  'grunge':          'brutalist',
+  'vintage':         'retro',
+  'nostalgic':       'retro',
+  'classic':         'retro',
+  'futuristic':      'neon',
+  'cyber':           'neon',
+  'dark-tech':       'neon',
+  'journal':         'paper',
+  'organic':         'paper',
+  'handmade':        'paper',
+  'friendly':        'warm',
+  'cosy':            'warm',
+  'cozy':            'warm',
+  'professional':    'corporate',
+  'business':        'corporate',
+  'enterprise':      'corporate',
+}
+
+function normaliseVibe(v) {
+  if (!v) return v
+  const lower = v.toLowerCase().replace(/[_\s]+/g, '-')
+  return VIBE_SYNONYMS[lower] || v
+}
+
 // ---------------------------------------------------------------------------
 // Server
 // ---------------------------------------------------------------------------
@@ -1740,7 +1782,8 @@ Accepts antiStyle ("what should this NOT look like?") and inspiration (a site or
       inspiration: z.string().optional().describe('A website, brand, or visual reference you admire — any industry. E.g. "stripe.com", "a Swiss railway poster", "the Economist magazine". Used to extract aesthetic intent and inform structural choices, not to copy.'),
     },
   },
-  ({ name, pitch, features, targetUser, palette, font, theme = 'dark', vibe, styleNotes, antiStyle, inspiration }) => {
+  ({ name, pitch, features, targetUser, palette, font, theme = 'dark', vibe: rawVibe, styleNotes, antiStyle, inspiration }) => {
+    const vibe = normaliseVibe(rawVibe)
     const featureList = features.split(',').map(f => f.trim()).filter(Boolean)
     const lines = []
 
@@ -2105,7 +2148,8 @@ After choosing a direction, fetch \`pulse://guide/explore\` for raw HTML pattern
       pageType:  z.enum(['landing', 'about', 'portfolio', 'blog', 'product', 'event', 'contact', 'dashboard']).optional().describe('Type of page — calibrates structural options. Defaults to landing.'),
     },
   },
-  ({ brief, vibe, antiStyle, pageType = 'landing' }) => {
+  ({ brief, vibe: rawVibe, antiStyle, pageType = 'landing' }) => {
+    const vibe = normaliseVibe(rawVibe)
     const lines = []
     lines.push('# Layout Directions\n')
     lines.push('Three structurally distinct options for this page. Read all three before choosing — the right one is rarely the first.\n')
@@ -2212,7 +2256,7 @@ Run this immediately after writing a theme file — before production build and 
       let block
       while ((block = blockRegex.exec(cssText)) !== null) {
         const body = block[1]
-        const propRegex = /--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|[a-z]+)\s*;/gi
+        const propRegex = /--([\w-]+)\s*:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|var\(--[\w-]+\)|[a-z]+)\s*;/gi
         let prop
         while ((prop = propRegex.exec(body)) !== null) {
           vars[`--${prop[1]}`] = prop[2].trim()

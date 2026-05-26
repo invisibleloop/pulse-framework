@@ -158,6 +158,30 @@ Then in app.css:
 
 If you cannot modify `createServer` (e.g. the project uses auto-discovery), use a self-hosted font in `public/fonts/` with `@font-face` in `app.css` — no CSP changes needed.
 
+### External images (img-src)
+
+The default CSP does **not** restrict `img-src` — it inherits `default-src 'self'`, which means images served from the same origin load fine. But if you load images from an external host (e.g. `https://images.unsplash.com`, `https://picsum.photos`, a CDN), you must add the host to `img-src`:
+
+```js
+createServer(specs, {
+  csp: {
+    'img-src': ['https://images.unsplash.com', 'https://picsum.photos'],
+  },
+})
+```
+
+Or using `pulse.config.js`:
+
+```js
+export default {
+  csp: {
+    'img-src': ['https://images.unsplash.com'],
+  },
+}
+```
+
+Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
+
 For multiple weights or italic variants, separate them with a semicolon in the URL:
 ```
 ?family=Inter:ital,wght@0,400;0,700;1,400&display=swap

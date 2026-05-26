@@ -13,7 +13,9 @@ Every Pulse component is well-built. That's also their risk: they pull strongly 
 **The escape hatch is always available.** The `view` function is raw HTML. You can use:
 - Zero components — just utility classes and inline HTML
 - A mix of raw layout with components for specific elements (nav, footer, forms)
-- Component structure with heavily overridden CSS via inline `style=` props
+- Component structure with overridden CSS via app.css class rules
+
+> **Note on inline styles:** The raw HTML patterns in this guide use `style=` attributes for clarity. In your own specs, move those rules into `app.css` as named classes — the `pulse_review` checklist will flag inline styles as a smell, and they can't be overridden cleanly. The pattern is: sketch with inline styles → extract to `app.css` classes → done.
 
 ---
 
