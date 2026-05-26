@@ -57,7 +57,15 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
   const stampPath  = path.join(PUBLIC_DIR, '.pulse-ui-version')
   const stamp      = fs.existsSync(stampPath) ? fs.readFileSync(stampPath, 'utf8').trim() : null
 
-  if (stamp === pkgVersion) return
+  // Compare CSS byte-length so any content change triggers a re-copy, even
+  // within the same version (e.g. when iterating locally with npm link).
+  const srcCss    = path.join(pkgPublic, 'pulse-ui.css')
+  const dstCss    = path.join(PUBLIC_DIR, 'pulse-ui.css')
+  const srcSize   = fs.existsSync(srcCss) ? fs.statSync(srcCss).size : -1
+  const dstSize   = fs.existsSync(dstCss) ? fs.statSync(dstCss).size : -2
+  const cssStale  = srcSize !== dstSize
+
+  if (stamp === pkgVersion && !cssStale) return
 
   fs.mkdirSync(PUBLIC_DIR, { recursive: true })
   for (const asset of ['pulse-ui.css', 'pulse-ui.js']) {
