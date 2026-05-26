@@ -16,7 +16,34 @@ Non-interactive components (nav, hero, button, card, etc.) only need '/pulse-ui.
 
 pulse-ui.css exposes CSS custom properties for every token. app.css MUST use these tokens — never hardcode colour hex values.
 
-Override tokens in :root inside app.css to retheme all components at once:
+### How theming works — two-layer token system
+
+Pulse uses a **two-layer token system**:
+
+1. **Input tokens** (unprefixed: `--bg`, `--text`, `--accent`, etc.) — you define these in `:root` or `[data-theme="light"]` to set your palette
+2. **Output tokens** (prefixed: `--ui-bg`, `--ui-text`, `--ui-accent`, etc.) — pulse-ui components read these; you reference them in app.css
+
+pulse-ui.css sets `--ui-*` tokens to `var(--your-input-token, fallback)`. When you override `--accent`, components automatically pick it up via `--ui-accent`.
+
+**Which token names to use where:**
+
+| File | Define input tokens | Reference output tokens |
+|---|---|---|
+| `public/theme.css` | ✓ `--accent: #e25;` | — |
+| `app.css` | — | ✓ `color: var(--ui-accent);` |
+| Pulse components | — | ✓ (already done internally) |
+
+**Common mistake:** defining `--color-accent` or `--brand-primary` expecting components to use them. Components only read the canonical unprefixed names: `--accent`, `--text`, `--bg`, `--surface`, `--border`, `--muted`, `--radius`. Define those, and everything updates.
+
+### Dark by default
+
+**The library is dark by default.** `pulse-ui.css` applies `background-color: var(--ui-bg)` and `color: var(--ui-text)` to `html, body` automatically using the dark palette defined in `:root` — you do NOT need to add these to app.css.
+
+For a **light theme**, set `meta.theme: 'light'` in the spec — this adds `data-theme="light"` to the `<body>` and activates the built-in light token set (accessible contrast for badges, alerts, and all semantic colours).
+
+### Overriding tokens in your theme
+
+Override input tokens in `:root` inside theme.css to retheme all components at once:
 ```css
 :root {
   --bg:           #0d0d10;   /* page background */
@@ -39,10 +66,6 @@ p    { color: var(--ui-muted); }
 a    { color: var(--ui-accent); }
 code { background: var(--ui-surface-2); color: var(--ui-accent); border: 1px solid var(--ui-border); }
 ```
-
-**The library is dark by default.** `pulse-ui.css` applies `background-color: var(--ui-bg)` and `color: var(--ui-text)` to `html, body` automatically — you do NOT need to add these to app.css.
-
-To apply a **light theme**, set `meta.theme: 'light'` in the spec — this adds `data-theme="light"` to the `<body>` and activates the built-in light token set (accessible contrast for badges, alerts, and all semantic colours). Do NOT manually copy token values into `:root`.
 
 **Overriding tokens on a light-theme page:** `pulse-ui.css` defines light theme values under `[data-theme="light"]`, which has higher specificity than `:root`. Overrides written only to `:root` will be silently beaten. Always target `[data-theme="light"]` when overriding tokens for a light-theme page:
 

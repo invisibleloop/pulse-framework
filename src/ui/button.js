@@ -39,6 +39,11 @@ export function button({
   if (!VARIANTS.has(variant)) variant = 'primary'
   if (!SIZES.has(size))       size    = 'md'
 
+  // Warn if href passed via attrs instead of the href prop (produces invalid <button href>)
+  if (typeof window === 'undefined' && !href && attrs.href) {
+    console.warn('[Pulse button] href passed via attrs produces invalid HTML (<button href>). Use button({ href: "..." }) instead — it renders an <a> automatically.')
+  }
+
   const classes = [
     'ui-btn',
     `ui-btn--${variant}`,
