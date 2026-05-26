@@ -214,6 +214,8 @@ Pass gates:
 
 **Troubleshooting browser profile lock:** If you see "browser already running" or chrome profile errors, another session is using the same Chrome profile. This is a `chrome-devtools-mcp` limitation — only one session can use the profile at a time. Ask the user to close other Claude sessions, or wait for the other session to finish.
 
+**CSS-only changes after verification:** If you've already run `/verify` successfully and the user asks for minor CSS tweaks (margins, colours, spacing), you must run the full `/verify` workflow again — the stop hook checks the file mtime against the stamp. There is no lighter CSS-only check. This is by design: even CSS changes can affect CLS, colour contrast, or readability.
+
 ---
 
 ## Phase 6 — Tests (pass gate, Tier 2+)

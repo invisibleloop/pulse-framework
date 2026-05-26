@@ -766,6 +766,49 @@ ${source}
 
 ---
 
+## Auto-checked items
+
+${(() => {
+  const checks = []
+  
+  // Check rendered HTML
+  if (renderedHtml) {
+    // Positive tabindex
+    const posTabindex = /tabindex=["']?([1-9]\d*)/.test(renderedHtml)
+    checks.push(posTabindex ? '✗ **Positive tabindex found** — remove tabindex > 0, reorder DOM instead' : '✓ No positive tabindex')
+    
+    // data-event on input
+    const dataEventInput = /<input[^>]*data-event/.test(renderedHtml)
+    checks.push(dataEventInput ? '✗ **data-event on <input>** — this destroys focus on every keystroke' : '✓ No data-event on text inputs')
+    
+    // React patterns
+    const reactPatterns = /(className|htmlFor|onClick)=/.test(renderedHtml)
+    checks.push(reactPatterns ? '✗ **React patterns found** — use class, for, data-event instead' : '✓ No React patterns (className/htmlFor/onClick)')
+    
+    // Emoji in HTML
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u
+    const hasEmoji = emojiRegex.test(renderedHtml)
+    checks.push(hasEmoji ? '✗ **Emoji in HTML** — use icon components or aria-label instead' : '✓ No emoji in view HTML')
+    
+    // Main landmark
+    const hasMain = /<main[^>]*id=["']?main-content/.test(renderedHtml)
+    checks.push(hasMain ? '✓ <main id="main-content"> present' : '✗ **Missing main landmark** — add <main id="main-content">')
+  }
+  
+  // Check spec source
+  // Hex colours in view (rough check — may have false positives from comments)
+  const hexInView = /#[0-9a-fA-F]{3,6}/.test(source) && source.includes('view:')
+  if (hexInView) {
+    checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only')
+  } else {
+    checks.push('✓ No obvious hex colours in view')
+  }
+  
+  return checks.join('\n')
+})()}
+
+---
+
 ## Review checklist
 
 Work through every item. Fix anything that fails. Refer to the spec source at ${file} as needed — do not ask me to paste it.

@@ -143,12 +143,18 @@ process.on('SIGTERM', closeReloadClients)
 process.on('SIGINT',  closeReloadClients)
 
 let reloadTimer = null
+let lastReload = 0
 fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(async () => {
+    // Debounce rapid file changes (e.g. multiple Edit tool calls)
+    const now = Date.now()
+    if (now - lastReload < 100) return
+    lastReload = now
+    
     console.log('  ⟳ File changed, reloading specs...')
     try {
-      const fresh = await loadPages(ROOT, Date.now())
+      const fresh = await loadPages(ROOT, now)
       updateSpecs(fresh)
       console.log('  ✓ Specs reloaded')
     } catch (err) {
@@ -156,7 +162,7 @@ fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
       /* spec error — browser will show the old page, not crash */
     }
     notifyReload()
-  }, 50)
+  }, 200)
 })
 
 // Tiny script injected into every page — connects to SSE and reloads on change
