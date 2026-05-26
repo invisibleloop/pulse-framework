@@ -923,7 +923,7 @@ hr.ui-divider {
 /* Split (text + image, 50/50) */
 .ui-hero--split { text-align: left; }
 .ui-hero--split .ui-hero-inner {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -938,7 +938,7 @@ hr.ui-divider {
 /* Asymmetric (text 60%, image 40%) */
 .ui-hero--asymmetric { text-align: left; }
 .ui-hero--asymmetric .ui-hero-inner {
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 3fr 2fr;
