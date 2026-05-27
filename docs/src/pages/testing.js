@@ -112,7 +112,7 @@ const result = await render(productSpec, {
       )}
 
       ${section('selectors', 'Supported selectors')}
-      <p>The selector engine supports the most common patterns. Descendant combinators (<code>div p</code>) are not supported — use <code>element.findAll()</code> to search within a matched element instead.</p>
+      <p>The selector engine supports the most common CSS patterns including descendant combinators (<code>div p</code>, <code>.parent li</code>). Descendant selectors match the rightmost token within the ancestor context — if no ancestors match, the result is empty (count 0).</p>
       ${table(
         ['Selector', 'Example', 'Matches'],
         [
@@ -122,6 +122,7 @@ const result = await render(productSpec, {
           ['Attribute present','<code>[disabled]</code>',              'Elements with a <code>disabled</code> attribute'],
           ['Attribute value',  '<code>[type="submit"]</code>',         'Elements where <code>type</code> equals <code>submit</code>'],
           ['Compound',         '<code>button.primary[disabled]</code>', 'All conditions on the same element'],
+          ['Descendant',       '<code>tbody tr</code>',                '<code>&lt;tr&gt;</code> elements inside <code>&lt;tbody&gt;</code>'],
         ]
       )}
       ${codeBlock(highlight(`result.has('button')                         // any <button>
