@@ -2582,8 +2582,10 @@ server.registerTool(
       return text(`npm install failed:\n${e.stderr?.toString() || e.message}`)
     }
 
-    // 2. Copy assets from the newly installed package
-    const pkgPublic  = new URL('../../public', import.meta.url).pathname
+    // 2. Copy assets from the newly installed package in node_modules.
+    //    Do NOT use import.meta.url here — in the dev repo that resolves to
+    //    the repo's own public/ (dev version), not the npm-installed package.
+    const pkgPublic  = path.join(ROOT, 'node_modules', '@invisibleloop', 'pulse', 'public')
     const publicDir  = path.join(ROOT, 'public')
     const assets     = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
     const updated    = []
@@ -2595,7 +2597,7 @@ server.registerTool(
       if (fs.existsSync(src)) { fs.copyFileSync(src, dst); updated.push(`public/${asset}`) }
     }
 
-    const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
+    const checklistSrc = path.join(ROOT, 'node_modules', '@invisibleloop', 'pulse', 'src', 'agent', 'checklist.md')
     const checklistDst = path.join(ROOT, '.claude', 'pulse-checklist.md')
     if (fs.existsSync(checklistSrc)) {
       fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
