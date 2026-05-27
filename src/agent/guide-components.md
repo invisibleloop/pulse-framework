@@ -251,6 +251,18 @@ colophon({
 
 **Composition:** Editorial components work inside `section()` + `container()` like any other Pulse component. Use `prose()` for body text, `sectionLabel()` for section breaks, `entryList()` for tabular content, `displayHeading()` for large type moments, and `colophon()` instead of `footer()` for editorial pages.
 
+#### Important: Vibes affect CSS tokens, not component HTML structure
+
+The `meta.vibe` setting (`warm`, `editorial`, `playful`, `minimal`, `bold`, `brutalist`, `retro`, `corporate`, `neon`, `paper`) applies CSS variable overrides via `data-vibe` on the `<body>` element. This changes **visual styling** — border radius, font size, letter-spacing, heading weight — but does **not** change the **HTML structure** of components.
+
+For example:
+- `hero()` with `vibe: 'editorial'` still renders eyebrow + title + subtitle + actions (SaaS structure)
+- The vibe adjusts the font sizes, tracking, and spacing, but the component HTML is unchanged
+
+**If you need different HTML structure for an editorial design** — e.g., a large display title + asymmetric layout + drop cap instead of eyebrow/subtitle/actions — use the editorial components (`displayHeading`, `dropCap`, `sectionLabel`) or write custom markup. Do not expect `hero()` to become structurally editorial when `vibe: 'editorial'` is set.
+
+This is by design: vibes are a paint job, not a structural transformation. Components stay predictable and testable. When the design structure itself differs from the SaaS patterns (centred hero, three-column features, pricing cards), reach for the editorial components or custom layout instead of trying to force `hero()` / `feature()` / `cta()` into shapes they weren't designed for.
+
 ### Landing page components
 
 | Component | Key props |
