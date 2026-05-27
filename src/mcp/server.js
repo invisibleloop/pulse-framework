@@ -2575,21 +2575,27 @@ Run this immediately after writing a theme file — before production build and 
 server.registerTool(
   'pulse_update',
   {
-    description: 'Install the latest @invisibleloop/pulse package, then re-copy pulse-ui.css, pulse-ui.js, and the agent checklist into public/. One command does the full upgrade.',
+    description: 'Install the latest @invisibleloop/pulse package (skipped if npm-linked), then re-copy pulse-ui.css, pulse-ui.js, and the agent checklist into public/. One command does the full upgrade.',
     inputSchema: {},
   },
   async () => {
-    // 1. npm install latest
+    // 1. npm install latest — but only if the package is NOT npm-linked.
+    //    An npm link is a symlink in node_modules. Installing @latest over a
+    //    link downgrades the project to the published version even when the
+    //    developer has a newer local build linked. Detect the symlink and skip.
     const { execSync } = await import('child_process')
-    try {
-      execSync('npm install @invisibleloop/pulse@latest', { cwd: ROOT, stdio: 'pipe' })
-    } catch (e) {
-      return text(`npm install failed:\n${e.stderr?.toString() || e.message}`)
+    const pkgDir = path.join(ROOT, 'node_modules', '@invisibleloop', 'pulse')
+    const isLinked = fs.existsSync(pkgDir) && fs.lstatSync(pkgDir).isSymbolicLink()
+
+    if (!isLinked) {
+      try {
+        execSync('npm install @invisibleloop/pulse@latest', { cwd: ROOT, stdio: 'pipe' })
+      } catch (e) {
+        return text(`npm install failed:\n${e.stderr?.toString() || e.message}`)
+      }
     }
 
-    // 2. Copy assets from the newly installed package in node_modules.
-    //    Do NOT use import.meta.url here — in the dev repo that resolves to
-    //    the repo's own public/ (dev version), not the npm-installed package.
+    // 2. Copy assets from the package in node_modules (installed or linked).
     const pkgPublic  = path.join(ROOT, 'node_modules', '@invisibleloop', 'pulse', 'public')
     const publicDir  = path.join(ROOT, 'public')
     const assets     = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
