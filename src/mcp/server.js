@@ -375,9 +375,28 @@ server.registerTool(
   'pulse_validate',
   {
     description: 'Validate a Pulse spec before writing it. Returns errors or confirms the spec is valid.',
-    inputSchema: { content: z.string().describe('JavaScript spec content to validate') },
+    inputSchema: {
+      content: z.string().optional().describe('JavaScript spec content to validate'),
+      file: z.string().optional().describe('Absolute path to spec file to validate'),
+    },
   },
-  async ({ content }) => validateContent(content)
+  async ({ content, file }) => {
+    if (!content && !file) {
+      return text('Error: must provide either content or file')
+    }
+    if (content && file) {
+      return text('Error: provide only one of content or file, not both')
+    }
+    
+    if (file) {
+      if (!fs.existsSync(file)) {
+        return text(`File not found: ${file}`)
+      }
+      content = fs.readFileSync(file, 'utf8')
+    }
+    
+    return validateContent(content)
+  }
 )
 
 // ---------------------------------------------------------------------------
@@ -697,24 +716,51 @@ and returns a structured review brief. You must read everything carefully, find 
 issue, and fix them all before reporting back to the user. Use this after completing
 any feature build.`,
     inputSchema: {
-      file: z.string().describe('Absolute path to the spec file to review'),
+      file: z.string().optional().describe('Absolute path to the spec file to review'),
+      content: z.string().optional().describe('JavaScript spec content to review (alternative to file)'),
     },
   },
-  async ({ file }) => {
-    if (!fs.existsSync(file)) return text(`File not found: ${file}`)
+  async ({ file, content }) => {
+    if (!file && !content) {
+      return text('Error: must provide either file or content')
+    }
+    if (file && content) {
+      return text('Error: provide only one of file or content, not both')
+    }
 
-    const source = fs.readFileSync(file, 'utf8')
+    let source = content
+    if (file) {
+      if (!fs.existsSync(file)) return text(`File not found: ${file}`)
+      source = fs.readFileSync(file, 'utf8')
+    }
 
     // Run the validator in a child process (same as pulse_validate)
-    const validatorScript = new URL('./validate-worker.js', import.meta.url).pathname
     let validationResult = '(could not run validator)'
-    try {
-      validationResult = execFileSync(process.execPath, [validatorScript, file], {
-        timeout: 10_000,
-        encoding: 'utf8',
-      }).trim()
-    } catch (err) {
-      validationResult = err.stdout?.trim() || err.message
+    if (file) {
+      const validatorScript = new URL('./validate-worker.js', import.meta.url).pathname
+      try {
+        validationResult = execFileSync(process.execPath, [validatorScript, file], {
+          timeout: 10_000,
+          encoding: 'utf8',
+        }).trim()
+      } catch (err) {
+        validationResult = err.stdout?.trim() || err.message
+      }
+    } else {
+      // Content-only mode — write to temp file and validate
+      const tmpFile = path.join(os.tmpdir(), `pulse-review-${Date.now()}.js`)
+      fs.writeFileSync(tmpFile, source, 'utf8')
+      const validatorScript = new URL('./validate-worker.js', import.meta.url).pathname
+      try {
+        validationResult = execFileSync(process.execPath, [validatorScript, tmpFile], {
+          timeout: 10_000,
+          encoding: 'utf8',
+        }).trim()
+      } catch (err) {
+        validationResult = err.stdout?.trim() || err.message
+      } finally {
+        try { fs.unlinkSync(tmpFile) } catch {}
+      }
     }
 
     // Try to render the view with initial state

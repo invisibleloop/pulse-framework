@@ -155,11 +155,24 @@ export function tokenize(html) {
 /**
  * Parse a simple CSS selector string.
  * Supports: tag  .class  #id  [attr]  [attr="value"]  and combinations.
+ * Also supports descendant combinators: parent child grandchild
  *
  * @param {string} selector
- * @returns {{ tag: string|null, id: string|null, classes: string[], attrs: Array<{name,value}> }}
+ * @returns {{ tag: string|null, id: string|null, classes: string[], attrs: Array<{name,value}> }} | Array of same
  */
 export function parseSelector(selector) {
+  const trimmed = selector.trim()
+  
+  // Check for descendant combinator (space)
+  if (trimmed.includes(' ')) {
+    // Split by space and parse each part
+    return trimmed.split(/\s+/).map(part => parseSingleSelector(part))
+  }
+  
+  return parseSingleSelector(trimmed)
+}
+
+function parseSingleSelector(selector) {
   const result = { tag: null, id: null, classes: [], attrs: [] }
   let s = selector.trim()
 
@@ -255,37 +268,105 @@ export function extractText(tokens) {
 
 /**
  * Find the first token matching selector.
+ * Supports descendant combinators: parent child
  * @param {Array}  tokens
  * @param {string} selector
  * @returns {{ token, index } | null}
  */
 export function findFirst(tokens, selector) {
-  // Warn if selector contains a space (descendant combinator not supported)
-  if (selector.includes(' ') && selector.trim().includes(' ')) {
-    console.warn(`[Pulse testing] Descendant selectors not supported: "${selector}". Use a class on the target element instead, or call element.find() to search within a specific parent.`)
-  }
   const sel = parseSelector(selector)
+  
+  // Simple selector (no spaces)
+  if (!Array.isArray(sel)) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (matchesToken(tokens[i], sel)) return { token: tokens[i], index: i }
+    }
+    return null
+  }
+  
+  // Descendant selector (array of selectors)
+  const target = sel[sel.length - 1]  // Last selector is the element we're looking for
+  const ancestors = sel.slice(0, -1)  // Earlier selectors are ancestor requirements
+  
   for (let i = 0; i < tokens.length; i++) {
-    if (matchesToken(tokens[i], sel)) return { token: tokens[i], index: i }
+    if (matchesToken(tokens[i], target)) {
+      // Check if all ancestor requirements are met
+      if (hasAncestors(tokens, i, ancestors)) {
+        return { token: tokens[i], index: i }
+      }
+    }
   }
   return null
 }
 
 /**
+ * Check if a token at index has all required ancestors.
+ * @param {Array} tokens
+ * @param {number} index - index of the target token
+ * @param {Array} ancestorSels - array of ancestor selectors to match
+ */
+function hasAncestors(tokens, index, ancestorSels) {
+  if (ancestorSels.length === 0) return true
+  
+  // Build a stack of open tags from start to index
+  const stack = []
+  for (let i = 0; i < index; i++) {
+    if (tokens[i].type === 'open') {
+      stack.push(tokens[i])
+    } else if (tokens[i].type === 'close') {
+      stack.pop()
+    }
+  }
+  
+  // Now check if the stack contains all required ancestors in order
+  // We need to find each ancestor selector somewhere in the stack, in order
+  let stackIdx = 0
+  for (const ancestorSel of ancestorSels) {
+    let found = false
+    while (stackIdx < stack.length) {
+      if (matchesToken(stack[stackIdx], ancestorSel)) {
+        found = true
+        stackIdx++  // Move past this one for the next ancestor search
+        break
+      }
+      stackIdx++
+    }
+    if (!found) return false
+  }
+  
+  return true
+}
+
+/**
  * Find all tokens matching selector.
+ * Supports descendant combinators: parent child
  * @param {Array}  tokens
  * @param {string} selector
  * @returns {Array<{ token, index }>}
  */
 export function findAll(tokens, selector) {
-  // Warn if selector contains a space (descendant combinator not supported)
-  if (selector.includes(' ') && selector.trim().includes(' ')) {
-    console.warn(`[Pulse testing] Descendant selectors not supported: "${selector}". Use a class on the target element instead, or call element.findAll() to search within a specific parent.`)
-  }
   const sel = parseSelector(selector)
+  
+  // Simple selector (no spaces)
+  if (!Array.isArray(sel)) {
+    const results = []
+    for (let i = 0; i < tokens.length; i++) {
+      if (matchesToken(tokens[i], sel)) results.push({ token: tokens[i], index: i })
+    }
+    return results
+  }
+  
+  // Descendant selector (array of selectors)
+  const target = sel[sel.length - 1]
+  const ancestors = sel.slice(0, -1)
+  
   const results = []
   for (let i = 0; i < tokens.length; i++) {
-    if (matchesToken(tokens[i], sel)) results.push({ token: tokens[i], index: i })
+    if (matchesToken(tokens[i], target)) {
+      if (hasAncestors(tokens, i, ancestors)) {
+        results.push({ token: tokens[i], index: i })
+      }
+    }
   }
   return results
 }

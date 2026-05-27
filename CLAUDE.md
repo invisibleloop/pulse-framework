@@ -422,9 +422,7 @@ const result = await render(mySpec, { server: { product: mockProduct } })
 const result = await render(mySpec, { ctx: { params: { id: '1' } } }) // real fetchers
 ```
 
-**Supported selectors:** `button`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations: `button.primary[type="submit"]`.
-
-**Descendant selectors NOT supported:** `result.count('.parent li')` will silently return wrong results. Instead, use `result.find('.parent').findAll('li')` to search within a specific parent, or add a class to the target element.
+**Supported selectors:** `button`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations: `button.primary[type="submit"]`. **Descendant combinators are supported:** `result.count('.parent li')` or `result.find('tbody tr')`.
 
 `Element` also has `.find()`, `.findAll()`, `.has()`, `.attr()`, `.text`, `.tag`, `.attrs`.
 

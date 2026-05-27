@@ -60,6 +60,11 @@ Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The r
 | `codeWindow` | `.ui-code-window` | |
 | `segmented` | `.ui-segmented` | |
 | `rating` | `.ui-rating` | |
+| `entryList` | `.ui-entry-list` | Editorial — tabular list with metadata |
+| `displayHeading` | `.ui-display-heading` | Editorial — large typographic heading |
+| `sectionLabel` | `.ui-section-label` | Editorial — eyebrow + h2 + rule |
+| `dropCap` | `.ui-drop-cap` | Editorial — first-letter treatment |
+| `colophon` | `.ui-colophon` | Editorial — minimal footer |
 
 
 
@@ -196,6 +201,55 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 **`balance: true`** on `heading()` prevents orphaned words. Apply to any heading the verification orphan check flags.
 
 Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`list()` when writing content yourself.
+
+### Editorial components
+
+Editorial/typographic primitives for non-SaaS layouts: paperback books, vintage magazines, editorial sites, portfolio pages. These complement the landing-page-focused components (hero, feature, cta) when the design needs structure that's tabular, asymmetric, or typography-led.
+
+| Component | Key props | Use for |
+|-----------|-----------|---------|
+| `entryList` | `items` ([{meta, title, description}]), `metaLabel` (accessible name for meta column — e.g. "Year") | Backlists, release notes, changelogs, project archives, talk logs |
+| `displayHeading` | `text`, `level` (1–6), `maxWidth` (ch units, default 20), `balance` (true), `tracking` ('tight'\|'normal'\|'wide') | Hero titles, chapter openings, large typographic moments |
+| `sectionLabel` | `eyebrow`, `heading`, `level` (1–6, default 2), `rule` (true — show horizontal rule), `align` ('left'\|'center') | Section dividers, chapter labels, content blocks |
+| `dropCap` | `letter` (the drop cap letter or word), `content` (rest of paragraph), `lines` (height in lines, default 3) | First-paragraph treatment, editorial openings |
+| `colophon` | `content` (HTML slot), `align` ('center'\|'left') | Paperback-style footer — minimal, tight type, no columns |
+
+#### When to use editorial components
+
+Use these when the design direction is **editorial**, **retro**, **brutalist**, or **paper** vibe, or when the content structure is naturally tabular (list of books, releases, projects). They're shaped for asymmetry and typography-first layouts, not centred hero + three-column features.
+
+**Example: Book backlist**
+```js
+entryList({
+  metaLabel: 'Year',
+  items: [
+    { meta: '2023', title: 'The Argent Ghost', description: 'A tale of time-travel and lost identity.' },
+    { meta: '2021', title: 'Signal Drift',      description: 'First contact from a dead civilization.' },
+    { meta: '2019', title: 'Cold Equations',    description: 'Survival at the edge of known space.' },
+  ],
+})
+```
+
+**Example: Editorial hero**
+```js
+${displayHeading({ text: 'In Search of Lost Code', level: 1, tracking: 'tight' })}
+${dropCap({ letter: 'T', content: 'he first computers were humans, pencil-wielding calculators in windowless rooms, computing artillery trajectories by hand...' })}
+```
+
+**Example: Section divider**
+```js
+sectionLabel({ eyebrow: 'Chapter 3', heading: 'The Rise of Symbolic Logic', rule: true })
+```
+
+**Example: Minimal footer for an editorial page**
+```js
+colophon({
+  content: `<p>© 2025 Alden Press • Set in Lyon Text and Atlas Grotesk</p>
+  <p><a href="/about">About</a> • <a href="/contact">Contact</a></p>`,
+})
+```
+
+**Composition:** Editorial components work inside `section()` + `container()` like any other Pulse component. Use `prose()` for body text, `sectionLabel()` for section breaks, `entryList()` for tabular content, `displayHeading()` for large type moments, and `colophon()` instead of `footer()` for editorial pages.
 
 ### Landing page components
 

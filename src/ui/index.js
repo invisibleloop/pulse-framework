@@ -83,6 +83,13 @@ export { decorate }    from './decorate.js'
 export { pullquote }   from './pullquote.js'
 export { prose }       from './prose.js'
 export { heading }     from './heading.js'
+
+// Editorial components
+export { entryList }      from './entry-list.js'
+export { displayHeading } from './display-heading.js'
+export { sectionLabel }   from './section-label.js'
+export { dropCap }        from './drop-cap.js'
+export { colophon }       from './colophon.js'
 export { list }        from './list.js'
 export {
   iconArrowLeft, iconArrowRight, iconArrowUp, iconArrowDown,
