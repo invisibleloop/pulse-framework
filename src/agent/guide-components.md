@@ -251,6 +251,23 @@ colophon({
 
 **Composition:** Editorial components work inside `section()` + `container()` like any other Pulse component. Use `prose()` for body text, `sectionLabel()` for section breaks, `entryList()` for tabular content, `displayHeading()` for large type moments, and `colophon()` instead of `footer()` for editorial pages.
 
+#### When components feel restrictive
+
+**Symptom:** You're fighting a component's wrapper styles (padding, max-width, centering) in your CSS overrides.
+
+**Solutions:**
+1. **Use the right component for your design.** If the page is editorial/typographic, use the editorial components (`displayHeading`, `sectionLabel`, `entryList`, `colophon`) instead of trying to force `hero()`, `feature()`, `cta()` into an editorial shape.
+2. **Write custom markup for structural differences.** Components provide sensible defaults for common patterns. When your design structure diverges significantly (asymmetric grid, full-bleed sections, custom positioning), write the HTML directly — that's permitted for layouts. Use components for the UI primitives (`button`, `card`, `input`, `badge`), but write the outer structure yourself.
+3. **Override with higher specificity.** Component wrappers use single class names (`.ui-hero`, `.ui-cta`). Override with a more specific selector in your `app.css`:
+   ```css
+   .my-editorial-hero .ui-hero-inner {
+     max-width: none;
+     padding: 0;
+   }
+   ```
+
+Components are opinionated by design — they enforce accessibility, consistency, and tested patterns. When the design requires breaking those patterns, prefer custom markup over fighting the component.
+
 #### Important: Vibes affect CSS tokens, not component HTML structure
 
 The `meta.vibe` setting (`warm`, `editorial`, `playful`, `minimal`, `bold`, `brutalist`, `retro`, `corporate`, `neon`, `paper`) applies CSS variable overrides via `data-vibe` on the `<body>` element. This changes **visual styling** — border radius, font size, letter-spacing, heading weight — but does **not** change the **HTML structure** of components.
