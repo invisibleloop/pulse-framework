@@ -255,7 +255,10 @@ server.registerTool(
         ].filter(Boolean)
 
         const tagStr = tags.length ? `  [${tags.join(' | ')}]` : ''
-        lines.push(`  ${route.padEnd(24)} → ${path.relative(ROOT, spec.hydrate.replace('/src/', 'src/'))}${tagStr}`)
+        const hydrateStr = spec.hydrate
+          ? path.relative(ROOT, spec.hydrate.replace('/src/', 'src/'))
+          : '(server-only)'
+        lines.push(`  ${route.padEnd(24)} → ${hydrateStr}${tagStr}`)
       }
     }
 

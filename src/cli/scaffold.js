@@ -429,8 +429,8 @@ const fallback = spec.onViewError(new Error('boom'), {}, {})
 assert(fallback.includes('main-content'))
 \`\`\`
 
-**Selector support:** \`tag\`, \`.class\`, \`#id\`, \`[attr]\`, \`[attr="value"]\`, and combinations (\`button.primary[disabled]\`).
-Descendant selectors (\`tbody tr\`, \`ul li\`) are NOT supported — use \`r.count('tr')\` not \`r.count('tbody tr')\`.
+**Selector support:** \`tag\`, \`.class\`, \`#id\`, \`[attr]\`, \`[attr="value"]\`, combinations (\`button.primary[disabled]\`), and **descendant combinators** (\`r.count('tbody tr')\`, \`r.find('.card h2')\`).
+Descendant selectors match the rightmost token within the ancestor context — \`r.count('.foo span')\` counts spans that are descendants of \`.foo\` elements.
 
 @.claude/pulse-checklist.md
 `

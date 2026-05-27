@@ -108,7 +108,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   assert.equal(result.get('h1').text, mockProduct.name)
   assert.equal(result.attr('img', 'src'), mockProduct.image)
   ```
-  Supported selectors: `tag`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations (`button.primary[disabled]`).
+  Supported selectors: `tag`, `.class`, `#id`, `[attr]`, `[attr="value"]`, combinations (`button.primary[disabled]`), and **descendant combinators** (`result.count('.parent li')`, `result.find('tbody tr')`). Descendant selectors match the rightmost token within the ancestor context — they do not return 0 if the ancestor doesn't exist, they simply find no matching descendants.
 
 ### Markdown
 
