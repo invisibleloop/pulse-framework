@@ -440,6 +440,25 @@ const result = await render(mySpec, { ctx: { params: { id: '1' } } }) // real fe
 
 ## Build Workflow
 
+### New page or new site? Start with intake — always
+
+For any **new page, landing page, or branded site**, run this sequence first. Do not skip to building.
+
+```
+0. pulse_extract_inspiration(url/image)       → structured design brief  [if user shares reference]
+1. pulse_intake(name, pitch, features, ...)   → product brief + contrast check
+2. pulse_sketch(brief, vibe?, antiStyle?)     → 3 layout directions to choose from
+3. pulse_intent(description)                  → archetype + scaffold + guide list
+```
+
+**Before calling `pulse_intake`**, gather the required information by asking the user — one question at a time, in plain prose, no bullet lists. You need at minimum: the product name, what it does (pitch), and its key features. Ask for inspiration references, palette, vibe, and anti-style if the user hasn't mentioned them.
+
+**`pulse_sketch` is mandatory** for `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes — those vibes fight the default centred-hero layout. Skip it only for `corporate` or `minimal` when no structural preference has been stated.
+
+For **small edits, bug fixes, or "add X to existing Y"** — skip intake/sketch and go straight to Understand below.
+
+---
+
 Every build task follows this sequence. Each phase has a pass gate — do not advance until it clears.
 
 **Before calling any slow tool (`pulse_build`, `lighthouse_audit`), output a status message to the user first** — e.g. "Building for production — ~30 s…" or "Running Lighthouse desktop audit…". Never call a slow tool silently.
