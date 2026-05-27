@@ -288,7 +288,10 @@ async function runUpdate(root) {
     process.exit(1)
   }
 
-  const pkgPublic = new URL('../../public', import.meta.url).pathname
+  // Always copy from the npm-installed package in node_modules, not from
+  // import.meta.url — in the dev repo that would resolve to the source tree.
+  const nmPkg    = path.join(root, 'node_modules', '@invisibleloop', 'pulse')
+  const pkgPublic = path.join(nmPkg, 'public')
   const assets    = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
   const publicDir = path.join(root, 'public')
   const updated   = []
@@ -304,11 +307,10 @@ async function runUpdate(root) {
 
   // Sync agent files into .claude/
   const agentFiles = [
-    ['../agent/checklist.md',      'pulse-checklist.md'],
-    ['../agent/coverage-check.js', 'coverage-check.js'],
+    [path.join(nmPkg, 'src', 'agent', 'checklist.md'),      'pulse-checklist.md'],
+    [path.join(nmPkg, 'src', 'agent', 'coverage-check.js'), 'coverage-check.js'],
   ]
-  for (const [rel, dst] of agentFiles) {
-    const src = new URL(rel, import.meta.url).pathname
+  for (const [src, dst] of agentFiles) {
     if (fs.existsSync(src)) {
       const dstPath = path.join(root, '.claude', dst)
       fs.mkdirSync(path.dirname(dstPath), { recursive: true })
@@ -318,7 +320,7 @@ async function runUpdate(root) {
   }
 
   // Sync slash commands into .claude/commands/
-  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsSrc = path.join(nmPkg, 'src', 'agent', 'commands')
   const commandsDst = path.join(root, '.claude', 'commands')
   if (fs.existsSync(commandsSrc)) {
     fs.mkdirSync(commandsDst, { recursive: true })
