@@ -476,6 +476,8 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 
 **Skip phase 2 confirmation only for trivially small, unambiguous tasks.** When in doubt, confirm.
 
+**Template mode exception:** when adapting a pre-built template (see `pulse://guide/templates`), replace the full plan with a single compact confirmation block — template, substitutions, files. One turn is enough; do not run the full phase 2 ceremony.
+
 **The Review Agent is always last.** Never invoke it before validate, Lighthouse, and tests all pass.
 
 The `/verify` command runs the browser check loop (phases 4–5) automatically. Use it.

@@ -1707,6 +1707,16 @@ server.registerTool(
     const q = filter?.toLowerCase()
     const lines = ['# Pulse UI Icons\n', 'Import from `@invisibleloop/pulse/ui`. All icons accept `{ size, class, color }` props.\n']
 
+    if (!q) {
+      lines.push('## Quick scan — one from each category\n')
+      for (const [category, icons] of Object.entries(ICON_CATALOGUE)) {
+        const sample = icons.slice(0, 5).join('  ·  ')
+        lines.push(`**${category}** — ${sample}  _(+${Math.max(0, icons.length - 5)} more)_`)
+      }
+      lines.push('\nUse `filter` to drill into a category: `pulse_list_icons({ filter: "arrow" })`, `pulse_list_icons({ filter: "shop" })`\n')
+      lines.push('---\n')
+    }
+
     for (const [category, icons] of Object.entries(ICON_CATALOGUE)) {
       const filtered = q ? icons.filter(n => n.toLowerCase().includes(q)) : icons
       if (filtered.length === 0) continue
@@ -2411,6 +2421,20 @@ Run this immediately after writing a theme file — before production build and 
     const rootVars  = extractVars(source, ':root')
     const lightVars = extractVars(source, '\\[data-theme=["\']light["\']\\]|[.]ui-theme-light')
 
+    // pulse-ui.css maps --NAME → --ui-NAME (e.g. --accent → --ui-accent).
+    // Theme files written per the guide define bare --* tokens. Synthesize the
+    // --ui-* entries so the checker can resolve them without needing pulse-ui.css.
+    const UI_ALIASES = ['text','bg','muted','accent','accent-text','surface','surface-2','border','heading']
+    const addAliases = (vars) => {
+      for (const name of UI_ALIASES) {
+        if (vars[`--${name}`] && !vars[`--ui-${name}`]) {
+          vars[`--ui-${name}`] = vars[`--${name}`]
+        }
+      }
+    }
+    addAliases(rootVars)
+    addAliases(lightVars)
+
     const resolveColor = (value, varMap) => {
       if (!value) return null
       if (value.startsWith('#')) return hexToLuminance(value)
@@ -2492,7 +2516,7 @@ Run this immediately after writing a theme file — before production build and 
     }
 
     if (allResults.length === 0) {
-      return text(`No color variable pairs found to check.\n\nMake sure your CSS defines variables like:\n  :root { --ui-text: #e2e2ea; --ui-bg: #0d0d10; }\n  [data-theme="light"] { --ui-text: #111; --ui-bg: #fff; }`)
+      return text(`No color variable pairs found to check.\n\nThe checker looks for --ui-* token pairs (e.g. --ui-text, --ui-bg, --ui-accent).\n\nIf your theme.css defines bare tokens like --accent or --bg, that is correct — the checker will auto-map them. Make sure the variables are inside a :root { } or [data-theme="light"] { } block:\n\n  :root {\n    --text: #e2e2ea;\n    --bg:   #0d0d10;\n  }\n  [data-theme="light"] {\n    --text: #111;\n    --bg:   #fff;\n  }`)
     }
 
     const failures = allResults.filter(r => !r.pass)

@@ -335,17 +335,17 @@ When you DO need to write CSS, add it to public/app.css — never inline.
 
 ## Placeholder images for prototypes
 
-**Use `picsum.photos` — not Unsplash direct IDs.** Unsplash photo IDs rotate and 404 without warning, breaking layouts during development.
+**Use `picsum.photos` with numeric IDs for anything Lighthouse-audited.** Unsplash direct IDs rotate and 404 without warning. Picsum seeds are convenient for development but can return `ERR_CONNECTION_CLOSED` under Lighthouse's burst-load pattern — use numeric IDs for pages you'll audit:
 
 ```html
-<!-- Reliable: picsum uses a seed, always returns the same image -->
-<img src="https://picsum.photos/seed/hero/1200/600" alt="..." width="1200" height="600">
-<img src="https://picsum.photos/seed/avatar1/80/80" alt="..." width="80" height="80">
+<!-- Best for Lighthouse: numeric IDs — stable under burst load -->
+<img src="https://picsum.photos/id/10/1200/600" alt="..." width="1200" height="600">
+<img src="https://picsum.photos/id/64/80/80" alt="..." width="80" height="80">
 
-<!-- Also reliable: numbered picsum IDs (sequential, stable) -->
-<img src="https://picsum.photos/id/10/800/400" alt="..." width="800" height="400">
+<!-- OK for dev / visual work only: seeds can fail under Lighthouse burst -->
+<img src="https://picsum.photos/seed/hero/1200/600" alt="..." width="1200" height="600">
 ```
 
-The seed string is arbitrary — use descriptive names (`hero`, `team-photo`, `product-shot`) to get consistent images across refreshes. Change the seed to get a different image.
+The numeric ID is sequential (1–1000+). Browse options at `https://picsum.photos/images`. Use numeric IDs whenever you're running Lighthouse — seeds are fine for screenshots and dev iteration.
 
 **Avoid:** `https://images.unsplash.com/photo-LONGID?...` — these are unstable for prototypes. If you use Unsplash, add `https://images.unsplash.com` to `csp.img-src` in `pulse.config.js`, and expect some IDs to rot.

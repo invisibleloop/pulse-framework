@@ -3,7 +3,7 @@
  *
  * No dependencies. Handles common HTML patterns well enough for test assertions.
  * Supports: tag, .class, #id, [attr], [attr="value"] and combinations thereof.
- * Does NOT support descendant combinators (div p) — match within el.findAll() instead.
+ * Supports descendant combinators (div p, .parent span) — findFirst/findAll walk the ancestor stack.
  */
 
 // ---------------------------------------------------------------------------

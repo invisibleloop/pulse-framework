@@ -36,6 +36,8 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   
   If you find yourself writing `class="hero"` or `class="product-card"` or `class="testimonial"`, stop — import the component instead.
 
+- **Exception — brutalist, editorial, and playful vibes:** these vibes intentionally break from polished templates. `pulse://guide/explore` explicitly endorses zone-based raw HTML for distinctive layouts. For `brutalist`, `editorial`, `retro`, or `neon` vibes, raw structural HTML is correct — components can still be used for functional atoms (`button`, `input`, `modal`) but structural sections do not need to come from components. When reviewing a brutalist or editorial spec, do not flag raw section HTML as a violation.
+
 ### Reuse (DRY)
 
 - **Extract a view helper when the same HTML pattern appears 3 or more times in a single spec.** A plain JS function returning an HTML string is sufficient — no framework needed:
