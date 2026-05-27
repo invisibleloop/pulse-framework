@@ -59,6 +59,20 @@ Wait one turn for confirmation. This replaces the full plan/build/confirm cycle.
 
 **Do not skip the confirmation.** Even for templates, one turn of "does this look right?" prevents throwing away a completed build because the app name or palette was wrong.
 
+### One-shot builds without a template
+
+For a one-shot "build me X" request that doesn't use a named template, use the same compact style — a 3–5 line brief, not a full phase-2 plan:
+
+```
+Building: Chess Club landing page (/chess-club)
+Vibe:     editorial · dark navy + gold · brutalist structure
+Sections: hero, about, schedule, join CTA
+Files:    src/pages/chess-club.js, public/themes/chess-club.css
+Confirm to proceed — or reply with changes.
+```
+
+Reserve the full plan-and-confirm ceremony (route / state / mutations / actions / server fetchers) for multi-page builds, pages with complex state, or when the user hasn't confirmed the scope yet.
+
 ---
 
 ## Before writing any code — mandatory product intake

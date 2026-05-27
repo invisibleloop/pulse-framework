@@ -183,7 +183,20 @@ If you cannot modify `createServer` (e.g. the project uses auto-discovery), use 
 
 ### External images (img-src)
 
-The default CSP does **not** restrict `img-src` — it inherits `default-src 'self'`, which means images served from the same origin load fine. But if you load images from an external host (e.g. `https://images.unsplash.com`, `https://picsum.photos`, a CDN), you must add the host to `img-src`:
+The default CSP does **not** restrict `img-src` — it inherits `default-src 'self'`, which means images served from the same origin load fine. But if you load images from an external host (e.g. `https://images.unsplash.com`, `https://picsum.photos`, a CDN), you must add the host to `img-src`.
+
+**Do this at build time, before writing any image tags.** If you know you'll use external images, add the CSP entry to `pulse.config.js` first — discovering the block at Lighthouse time costs an extra round-trip.
+
+```js
+// pulse.config.js
+export default {
+  csp: {
+    'img-src': ['https://picsum.photos'],
+  },
+}
+```
+
+Or via `createServer`:
 
 ```js
 createServer(specs, {
@@ -193,15 +206,13 @@ createServer(specs, {
 })
 ```
 
-Or using `pulse.config.js`:
-
-```js
-export default {
-  csp: {
-    'img-src': ['https://images.unsplash.com'],
-  },
-}
-```
+**Common hosts to add:**
+| Source | `img-src` entry |
+|---|---|
+| picsum.photos | `https://picsum.photos` |
+| Unsplash | `https://images.unsplash.com` |
+| Cloudinary | `https://res.cloudinary.com` |
+| Imgix | your subdomain, e.g. `https://mysite.imgix.net` |
 
 Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
 

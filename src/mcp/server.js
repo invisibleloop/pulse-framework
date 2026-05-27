@@ -2020,6 +2020,8 @@ Accepts antiStyle ("what should this NOT look like?") and inspiration (a site or
     lines.push('Call `pulse_sketch` with this brief to get 3 structurally distinct layout directions before writing any code.')
     lines.push('This prevents defaulting to the standard centred hero + three columns layout.')
     if (antiStyle) lines.push(`Pass \`antiStyle: "${antiStyle}"\` to pulse_sketch to filter directions that might drift toward the constraint.`)
+    lines.push('')
+    lines.push('**Before writing image tags:** if you plan to use external images (picsum.photos, Unsplash, Cloudinary, etc.), add the host to `csp.img-src` in `pulse.config.js` before your first Lighthouse run — or images will be blocked and Best Practices will fail. See `pulse://guide/styles` → "External images (img-src)".')
 
     return text(lines.join('\n'))
   }
