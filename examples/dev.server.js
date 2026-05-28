@@ -17,6 +17,7 @@
  *   http://localhost:3001/retrowheels  — vintage bicycle shop, slab-serif, booking form
  *   http://localhost:3001/suzukibento  — artist portfolio, dark brutalist, asymmetric grid
  *   http://localhost:3001/andypixel   — blog article, editorial light, newsletter action
+ *   http://localhost:3001/journey     — app landing page, dark split-screen, sticky timeline
  */
 
 import fs   from 'fs'
@@ -91,6 +92,7 @@ await createServer(
     new URL('./retrowheels.js', import.meta.url),
     new URL('./suzukibento.js', import.meta.url),
     new URL('./andypixel.js',   import.meta.url),
+    new URL('./journey.js',     import.meta.url),
   ],
   {
     port:       3001,
