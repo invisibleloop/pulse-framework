@@ -366,6 +366,67 @@ server.registerTool(
     const versionMatch  = syncedVersion === PKG_VERSION
     lines.push(`\npulse-ui: ${versionMatch ? `v${PKG_VERSION} ✓` : `OUT OF DATE (project: ${syncedVersion || 'unknown'}, installed: v${PKG_VERSION})`}`)
 
+    // ── Last verified stamp ────────────────────────────────────────────────
+    const verifyStampPath = path.join(ROOT, '.pulse-verified')
+    if (fs.existsSync(verifyStampPath)) {
+      const stampSecs = parseInt(fs.readFileSync(verifyStampPath, 'utf8').trim(), 10)
+      const stampAge  = Math.round((Date.now() / 1000) - stampSecs)
+      const stampStr  = stampAge < 60 ? `${stampAge}s ago`
+        : stampAge < 3600 ? `${Math.round(stampAge / 60)}m ago`
+        : `${Math.round(stampAge / 3600)}h ago`
+
+      // Check if any spec was edited after the stamp
+      const pagesDir = path.join(ROOT, 'src', 'pages')
+      let staleSince = null
+      if (fs.existsSync(pagesDir)) {
+        const checkDir = (dir) => {
+          for (const entry of fs.readdirSync(dir)) {
+            const full = path.join(dir, entry)
+            if (fs.statSync(full).isDirectory()) { checkDir(full); continue }
+            if (!entry.endsWith('.js') || entry.endsWith('.test.js')) continue
+            const mtime = fs.statSync(full).mtimeMs / 1000
+            if (mtime > stampSecs && (!staleSince || mtime > staleSince)) staleSince = mtime
+          }
+        }
+        try { checkDir(pagesDir) } catch { /* ignore */ }
+      }
+      if (staleSince) {
+        const editAge = Math.round((Date.now() / 1000) - staleSince)
+        const editStr = editAge < 60 ? `${editAge}s ago` : editAge < 3600 ? `${Math.round(editAge / 60)}m ago` : `${Math.round(editAge / 3600)}h ago`
+        lines.push(`\nLast verified: ${stampStr} ⚠ spec edited ${editStr} after stamp — run /verify`)
+      } else {
+        lines.push(`\nLast verified: ${stampStr} ✓`)
+      }
+    } else {
+      lines.push('\nLast verified: never — run /verify before marking work done')
+    }
+
+    // ── Served title check ─────────────────────────────────────────────────
+    // Fetch the served HTML and compare its <title> against the spec's meta.title.
+    // A mismatch means the dev server is serving a different project — a common
+    // confusion source when multiple Pulse projects share the same port.
+    if (serverRunning && specs.length > 0) {
+      const rootSpec = specs.find(s => s.route === '/' || s.route === '')
+      if (rootSpec?.meta?.title && typeof rootSpec.meta.title === 'string') {
+        try {
+          const servedHtml = await new Promise((resolve, reject) => {
+            let body = ''
+            const req = http.get(`http://localhost:${port}/`, res => {
+              res.on('data', chunk => { body += chunk; if (body.length > 4096) { req.destroy(); resolve(body) } })
+              res.on('end', () => resolve(body))
+            })
+            req.on('error', reject)
+            req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')) })
+          })
+          const titleMatch = servedHtml.match(/<title>([^<]*)<\/title>/)
+          const servedTitle = titleMatch?.[1]?.trim()
+          if (servedTitle && servedTitle !== rootSpec.meta.title) {
+            lines.push(`\n⚠ Server title mismatch: served "${servedTitle}" but spec says "${rootSpec.meta.title}". The dev server may be serving a different project — run pulse_restart_server.`)
+          }
+        } catch { /* ignore — network error, non-critical */ }
+      }
+    }
+
     return text(lines.join('\n'))
   }
 )
@@ -932,6 +993,13 @@ Work through every item. Fix anything that fails. Refer to the spec source at ${
 Fix every issue you find. Then confirm what was changed.
 
 **After confirming fixes: you are back in builder mode. Continue to the verification workflow — navigate to the page in the browser, take a screenshot, run Lighthouse desktop audit, run Lighthouse mobile audit. Do not stop at the review.**`)
+
+    // Write the .pulse-verified stamp from the MCP side so the stop hook
+    // is never blocked by a sub-second mtime race from a Bash touch command.
+    // This is a best-effort write — if it fails, the agent can still Bash-stamp.
+    try {
+      fs.writeFileSync(path.join(ROOT, '.pulse-verified'), String(Math.floor(Date.now() / 1000)), 'utf8')
+    } catch { /* non-critical */ }
   }
 )
 
@@ -2834,7 +2902,26 @@ Run this immediately after writing a theme file — before production build and 
     }
 
     if (allResults.length === 0) {
-      return text(`No color variable pairs found to check.\n\nThe checker looks for --ui-* token pairs (e.g. --ui-text, --ui-bg, --ui-accent).\n\nIf your theme.css defines bare tokens like --accent or --bg, that is correct — the checker will auto-map them. Make sure the variables are inside a :root { } or [data-theme="light"] { } block:\n\n  :root {\n    --text: #e2e2ea;\n    --bg:   #0d0d10;\n  }\n  [data-theme="light"] {\n    --text: #111;\n    --bg:   #fff;\n  }`)
+      // Try to cross-reference app.css to extract real-world color pairings
+      // (e.g. --color-text on --color-bg used in body { color: var(--color-text); background: var(--color-bg) })
+      const appCssPath = path.join(ROOT, 'public', 'app.css')
+      let appCssHints = ''
+      if (fs.existsSync(appCssPath)) {
+        try {
+          const appCss = fs.readFileSync(appCssPath, 'utf8')
+          const varRefs = [...appCss.matchAll(/var\(--([\w-]+)\)/g)].map(m => `--${m[1]}`)
+          const uniqueRefs = [...new Set(varRefs)]
+          const unknownToChecker = uniqueRefs.filter(v =>
+            !v.startsWith('--ui-') &&
+            (Object.keys(rootVars).some(k => k === v) || Object.keys(lightVars).some(k => k === v))
+          )
+          if (unknownToChecker.length > 0) {
+            appCssHints = `\n\napp.css uses these custom tokens that the checker couldn't auto-map to --ui-* pairings:\n  ${unknownToChecker.join(', ')}\n\nTo check these, add explicit --ui-* aliases in your theme file:\n  :root { --ui-text: var(--color-text); --ui-bg: var(--color-bg); }\nOr run this tool with theme.css content that includes --ui-text/--ui-bg definitions.`
+          }
+        } catch { /* ignore */ }
+      }
+
+      return text(`⚠ CHECKED 0 PAIRINGS — this is NOT "all clear". The checker found no colour variable pairs to test.\n\nThis typically means your theme uses custom token names (e.g. --color-text, --color-sunburst) rather than --ui-text / --ui-bg. The checker auto-maps bare tokens (--text, --bg, --accent, --muted, --surface, --border, --heading, --accent-text) but NOT arbitrary custom names.\n\nThe checker looked for --ui-* token pairs (e.g. --ui-text, --ui-bg, --ui-accent). Make sure variables are inside a :root { } or [data-theme="light"] { } block.\n\nYou must check contrast manually (e.g. via WebAIM) or alias your tokens:\n  :root { --ui-text: var(--color-text); --ui-bg: var(--color-bg); }\n\nDo NOT skip contrast checking and proceed to Lighthouse — 11 contrast failures have been caught at Lighthouse stage after a 0-pairing result here.${appCssHints}`)
     }
 
     const failures = allResults.filter(r => !r.pass)
@@ -2987,22 +3074,45 @@ async function validateContent(content) {
   // External image URL check — warn if spec contains external image domains not
   // commonly whitelisted in CSP. Caught here prevents a Lighthouse Best Practices failure.
   const externalImgHosts = [
-    { pattern: /https?:\/\/images\.unsplash\.com/,  entry: 'https://images.unsplash.com' },
-    { pattern: /https?:\/\/(?:fastly\.)?picsum\.photos/, entry: 'https://picsum.photos https://fastly.picsum.photos' },
-    { pattern: /https?:\/\/res\.cloudinary\.com/,   entry: 'https://res.cloudinary.com' },
-    { pattern: /https?:\/\/cdn\.shopify\.com/,      entry: 'https://cdn.shopify.com' },
+    {
+      pattern: /https?:\/\/images\.unsplash\.com/,
+      entry:   'https://images.unsplash.com',
+      cookieWarning: true,
+      name: 'Unsplash',
+    },
+    {
+      pattern: /https?:\/\/(?:fastly\.)?picsum\.photos/,
+      entry:   'https://picsum.photos https://fastly.picsum.photos',
+      cookieWarning: false,
+      name: 'picsum',
+    },
+    {
+      pattern: /https?:\/\/res\.cloudinary\.com/,
+      entry:   'https://res.cloudinary.com',
+      cookieWarning: true,
+      name: 'Cloudinary',
+    },
+    {
+      pattern: /https?:\/\/cdn\.shopify\.com/,
+      entry:   'https://cdn.shopify.com',
+      cookieWarning: false,
+      name: 'Shopify CDN',
+    },
   ]
   const configPath = path.join(ROOT, 'pulse.config.js')
   let configImgSrc = ''
   if (fs.existsSync(configPath)) {
     try { configImgSrc = fs.readFileSync(configPath, 'utf8') } catch { /* ignore */ }
   }
-  for (const { pattern, entry } of externalImgHosts) {
+  for (const { pattern, entry, cookieWarning, name } of externalImgHosts) {
     if (pattern.test(content) && !pattern.test(configImgSrc)) {
+      const cookieNote = cookieWarning
+        ? `\n  ⚠ ${name} sets tracking cookies that fail Lighthouse Best Practices regardless of CSP. For production, download images to public/images/ instead of linking to ${name} directly.`
+        : ''
       sourceWarnings.push(
-        `External image host detected in spec. Add it to csp.img-src in pulse.config.js before running Lighthouse:\n` +
+        `External image host detected (${name}). Add it to csp.img-src in pulse.config.js before running Lighthouse:\n` +
         `    csp: { 'img-src': ['${entry}'] }\n` +
-        `  Without this, images will be blocked and Lighthouse Best Practices will fail.`
+        `  Without this, images will be blocked and Lighthouse Best Practices will fail.${cookieNote}`
       )
     }
   }

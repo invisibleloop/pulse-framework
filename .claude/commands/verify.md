@@ -42,7 +42,9 @@ Use `mcp__chrome-devtools__list_console_messages` — report any errors or unexp
 
 ### 9. Code review
 
-Check the spec against the checklist in `.claude/pulse-checklist.md`. Work through every item. Fix anything that fails before proceeding to the next step.
+Call `pulse_review` with the spec file path. This runs a full code review AND atomically writes the `.pulse-verified` stamp server-side, eliminating any race condition with the stop hook.
+
+Work through every item the review returns. Fix anything that fails before proceeding.
 
 ### 10. Close extra browser tabs
 
@@ -52,13 +54,13 @@ If there is only one page open, skip this step — there is nothing to close.
 
 ### 11. Write verification stamp
 
-Run:
+`pulse_review` writes the stamp automatically. As a belt-and-suspenders backup, also run:
 
 ```bash
 date +%s > .pulse-verified
 ```
 
-This records that verify completed successfully. The stop hook checks this stamp — do not skip this step.
+This ensures the stamp is present even if `pulse_review` was not called with a file path.
 
 ### 12. Report
 
