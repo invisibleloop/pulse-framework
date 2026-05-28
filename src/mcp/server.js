@@ -1542,14 +1542,7 @@ Use this AFTER the initial screenshot but BEFORE Lighthouse. It catches layout i
 Call this as part of the Phase 5 browser check:
   screenshot → pulse_design_review → pulse_layout_review → Lighthouse`,
     inputSchema: {
-      type: 'object',
-      properties: {
-        url: {
-          type: 'string',
-          description: 'The full URL to check, e.g. http://localhost:3001/about',
-        },
-      },
-      required: ['url'],
+      url: z.string().describe('The full URL to check, e.g. http://localhost:3001/about'),
     },
   },
   async ({ url }) => {
