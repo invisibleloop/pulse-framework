@@ -163,6 +163,12 @@ export const NAV = [
       { label: 'Portfolio',            href: '/templates/portfolio'         },
       { label: 'Event / Conference',   href: '/templates/event'             },
       { label: 'Editorial / Magazine', href: '/templates/editorial'         },
+      { label: 'Swish — Fashion',      href: '/templates/swish'             },
+      { label: 'BookWorms',            href: '/templates/bookworms'         },
+      { label: 'Retro Wheels Co.',     href: '/templates/retrowheels'       },
+      { label: 'Susuki Bento',         href: '/templates/suzukibento'       },
+      { label: 'Andy Pixel — Blog',    href: '/templates/andypixel'         },
+      { label: 'Journey — App',        href: '/templates/journey'           },
     ],
   },
 ]
