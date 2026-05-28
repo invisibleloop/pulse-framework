@@ -179,7 +179,7 @@ const reloadScript = (nonce) => `<script nonce="${nonce}">
   })();
 </script>`
 
-const { updateSpecs } = createServer(specs, {
+const { updateSpecs } = await createServer(specs, {
   port:      PORT,
   stream:    true,
   staticDir: fs.existsSync(PUBLIC_DIR) ? PUBLIC_DIR : null,

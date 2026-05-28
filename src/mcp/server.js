@@ -2642,6 +2642,61 @@ function suggestContrastFix(fgHex, bgLum, targetRatio) {
 }
 
 server.registerTool(
+  'pulse_tokens',
+  {
+    description: `List all available --ui-* CSS custom property tokens from the installed pulse-ui.css.
+
+Use this before writing theme overrides or app.css to avoid guessing token names. The correct override pattern is:
+  - Set --accent (no prefix) in theme.css — pulse-ui maps it to --ui-accent automatically
+  - Reference --ui-accent (prefixed) in app.css
+
+Returns tokens grouped by category.`,
+    inputSchema: {},
+  },
+  async () => {
+    const cssPath = path.join(ROOT, 'public', 'pulse-ui.css')
+    let tokens = []
+
+    if (fs.existsSync(cssPath)) {
+      const css = fs.readFileSync(cssPath, 'utf8')
+      // Extract property: value pairs for --ui-* defined in :root
+      const matches = [...css.matchAll(/--ui-([a-z0-9-]+)\s*:\s*([^;}{]+)/g)]
+      tokens = [...new Set(matches.map(m => `--ui-${m[1]}`))]
+    }
+
+    // Group tokens by category
+    const groups = {
+      'Colour':    tokens.filter(t => /^--ui-(bg|surface|border|text|muted|accent|green|red|yellow|blue|shadow)/.test(t)),
+      'Spacing':   tokens.filter(t => t.startsWith('--ui-space-')),
+      'Type size': tokens.filter(t => t.startsWith('--ui-text-')),
+      'Typography': tokens.filter(t => /^--ui-(font|mono|letter-spacing)/.test(t)),
+      'Shape':     tokens.filter(t => t.startsWith('--ui-radius')),
+      'Other':     tokens.filter(t => !/(bg|surface|border|text|muted|accent|green|red|yellow|blue|shadow|space-|text-|font|mono|letter|radius)/.test(t.slice(5))),
+    }
+
+    const lines = [
+      '## Pulse UI Tokens\n',
+      '**Override pattern:**',
+      '  • Set `--accent: #yourcolour` in `:root` (theme.css) — maps to `--ui-accent` automatically',
+      '  • Reference `var(--ui-accent)` in app.css — never `var(--accent)` in app.css',
+      '  • Common mistake: `--ui-color-accent` or `--color-accent` — these do NOT exist\n',
+    ]
+
+    for (const [group, toks] of Object.entries(groups)) {
+      if (toks.length === 0) continue
+      lines.push(`### ${group}`)
+      lines.push(toks.join('  •  '))
+      lines.push('')
+    }
+
+    lines.push('**Input tokens (set these in theme.css):**')
+    lines.push('`--accent` `--accent-hover` `--accent-dim` `--accent-text` `--bg` `--surface` `--surface-2` `--border` `--text` `--muted` `--muted-bg` `--radius` `--font` `--mono`')
+
+    return text(lines.join('\n'))
+  }
+)
+
+server.registerTool(
   'pulse_check_contrast',
   {
     description: `Static WCAG contrast checker. Provide theme CSS content (or a file path) and it extracts all color variable definitions, then checks common foreground/background pairings for WCAG AA compliance (4.5:1 for normal text, 3:1 for large text and UI components).
@@ -3054,6 +3109,7 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 - \`pulse_suggest(content)\` — **Draft-mode feedback.** Paste a partial or complete spec and get constructive, non-blocking suggestions: missing pieces, likely omissions, component upgrades, empty-state reminders. A collaborator, not a gate. Use mid-build before running the hard validator.
 - \`pulse_list_icons(filter?)\` — **List all available icon names grouped by category.** Always call this before importing icons — never guess a name or grep source files. Optional filter keyword narrows results (e.g. filter: "arrow").
 - \`pulse_check_contrast(css?, file?, theme?)\` — **Static WCAG contrast check.** Provide theme CSS content or a file path; it checks all token color pairings against WCAG AA thresholds (4.5:1 normal text, 3:1 large text/UI). Run immediately after writing a theme file — before pulse_build and Lighthouse. Catches palette mistakes in milliseconds.
+- \`pulse_tokens\` — **List all --ui-* CSS tokens** from the installed pulse-ui.css, grouped by category (colour, spacing, type-size, typography, shape). Call before writing theme overrides to avoid guessing names. Reminder: set \`--accent\` (no prefix) in theme.css — pulse-ui maps it to \`--ui-accent\` automatically.
 - \`pulse_status\` — **Project health snapshot.** Returns page count, routes, dev server status, last build age, and pulse-ui version check. Call at the start of a session to orient quickly without reading files.
 - \`pulse_list_structure\` — list pages, components, and pulse-ui version. Call at the start of every session.
 - \`pulse_validate\` — validate spec content. Call after every write. Fix all errors AND warnings.

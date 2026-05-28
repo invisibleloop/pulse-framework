@@ -362,3 +362,5 @@ When you DO need to write CSS, add it to public/app.css — never inline.
 The numeric ID is sequential (1–1000+). Browse options at `https://picsum.photos/images`. Use numeric IDs whenever you're running Lighthouse — seeds are fine for screenshots and dev iteration.
 
 **Avoid:** `https://images.unsplash.com/photo-LONGID?...` — these are unstable for prototypes. If you use Unsplash, add `https://images.unsplash.com` to `csp.img-src` in `pulse.config.js`, and expect some IDs to rot.
+
+> **Unsplash photo IDs must be the full hash.** The format is `photo-` followed by an 11-character alphanumeric hash, e.g. `photo-1506905925346-21bda4d32df4`. A truncated or partial ID (e.g. `photo-1506905925346`) returns a 404 silently — the image is missing with no obvious error. Always copy the full ID from the Unsplash URL.
