@@ -288,10 +288,11 @@ async function runUpdate(root) {
     process.exit(1)
   }
 
-  // Use import.meta.url to find assets — this correctly follows npm links.
-  // When globally linked to the dev repo, it resolves to the dev source (0.13.x).
-  // When installed as a package in node_modules, it resolves to that package.
+  // Copy assets from the package this CLI binary lives in (import.meta.url).
+  // When globally npm-linked to the dev repo, this resolves to dev source.
+  // When installed normally, this resolves to the installed version.
   const pkgPublic = new URL('../../public', import.meta.url).pathname
+  const pkgSrc    = new URL('..', import.meta.url).pathname
   const assets    = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
   const publicDir = path.join(root, 'public')
   const updated   = []
@@ -307,11 +308,10 @@ async function runUpdate(root) {
 
   // Sync agent files into .claude/
   const agentFiles = [
-    ['../agent/checklist.md',      'pulse-checklist.md'],
-    ['../agent/coverage-check.js', 'coverage-check.js'],
+    [path.join(pkgSrc, 'agent', 'checklist.md'),      'pulse-checklist.md'],
+    [path.join(pkgSrc, 'agent', 'coverage-check.js'), 'coverage-check.js'],
   ]
-  for (const [rel, dst] of agentFiles) {
-    const src = new URL(rel, import.meta.url).pathname
+  for (const [src, dst] of agentFiles) {
     if (fs.existsSync(src)) {
       const dstPath = path.join(root, '.claude', dst)
       fs.mkdirSync(path.dirname(dstPath), { recursive: true })
@@ -321,7 +321,7 @@ async function runUpdate(root) {
   }
 
   // Sync slash commands into .claude/commands/
-  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsSrc = path.join(pkgSrc, 'agent', 'commands')
   const commandsDst = path.join(root, '.claude', 'commands')
   if (fs.existsSync(commandsSrc)) {
     fs.mkdirSync(commandsDst, { recursive: true })
@@ -436,6 +436,14 @@ switch (command) {
   case 'update':
     await runUpdate(CWD)
     break
+  case 'link': {
+    // DEV-ONLY: npm link the local dev repo into this project, then pulse update.
+    const { execSync } = await import('child_process')
+    console.log('\n  Linking @invisibleloop/pulse from dev repo…\n')
+    execSync('npm link @invisibleloop/pulse', { cwd: CWD, stdio: 'inherit' })
+    await runUpdate(CWD)
+    break
+  }
   default:
     await runDefault(CWD, agentFlag)
 }
