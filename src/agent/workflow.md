@@ -203,10 +203,20 @@ Run `pulse_validate` on the spec file.
 
 > **Lighthouse pre-flight:** `/verify` calls `pulse_build` automatically before running Lighthouse, and audits against the production server on port 3001. If you ever call `lighthouse_audit` manually outside `/verify`, you must first run `pulse_build` and navigate to `http://localhost:3001/your-route`. Auditing the dev server (port 3000) will produce misleading results.
 
+### ⛔ After every screenshot — mandatory steps before continuing
+
+Taking a screenshot is NOT the end of phase 5. After every screenshot, you **must** run:
+
+1. `pulse_design_review` (if `pulse_intake` ran) — work through all 7 signals, fix any Fail
+2. `pulse_layout_review <url>` — 390/768/1280px overflow, broken images, collapsed sections
+3. `/verify` — Lighthouse desktop + mobile (100/100/100) + CLS 0.00 + `pulse_review`
+
+**Do not report the page as done until `/verify` writes the `.pulse-verified` stamp.** Skipping Lighthouse means broken contrast, missing landmarks, and Best Practices failures ship to the user.
+
 Pass gates:
 - Screenshot: no layout or rendering issues
-- **Design review:** if this build started with `pulse_intake`, call `pulse_design_review` immediately after taking the screenshot — the screenshot is your evidence. Work through all 7 signals. Fix any Fail before continuing.
-- **Layout review:** call `pulse_layout_review` with the page URL — this checks overflow, broken images, and collapsed sections at 390px, 768px, and 1280px. Fix any failures before proceeding to Lighthouse.
+- Design review: all 7 signals pass (or intake didn't run)
+- Layout review: no overflow, broken images, or collapsed sections at any viewport
 - Lighthouse desktop: Accessibility, Best Practices, SEO all 100
 - Lighthouse mobile: same
 - **CLS: 0.00** — any layout shift is a blocker

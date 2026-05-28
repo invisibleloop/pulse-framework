@@ -318,23 +318,30 @@ For multi-brand setups, each brand theme file just overrides `--font` in `:root`
 
 ## Overriding Theme Colours
 
-`pulse-ui.css` defines light theme variables under `[data-theme="light"]`, which has **higher specificity than `:root`**. Overrides written only to `:root` will be silently beaten by those rules.
-
-Always target `[data-theme="light"]` when overriding colours for the light theme:
+Use **input tokens** (unprefixed: `--accent`, `--bg`, `--text`, etc.) in `theme.css`. `pulse-ui.css` maps them to output tokens via `var()` in **both** the dark (`:root`) and light (`[data-theme="light"]`) blocks:
 
 ```css
-/* WRONG — loses to [data-theme="light"] rules in pulse-ui.css */
+/* Dark theme — in :root */
 :root {
-  --color-accent: #e25;
+  --accent: #9b8dff;
 }
 
-/* CORRECT */
+/* Light theme — in [data-theme="light"] */
 [data-theme="light"] {
-  --color-accent: #e25;
+  --accent: #e25;   /* overrides the light default */
 }
 ```
 
-If a colour must apply in both themes, set it in both `:root` and `[data-theme="light"]`.
+Setting `--accent` in `[data-theme="light"]` works correctly — `pulse-ui.css` resolves `var(--accent, ...)` there just like it does in `:root`.
+
+If you need to override an output token directly (e.g. one with no input equivalent), target `[data-theme="light"]` explicitly:
+
+```css
+/* Direct output token override for light theme only */
+[data-theme="light"] {
+  --ui-nav-sticky-bg: rgba(255, 255, 255, 0.95);
+}
+```
 
 ## CSS File Responsibilities
 
@@ -469,7 +476,7 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 | 2. Plan | Present plan to user, wait for confirmation | User confirms |
 | 3. Build | Write spec + related files | — |
 | 4. Validate | `pulse_validate` — fix all errors + warnings | Clean output |
-| 5. Browser | Screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile | Design signals pass + layout review pass + 100/100/100 (Accessibility, Best Practices, SEO) |
+| 5. Browser | Screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → `/verify` (Lighthouse desktop + mobile + `pulse_review`) | ⛔ Do not skip: all gates must pass + `.pulse-verified` stamp written |
 | 6. Tests | Write tests, run them, fix failures | All pass |
 | 7. Code Review | `pulse_review` — only after phases 4–6 pass | — |
 | 8. Fix | Fix every review issue, re-run affected gates | All gates still pass |

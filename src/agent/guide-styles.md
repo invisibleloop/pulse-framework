@@ -43,8 +43,10 @@ For a **light theme**, set `meta.theme: 'light'` in the spec — this adds `data
 
 ### Overriding tokens in your theme
 
-Override input tokens in `:root` inside theme.css to retheme all components at once:
+Override input tokens to retheme all components at once. The pattern is the same for both dark and light themes — set the unprefixed input token in the appropriate selector:
+
 ```css
+/* Dark theme overrides — in :root */
 :root {
   --bg:           #0d0d10;   /* page background */
   --surface:      #111116;   /* card / panel background */
@@ -56,7 +58,16 @@ Override input tokens in `:root` inside theme.css to retheme all components at o
   --accent-hover: #b5aaff;
   --radius:       8px;
 }
+
+/* Light theme overrides — in [data-theme="light"] */
+[data-theme="light"] {
+  --bg:           #ffffff;
+  --surface:      #f5f5fa;
+  --accent:       #e25;       /* overrides the light default #6b5ce7 */
+}
 ```
+
+pulse-ui.css maps input → output via `var()` in **both** the dark (`:root`) and light (`[data-theme="light"]`) blocks, so the same two-layer pattern works in both themes.
 
 Then use the computed --ui-* tokens everywhere in app.css:
 ```css
@@ -67,15 +78,7 @@ a    { color: var(--ui-accent); }
 code { background: var(--ui-surface-2); color: var(--ui-accent); border: 1px solid var(--ui-border); }
 ```
 
-**Overriding tokens on a light-theme page:** `pulse-ui.css` defines light theme values under `[data-theme="light"]`, which has higher specificity than `:root`. Overrides written only to `:root` will be silently beaten. Always target `[data-theme="light"]` when overriding tokens for a light-theme page:
-
-```css
-/* WRONG — loses to pulse-ui.css */
-:root { --ui-accent: #e25; }
-
-/* CORRECT */
-[data-theme="light"] { --ui-accent: #e25; }
-```
+> **Light theme escape hatch:** if you need to override a specific output token that has no input equivalent, you can set `--ui-accent` directly inside `[data-theme="light"]` — but prefer input tokens wherever possible.
 
 ```js
 meta: {

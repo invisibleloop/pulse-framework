@@ -614,7 +614,8 @@ server.registerTool(
       res.on('data', d => chunks.push(d))
       res.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf-8')
-        resolve(text(`HTTP ${res.statusCode}\n\n${body.slice(0, 8000)}`))
+        const reminder = res.statusCode === 200 ? `\n\n---\n⚠ POST-BUILD CHECKLIST — run these before telling the user you're done:\n1. Take a screenshot with chrome-devtools\n2. pulse_design_review (if you ran pulse_intake)\n3. pulse_layout_review <url>\n4. /verify  ← runs Lighthouse desktop + mobile + pulse_review + writes stamp\nDo NOT skip to reporting done after a screenshot.` : ''
+        resolve(text(`HTTP ${res.statusCode}\n\n${body.slice(0, 8000)}${reminder}`))
       })
     })
     req.on('error', e => resolve(text(`Error fetching page: ${e.message}`)))
@@ -2979,6 +2980,29 @@ async function validateContent(content) {
     }
   }
 
+  // External image URL check — warn if spec contains external image domains not
+  // commonly whitelisted in CSP. Caught here prevents a Lighthouse Best Practices failure.
+  const externalImgHosts = [
+    { pattern: /https?:\/\/images\.unsplash\.com/,  entry: 'https://images.unsplash.com' },
+    { pattern: /https?:\/\/(?:fastly\.)?picsum\.photos/, entry: 'https://picsum.photos https://fastly.picsum.photos' },
+    { pattern: /https?:\/\/res\.cloudinary\.com/,   entry: 'https://res.cloudinary.com' },
+    { pattern: /https?:\/\/cdn\.shopify\.com/,      entry: 'https://cdn.shopify.com' },
+  ]
+  const configPath = path.join(ROOT, 'pulse.config.js')
+  let configImgSrc = ''
+  if (fs.existsSync(configPath)) {
+    try { configImgSrc = fs.readFileSync(configPath, 'utf8') } catch { /* ignore */ }
+  }
+  for (const { pattern, entry } of externalImgHosts) {
+    if (pattern.test(content) && !pattern.test(configImgSrc)) {
+      sourceWarnings.push(
+        `External image host detected in spec. Add it to csp.img-src in pulse.config.js before running Lighthouse:\n` +
+        `    csp: { 'img-src': ['${entry}'] }\n` +
+        `  Without this, images will be blocked and Lighthouse Best Practices will fail.`
+      )
+    }
+  }
+
   // Write into PAGES_DIR so relative imports (e.g. '../components/nav.js') resolve correctly
   fs.mkdirSync(PAGES_DIR, { recursive: true })
   const tmpFile = path.join(PAGES_DIR, `.pulse-validate-${Date.now()}.mjs`)
@@ -3011,6 +3035,11 @@ async function validateContent(content) {
       } else {
         finalOutput = finalOutput + '\n' + propNotes
       }
+    }
+
+    // Append browser check reminder on clean pass so agents don't skip Lighthouse
+    if (finalOutput.startsWith('Valid ✓') && !finalOutput.includes('Invalid')) {
+      finalOutput += '\n\n---\n**Next: browser check sequence** (do not skip)\n1. `pulse_fetch_page` → screenshot\n2. `pulse_design_review` (if intake ran)\n3. `pulse_layout_review <url>`\n4. `/verify` — Lighthouse desktop + mobile + pulse_review\nDo not report done until `/verify` passes.'
     }
 
     return text(finalOutput)
