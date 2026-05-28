@@ -334,11 +334,170 @@ const TEMPLATES = [
       'CLS':   '0.00',
     },
   },
+  {
+    name:        'Swish — Fashion Ecommerce',
+    route:       '/templates/swish',
+    description: 'An editorial light-theme fashion brand — full-bleed hero with gradient overlay, lookbook grid, product strip, journal cards, and newsletter. Composites nav, section, grid, pullquote, and input.',
+    tags:        ['Ecommerce', 'Fashion', 'Editorial', 'Light Theme'],
+    preview:     `<div style="background:#faf9f7;padding:1.5rem;border-radius:8px;font-family:system-ui,sans-serif">
+      <div style="height:80px;background:linear-gradient(160deg,#2a2118,#5c4a3a);border-radius:6px;margin-bottom:0.75rem;display:flex;align-items:flex-end;padding:0.5rem">
+        <div>
+          <div style="height:6px;background:rgba(255,255,255,0.5);border-radius:2px;width:60px;margin-bottom:4px"></div>
+          <div style="height:12px;background:#fff;border-radius:2px;width:120px;margin-bottom:6px"></div>
+          <div style="height:20px;background:rgba(255,255,255,0.9);border-radius:14px;width:80px"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem">
+        ${[1,2,3].map(() => `<div style="background:#ede9e3;border-radius:4px;overflow:hidden">
+          <div style="height:44px;background:rgba(90,70,50,0.15);"></div>
+          <div style="padding:0.3rem">
+            <div style="height:6px;background:rgba(0,0,0,0.4);border-radius:2px;width:80%;margin-bottom:3px"></div>
+            <div style="height:5px;background:rgba(0,0,0,0.2);border-radius:2px;width:50%"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'editorial',
+      'Theme': 'light',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'BookWorms — Independent Bookshop',
+    route:       '/templates/bookworms',
+    description: 'A warm editorial site for an independent bookshop — staff picks grid, press pullquote, two-column features, event list, and a centred CTA. Fraunces serif headings, light cream palette.',
+    tags:        ['Local Business', 'Retail', 'Editorial', 'Light Theme'],
+    preview:     `<div style="background:#fdf8f2;padding:1.5rem;border-radius:8px;font-family:Georgia,serif">
+      <div style="height:8px;background:#8b4513;border-radius:2px;width:30%;margin-bottom:0.75rem"></div>
+      <div style="height:18px;background:rgba(60,30,10,0.85);border-radius:2px;width:85%;margin-bottom:0.5rem"></div>
+      <div style="height:8px;background:rgba(60,30,10,0.3);border-radius:2px;width:70%;margin-bottom:1rem"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0.4rem">
+        ${[1,2,3,4].map(() => `<div style="background:#f0e8da;border-radius:3px;overflow:hidden">
+          <div style="height:50px;background:rgba(139,69,19,0.2);"></div>
+          <div style="padding:0.3rem">
+            <div style="height:5px;background:rgba(60,30,10,0.5);border-radius:2px;width:90%;margin-bottom:3px"></div>
+            <div style="height:4px;background:rgba(60,30,10,0.2);border-radius:2px;width:70%"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'paper',
+      'Theme': 'light',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'Retro Wheels Co. — Classic Cars',
+    route:       '/templates/retrowheels',
+    description: 'A vintage 1970s enamel-sign aesthetic for a classic car dealer. Stat strip, testimonials, async booking enquiry form with form state, and Rockwell system fonts. Zero extra HTTP requests.',
+    tags:        ['Retro', 'Automotive', 'Form', 'Light Theme'],
+    preview:     `<div style="background:#f5f0e8;padding:1.5rem;border-radius:8px;font-family:'Courier New',monospace">
+      <div style="height:70px;background:linear-gradient(160deg,#1a1a2e,#2d2d4e);border-radius:4px;margin-bottom:0.75rem;display:flex;align-items:center;justify-content:center">
+        <div style="height:14px;background:rgba(205,160,60,0.9);border-radius:2px;width:100px"></div>
+      </div>
+      <div style="background:#1a1a2e;border-radius:4px;padding:0.5rem;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;margin-bottom:0.75rem">
+        ${[1,2,3].map(() => `<div style="text-align:center">
+          <div style="height:10px;background:rgba(205,160,60,0.8);border-radius:2px;width:60%;margin:0 auto 3px"></div>
+          <div style="height:6px;background:rgba(255,255,255,0.3);border-radius:2px;width:80%;margin:0 auto"></div>
+        </div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem">
+        ${[1,2].map(() => `<div style="background:#fff;border:2px solid #1a1a2e;border-radius:3px;padding:0.4rem">
+          <div style="height:7px;background:rgba(26,26,46,0.7);border-radius:2px;width:90%;margin-bottom:4px"></div>
+          <div style="height:5px;background:rgba(26,26,46,0.3);border-radius:2px;width:70%"></div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'retro',
+      'Theme': 'light',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'Susuki Bento — Artist Portfolio',
+    route:       '/templates/suzukibento',
+    description: 'A dark brutalist gallery for a fine-art painter. Zero border-radius, asymmetric 12-column works grid, exhibition table, and press list. Pure HTML — no Pulse UI components. Mode B creative override.',
+    tags:        ['Portfolio', 'Art', 'Brutalist', 'Dark Theme'],
+    preview:     `<div style="background:#0e0e0e;padding:1.5rem;border-radius:0;font-family:system-ui,sans-serif;border:1px solid #222">
+      <div style="height:10px;background:#f2efe8;width:80%;margin-bottom:0.75rem"></div>
+      <div style="height:6px;background:#cc3300;width:40%;margin-bottom:1rem"></div>
+      <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:60px 40px;gap:3px">
+        <div style="background:rgba(242,239,232,0.1);grid-row:1/3"></div>
+        <div style="background:rgba(242,239,232,0.08)"></div>
+        <div style="background:rgba(204,51,0,0.15)"></div>
+        <div style="background:rgba(242,239,232,0.06);grid-column:2/4"></div>
+      </div>
+      <div style="margin-top:0.75rem;display:flex;gap:0.4rem">
+        ${[1,2,3].map(() => `<div style="height:4px;background:rgba(242,239,232,0.2);border-radius:0;flex:1"></div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'brutalist',
+      'Theme': 'dark',
+      'CLS':   '0.00',
+      'Mode':  'B — raw HTML',
+    },
+  },
+  {
+    name:        'Andy Pixel — Dev Blog',
+    route:       '/templates/andypixel',
+    description: 'An editorial blog article page — prose-width reading column, badge, avatar, custom code block, blockquote, author bio, and async newsletter subscribe. Orange accent on light cream.',
+    tags:        ['Blog', 'Editorial', 'Article', 'Light Theme'],
+    preview:     `<div style="background:#fdfaf6;padding:1.5rem;border-radius:8px;font-family:Georgia,serif">
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem">
+        <div style="width:24px;height:24px;background:#e65c00;border-radius:50%;flex-shrink:0"></div>
+        <div style="height:6px;background:rgba(0,0,0,0.3);border-radius:3px;width:80px"></div>
+        <div style="height:14px;background:#e65c00;border-radius:10px;width:40px;margin-left:auto"></div>
+      </div>
+      <div style="height:18px;background:rgba(0,0,0,0.8);border-radius:2px;width:90%;margin-bottom:0.5rem"></div>
+      <div style="height:18px;background:rgba(0,0,0,0.6);border-radius:2px;width:70%;margin-bottom:0.75rem"></div>
+      <div style="background:#1a1a1a;border-radius:6px;padding:0.5rem;margin-bottom:0.75rem">
+        <div style="height:5px;background:rgba(230,92,0,0.5);border-radius:2px;width:50%;margin-bottom:5px"></div>
+        ${[1,2,3].map(() => `<div style="height:4px;background:rgba(255,255,255,0.3);border-radius:2px;width:${70+Math.random()*20|0}%;margin-bottom:3px"></div>`).join('')}
+      </div>
+      <div style="height:6px;background:rgba(0,0,0,0.2);border-radius:2px;width:85%"></div>
+    </div>`,
+    stats: {
+      'Vibe':  'editorial',
+      'Theme': 'light',
+      'CLS':   '0.00',
+    },
+  },
+  {
+    name:        'Journey — App Landing Page',
+    route:       '/templates/journey',
+    description: 'A dark split-screen app landing page — sticky hero left, scrollable timeline right, frosted glass nav, gold accent, App Store badge. Pure HTML throughout. Mode B creative override.',
+    tags:        ['Landing Page', 'App', 'Dark Theme', 'Split-screen'],
+    preview:     `<div style="background:#0a0a0f;padding:0;border-radius:8px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;min-height:130px">
+      <div style="padding:1rem;display:flex;flex-direction:column;justify-content:center;gap:0.4rem;border-right:1px solid rgba(201,169,110,0.2)">
+        <div style="height:5px;background:rgba(201,169,110,0.5);border-radius:2px;width:50%;margin-bottom:2px"></div>
+        <div style="height:14px;background:rgba(240,237,232,0.9);border-radius:2px;width:90%"></div>
+        <div style="height:14px;background:rgba(240,237,232,0.6);border-radius:2px;width:70%"></div>
+        <div style="height:8px;background:rgba(240,237,232,0.25);border-radius:2px;width:80%;margin-top:2px"></div>
+        <div style="height:20px;background:rgba(201,169,110,0.8);border-radius:4px;width:80px;margin-top:4px"></div>
+      </div>
+      <div style="padding:0.75rem;display:flex;flex-direction:column;gap:0.4rem">
+        ${[1,2,3].map(() => `<div style="background:rgba(255,255,255,0.04);border-radius:4px;padding:0.35rem;border-left:2px solid rgba(201,169,110,0.4)">
+          <div style="height:5px;background:rgba(201,169,110,0.5);border-radius:2px;width:40%;margin-bottom:3px"></div>
+          <div style="height:4px;background:rgba(240,237,232,0.2);border-radius:2px;width:85%"></div>
+        </div>`).join('')}
+      </div>
+    </div>`,
+    stats: {
+      'Vibe':  'bold',
+      'Theme': 'dark',
+      'CLS':   '0.00',
+      'Mode':  'B — raw HTML',
+    },
+  },
 ]
 
 const content = `
   ${h1('Templates')}
-  ${lead('Production-ready Pulse templates built entirely from the <a href="/components">UI component library</a>. Six templates covering different design directions — from local business to editorial to event. Every template ships with 100/100/100 Lighthouse scores and zero CLS.')}
+  ${lead('Production-ready Pulse templates — from local business to editorial to app landing pages. Every template ships with 100/100/100 Lighthouse scores and zero CLS.')}
 
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1.5rem;margin-top:2rem">
     ${TEMPLATES.map(templateCard).join('')}

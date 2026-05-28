@@ -207,7 +207,6 @@ const venue = section({
 // ── Tickets ───────────────────────────────────────────────────────────────────
 
 const tickets = cta({
-  id:       'tickets',
   eyebrow:  'Early Bird — ends 30 June',
   title:    'Join 1,000 Makers in London',
   subtitle: 'All-access pass includes three days of talks, workshops, evening events, and a printed programme. Early bird saves £200.',

@@ -1,0 +1,410 @@
+/*
+ * retrowheels.css — Retro Wheels Co. bicycle shop example
+ *
+ * 1970s enamel-sign aesthetic: cream paper, burnt orange, mustard yellow,
+ * forest green, oxidised navy. Rockwell slab serif + Courier New monospace.
+ * All system fonts — zero external HTTP requests.
+ *
+ * Split into two logical sections:
+ *   1. Token overrides — hex values, palette definitions
+ *   2. Component styles — layout, typography, custom elements (var() only)
+ */
+
+/* ==========================================================================
+   1. Token overrides (hex values live here)
+   ========================================================================== */
+
+/* Named palette — referenced throughout this file via var() */
+:root {
+  --rw-orange:        #c8431f;
+  --rw-orange-dark:   #a8351a;
+  --rw-cream:         #f4e9d3;
+  --rw-cream-deep:    #ead9b8;
+  --rw-navy:          #1f2a3a;
+  --rw-mustard:       #d9a441;
+  --rw-mustard-dark:  #8a6418;
+  --rw-green:         #2f5d3a;
+  --rw-green-dark:    #1f3f27;
+  --rw-ink:           #2b2018;
+}
+
+/* System slab-serif stack for headings — no Google Fonts needed */
+:root {
+  --font:         Georgia, 'Bookman Old Style', serif;
+  --font-display: 'Rockwell', 'Bookman Old Style', Georgia, serif;
+}
+
+[data-theme="light"] {
+  --ui-bg:           #f4e9d3;
+  --ui-surface:      #fbf3df;
+  --ui-surface-2:    #ead9b8;
+  --ui-border:       #c9b890;
+  --ui-text:         #2b2018;
+  --ui-muted:        #6b5d48;
+  --ui-accent:       #a8351a;
+  --ui-accent-hover: #8a2912;
+  --ui-accent-dim:   rgba(168, 53, 26, 0.12);
+  --ui-accent-text:  #fbf3df;
+}
+
+[data-theme="light"] .ui-btn--primary {
+  color: #fbf3df;
+}
+
+/* ==========================================================================
+   2. Component styles (var() only — no hex values below this line)
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font);
+  line-height: 1.6;
+  color: var(--ui-text);
+  background: var(--ui-bg);
+}
+
+/* Slab-serif for all headings and named component titles */
+h1, h2, h3, h4, h5, h6,
+.ui-hero-title, .ui-section-title, .ui-card-title,
+.ui-cta-title, .ui-feature-title, .ui-stat-value {
+  font-family: var(--ui-font-display);
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   Brand logo wordmark
+   -------------------------------------------------------------------------- */
+.rw-logo-text {
+  font-family: var(--ui-font-display);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  font-size: 1.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   Skip link
+   -------------------------------------------------------------------------- */
+.rw-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+}
+
+.rw-skip-link:focus {
+  left: var(--ui-space-2);
+  top: var(--ui-space-2);
+  background: var(--rw-cream);
+  color: var(--rw-navy);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  z-index: 1000;
+}
+
+/* --------------------------------------------------------------------------
+   Eyebrow labels
+   -------------------------------------------------------------------------- */
+.rw-eyebrow {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  font-size: var(--ui-text-xs);
+  color: var(--rw-orange-dark);
+}
+
+.rw-eyebrow--on-orange {
+  color: var(--rw-cream);
+}
+
+/* --------------------------------------------------------------------------
+   Decorative rule
+   -------------------------------------------------------------------------- */
+.rw-rule {
+  border: 0;
+  border-top: 3px double var(--ui-border);
+  margin: var(--ui-space-8) 0;
+}
+
+/* --------------------------------------------------------------------------
+   Full-bleed hero
+   -------------------------------------------------------------------------- */
+.rw-hero {
+  position: relative;
+  min-height: 70vh;
+  background:
+    linear-gradient(180deg, rgba(31, 42, 58, 0.55) 0%, rgba(31, 42, 58, 0.85) 100%),
+    url('https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=2000&q=80') center / cover no-repeat;
+  color: var(--rw-cream);
+  padding: var(--ui-space-24) var(--ui-space-6);
+  display: flex;
+  align-items: flex-end;
+}
+
+.rw-hero-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.rw-hero-eyebrow {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-size: var(--ui-text-sm);
+  color: var(--rw-mustard);
+  display: inline-block;
+  padding: var(--ui-space-1) var(--ui-space-3);
+  border: 2px solid var(--rw-mustard);
+  margin-bottom: var(--ui-space-6);
+}
+
+.rw-hero-title {
+  font-family: var(--ui-font-display);
+  font-weight: 900;
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--ui-space-5);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+.rw-hero-title em {
+  font-style: italic;
+  color: var(--rw-mustard);
+}
+
+.rw-hero-sub {
+  font-size: var(--ui-text-xl);
+  max-width: 38rem;
+  margin-bottom: var(--ui-space-6);
+  color: var(--rw-cream);
+  opacity: 0.95;
+}
+
+.rw-hero-actions {
+  display: flex;
+  gap: var(--ui-space-3);
+  flex-wrap: wrap;
+}
+
+.rw-hero-image-credit {
+  position: absolute;
+  bottom: var(--ui-space-2);
+  right: var(--ui-space-3);
+  font-size: var(--ui-text-xs);
+  opacity: 0.6;
+  font-family: 'Courier New', monospace;
+}
+
+/* --------------------------------------------------------------------------
+   Stat strip (inverted navy bar)
+   -------------------------------------------------------------------------- */
+.rw-stat-strip {
+  background: var(--rw-navy);
+  color: var(--rw-cream);
+  padding: var(--ui-space-8) var(--ui-space-6);
+}
+
+.rw-stat-strip .ui-stat-label {
+  color: var(--rw-mustard);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: var(--ui-text-xs);
+}
+
+.rw-stat-strip .ui-stat-value {
+  color: var(--rw-cream);
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-4xl);
+}
+
+.rw-stat-strip-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--ui-space-6);
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  .rw-stat-strip-inner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Editorial prose section (drop cap on first paragraph)
+   -------------------------------------------------------------------------- */
+.rw-editorial {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: var(--ui-space-16) var(--ui-space-6);
+}
+
+.rw-editorial p {
+  font-size: var(--ui-text-lg);
+  margin-bottom: var(--ui-space-5);
+}
+
+.rw-editorial p::first-letter {
+  font-family: var(--ui-font-display);
+  font-size: 3.5rem;
+  font-weight: 900;
+  float: left;
+  line-height: 0.9;
+  padding: 0.25rem var(--ui-space-2) 0 0;
+  color: var(--rw-orange-dark);
+}
+
+.rw-editorial p + p::first-letter {
+  font-size: inherit;
+  float: none;
+  padding: 0;
+  color: inherit;
+  font-weight: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   Section template
+   -------------------------------------------------------------------------- */
+.rw-section {
+  padding: var(--ui-space-16) var(--ui-space-6);
+}
+
+.rw-section--alt {
+  background: var(--rw-cream-deep);
+}
+
+.rw-section-inner {
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.rw-section-title {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-4xl);
+  font-weight: 900;
+  margin-bottom: var(--ui-space-2);
+  letter-spacing: -0.01em;
+}
+
+.rw-section-deck {
+  color: var(--ui-muted);
+  font-size: var(--ui-text-lg);
+  margin-bottom: var(--ui-space-10);
+  max-width: 36rem;
+}
+
+/* --------------------------------------------------------------------------
+   Services grid
+   -------------------------------------------------------------------------- */
+.rw-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ui-space-6);
+}
+
+@media (max-width: 900px) { .rw-service-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .rw-service-grid { grid-template-columns: 1fr; } }
+
+.rw-service {
+  background: var(--ui-surface);
+  border: 2px solid var(--ui-border);
+  padding: var(--ui-space-6);
+  position: relative;
+}
+
+.rw-service-num {
+  font-family: 'Courier New', monospace;
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.2em;
+  color: var(--rw-orange-dark);
+  margin-bottom: var(--ui-space-3);
+}
+
+.rw-service h3 {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-xl);
+  font-weight: 900;
+  margin-bottom: var(--ui-space-2);
+}
+
+.rw-service p {
+  color: var(--ui-muted);
+  margin-bottom: var(--ui-space-4);
+}
+
+.rw-service-price {
+  font-family: 'Courier New', monospace;
+  font-size: var(--ui-text-sm);
+  color: var(--rw-green-dark);
+  border-top: 1px dashed var(--ui-border);
+  padding-top: var(--ui-space-3);
+}
+
+/* --------------------------------------------------------------------------
+   Visit section — hours + booking card
+   -------------------------------------------------------------------------- */
+.rw-visit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ui-space-12);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .rw-visit-grid { grid-template-columns: 1fr; }
+}
+
+.rw-hours-heading {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-xl);
+  font-weight: 900;
+  margin-bottom: var(--ui-space-3);
+}
+
+.rw-hours {
+  font-family: 'Courier New', monospace;
+  font-size: var(--ui-text-base);
+  list-style: none;
+}
+
+.rw-hours-row {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--ui-space-2) 0;
+  border-bottom: 1px dashed var(--ui-border);
+}
+
+.rw-hours li:last-child { border-bottom: 0; }
+
+.rw-closed { color: var(--rw-orange-dark); }
+
+.rw-address {
+  margin-top: var(--ui-space-6);
+  line-height: 1.7;
+}
+
+/* --------------------------------------------------------------------------
+   Saturday ride banner (full-bleed burnt orange)
+   -------------------------------------------------------------------------- */
+.rw-ride-banner {
+  background: var(--rw-orange-dark);
+  color: var(--rw-cream);
+  padding: var(--ui-space-16) var(--ui-space-6);
+  text-align: center;
+}
+
+.rw-ride-banner h2 {
+  color: var(--rw-cream);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+  margin-bottom: var(--ui-space-3);
+}
+
+.rw-ride-banner p {
+  font-size: var(--ui-text-lg);
+  max-width: 40rem;
+  margin: 0 auto var(--ui-space-6);
+}
