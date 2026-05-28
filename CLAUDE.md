@@ -469,7 +469,7 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 | 2. Plan | Present plan to user, wait for confirmation | User confirms |
 | 3. Build | Write spec + related files | — |
 | 4. Validate | `pulse_validate` — fix all errors + warnings | Clean output |
-| 5. Browser | Screenshot → `pulse_design_review` (if intake ran) → Lighthouse desktop + mobile | Design signals pass + 100/100/100 (Accessibility, Best Practices, SEO) |
+| 5. Browser | Screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile | Design signals pass + layout review pass + 100/100/100 (Accessibility, Best Practices, SEO) |
 | 6. Tests | Write tests, run them, fix failures | All pass |
 | 7. Code Review | `pulse_review` — only after phases 4–6 pass | — |
 | 8. Fix | Fix every review issue, re-run affected gates | All gates still pass |

@@ -130,6 +130,11 @@ try {
   if (/=\s*'[^']*'[^']*'/.test(html)) {
     warnings.push('Possible unescaped apostrophe in an HTML attribute — use &apos; or &#39; or switch to double quotes')
   }
+
+  // Inline <style> blocks in view — blocked by Pulse CSP nonce policy
+  if (/<style[\s>]/i.test(html)) {
+    warnings.push('Inline <style> block detected in view — Pulse\'s CSP (style-src with nonces) will silently block these styles at runtime. Move styles to public/app.css instead.')
+  }
 } catch { /* view may depend on server data — skip HTML checks */ }
 
 if (warnings.length > 0) {

@@ -1529,8 +1529,106 @@ If your page genuinely doesn't fit a pattern, start from pulse://guide/spec and 
 )
 
 // ---------------------------------------------------------------------------
+// pulse_layout_review — Multi-viewport layout check
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_layout_review',
+  {
+    description: `Run a multi-viewport layout review on the current page. Returns a structured set of browser steps to execute using chrome-devtools tools.
+
+Use this AFTER the initial screenshot but BEFORE Lighthouse. It catches layout issues (overflow, collapsed sections, broken images) that Lighthouse doesn't check and that are invisible at a single viewport width.
+
+Call this as part of the Phase 5 browser check:
+  screenshot → pulse_design_review → pulse_layout_review → Lighthouse`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          description: 'The full URL to check, e.g. http://localhost:3001/about',
+        },
+      },
+      required: ['url'],
+    },
+  },
+  async ({ url }) => {
+    const steps = `
+## pulse_layout_review — run these steps in sequence
+
+**URL:** ${url}
+
+Execute the following in order using chrome-devtools tools:
+
+### 1. Mobile (390 × 844)
+\`\`\`
+chrome-devtools-resize_page: { width: 390, height: 844 }
+chrome-devtools-navigate_page: { type: "url", url: "${url}" }
+chrome-devtools-take_screenshot
+\`\`\`
+Then run this scan:
+\`\`\`js
+chrome-devtools-evaluate_script: () => {
+  const issues = []
+  if (document.documentElement.scrollWidth > document.documentElement.clientWidth) {
+    issues.push('OVERFLOW: page has horizontal overflow at 390px — some element is wider than the viewport')
+  }
+  document.querySelectorAll('img').forEach((img, i) => {
+    if (img.complete && img.naturalWidth === 0) {
+      issues.push('BROKEN IMAGE: img[' + i + '] src="' + img.src + '" failed to load (naturalWidth === 0)')
+    }
+  })
+  document.querySelectorAll('section, main, header, footer, [class*="hero"], [class*="feature"], [class*="grid"]').forEach(el => {
+    if (el.offsetHeight === 0) {
+      issues.push('COLLAPSED: <' + el.tagName.toLowerCase() + (el.className ? ' class="' + el.className + '"' : '') + '> has zero height — check visibility, display, or missing content')
+    }
+  })
+  return issues.length ? issues : ['No layout issues found at 390px']
+}
+\`\`\`
+
+### 2. Tablet (768 × 1024)
+\`\`\`
+chrome-devtools-resize_page: { width: 768, height: 1024 }
+chrome-devtools-navigate_page: { type: "url", url: "${url}" }
+chrome-devtools-take_screenshot
+\`\`\`
+Run the same JS scan. Report any issues found.
+
+### 3. Desktop (1280 × 800)
+\`\`\`
+chrome-devtools-resize_page: { width: 1280, height: 800 }
+chrome-devtools-navigate_page: { type: "url", url: "${url}" }
+chrome-devtools-take_screenshot
+\`\`\`
+Run the same JS scan. Report any issues found.
+
+### 4. Restore desktop size
+\`\`\`
+chrome-devtools-resize_page: { width: 1280, height: 800 }
+\`\`\`
+
+### 5. Report
+
+Fill in this table before proceeding to Lighthouse:
+
+| Viewport | Overflow | Broken images | Collapsed sections | Screenshot |
+|---|---|---|---|---|
+| 390px mobile | ✅ / ❌ | ✅ / ❌ | ✅ / ❌ | [describe] |
+| 768px tablet | ✅ / ❌ | ✅ / ❌ | ✅ / ❌ | [describe] |
+| 1280px desktop | ✅ / ❌ | ✅ / ❌ | ✅ / ❌ | [describe] |
+
+**If any cell is ❌**, fix the issue and re-run pulse_layout_review before proceeding to Lighthouse.
+`.trim()
+
+    return text(steps)
+  }
+)
+
+// ---------------------------------------------------------------------------
 // pulse_design_review — Visual design review against the original brief
 // ---------------------------------------------------------------------------
+
 
 server.registerTool(
   'pulse_design_review',
@@ -2810,7 +2908,29 @@ async function waitForServer(port, maxMs = 10_000) {
   return false
 }
 
+// Common prop aliases that agents and developers pass by mistake.
+// Maps wrong name → { correct, component } for each well-known component.
+const PROP_ALIASES = [
+  { component: 'nav()',    wrong: 'brand',   correct: 'logo',    note: 'The nav logo is set with the `logo` prop, not `brand`.' },
+  { component: 'nav()',    wrong: 'actions', correct: 'action',  note: 'nav() takes a single `action` string (HTML), not an array.' },
+  { component: 'footer()', wrong: 'items',  correct: 'links',   note: 'footer() top-level links use `links: [{ label, href }]`, not `items`.' },
+  { component: 'footer()', wrong: 'nav',    correct: 'links',   note: 'footer() links prop is `links`, not `nav`.' },
+]
+
 async function validateContent(content) {
+  // Source-level checks — run before the worker so errors are caught without importing
+  const sourceWarnings = []
+
+  // Component prop alias checks — flag known wrong prop names
+  for (const { component, wrong, correct, note } of PROP_ALIASES) {
+    // Match: nav({ ...wrong: or footer({ ...wrong: (within the call args)
+    const fnName = component.replace('()', '')
+    const re = new RegExp(`${fnName}\\s*\\(\\s*\\{[^}]*\\b${wrong}\\s*:`, 'g')
+    if (re.test(content)) {
+      sourceWarnings.push(`"${wrong}" is not a recognised prop for ${component} — did you mean "${correct}"? ${note}`)
+    }
+  }
+
   // Write into PAGES_DIR so relative imports (e.g. '../components/nav.js') resolve correctly
   fs.mkdirSync(PAGES_DIR, { recursive: true })
   const tmpFile = path.join(PAGES_DIR, `.pulse-validate-${Date.now()}.mjs`)
@@ -2833,7 +2953,19 @@ async function validateContent(content) {
       return text(msg)
     }
 
-    return text(output.trim())
+    let finalOutput = output.trim()
+    // Merge source-level prop warnings into the worker output
+    if (sourceWarnings.length > 0) {
+      const propNotes = sourceWarnings.map(w => `  ⚠ ${w}`).join('\n')
+      if (finalOutput.startsWith('Valid ✓')) {
+        finalOutput = finalOutput.replace('Valid ✓', 'Valid ✓ — but fix these issues:').replace(' — but fix these issues: — but fix these issues:', ' — but fix these issues:')
+        finalOutput = finalOutput + '\n' + propNotes
+      } else {
+        finalOutput = finalOutput + '\n' + propNotes
+      }
+    }
+
+    return text(finalOutput)
   } finally {
     try { fs.unlinkSync(tmpFile) } catch { /* ignore */ }
   }

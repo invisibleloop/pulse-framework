@@ -191,7 +191,7 @@ The default CSP does **not** restrict `img-src` — it inherits `default-src 'se
 // pulse.config.js
 export default {
   csp: {
-    'img-src': ['https://picsum.photos'],
+    'img-src': ['https://picsum.photos', 'https://fastly.picsum.photos'],
   },
 }
 ```
@@ -209,10 +209,12 @@ createServer(specs, {
 **Common hosts to add:**
 | Source | `img-src` entry |
 |---|---|
-| picsum.photos | `https://picsum.photos` |
+| picsum.photos | `https://picsum.photos https://fastly.picsum.photos` |
 | Unsplash | `https://images.unsplash.com` |
 | Cloudinary | `https://res.cloudinary.com` |
 | Imgix | your subdomain, e.g. `https://mysite.imgix.net` |
+
+> **picsum CDN note:** `picsum.photos` redirects image requests through `fastly.picsum.photos`. You must whitelist **both** domains — whitelisting only `https://picsum.photos` will still block the actual image bytes and the browser error will point to the `fastly.picsum.photos` URL, which is confusing to debug.
 
 Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
 

@@ -100,7 +100,7 @@ No tests required for pure view specs with no logic. Add tests if the view has n
 | 2 | Plan | user confirmation (skip if unambiguous) |
 | 3 | Build | announce brief → write files |
 | 4 | Validate | `pulse_validate` clean |
-| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
+| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
 | 6 | Tests | mutations, view landmarks, any utility functions |
 | 7 | Code review | `pulse_review` — only after 4–6 pass |
 
@@ -116,7 +116,7 @@ All phases as originally defined — full 8-phase flow with every gate.
 | 2 | Plan | **user confirmation required** |
 | 3 | Build | announce brief → write files |
 | 4 | Validate | `pulse_validate` clean |
-| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
+| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
 | 6 | Tests | full coverage: mutations, actions, guards, view |
 | 7 | Code review | `pulse_review` |
 | 8 | Fix + re-verify | re-run all gates |
@@ -206,6 +206,7 @@ Run `pulse_validate` on the spec file.
 Pass gates:
 - Screenshot: no layout or rendering issues
 - **Design review:** if this build started with `pulse_intake`, call `pulse_design_review` immediately after taking the screenshot — the screenshot is your evidence. Work through all 7 signals. Fix any Fail before continuing.
+- **Layout review:** call `pulse_layout_review` with the page URL — this checks overflow, broken images, and collapsed sections at 390px, 768px, and 1280px. Fix any failures before proceeding to Lighthouse.
 - Lighthouse desktop: Accessibility, Best Practices, SEO all 100
 - Lighthouse mobile: same
 - **CLS: 0.00** — any layout shift is a blocker
