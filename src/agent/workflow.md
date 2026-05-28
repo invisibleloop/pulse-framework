@@ -100,10 +100,9 @@ No tests required for pure view specs with no logic. Add tests if the view has n
 | 2 | Plan | user confirmation (skip if unambiguous) |
 | 3 | Build | announce brief → write files |
 | 4 | Validate | `pulse_validate` clean |
-| 5 | Browser | screenshot + Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
+| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
 | 6 | Tests | mutations, view landmarks, any utility functions |
-| 7a | Design review | `pulse_design_review` — if started with `pulse_intake` |
-| 7b | Code review | `pulse_review` — only after 4–6 (and 7a) pass |
+| 7 | Code review | `pulse_review` — only after 4–6 pass |
 
 ### Tier 3 — Complex (multi-step, shared state, or security-sensitive)
 
@@ -117,10 +116,9 @@ All phases as originally defined — full 8-phase flow with every gate.
 | 2 | Plan | **user confirmation required** |
 | 3 | Build | announce brief → write files |
 | 4 | Validate | `pulse_validate` clean |
-| 5 | Browser | Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
+| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
 | 6 | Tests | full coverage: mutations, actions, guards, view |
-| 7a | Design review | `pulse_design_review` — if started with `pulse_intake` |
-| 7b | Code review | `pulse_review` |
+| 7 | Code review | `pulse_review` |
 | 8 | Fix + re-verify | re-run all gates |
 
 **If in doubt, default to Tier 2.** Choosing a lower tier than the task warrants means you'll hit problems at gates — the tiers are a shortcut, not a way to skip quality.
@@ -207,6 +205,7 @@ Run `pulse_validate` on the spec file.
 
 Pass gates:
 - Screenshot: no layout or rendering issues
+- **Design review:** if this build started with `pulse_intake`, call `pulse_design_review` immediately after taking the screenshot — the screenshot is your evidence. Work through all 7 signals. Fix any Fail before continuing.
 - Lighthouse desktop: Accessibility, Best Practices, SEO all 100
 - Lighthouse mobile: same
 - **CLS: 0.00** — any layout shift is a blocker
@@ -234,21 +233,7 @@ Run the tests. Fix every failure.
 
 ## Phase 7 — Review (Tier 2+)
 
-### 7a — Design review (new sites and landing pages)
-
-If this build started with `pulse_intake`, run `pulse_design_review` before the code review:
-
-1. Take a screenshot of the page
-2. Call `pulse_design_review` with the route — it reads `.pulse/brief.json` and returns a structured design critique
-3. Work through every signal in the review: audience fit, typography feel, colour mood, layout density, imagery, CTA tone, trust signals
-4. **If any signal fails** — describe what needs to change and fix it before proceeding
-5. Only proceed to `pulse_review` once all design signals pass or warn
-
-This catches design mismatches (a builders merchant that looks like a magazine; a children's app that feels corporate) that the building agent is too anchored to its own decisions to spot.
-
-### 7b — Code review
-
-Only invoke `pulse_review` after phases 4–6 all pass (and 7a if applicable). It checks the code for correctness, security, accessibility, DRY violations, and checklist adherence.
+Only invoke `pulse_review` after phases 4–6 all pass. It checks the code for correctness, security, accessibility, DRY violations, and checklist adherence.
 
 > Note: `/verify` includes the review step — if you ran `/verify` and it passed, the Review Agent has already run.
 
