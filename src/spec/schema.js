@@ -389,6 +389,11 @@ export function validateSpec(spec) {
     } else if (typeof desc === 'string' && desc.trim() === 'Built with Pulse') {
       warnings.push('spec.meta.description is still the default "Built with Pulse" — replace it with a real description')
     }
+    // If meta.theme is not set, Pulse defaults to dark — warn so agents don't accidentally
+    // ship a dark-themed page when they intended light, or forget to declare intent.
+    if (spec.meta.theme === undefined && typeof spec.meta.theme !== 'function') {
+      warnings.push('spec.meta.theme is not set — Pulse defaults to dark. Add meta.theme: \'dark\' (or \'light\') to make the intent explicit and suppress this warning.')
+    }
   }
 
   return {

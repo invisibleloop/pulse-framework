@@ -67,6 +67,7 @@ export default {
     title:       'Quiz — Pulse',
     description: 'A multiple-choice quiz built with Pulse. Demonstrates multi-step state machine and computed views.',
     styles:      ['/pulse-ui.css'],
+    theme:       'dark',
   },
 
   state: {

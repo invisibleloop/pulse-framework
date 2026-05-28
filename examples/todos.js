@@ -38,6 +38,7 @@ export default {
     title:       'Todos — Pulse',
     description: 'A todo list built with Pulse. Demonstrates client mutations, persist, constraints, and filter state.',
     styles:      ['/pulse-ui.css'],
+    theme:       'dark',
   },
 
   state: {

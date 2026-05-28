@@ -16,6 +16,8 @@ Use `pulse_validate` with the spec file content. If validation fails, report eve
 
 Use `pulse_fetch_page` to confirm the server is responding for the route. If it errors, use `pulse_restart_server` and retry once.
 
+**If `pulse_fetch_page` returns unexpected HTML (e.g. a different project's page title, a Next.js 404, or any non-Pulse response):** check the `X-Pulse` response header — Pulse servers always send this. If it is absent, the wrong server is running on that port. Stop and inform the user before continuing.
+
 ### 4. Screenshot
 
 Use `mcp__chrome-devtools__navigate_page` to load the page route, then `mcp__chrome-devtools__take_screenshot` to capture the result. Describe what you see — layout, content, any obvious rendering issues.
@@ -31,6 +33,8 @@ Run `mcp__chrome-devtools__lighthouse_audit` on the route with `{ "strategy": "d
 Run `mcp__chrome-devtools__lighthouse_audit` on the same route with `{ "strategy": "mobile" }`.
 
 **Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 2.
+
+**If you need to visually inspect the layout at a mobile viewport width** (e.g. to debug a wrapping or overflow issue), use `mcp__chrome-devtools__emulate` with `viewport: "390x844x2,mobile,touch"` — not `resize_page`. The `emulate` tool reliably sets the viewport; `resize_page` does not reliably trigger responsive layout changes. Reset afterward with `emulate` using the desktop viewport: `"1440x900x1"`.
 
 ### 7. Performance
 

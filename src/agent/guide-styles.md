@@ -367,3 +367,40 @@ The numeric ID is sequential (1–1000+). Browse options at `https://picsum.phot
 **Avoid:** `https://images.unsplash.com/photo-LONGID?...` — these are unstable for prototypes. If you use Unsplash, add `https://images.unsplash.com` to `csp.img-src` in `pulse.config.js`, and expect some IDs to rot.
 
 > **Unsplash photo IDs must be the full hash.** The format is `photo-` followed by an 11-character alphanumeric hash, e.g. `photo-1506905925346-21bda4d32df4`. A truncated or partial ID (e.g. `photo-1506905925346`) returns a 404 silently — the image is missing with no obvious error. Always copy the full ID from the Unsplash URL.
+
+
+## CSS gotchas
+
+### calc() with + and − requires whitespace
+
+The CSS specification **requires** whitespace around `+` and `−` inside `calc()` when either operand is a value that starts with a sign (including CSS custom properties, since their resolved value may start with `−`):
+
+```css
+/* ✓ CORRECT — spaces around + */
+padding-top: calc(64px + var(--ui-space-16));
+
+/* ✗ WRONG — will silently fail in browsers, padding becomes 0 */
+padding-top: calc(64px+var(--ui-space-16));
+```
+
+The Pulse production CSS minifier preserves these spaces. Never manually collapse `calc()` expressions.
+
+### Padding shorthand vs. longhand ordering
+
+CSS processes declarations top-to-bottom. A shorthand that appears **after** a longhand will silently override it:
+
+```css
+/* ✗ WRONG — padding-top: 0 because shorthand resets it */
+.block {
+  padding-top: var(--ui-space-8);  /* set */
+  padding: 0 var(--ui-space-6);   /* shorthand resets padding-top to 0 */
+}
+
+/* ✓ CORRECT — shorthand first, longhand overrides */
+.block {
+  padding: 0 var(--ui-space-6);
+  padding-top: var(--ui-space-8);
+}
+```
+
+This produces no browser error and is invisible at a glance — the expected spacing just doesn't appear. Always write shorthand before longhand in the same declaration block.

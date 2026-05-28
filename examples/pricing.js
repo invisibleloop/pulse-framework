@@ -134,6 +134,7 @@ export default {
     title:       'Pricing — Pulse',
     description: 'Simple, transparent pricing for every stage. Starter is free forever. Pro and Team plans include a 14-day trial.',
     styles:      ['/pulse-ui.css', '/examples/pricing.css'],
+    theme:       'dark',
   },
 
   state: {

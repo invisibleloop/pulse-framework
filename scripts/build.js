@@ -851,7 +851,8 @@ function minifyCss(css) {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '')   // strip comments
     .replace(/\s+/g, ' ')               // collapse whitespace
-    .replace(/\s*([{}:;,>~+])\s*/g, '$1') // remove spaces around punctuation
+    // Remove spaces around safe punctuation — NOT + or - (would break calc() expressions)
+    .replace(/\s*([{}:;,>~])\s*/g, '$1')
     .replace(/;}/g, '}')                // remove trailing semicolons
     .trim()
 }
