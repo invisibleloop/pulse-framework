@@ -25,6 +25,8 @@
   --ui-accent-hover: var(--accent-hover,  #b5aaff);
   --ui-accent-dim:   var(--accent-dim,    rgba(155,141,255,.12));
   --ui-accent-text:  var(--accent-text,   #0d0a20);
+  /* Inline code in dark theme — accent passes WCAG AA on surface-2 by default */
+  --ui-code-color:   var(--code-color,    var(--ui-accent));
   --ui-green:        var(--green,         #3dd68c);
   --ui-green-dim:    rgba(61, 214, 140, .12);
   --ui-red:          var(--red,           #ff6b6b);
@@ -1802,6 +1804,9 @@ hr.ui-divider {
 .u-opacity-50  { opacity: .5; }
 .u-opacity-75  { opacity: .75; }
 
+/* Numeric formatting */
+.u-tabular-nums { font-variant-numeric: tabular-nums; }
+
 /* ─── Section header ─────────────────────────────────────────────────────────
    Optional heading block prepended to section() when eyebrow/title/subtitle
    props are supplied. Sits above the content slot.                           */
@@ -3155,7 +3160,7 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
 
 .ui-prose code {
   background:    var(--ui-surface-2);
-  color:         var(--ui-accent);
+  color:         var(--ui-code-color);
   padding:       .1em .35em;
   border-radius: var(--ui-radius-sm);
   font-size:     .875em;
@@ -3252,6 +3257,8 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   --ui-accent-hover:    var(--accent-hover, #5847d6);
   --ui-accent-dim:      var(--accent-dim,   rgba(107, 92, 231, .12));
   --ui-accent-text:     var(--accent-text,  #ffffff);
+  /* Inline code uses a slightly darker accent so it passes WCAG AA on --ui-surface-2 */
+  --ui-code-color:      var(--code-color,   #4a3db5);
   --ui-green:           var(--green,        #166534);
   --ui-green-dim:       rgba(22, 163, 74,  .12);
   --ui-red:             var(--red,          #991b1b);

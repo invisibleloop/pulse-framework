@@ -2960,10 +2960,14 @@ async function waitForServer(port, maxMs = 10_000) {
 // Common prop aliases that agents and developers pass by mistake.
 // Maps wrong name → { correct, component } for each well-known component.
 const PROP_ALIASES = [
-  { component: 'nav()',    wrong: 'brand',   correct: 'logo',    note: 'The nav logo is set with the `logo` prop, not `brand`.' },
-  { component: 'nav()',    wrong: 'actions', correct: 'action',  note: 'nav() takes a single `action` string (HTML), not an array.' },
-  { component: 'footer()', wrong: 'items',  correct: 'links',   note: 'footer() top-level links use `links: [{ label, href }]`, not `items`.' },
-  { component: 'footer()', wrong: 'nav',    correct: 'links',   note: 'footer() links prop is `links`, not `nav`.' },
+  { component: 'nav()',    wrong: 'brand',       correct: 'logo',    note: 'The nav logo is set with the `logo` prop, not `brand`.' },
+  { component: 'nav()',    wrong: 'actions',     correct: 'action',  note: 'nav() takes a single `action` string (HTML), not an array.' },
+  { component: 'footer()', wrong: 'items',       correct: 'links',   note: 'footer() top-level links use `links: [{ label, href }]`, not `items`.' },
+  { component: 'footer()', wrong: 'nav',         correct: 'links',   note: 'footer() links prop is `links`, not `nav`.' },
+  { component: 'input()',  wrong: 'autocomplete', correct: 'attrs: { autocomplete }', note: 'HTML attributes not in the component API (autocomplete, min, max, step, pattern, inputmode, etc.) go inside the `attrs` object: input({ attrs: { autocomplete: "email" } }).' },
+  { component: 'input()',  wrong: 'maxlength',   correct: 'attrs: { maxlength }',     note: 'HTML attributes go inside `attrs`: input({ attrs: { maxlength: "100" } }).' },
+  { component: 'input()',  wrong: 'minlength',   correct: 'attrs: { minlength }',     note: 'HTML attributes go inside `attrs`: input({ attrs: { minlength: "2" } }).' },
+  { component: 'input()',  wrong: 'pattern',     correct: 'attrs: { pattern }',       note: 'HTML attributes go inside `attrs`: input({ attrs: { pattern: "[0-9]+" } }).' },
 ]
 
 async function validateContent(content) {

@@ -144,7 +144,8 @@ process.on('SIGINT',  closeReloadClients)
 
 let reloadTimer = null
 let lastReload = 0
-fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
+
+async function triggerReload(label = 'File changed') {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(async () => {
     // Debounce rapid file changes (e.g. multiple Edit tool calls)
@@ -152,7 +153,7 @@ fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
     if (now - lastReload < 100) return
     lastReload = now
     
-    console.log('  ⟳ File changed, reloading specs...')
+    console.log(`  ⟳ ${label}, reloading specs...`)
     try {
       const fresh = await loadPages(ROOT, now)
       updateSpecs(fresh)
@@ -163,7 +164,19 @@ fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
     }
     notifyReload()
   }, 200)
-})
+}
+
+// Watch src/ for changes to existing files (spec edits, component edits)
+fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => triggerReload('File changed'))
+
+// Also watch the pages directory explicitly so macOS reliably fires on new file creation.
+// On macOS, fs.watch with recursive=true watches subdirectory contents but may not fire
+// for the parent dir entry when a brand-new file is created. Watching the dir non-recursively
+// catches the "new entry added to this directory" event.
+const pagesDir = path.join(ROOT, 'src', 'pages')
+if (fs.existsSync(pagesDir)) {
+  fs.watch(pagesDir, { recursive: false }, () => triggerReload('New page detected'))
+}
 
 // Tiny script injected into every page — connects to SSE and reloads on change
 // Passed as a function so the server can inject the per-request CSP nonce

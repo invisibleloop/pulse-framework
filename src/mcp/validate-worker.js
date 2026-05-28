@@ -53,6 +53,12 @@ if (!valid) {
 // Render the view and run additional HTML checks
 const warnings = [...schemaWarnings]
 
+// meta.theme missing — a page without theme set will use the user's system preference,
+// which can produce unexpected dark/light rendering for spec authors who built for one mode.
+if (!spec.meta?.theme) {
+  warnings.push('meta.theme is not set — the page will follow the user\'s system colour-scheme preference. Add meta: { theme: \'light\' } or meta: { theme: \'dark\' } to lock the appearance. Most Pulse pages should set this explicitly.')
+}
+
 // Raw-response specs (contentType + render) produce non-HTML output —
 // skip all view rendering and HTML-specific checks for them.
 const isRawResponse = typeof spec.render === 'function' ||
@@ -114,7 +120,7 @@ try {
   }
 
   // Unknown u-* utility classes — catch invented classes that have no CSS definition
-  const KNOWN_UTILS = new Set(['u-absolute','u-bg-accent','u-bg-surface','u-bg-surface2','u-block','u-border','u-border-b','u-border-t','u-flex','u-flex-1','u-flex-col','u-flex-wrap','u-font-bold','u-font-medium','u-font-normal','u-font-semibold','u-gap-1','u-gap-2','u-gap-3','u-gap-4','u-gap-5','u-gap-6','u-gap-8','u-hidden','u-inline','u-inline-block','u-items-center','u-items-end','u-items-start','u-items-stretch','u-justify-between','u-justify-center','u-justify-end','u-justify-start','u-leading-loose','u-leading-normal','u-leading-relaxed','u-leading-snug','u-leading-tight','u-max-w-lg','u-max-w-md','u-max-w-prose','u-max-w-sm','u-max-w-xl','u-max-w-xs','u-mb-0','u-mb-1','u-mb-10','u-mb-12','u-mb-16','u-mb-2','u-mb-3','u-mb-4','u-mb-5','u-mb-6','u-mb-8','u-ml-auto','u-mr-auto','u-mt-0','u-mt-1','u-mt-10','u-mt-12','u-mt-16','u-mt-2','u-mt-3','u-mt-4','u-mt-5','u-mt-6','u-mt-8','u-mx-auto','u-opacity-50','u-opacity-75','u-overflow-auto','u-overflow-hidden','u-p-0','u-p-1','u-p-2','u-p-3','u-p-4','u-p-5','u-p-6','u-p-8','u-px-0','u-px-2','u-px-3','u-px-4','u-px-5','u-px-6','u-px-8','u-py-0','u-py-2','u-py-3','u-py-4','u-py-5','u-py-6','u-py-8','u-relative','u-rounded','u-rounded-full','u-rounded-lg','u-rounded-md','u-rounded-xl','u-shrink-0','u-text-2xl','u-text-3xl','u-text-4xl','u-text-accent','u-text-balance','u-text-base','u-text-blue','u-text-center','u-text-default','u-text-green','u-text-left','u-text-lg','u-text-muted','u-text-red','u-text-right','u-text-sm','u-text-xl','u-text-xs','u-text-yellow','u-w-auto','u-w-full'])
+  const KNOWN_UTILS = new Set(['u-absolute','u-bg-accent','u-bg-surface','u-bg-surface2','u-block','u-border','u-border-b','u-border-t','u-flex','u-flex-1','u-flex-col','u-flex-wrap','u-font-bold','u-font-medium','u-font-normal','u-font-semibold','u-gap-1','u-gap-2','u-gap-3','u-gap-4','u-gap-5','u-gap-6','u-gap-8','u-hidden','u-inline','u-inline-block','u-items-center','u-items-end','u-items-start','u-items-stretch','u-justify-between','u-justify-center','u-justify-end','u-justify-start','u-leading-loose','u-leading-normal','u-leading-relaxed','u-leading-snug','u-leading-tight','u-max-w-lg','u-max-w-md','u-max-w-prose','u-max-w-sm','u-max-w-xl','u-max-w-xs','u-mb-0','u-mb-1','u-mb-10','u-mb-12','u-mb-16','u-mb-2','u-mb-3','u-mb-4','u-mb-5','u-mb-6','u-mb-8','u-ml-auto','u-mr-auto','u-mt-0','u-mt-1','u-mt-10','u-mt-12','u-mt-16','u-mt-2','u-mt-3','u-mt-4','u-mt-5','u-mt-6','u-mt-8','u-mx-auto','u-opacity-50','u-opacity-75','u-overflow-auto','u-overflow-hidden','u-p-0','u-p-1','u-p-2','u-p-3','u-p-4','u-p-5','u-p-6','u-p-8','u-px-0','u-px-2','u-px-3','u-px-4','u-px-5','u-px-6','u-px-8','u-py-0','u-py-2','u-py-3','u-py-4','u-py-5','u-py-6','u-py-8','u-relative','u-rounded','u-rounded-full','u-rounded-lg','u-rounded-md','u-rounded-xl','u-shrink-0','u-tabular-nums','u-text-2xl','u-text-3xl','u-text-4xl','u-text-accent','u-text-balance','u-text-base','u-text-blue','u-text-center','u-text-default','u-text-green','u-text-left','u-text-lg','u-text-muted','u-text-red','u-text-right','u-text-sm','u-text-xl','u-text-xs','u-text-yellow','u-w-auto','u-w-full'])
   const usedUtils = new Set([...html.matchAll(/\bu-([\w-]+)/g)].map(m => 'u-' + m[1]))
   const unknownUtils = [...usedUtils].filter(c => !KNOWN_UTILS.has(c))
   if (unknownUtils.length) {
@@ -126,9 +132,11 @@ try {
     warnings.push('input[type="file"] detected — use the fileUpload() component instead. It provides the drag-and-drop zone, correct styling, and pulse-ui.js integration. import { fileUpload } from \'@invisibleloop/pulse/ui\'')
   }
 
-  // Unescaped apostrophes in attribute values
-  if (/=\s*'[^']*'[^']*'/.test(html)) {
-    warnings.push('Possible unescaped apostrophe in an HTML attribute — use &apos; or &#39; or switch to double quotes')
+  // Unescaped apostrophes — only flag inside attribute values (attr='it's wrong'),
+  // not in text content (it's fine in body text). Match: attr='...apostrophe...'
+  // Pattern: an attribute assignment with single-quote delimiter containing a second single quote
+  if (/\s[\w-]+=\s*'[^'<>]*'[^']*'/.test(html)) {
+    warnings.push('Possible unescaped apostrophe in an HTML attribute value — use &apos; or &#39; or switch to double-quoted attributes')
   }
 
   // Inline <style> blocks in view — blocked by Pulse CSP nonce policy
