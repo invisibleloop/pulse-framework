@@ -127,15 +127,18 @@ All phases as originally defined — full 8-phase flow with every gate.
 
 ## Phase 3 — Build
 
-### 3a — Check components first
+### 3a — Decide: components or creative override
 
-**Before writing any view HTML**, grep `src/ui/index.js` for the components you need:
+**Two valid modes — choose one and state it in the build brief:**
+
+**Mode A — Components first (default)**
+Use Pulse UI components for all standard UI patterns. Before writing any view HTML, grep `src/ui/index.js` for the components you need:
 
 ```bash
 grep -E "^export" src/ui/index.js | head -20
 ```
 
-Or use the guide-components table. Never write these patterns from scratch:
+Or use the guide-components table. Never write these patterns from scratch in Mode A:
 
 - Hero section → `hero()`
 - Product/service cards → `card()`
@@ -145,24 +148,35 @@ Or use the guide-components table. Never write these patterns from scratch:
 - Testimonials → `testimonial()`
 - CTAs → `cta()`
 
-If you're about to type `class="hero"` or `class="product-card"`, stop — use the component instead. Custom CSS on top of components is fine; rewriting the component from scratch is not.
+If you're about to type `class="hero"` or `class="product-card"` in Mode A, stop — use the component instead.
+
+**Mode B — Creative override (raw HTML throughout)**
+When the design intent calls for a more expressive, unconventional, or typographically-driven layout that components would constrain, you may build with raw HTML throughout. This is a deliberate design decision, not a shortcut.
+
+Rules for Mode B:
+- Load `/pulse-ui.css` in `meta.styles` — the token system is still required
+- Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason
+- The quality gate is 100/100/100/100 Lighthouse on both desktop and mobile — this replaces the component checklist as the pass bar
+
+Announce Mode B explicitly in the build brief: *"Mode B — component-free, raw HTML for creative control."*
 
 ### 3b — Announce before writing
 
 Before writing any file, output a build brief:
 
 ```
-Building: <page name> (<route>)
-State:     <fields and types, or "none">
-Mutations: <list, or "none">
-Actions:   <list with brief description, or "none">
-Server:    <fetcher names and what they fetch, or "none">
-Components: <which UI components you will use>
-View:      <key sections / landmarks>
-Files:     <list of files that will be written>
+Building:   <page name> (<route>)
+Mode:       A — components first | B — creative override (raw HTML, reason: ...)
+State:      <fields and types, or "none">
+Mutations:  <list, or "none">
+Actions:    <list with brief description, or "none">
+Server:     <fetcher names and what they fetch, or "none">
+Components: <which UI components you will use, or "none — Mode B">
+View:       <key sections / landmarks>
+Files:      <list of files that will be written>
 ```
 
-One-liners are fine for simple pages, but always output something. **Listing components you plan to use** helps catch reinvention before writing.
+One-liners are fine for simple pages, but always output something. **Declaring the mode upfront** makes the design intent explicit and prevents unnecessary component-reinvention warnings during review.
 
 ### 3c — Write
 

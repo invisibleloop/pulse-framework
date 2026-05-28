@@ -497,13 +497,18 @@ Convention: name dynamic-route files [param].js inside a subfolder:
 
 This is purely a human readability convention. Pulse does not process [ ] in filenames.
 
-## UI components — MANDATORY
+## UI components
 
-**RULE: Before writing any HTML, check whether a Pulse UI component exists for the purpose. If it does, you MUST use it. Raw HTML is only permitted for structural tags with no component equivalent (div, main, aside, footer, header).**
+**Default rule: Before writing any HTML, check whether a Pulse UI component exists for the purpose. If it does, use it.** Components ship with correct ARIA, token-based styling, and responsive behaviour — choosing them over raw HTML means less work, not more.
 
-**RULE: For every feature, page, or UI element you build — regardless of how the request is phrased, whether it came from text or an image — your first step is always to check whether a Pulse UI component exists for it. If it does, you MUST use it. There are no exceptions.**
+**Creative override:** When the design intent genuinely calls for a more expressive or unconventional layout — a distinctive visual identity, an asymmetric or typographically-driven composition, a brutalist or editorial structure that components would constrain — you may build with raw HTML instead. This is not a loophole; it is a deliberate design decision. When taking this path:
 
-Before writing a single line of HTML, mentally scan the task and list which components apply. Only after exhausting the component list should you write raw HTML — and only for structural wrappers (div, main, aside, footer) with no component equivalent.
+1. **State your intent explicitly** in the build brief: *"Building component-free — raw HTML throughout for maximum creative control."*
+2. **Pulse-ui.css is still required** — always load it in `meta.styles`. It provides the token system (`--ui-*` variables) that your custom CSS will reference.
+3. **Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components** unless there is a specific design reason to hand-roll them. These are the hardest to get right for accessibility.
+4. **The quality gate replaces the component checklist** — 100/100/100/100 Lighthouse (Accessibility, Best Practices, SEO, Agentic Browsing) on both desktop and mobile is the arbiter. A component-free page that passes every Lighthouse audit is correct. A component-heavy page that fails accessibility is not.
+
+Before writing a single line of HTML, decide which mode you are in and state it in the build brief:
 
 **RULE: All components accept a `class` prop — never `className` (that is React). Use `class` to add utility classes or custom identifiers to any component.**
 

@@ -20,10 +20,10 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 - **Do not set `hydrate` in specs.** It is auto-derived by the framework from the URL entry passed to `createServer`. Specs with `mutations`, `actions`, or `persist` are hydrated automatically. Purely server-rendered specs get zero JavaScript — no configuration needed.
 
-### Components first
+### Components first — or creative override
 
 - **Before writing any HTML by hand, check `src/ui/index.js`.** There are 50+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
-- **Do not reinvent component patterns.** These patterns have dedicated components — never write custom HTML for them:
+- **Do not reinvent component patterns.** These patterns have dedicated components — never write custom HTML for them unless a creative override applies (see below):
   - Hero sections → `hero({ title, subtitle, actions, image, ... })`
   - Product/service cards → `card({ title, body, image, footer, ... })`
   - Image + text two-column layouts → `media({ image, content, reverse })`
@@ -33,10 +33,14 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - CTAs → `cta({ title, subtitle, actions })`
   - Navigation → `nav({ logo, links, actions })`
   - Footers → `footer({ logo, links, columns, legal, ... })`
-  
-  If you find yourself writing `class="hero"` or `class="product-card"` or `class="testimonial"`, stop — import the component instead.
 
-- **Exception — brutalist, editorial, and playful vibes:** these vibes intentionally break from polished templates. `pulse://guide/explore` explicitly endorses zone-based raw HTML for distinctive layouts. For `brutalist`, `editorial`, `retro`, or `neon` vibes, raw structural HTML is correct — components can still be used for functional atoms (`button`, `input`, `modal`) but structural sections do not need to come from components. When reviewing a brutalist or editorial spec, do not flag raw section HTML as a violation.
+- **Creative override — raw HTML throughout is permitted** when the design intent genuinely calls for it: a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe where components would constrain the expression. This is a deliberate design decision, not a shortcut. When taking this path:
+  - State it explicitly in the build brief: *"Building component-free — raw HTML throughout for creative control."*
+  - Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason not to.
+  - `/pulse-ui.css` is always required — it provides the token system your custom CSS will use.
+  - The quality gate replaces the component checklist: **100/100/100/100 Lighthouse on both desktop and mobile is the pass bar.** A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
+
+- When reviewing a spec built under creative override, do not flag raw section HTML as a violation — check the Lighthouse results instead.
 
 ### Reuse (DRY)
 
