@@ -12,6 +12,7 @@
  *   http://localhost:3001/quiz      — multi-step state machine
  *   http://localhost:3001/products  — server data + search/filter/sort
  *   http://localhost:3001/pricing   — landing page components + billing toggle
+ *   http://localhost:3001/swish     — editorial fashion branding + light theme
  */
 
 import fs   from 'fs'
@@ -81,6 +82,7 @@ await createServer(
     new URL('./quiz.js',     import.meta.url),
     new URL('./products.js', import.meta.url),
     new URL('./pricing.js',  import.meta.url),
+    new URL('./swish.js',    import.meta.url),
   ],
   {
     port:       3001,
@@ -89,5 +91,10 @@ await createServer(
     root:       new URL('..', import.meta.url),  // pulse2/ — specs served at /examples/*
     onRequest:  staticHandler,
     extraBody:  themeScript,
+    csp: {
+      'style-src': ['https://fonts.googleapis.com'],
+      'font-src':  ['https://fonts.gstatic.com'],
+      'img-src':   ['https://images.unsplash.com'],
+    },
   }
 )
