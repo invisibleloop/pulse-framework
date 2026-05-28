@@ -13,7 +13,8 @@
  *   http://localhost:3001/products  — server data + search/filter/sort
  *   http://localhost:3001/pricing   — landing page components + billing toggle
  *   http://localhost:3001/swish     — editorial fashion branding + light theme
- *   http://localhost:3001/bookworms — independent bookshop, Fraunces font, picsum covers
+ *   http://localhost:3001/bookworms   — independent bookshop, Fraunces font, picsum covers
+ *   http://localhost:3001/retrowheels — vintage bicycle shop, slab-serif, booking form
  */
 
 import fs   from 'fs'
@@ -84,7 +85,8 @@ await createServer(
     new URL('./products.js', import.meta.url),
     new URL('./pricing.js',  import.meta.url),
     new URL('./swish.js',    import.meta.url),
-    new URL('./bookworms.js', import.meta.url),
+    new URL('./bookworms.js',    import.meta.url),
+    new URL('./retrowheels.js', import.meta.url),
   ],
   {
     port:       3001,
