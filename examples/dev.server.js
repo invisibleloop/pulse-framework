@@ -16,6 +16,7 @@
  *   http://localhost:3001/bookworms   — independent bookshop, Fraunces font, picsum covers
  *   http://localhost:3001/retrowheels  — vintage bicycle shop, slab-serif, booking form
  *   http://localhost:3001/suzukibento  — artist portfolio, dark brutalist, asymmetric grid
+ *   http://localhost:3001/andypixel   — blog article, editorial light, newsletter action
  */
 
 import fs   from 'fs'
@@ -89,6 +90,7 @@ await createServer(
     new URL('./bookworms.js',    import.meta.url),
     new URL('./retrowheels.js', import.meta.url),
     new URL('./suzukibento.js', import.meta.url),
+    new URL('./andypixel.js',   import.meta.url),
   ],
   {
     port:       3001,
