@@ -13,7 +13,8 @@ const ALL_LINKS = [
   { label: 'Quiz',     href: '/quiz'     },
   { label: 'Products', href: '/products' },
   { label: 'Pricing',  href: '/pricing'  },
-  { label: 'Swish',    href: '/swish'    },
+  { label: 'Swish',     href: '/swish'     },
+  { label: 'BookWorms', href: '/bookworms' },
 ]
 
 // Both icons rendered in DOM; JS hides the inactive one via `hidden` attribute.
