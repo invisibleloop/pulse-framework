@@ -471,14 +471,15 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 | 4. Validate | `pulse_validate` — fix all errors + warnings | Clean output |
 | 5. Browser | Screenshot + Lighthouse desktop + mobile | 100/100/100 (Accessibility, Best Practices, SEO) both strategies |
 | 6. Tests | Write tests, run them, fix failures | All pass |
-| 7. Review Agent | Invoke review — **only after phases 4–6 all pass** | — |
+| 7a. Design Review | `pulse_design_review` — if build started with `pulse_intake` | All signals pass |
+| 7b. Code Review | `pulse_review` — only after 4–6 (and 7a) pass | — |
 | 8. Fix | Fix every review issue, re-run affected gates | All gates still pass |
 
 **Skip phase 2 confirmation only for trivially small, unambiguous tasks.** When in doubt, confirm.
 
 **Template mode exception:** when adapting a pre-built template (see `pulse://guide/templates`), replace the full plan with a single compact confirmation block — template, substitutions, files. One turn is enough; do not run the full phase 2 ceremony.
 
-**The Review Agent is always last.** Never invoke it before validate, Lighthouse, and tests all pass.
+**The Code Review Agent is always last.** Never invoke `pulse_review` before validate, Lighthouse, tests, and design review all pass.
 
 The `/verify` command runs the browser check loop (phases 4–5) automatically. Use it.
 

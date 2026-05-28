@@ -1529,6 +1529,159 @@ If your page genuinely doesn't fit a pattern, start from pulse://guide/spec and 
 )
 
 // ---------------------------------------------------------------------------
+// pulse_design_review — Visual design review against the original brief
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_design_review',
+  {
+    description: `Review the built page's visual design against the original product brief from pulse_intake.
+
+Use this AFTER taking a screenshot but BEFORE the code review gate. It checks whether the design looks and feels appropriate for the stated product, audience, and vibe — catching mismatches like "builders merchant site that looks like a magazine" or "children's app that feels corporate".
+
+Returns a structured design critique the agent must address.`,
+    inputSchema: {
+      route:       z.string().optional().describe('Route to screenshot, e.g. "/" or "/about". Defaults to "/".'),
+      screenshot:  z.string().optional().describe('Description of what you observed in the screenshot (optional — helps focus the review).'),
+    },
+  },
+  ({ route = '/', screenshot }) => {
+    const briefFile = path.join(ROOT, '.pulse', 'brief.json')
+    const hasBrief  = fs.existsSync(briefFile)
+    const brief     = hasBrief ? JSON.parse(fs.readFileSync(briefFile, 'utf8')) : null
+
+    const lines = []
+    lines.push('# Design review — brief vs reality\n')
+
+    if (!brief) {
+      lines.push('> **No brief found** — `.pulse/brief.json` does not exist. Either `pulse_intake` was not run for this project, or the brief was not saved.')
+      lines.push('> You can still do a qualitative design review — describe the product type and target user to assess below.\n')
+    } else {
+      lines.push('## The original brief\n')
+      lines.push(`| Field | Value |`)
+      lines.push(`|---|---|`)
+      lines.push(`| Product | **${brief.name}** — ${brief.pitch} |`)
+      if (brief.targetUser) lines.push(`| Target user | ${brief.targetUser} |`)
+      if (brief.vibe)       lines.push(`| Vibe | ${brief.vibe} |`)
+      if (brief.theme)      lines.push(`| Theme | ${brief.theme} |`)
+      if (brief.antiStyle)  lines.push(`| Anti-style | ${brief.antiStyle} |`)
+      if (brief.styleNotes) lines.push(`| Style notes | ${brief.styleNotes} |`)
+      if (brief.features?.length) lines.push(`| Features | ${brief.features.join(', ')} |`)
+      lines.push('')
+    }
+
+    if (screenshot) {
+      lines.push('## Your screenshot observation\n')
+      lines.push(`> ${screenshot}\n`)
+    }
+
+    lines.push('## Your task\n')
+    lines.push('You are now a **design reviewer with no knowledge of the code**. Look only at the screenshot.')
+    lines.push('Work through each signal below. Give an honest verdict for each — do not skip any.\n')
+
+    // Build product-type signals from brief if available
+    const productType = brief ? `${brief.name} (${brief.pitch})` : 'this product'
+    const audience    = brief?.targetUser ?? 'the stated target user'
+    const vibe        = brief?.vibe ?? null
+    const antiStyle   = brief?.antiStyle ?? null
+
+    lines.push('### 1. First impression — audience fit')
+    lines.push(`Show the screenshot to someone unfamiliar with the brief. Would they immediately guess this is **${productType}** aimed at **${audience}**?`)
+    lines.push('- What three words does this design communicate at a glance?')
+    lines.push(`- Do those words match what **${audience}** would expect and trust?\n`)
+
+    lines.push('### 2. Typography feel')
+    lines.push('- **Serif vs sans**: Serifs read as editorial, literary, premium. Sans reads as functional, modern, utilitarian.')
+    lines.push('- **Weight**: Heavy/condensed headings = bold, urgent, industrial. Light/spaced = refined, editorial.')
+    lines.push('- **Scale**: Oversized display type = magazine/editorial. Modest headings with dense body = catalogue/functional.')
+    if (vibe)      lines.push(`- Expected for **${vibe}** vibe: ${vibeTypographyHint(vibe)}`)
+    if (antiStyle) lines.push(`- Anti-style check: does it resemble "${antiStyle}"? If so, flag it.\n`)
+    else           lines.push('')
+
+    lines.push('### 3. Colour mood')
+    lines.push('- **Warm neutrals + organic accent** = hospitality, artisan, food')
+    lines.push('- **Industrial palette** (grey, orange, yellow, black) = trades, construction, hardware')
+    lines.push('- **Navy/white/gold** = professional services, finance, prestige')
+    lines.push('- **Bright primaries** = consumer, retail, energy')
+    lines.push('- **Dark bg + neon accent** = tech, dev tools, gaming')
+    lines.push(`- Does the palette match what **${audience}** would associate with this category?\n`)
+
+    lines.push('### 4. Layout density and hierarchy')
+    lines.push('- **Sparse, generous whitespace, large imagery** → magazine, editorial, luxury')
+    lines.push('- **Dense, product grid, clear categories** → e-commerce, catalogue, trades')
+    lines.push('- **Dashboard grid, data-forward** → SaaS, B2B, professional tools')
+    lines.push('- **Single focus per section, story-driven scroll** → startup landing, consumer app')
+    lines.push(`- Which pattern does this layout use? Is that right for **${productType}**?\n`)
+
+    lines.push('### 5. Imagery and visual language')
+    lines.push('- **Lifestyle/aspirational photography** → consumer, food, travel, luxury')
+    lines.push('- **Product/catalogue photos** → e-commerce, hardware, trades')
+    lines.push('- **Abstract/geometric** → tech, SaaS, fintech')
+    lines.push('- **Illustration** → consumer apps, education, healthcare')
+    lines.push('- **No imagery, type-only** → brutalist, editorial, developer tools')
+    lines.push(`- Does the visual language feel appropriate for **${audience}**?\n`)
+
+    lines.push('### 6. CTA and copy tone')
+    lines.push('- **"Get a quote", "Order now", "Find a branch"** → trades, construction, B2B')
+    lines.push('- **"Get started", "Try free", "Sign up"** → SaaS, consumer app')
+    lines.push('- **"Explore", "Discover", "See the collection"** → editorial, luxury, fashion')
+    lines.push('- **"Book", "Reserve", "Check availability"** → hospitality, events, services')
+    lines.push(`- Do the CTAs sound like something **${audience}** would respond to?\n`)
+
+    lines.push('### 7. Trust signals for this audience')
+    lines.push(`What would make **${audience}** trust this site immediately? Check if those elements are present and prominent:`)
+    if (audience.match(/trade|builder|contractor|professional|B2B/i)) {
+      lines.push('- Trade account / account login visible?')
+      lines.push('- Product categories or catalogue entry point prominent?')
+      lines.push('- Delivery/collection info surfaced early?')
+      lines.push('- No unnecessary lifestyle imagery pushing catalogue below fold?')
+    } else if (audience.match(/consumer|shopper|customer|general/i)) {
+      lines.push('- Social proof (reviews, ratings, testimonials) visible?')
+      lines.push('- Clear pricing or "from £X" signals?')
+      lines.push('- Easy navigation to product categories?')
+    } else {
+      lines.push('- Are the primary conversion actions immediately visible?')
+      lines.push('- Does the above-fold content answer "what is this and why should I care"?')
+    }
+    lines.push('')
+
+    lines.push('## Verdict\n')
+    lines.push('After working through every signal above, give a verdict:')
+    lines.push('')
+    lines.push('| Signal | Pass / Fail / Warn | Notes |')
+    lines.push('|---|---|---|')
+    lines.push('| Audience fit | | |')
+    lines.push('| Typography feel | | |')
+    lines.push('| Colour mood | | |')
+    lines.push('| Layout density | | |')
+    lines.push('| Imagery style | | |')
+    lines.push('| CTA tone | | |')
+    lines.push('| Trust signals | | |')
+    lines.push('')
+    lines.push('**If any signal is Fail:** stop. Describe what needs to change and why before proceeding to the code review.')
+    lines.push('**If all Pass or Warn:** proceed to `pulse_review` for the code review gate.')
+
+    return text(lines.join('\n'))
+  }
+)
+
+function vibeTypographyHint(vibe) {
+  const hints = {
+    editorial:  'serif headings, tight tracking, high contrast text, editorial scale',
+    bold:       'heavy condensed headings, impact weight, high contrast',
+    brutalist:  'monospace or system font, raw weight, zero decoration',
+    retro:      'slab serif or display font, warm tones, nostalgic feel',
+    neon:       'monospace, futuristic, glowing accent on dark background',
+    warm:       'rounded sans, generous spacing, soft palette',
+    playful:    'rounded display font, large type, bright colours',
+    minimal:    'light weight sans, generous whitespace, restrained scale',
+    corporate:  'conservative sans, neutral palette, structured layout',
+    paper:      'serif body, organic texture, journal-like rhythm',
+  }
+  return hints[vibe] ?? 'match the vibe description'
+}
+
+// ---------------------------------------------------------------------------
 // pulse_suggest — Draft-mode contextual feedback
 // ---------------------------------------------------------------------------
 
@@ -2025,6 +2178,19 @@ Accepts antiStyle ("what should this NOT look like?") and inspiration (a site or
     if (antiStyle) lines.push(`Pass \`antiStyle: "${antiStyle}"\` to pulse_sketch to filter directions that might drift toward the constraint.`)
     lines.push('')
     lines.push('**Before writing image tags:** if you plan to use external images (picsum.photos, Unsplash, Cloudinary, etc.), add the host to `csp.img-src` in `pulse.config.js` before your first Lighthouse run — or images will be blocked and Best Practices will fail. See `pulse://guide/styles` → "External images (img-src)".')
+
+    // Save brief to .pulse/brief.json for later design review
+    try {
+      const pulseDir  = path.join(ROOT, '.pulse')
+      const briefFile = path.join(pulseDir, 'brief.json')
+      fs.mkdirSync(pulseDir, { recursive: true })
+      fs.writeFileSync(briefFile, JSON.stringify({
+        name, pitch, features: featureList, targetUser: targetUser ?? null,
+        vibe: vibe ?? null, theme, styleNotes: styleNotes ?? null,
+        antiStyle: antiStyle ?? null, palette: palette ?? null,
+        font: font ?? null, inspiration: inspiration ?? null,
+      }, null, 2))
+    } catch (_) { /* non-fatal — brief.json is best-effort */ }
 
     return text(lines.join('\n'))
   }
