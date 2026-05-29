@@ -387,3 +387,8 @@
   flex-wrap: wrap;
   justify-content: center;
 }
+
+/* Safe area padding for mobile devices (home indicator bar) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  footer { padding-bottom: max(var(--ui-space-6), env(safe-area-inset-bottom)); }
+}
