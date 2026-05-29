@@ -205,6 +205,13 @@ body { line-height: 1.6; }
   text-transform: uppercase;
 }
 
+/* Second book — solid semi-transparent block behind text */
+.bw-picks article:nth-child(2) .bw-pick-overlay {
+  inset: auto 0 0 0;
+  background: rgba(0, 0, 0, 0.55);
+  padding: var(--ui-space-5) var(--ui-space-6);
+}
+
 .bw-pick-overlay-tag {
   font-size: var(--ui-text-xs);
   letter-spacing: 0.14em;
