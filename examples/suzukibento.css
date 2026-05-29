@@ -241,13 +241,13 @@ body {
   margin-left: var(--ui-space-2);
 }
 
-/* Asymmetric grid spans — each work gets a distinct footprint */
-.sb-work--a { grid-column: span 7;  grid-row: span 4; }
-.sb-work--b { grid-column: span 5;  grid-row: span 3; }
-.sb-work--c { grid-column: span 5;  grid-row: span 3; }
-.sb-work--d { grid-column: span 4;  grid-row: span 3; }
-.sb-work--e { grid-column: span 8;  grid-row: span 3; }
-.sb-work--f { grid-column: span 12; grid-row: span 4; }
+/* Explicit positions — gap-free brickwork layout */
+.sb-work--a { grid-column: 1 / 8;  grid-row: 1 / 5; }
+.sb-work--b { grid-column: 8 / 13; grid-row: 1 / 4; }
+.sb-work--c { grid-column: 8 / 13; grid-row: 4 / 8; }
+.sb-work--d { grid-column: 1 / 5;  grid-row: 5 / 8; }
+.sb-work--e { grid-column: 5 / 8;  grid-row: 5 / 8; }
+.sb-work--f { grid-column: 1 / 13; grid-row: 8 / 12; }
 
 @media (max-width: 720px) {
   .sb-works { grid-auto-rows: 80px; }
