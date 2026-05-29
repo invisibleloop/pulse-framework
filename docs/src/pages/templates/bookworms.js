@@ -18,6 +18,7 @@
  */
 
 import { nav, button, footer } from '../../../../src/ui/index.js'
+import { asset } from '../../lib/layout.js'
 
 // ---------------------------------------------------------------------------
 // Static data
@@ -221,5 +222,6 @@ export default {
       ],
       legal: '\u00a9 2026 BookWorms \u00b7 14 Old Market Lane',
     })}
+    <script src="${asset('/pulse-ui.js')}" defer></script>
   `,
 }

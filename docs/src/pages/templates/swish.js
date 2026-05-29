@@ -23,6 +23,7 @@ import {
   footer,
   input,
 } from '../../../../src/ui/index.js'
+import { asset } from '../../lib/layout.js'
 
 // ---------------------------------------------------------------------------
 // Card / cell helpers
@@ -307,5 +308,6 @@ export default {
       ],
       legal: '© 2026 Swish Maison. All rights reserved.',
     })}
+    <script src="${asset('/pulse-ui.js')}" defer></script>
   `,
 }
