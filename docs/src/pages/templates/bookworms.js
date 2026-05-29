@@ -29,21 +29,21 @@ const picks = [
     title:  'The Lantern Keepers',
     author: 'Iris Aldenmoor',
     note:   'A quiet novel about three sisters, an unreliable lighthouse, and the long winter that follows a single decision.',
-    cover:  'https://picsum.photos/seed/lantern-keepers/400/600',
+    cover:  '/images/bookworms/lantern-keepers.jpg',
   },
   {
     tag:    'Non-fiction · This week',
     title:  'How We Read Now',
     author: 'Dr. Samuel Okafor',
     note:   'A short, generous history of attention — from monastic libraries to the open browser tab.',
-    cover:  'https://picsum.photos/seed/how-we-read-now/400/600',
+    cover:  '/images/bookworms/how-we-read-now.jpg',
   },
   {
     tag:    'Rare find · Just arrived',
     title:  'Letters from a Provincial Bookseller',
     author: 'M. Halloran (1927)',
     note:   'First edition, lightly foxed. A wry account of running a shop through a quiet decade.',
-    cover:  'https://picsum.photos/seed/provincial-bookseller/400/600',
+    cover:  '/images/bookworms/provincial-bookseller.jpg',
   },
 ]
 
