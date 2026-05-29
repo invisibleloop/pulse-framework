@@ -199,6 +199,12 @@ body { line-height: 1.6; }
   background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
 }
 
+.bw-picks article:first-child .bw-pick-overlay-title {
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .bw-pick-overlay-tag {
   font-size: var(--ui-text-xs);
   letter-spacing: 0.14em;
