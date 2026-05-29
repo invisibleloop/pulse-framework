@@ -182,6 +182,7 @@ export default {
 
       ${section({
         padding: 'lg',
+        class: 'swish-quote-section',
         content: container({
           size: 'md',
           content: pullquote({

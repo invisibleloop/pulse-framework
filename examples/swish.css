@@ -150,6 +150,9 @@
   border-color: #fff;
 }
 
+/* Quote section — reduce bottom padding to match visual weight of top */
+.swish-quote-section { padding-bottom: var(--ui-space-16); }
+
 /* --------------------------------------------------------------------------
    Section eyebrow / issue marker
    -------------------------------------------------------------------------- */
