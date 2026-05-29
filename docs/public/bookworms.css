@@ -212,6 +212,16 @@ body { line-height: 1.6; }
   padding: var(--ui-space-5) var(--ui-space-6);
 }
 
+/* Third book — Arial, no italic on author */
+.bw-picks article:nth-child(3) .bw-pick-overlay-title {
+  font-family: Arial, sans-serif;
+}
+
+.bw-picks article:nth-child(3) .bw-pick-overlay-author {
+  font-family: Arial, sans-serif;
+  font-style: normal;
+}
+
 .bw-pick-overlay-tag {
   font-size: var(--ui-text-xs);
   letter-spacing: 0.14em;
