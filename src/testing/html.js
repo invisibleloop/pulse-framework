@@ -153,6 +153,44 @@ export function tokenize(html) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Split a selector on whitespace that is NOT inside [...] attribute brackets.
+ * "span[aria-label="foo bar"]" → ["span[aria-label="foo bar"]"]  (single part)
+ * "div p span"                 → ["div", "p", "span"]
+ *
+ * @param {string} selector
+ * @returns {string[]}
+ */
+function splitDescendant(selector) {
+  const parts = []
+  let current = ''
+  let inBracket = false
+  let inQuote   = false
+  let quoteChar = ''
+
+  for (let i = 0; i < selector.length; i++) {
+    const c = selector[i]
+    if (inQuote) {
+      current += c
+      if (c === quoteChar) inQuote = false
+    } else if (inBracket) {
+      current += c
+      if (c === '"' || c === "'") { inQuote = true; quoteChar = c }
+      else if (c === ']') inBracket = false
+    } else if (c === '[') {
+      inBracket = true
+      current += c
+    } else if (c === ' ') {
+      if (current.trim()) parts.push(current.trim())
+      current = ''
+    } else {
+      current += c
+    }
+  }
+  if (current.trim()) parts.push(current.trim())
+  return parts
+}
+
+/**
  * Parse a simple CSS selector string.
  * Supports: tag  .class  #id  [attr]  [attr="value"]  and combinations.
  * Also supports descendant combinators: parent child grandchild
@@ -162,13 +200,12 @@ export function tokenize(html) {
  */
 export function parseSelector(selector) {
   const trimmed = selector.trim()
-  
-  // Check for descendant combinator (space)
-  if (trimmed.includes(' ')) {
-    // Split by space and parse each part
-    return trimmed.split(/\s+/).map(part => parseSingleSelector(part))
+  const parts   = splitDescendant(trimmed)
+
+  if (parts.length > 1) {
+    return parts.map(parseSingleSelector)
   }
-  
+
   return parseSingleSelector(trimmed)
 }
 

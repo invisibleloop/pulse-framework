@@ -113,6 +113,17 @@ test('button: renders icon HTML inside element', () => {
   assert.match(html, /<svg\/>/)
 })
 
+test('button: attrs with undefined values are omitted', () => {
+  const html = button({ label: 'Minus', attrs: { disabled: undefined, 'data-count': '3' } })
+  assert.doesNotMatch(html, /disabled="undefined"/)
+  assert.match(html, /data-count="3"/)
+})
+
+test('button: attrs with defined values are rendered', () => {
+  const html = button({ label: 'Add', attrs: { 'data-action': 'add' } })
+  assert.match(html, /data-action="add"/)
+})
+
 // ─── badge ──────────────────────────────────────────────────────────────────
 
 test('badge: renders with default variant', () => {
@@ -654,6 +665,30 @@ test('nav: action slot passes through raw HTML', () => {
 test('nav: escapes link labels and hrefs', () => {
   const html = nav({ logo: 'x', links: [{ label: '<b>X</b>', href: 'javascript:void(0)' }] })
   assert.doesNotMatch(html, /<b>X<\/b>/)
+})
+
+test('nav: aria-current="page" on current link', () => {
+  const html = nav({ logo: 'x', links: [
+    { label: 'Home', href: '/', current: true },
+    { label: 'About', href: '/about' },
+  ] })
+  assert.match(html, /aria-current="page"/)
+  // Appears in both desktop and mobile nav — once per nav, so 2 total
+  const matches = html.match(/aria-current="page"/g)
+  assert.ok(matches && matches.length >= 1, 'At least one link should have aria-current')
+  assert.doesNotMatch(html, /href="\/about"[^>]*aria-current/)
+})
+
+test('nav: no aria-current when current not set', () => {
+  const html = nav({ logo: 'x', links: [{ label: 'Home', href: '/' }] })
+  assert.doesNotMatch(html, /aria-current/)
+})
+
+test('nav: aria-current on utility link', () => {
+  const html = nav({ logo: 'x', links: [], utilityLinks: [
+    { label: 'Sign in', href: '/login', current: true },
+  ] })
+  assert.match(html, /aria-current="page"/)
 })
 
 // ─── appBadge ────────────────────────────────────────────────────────────────

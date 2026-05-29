@@ -20,7 +20,7 @@
  * @param {object}  opts
  * @param {string}  opts.logo       - Raw HTML slot — SVG, img, or text
  * @param {string}  opts.logoHref   - Logo link destination (default: '/')
- * @param {Array<{label:string, href?:string, mega?:Array}>} opts.links
+ * @param {Array<{label:string, href?:string, current?:boolean, mega?:Array}>} opts.links
  * @param {Array<{label:string, href?:string}>} opts.utilityLinks - Secondary links pushed to the far right
  * @param {string}  opts.action     - Raw HTML slot — typically a button()
  * @param {boolean} opts.sticky     - Position sticky with backdrop blur
@@ -64,7 +64,8 @@ function renderLink(link, navId, idx) {
     ${megaPanel(link.mega, panelId)}
   </div>`
   }
-  return `<a href="${e(link.href || '')}" class="ui-nav-link">${e(link.label || '')}</a>`
+  const current = link.current ? ' aria-current="page"' : ''
+  return `<a href="${e(link.href || '')}" class="ui-nav-link"${current}>${e(link.label || '')}</a>`
 }
 
 function renderMobileLink(link) {
@@ -72,7 +73,8 @@ function renderMobileLink(link) {
     const items = link.mega.flatMap(col => col.items || [])
     return `<p class="ui-nav-mobile-section">${e(link.label || '')}</p>` + items.map(item => megaItem(item)).join('')
   }
-  return `<a href="${e(link.href || '')}" class="ui-nav-link">${e(link.label || '')}</a>`
+  const current = link.current ? ' aria-current="page"' : ''
+  return `<a href="${e(link.href || '')}" class="ui-nav-link"${current}>${e(link.label || '')}</a>`
 }
 
 export function nav({
@@ -96,7 +98,7 @@ export function nav({
   const bgStyle = styles ? ` style="${styles}"` : ''
 
   const linksHtml       = links.map((l, i) => renderLink(l, id, i)).join('')
-  const utilityHtml     = utilityLinks.map(l => `<a href="${e(l.href || '')}" class="ui-nav-link">${e(l.label || '')}</a>`).join('')
+  const utilityHtml     = utilityLinks.map(l => `<a href="${e(l.href || '')}" class="ui-nav-link"${l.current ? ' aria-current="page"' : ''}>${e(l.label || '')}</a>`).join('')
   const mobileLinksHtml = [...links, ...utilityLinks].map(renderMobileLink).join('')
 
   const burgerHtml = (links.length || utilityLinks.length) ? `

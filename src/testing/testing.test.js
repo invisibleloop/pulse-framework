@@ -214,6 +214,24 @@ await test('matches attribute selector [attr="value"] (negative)', async () => {
   assert(!result.has('input[type="password"]'), 'Expected no password input')
 })
 
+await test('matches attribute selector [attr="value with spaces"]', async () => {
+  const spec = {
+    route: '/test-attr-spaces',
+    view: () => `<div><span aria-label="3 items in cart">3</span></div>`,
+  }
+  const result = renderSync(spec)
+  assert(result.has('span[aria-label="3 items in cart"]'), 'Expected span with aria-label containing spaces')
+})
+
+await test('descendant selector not confused by spaces in attr value', async () => {
+  const spec = {
+    route: '/test-desc-attr',
+    view: () => `<nav><a href="/cart" aria-label="3 items in cart">Cart</a></nav>`,
+  }
+  const result = renderSync(spec)
+  assert(result.has('nav a[aria-label="3 items in cart"]'), 'Expected descendant with spaced attr value')
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nresult.find() and result.get()\n')
