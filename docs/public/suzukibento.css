@@ -161,8 +161,13 @@ body {
   /* Nav hidden by default on mobile */
   .sb-nav nav {
     display: none;
-    width: 100%;
-    order: 3;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--ui-bg);
+    border-bottom: 1px solid var(--ui-border);
+    z-index: 49;
   }
 
   /* Show nav when checked */
@@ -173,8 +178,7 @@ body {
   .sb-nav__links {
     flex-direction: column;
     gap: 0;
-    padding: var(--ui-space-4) 0;
-    border-top: 1px solid var(--ui-border);
+    padding: var(--ui-space-4) var(--ui-space-5);
   }
 
   .sb-nav__links li { border-bottom: 1px solid var(--ui-border); }
