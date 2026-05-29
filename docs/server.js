@@ -118,6 +118,7 @@ await createServer(
     new URL('./src/pages/templates/suzukibento.js',         import.meta.url),
     new URL('./src/pages/templates/andypixel.js',           import.meta.url),
     new URL('./src/pages/templates/journey.js',             import.meta.url),
+    new URL('./src/pages/templates/shop.js',                import.meta.url),
     // Layout Components
     new URL('./src/pages/components/banner.js',      import.meta.url),
     new URL('./src/pages/components/cluster.js',     import.meta.url),

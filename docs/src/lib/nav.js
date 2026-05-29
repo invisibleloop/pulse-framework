@@ -165,6 +165,7 @@ export const NAV = [
       { label: 'Susuki Bento',         href: '/templates/suzukibento'       },
       { label: 'Andy Pixel — Blog',    href: '/templates/andypixel'         },
       { label: 'Journey — App',        href: '/templates/journey'           },
+      { label: 'Shop — Product Page',  href: '/templates/shop'              },
     ],
   },
 ]
