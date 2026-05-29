@@ -45,7 +45,7 @@ const exhibitions = [
 
 const press = [
   'Frieze', 'Artforum', 'ArtReview', 'S\u00fcddeutsche Zeitung',
-  'The Japan Times', 'Mousse', 'e-flux', 'Tank Magazine',
+  'The Japan Times', 'Mousse', 'e-flux',
 ]
 
 // ---------------------------------------------------------------------------
