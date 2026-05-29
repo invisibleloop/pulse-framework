@@ -13,6 +13,7 @@ import {
   topStrip, serviceCard, trustList, contactRow,
   iconZap, iconShield, iconCheck, iconPhone, iconMail, iconHome, iconClock, iconSettings, iconAlertTriangle, iconStar,
 } from '../../../../src/ui/index.js'
+import { asset } from '../../lib/layout.js'
 
 const PHONE      = '01623 555 014'
 const PHONE_HREF = 'tel:+441623555014'
@@ -243,5 +244,6 @@ export default {
       ],
       legal: '© 2026 Sparkys Electrical Ltd · NICEIC 60123456 · Reg. in England 09876543',
     })}
+    <script src="${asset('/pulse-ui.js')}" defer></script>
   `,
 }

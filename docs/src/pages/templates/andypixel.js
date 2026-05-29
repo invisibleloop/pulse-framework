@@ -25,6 +25,7 @@ import {
 } from '../../../../src/ui/index.js'
 
 import { iconCode, iconCheck } from '../../../../src/ui/icons.js'
+import { asset } from '../../lib/layout.js'
 
 // ---------------------------------------------------------------------------
 // Code block helper
@@ -238,6 +239,7 @@ proxy.score = 'oops'   // \u2717 TypeError`,
       })}
 
     </main>
+    <script src="${asset('/pulse-ui.js')}" defer></script>
   `,
 
   actions: {

@@ -7,6 +7,7 @@
 // All photography: placeholder images (originals are proprietary Coutumes photos)
 
 import { nav, banner, editorialHero, pullquote, grid, productCard, imagePair, brandStatement, uiImage, footer, input, button } from '@invisibleloop/pulse/ui'
+import { asset } from '../../lib/layout.js'
 
 export const spec = {
   route: '/templates/coutumes',
@@ -218,6 +219,7 @@ export const spec = {
     })}
 
   </main>
+  <script src="${asset('/pulse-ui.js')}" defer></script>
   `,
 }
 

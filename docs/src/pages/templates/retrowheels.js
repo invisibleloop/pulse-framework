@@ -21,6 +21,7 @@ import {
   nav, footer, button, input, stat, testimonial, cta, card, badge,
 } from '../../../../src/ui/index.js'
 import { iconMapPin, iconPhone, iconClock, iconSend, iconStar } from '../../../../src/ui/icons.js'
+import { asset } from '../../lib/layout.js'
 
 // ---------------------------------------------------------------------------
 // Static data
@@ -307,6 +308,7 @@ export default {
       ],
       legal: '\u00a9 1976 \u2014 2026 Retro Wheels Co. \u00b7 14 Saddler Lane, Cambridge \u00b7 A bicycle is forever.',
     })}
+    <script src="${asset('/pulse-ui.js')}" defer></script>
   `,
 
   actions: {
