@@ -190,7 +190,7 @@ export default {
 
     <footer class="sb-foot">
       <span>&copy; Susuki Bento Studio 2026</span>
-      <span>Site by the studio</span>
+      <span>Site by <a href="https://invisibleloop.com" class="sb-foot__link" target="_blank" rel="noopener">invisibleloop</a></span>
     </footer>
   `,
 }

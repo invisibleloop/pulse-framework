@@ -420,3 +420,10 @@ body {
   color: var(--ui-muted);
   border-top: 1px solid var(--ui-border);
 }
+
+.sb-foot__link {
+  color: var(--ui-muted);
+  text-decoration: none;
+}
+
+.sb-foot__link:hover { color: var(--ui-text); }
