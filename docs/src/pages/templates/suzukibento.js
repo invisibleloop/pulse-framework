@@ -103,7 +103,7 @@ export default {
 
     <main id="main-content">
       <section class="sb-hero">
-        <span class="sb-hero__eyebrow">Painter \u2014 b. Tokyo, 1984 \u00b7 lives Berlin</span>
+        <span class="sb-hero__eyebrow">ペインタ \u2014 b. Tokyo, 1984 \u00b7 lives Berlin</span>
         <h1 class="sb-hero__title">Susuki<br>Bento<em>.</em></h1>
         <div class="sb-hero__meta">
           <div>
