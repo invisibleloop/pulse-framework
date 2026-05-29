@@ -113,11 +113,13 @@
 }
 
 .swish-hero__eyebrow {
+  display: inline-block;
   font-size: var(--ui-text-xs);
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--swish-paper);
-  opacity: 0.9;
+  color: var(--swish-ink);
+  background: var(--swish-paper);
+  padding: var(--ui-space-1) var(--ui-space-3);
   margin-bottom: var(--ui-space-5);
 }
 
