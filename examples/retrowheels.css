@@ -247,7 +247,7 @@ h1, h2, h3, h4, h5, h6,
   margin-bottom: var(--ui-space-5);
 }
 
-.rw-editorial p::first-letter {
+.rw-editorial p:not(.rw-eyebrow)::first-letter {
   font-family: var(--ui-font-display);
   font-size: 3.5rem;
   font-weight: 900;
