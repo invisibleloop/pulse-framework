@@ -487,6 +487,14 @@ body {
   border-top: 1px solid var(--ui-border);
 }
 
+@media (max-width: 600px) {
+  .sb-foot {
+    flex-direction: column;
+    gap: var(--ui-space-2);
+    padding: var(--ui-space-5);
+  }
+}
+
 .sb-foot__link {
   color: var(--ui-muted);
   text-decoration: none;
