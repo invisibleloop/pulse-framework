@@ -120,6 +120,68 @@ body {
 .sb-nav__links a:hover,
 .sb-nav__links a:focus { color: var(--ui-accent); }
 
+/* Burger — hidden on desktop */
+.sb-nav__toggle-input { display: none; }
+.sb-nav__burger       { display: none; }
+
+@media (max-width: 600px) {
+  .sb-nav {
+    flex-wrap: wrap;
+    padding: var(--ui-space-4) var(--ui-space-5);
+  }
+
+  .sb-nav__burger {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 22px;
+    height: 16px;
+    cursor: pointer;
+  }
+
+  .sb-nav__burger span {
+    display: block;
+    height: 2px;
+    background: var(--ui-text);
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  .sb-nav__toggle-input:checked ~ .sb-nav__burger span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+  .sb-nav__toggle-input:checked ~ .sb-nav__burger span:nth-child(2) {
+    opacity: 0;
+  }
+  .sb-nav__toggle-input:checked ~ .sb-nav__burger span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  .sb-nav nav {
+    display: none;
+    width: 100%;
+    order: 3;
+  }
+
+  .sb-nav__toggle-input:checked ~ nav {
+    display: block;
+  }
+
+  .sb-nav__links {
+    flex-direction: column;
+    gap: 0;
+    padding: var(--ui-space-4) 0;
+    border-top: 1px solid var(--ui-border);
+  }
+
+  .sb-nav__links li { border-bottom: 1px solid var(--ui-border); }
+
+  .sb-nav__links a {
+    display: block;
+    padding: var(--ui-space-3) 0;
+    color: var(--ui-text);
+  }
+}
+
 /* --------------------------------------------------------------------------
    Hero
    -------------------------------------------------------------------------- */

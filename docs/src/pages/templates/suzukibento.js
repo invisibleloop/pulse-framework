@@ -91,6 +91,10 @@ export default {
 
     <header class="sb-nav">
       <a href="/suzukibento" class="sb-nav__brand" aria-label="Susuki Bento — home">Susuki Bento<span class="sb-nav__dot" aria-hidden="true"></span></a>
+      <input type="checkbox" id="sb-menu-toggle" class="sb-nav__toggle-input" aria-hidden="true">
+      <label for="sb-menu-toggle" class="sb-nav__burger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </label>
       <nav aria-label="Primary">
         <ul class="sb-nav__links">
           <li><a href="#works">Works</a></li>
