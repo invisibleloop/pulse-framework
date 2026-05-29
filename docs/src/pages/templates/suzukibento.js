@@ -58,7 +58,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => (
 
 const work = (w) => `
   <figure class="sb-work ${w.cls}">
-    <img src="https://picsum.photos/id/${w.id}/1200/900" alt="${esc(w.title)}, ${esc(w.year)}" loading="lazy" width="1200" height="900">
+    <img src="/images/suzukibento/${w.id}.jpg" alt="${esc(w.title)}, ${esc(w.year)}" loading="lazy" width="1200" height="900">
     <figcaption class="sb-work__caption">${esc(w.title)} <span>${esc(w.year)}</span></figcaption>
   </figure>
 `
