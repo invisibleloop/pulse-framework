@@ -31,7 +31,7 @@ const timelineEvents = [
     title: 'First Day in the City',
     body:  'Packed everything into one suitcase. The apartment was smaller than expected. The feeling was not.',
     tag:   'Milestone',
-    image: { src: 'https://picsum.photos/id/29/600/340', alt: 'City street view' },
+    image: { src: '/images/journey/29.jpg', alt: 'City street view' },
   },
   {
     year:  '2020',
@@ -44,7 +44,7 @@ const timelineEvents = [
     title: 'The Road Trip',
     body:  '4,200 miles across eleven states. Every diner looks the same after midnight. Every sunrise does not.',
     tag:   'Adventure',
-    image: { src: 'https://picsum.photos/id/178/600/340', alt: 'Open road through a landscape' },
+    image: { src: '/images/journey/178.jpg', alt: 'Open road through a landscape' },
   },
   {
     year:  '2022',
