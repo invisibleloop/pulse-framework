@@ -247,7 +247,7 @@ h1, h2, h3, h4, h5, h6,
   margin-bottom: var(--ui-space-5);
 }
 
-.rw-editorial p:not(.rw-eyebrow)::first-letter {
+.rw-editorial hr + p::first-letter {
   font-family: var(--ui-font-display);
   font-size: 3.5rem;
   font-weight: 900;
@@ -255,14 +255,6 @@ h1, h2, h3, h4, h5, h6,
   line-height: 0.9;
   padding: 0.25rem var(--ui-space-2) 0 0;
   color: var(--rw-orange-dark);
-}
-
-.rw-editorial p + p::first-letter {
-  font-size: inherit;
-  float: none;
-  padding: 0;
-  color: inherit;
-  font-weight: inherit;
 }
 
 /* --------------------------------------------------------------------------
