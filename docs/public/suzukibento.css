@@ -444,6 +444,16 @@ body {
   color: var(--ui-accent);
 }
 
+@media (max-width: 600px) {
+  .sb-press {
+    flex-direction: column;
+    gap: var(--ui-space-3);
+    font-size: var(--ui-text-base);
+  }
+
+  .sb-press span + span::before { display: none; }
+}
+
 /* --------------------------------------------------------------------------
    Contact
    -------------------------------------------------------------------------- */
