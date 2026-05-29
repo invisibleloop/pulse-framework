@@ -138,6 +138,16 @@
   opacity: 0.92;
 }
 
+/* Ghost button inside the hero — force white so it's visible over the dark veil */
+.swish-hero .ui-btn--ghost {
+  color: #fff;
+  border-color: rgba(255,255,255,0.6);
+}
+.swish-hero .ui-btn--ghost:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: #fff;
+}
+
 /* --------------------------------------------------------------------------
    Section eyebrow / issue marker
    -------------------------------------------------------------------------- */
