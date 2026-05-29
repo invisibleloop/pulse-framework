@@ -132,7 +132,7 @@ h1, h2, h3, h4, h5, h6,
   min-height: 70vh;
   background:
     linear-gradient(180deg, rgba(31, 42, 58, 0.55) 0%, rgba(31, 42, 58, 0.85) 100%),
-    url('https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=2000&q=80') center / cover no-repeat;
+    url('/images/retrowheels/hero.jpg') center / cover no-repeat;
   color: var(--rw-cream);
   padding: var(--ui-space-24) var(--ui-space-6);
   display: flex;
