@@ -144,7 +144,6 @@ export default {
                 <div class="bw-pick-cover-wrap">
                   <img class="bw-pick-cover" src="${p.cover}" alt="Cover of ${p.title} by ${p.author}" width="400" height="600" loading="lazy" />
                   <div class="bw-pick-overlay">
-                    <p class="bw-pick-overlay-tag">${p.tag}</p>
                     <h3 class="bw-pick-overlay-title">${p.title}</h3>
                     <p class="bw-pick-overlay-author">by ${p.author}</p>
                   </div>
