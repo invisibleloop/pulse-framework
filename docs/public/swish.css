@@ -96,7 +96,7 @@
   position: relative;
   min-height: 88vh;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   background-image:
     linear-gradient(180deg, var(--swish-hero-veil-top) 0%, var(--swish-hero-veil) 100%),
     url('/images/swish/1490481651871-ab68de25d43d.jpg');
