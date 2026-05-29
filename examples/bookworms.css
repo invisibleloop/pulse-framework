@@ -188,9 +188,9 @@ body { line-height: 1.6; }
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: var(--ui-space-6);
-  background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
 }
 
 .bw-pick-overlay-tag {
@@ -202,16 +202,17 @@ body { line-height: 1.6; }
 }
 
 .bw-pick-overlay-title {
-  font-family: var(--ui-font-display);
-  font-size: var(--ui-text-xl);
-  font-weight: 500;
-  line-height: 1.2;
+  font-family: var(--ui-font);
+  font-size: var(--ui-text-2xl);
+  font-weight: 600;
+  line-height: 1.15;
   color: #fff;
   margin-bottom: var(--ui-space-1);
 }
 
 .bw-pick-overlay-author {
   font-style: italic;
+  font-family: var(--ui-font);
   font-size: var(--ui-text-sm);
   color: rgba(255,255,255,0.7);
 }
