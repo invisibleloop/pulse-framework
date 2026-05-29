@@ -66,41 +66,41 @@ const featured = [
     name:   'The Marlene Coat',
     season: 'AW26',
     price:  '£1,290',
-    src:    'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=80&auto=format&fit=crop',
+    src:    '/images/swish/1539109136881-3be0616acf4b.jpg',
   },
   {
     name:   'Atelier Knit',
     season: 'AW26',
     price:  '£480',
-    src:    'https://images.unsplash.com/photo-1485518882345-15568b007407?w=900&q=80&auto=format&fit=crop',
+    src:    '/images/swish/1485518882345-15568b007407.jpg',
   },
   {
     name:   'Bias Slip Dress',
     season: 'AW26',
     price:  '£695',
-    src:    'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=900&q=80&auto=format&fit=crop',
+    src:    '/images/swish/1572804013309-59a88b7e92f1.jpg',
   },
   {
     name:   'Wide-Leg Trouser',
     season: 'AW26',
     price:  '£420',
-    src:    'https://images.unsplash.com/photo-1551803091-e20673f15770?w=900&q=80&auto=format&fit=crop',
+    src:    '/images/swish/1551803091-e20673f15770.jpg',
   },
 ]
 
 const lookbook = [
   {
-    src:   'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&q=80&auto=format&fit=crop',
+    src:   '/images/swish/1483985988355-763728e1935b.jpg',
     alt:   'Tailored editorial look in muted neutrals',
     label: 'Tailoring',
   },
   {
-    src:   'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1200&q=80&auto=format&fit=crop',
+    src:   '/images/swish/1469334031218-e382a71b716b.jpg',
     alt:   'Soft knitwear styled with wide trousers',
     label: 'Knitwear',
   },
   {
-    src:   'https://images.unsplash.com/photo-1502716119720-b23a93e5fe1b?w=1200&q=80&auto=format&fit=crop',
+    src:   '/images/swish/1502716119720-b23a93e5fe1b.jpg',
     alt:   'Evening dress under low light',
     label: 'Evening',
   },
@@ -112,21 +112,21 @@ const journal = [
     title:    'Inside the Florence workshop',
     deck:     'Where every Marlene coat is cut, basted and finished by hand over twenty-three days.',
     byline:   'Words by Inez Vasquez',
-    src:      'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1200&q=80&auto=format&fit=crop',
+    src:      '/images/swish/1558769132-cb1aea458c5e.jpg',
   },
   {
     category: 'Conversation',
     title:    'A new vocabulary for womenswear',
     deck:     'Creative director Lila Chen on quiet power, ease, and clothes that outlive a season.',
     byline:   'Interview by The Editors',
-    src:      'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=1200&q=80&auto=format&fit=crop',
+    src:      '/images/swish/1496747611176-843222e1e57c.jpg',
   },
   {
     category: 'Care',
     title:    'On keeping wool well',
     deck:     'A short guide to brushing, airing and storing the pieces meant to be with you for years.',
     byline:   'Words by Marta Engel',
-    src:      'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=80&auto=format&fit=crop',
+    src:      '/images/swish/1490481651871-ab68de25d43d.jpg',
   },
 ]
 
@@ -147,7 +147,7 @@ export default {
       '/examples/swish.css',
     ],
     ogTitle:     'Swish — Autumn/Winter 2026',
-    ogImage:     'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&q=80&auto=format&fit=crop',
+    ogImage:     '/images/swish/1490481651871-ab68de25d43d.jpg',
   },
 
   view: () => `
@@ -214,7 +214,7 @@ export default {
             <div class="swish-split">
               <div class="swish-split__media">
                 <img
-                  src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=1400&q=80&auto=format&fit=crop"
+                  src="/images/swish/1558769132-cb1aea458c5e.jpg"
                   alt="A tailor working at the Florence atelier" />
               </div>
               <div class="swish-split__body">
