@@ -115,16 +115,21 @@ export default {
 
     <main id="main-content">
       <section class="bw-hero">
-        <div class="bw-shell">
-          <p class="bw-eyebrow">Independent bookstore · Old Market Lane</p>
-          <h1 class="bw-hero-title">Books, handpicked for the curious.</h1>
-          <p class="bw-hero-lede">
-            BookWorms is a small shop with a long memory. Every title on our shelves has been read by
-            someone who works here — and is waiting for the right reader to find it.
-          </p>
-          <div class="bw-cta-actions bw-cta-actions--start">
-            ${button({ label: 'See this week\u2019s picks', href: '#picks', variant: 'primary' })}
-            ${button({ label: 'Upcoming events',            href: '#events', variant: 'secondary' })}
+        <div class="bw-shell bw-hero__inner">
+          <div class="bw-hero__content">
+            <p class="bw-eyebrow">Independent bookstore · Old Market Lane</p>
+            <h1 class="bw-hero-title">Books, handpicked for the curious.</h1>
+            <p class="bw-hero-lede">
+              BookWorms is a small shop with a long memory. Every title on our shelves has been read by
+              someone who works here — and is waiting for the right reader to find it.
+            </p>
+            <div class="bw-cta-actions bw-cta-actions--start">
+              ${button({ label: 'See this week\u2019s picks', href: '#picks', variant: 'primary' })}
+              ${button({ label: 'Upcoming events',            href: '#events', variant: 'secondary' })}
+            </div>
+          </div>
+          <div class="bw-hero__image" aria-hidden="true">
+            <img src="/images/bookworms/hero-books.jpg" alt="" width="820" height="1080" />
           </div>
         </div>
       </section>
