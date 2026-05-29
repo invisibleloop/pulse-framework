@@ -90,7 +90,7 @@ export default {
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <header class="sb-nav">
-      <a href="/suzukibento" class="sb-nav__brand" aria-label="Susuki Bento \u2014 home">Susuki Bento</a>
+      <a href="/suzukibento" class="sb-nav__brand" aria-label="Susuki Bento — home">Susuki Bento<span class="sb-nav__dot" aria-hidden="true"></span></a>
       <nav aria-label="Primary">
         <ul class="sb-nav__links">
           <li><a href="#works">Works</a></li>

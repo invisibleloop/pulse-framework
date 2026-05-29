@@ -92,6 +92,18 @@ body {
   font-weight: 700;
   color: var(--ui-text);
   text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.sb-nav__dot {
+  display: inline-block;
+  width: 0.45em;
+  height: 0.45em;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  flex-shrink: 0;
 }
 
 .sb-nav__links {
