@@ -33,13 +33,6 @@ for (let i = 0; i < rawArgs.length; i++) {
 const command = args[0]
 const CWD     = process.cwd()
 
-// Parse --agent flag before routing to commands
-let agentFlag = null
-const agentIdx = args.indexOf('--agent')
-if (agentIdx !== -1 && args[agentIdx + 1]) {
-  agentFlag = args[agentIdx + 1]
-}
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
