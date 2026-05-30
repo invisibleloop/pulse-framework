@@ -48,6 +48,7 @@ export function search({
     : ''
 
   const attrsStr = Object.entries(attrs)
+    .filter(([, v]) => v !== undefined)
     .map(([k, v]) => ` ${e(k)}="${e(String(v))}"`)
     .join('')
 

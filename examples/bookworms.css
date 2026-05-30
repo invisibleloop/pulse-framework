@@ -1,0 +1,422 @@
+/*
+ * bookworms.css — BookWorms independent bookshop example
+ *
+ * Palette: warm off-white, deep ink, oxblood accent.
+ * Font:    Fraunces (display headings, loaded via Google Fonts in meta.styles)
+ *
+ * Split into two logical sections:
+ *   1. Token overrides — hex values, palette definitions ([data-theme="light"])
+ *   2. Component styles — layout, typography, custom elements (var() only)
+ */
+
+/* ==========================================================================
+   1. Token overrides (hex values live here)
+   ========================================================================== */
+
+/*
+ * Override --font and --font-display so --ui-font / --ui-font-display
+ * cascade to Fraunces throughout components and custom elements.
+ */
+:root {
+  --font:         'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+}
+
+[data-theme="light"] {
+  --ui-bg:           #f6f2ec;
+  --ui-surface:      #ffffff;
+  --ui-surface-2:    #efe9df;
+  --ui-border:       #d8cfc1;
+  --ui-text:         #1a1a1a;
+  --ui-muted:        #5a5043;
+  --ui-accent:       #6b2a2a;
+  --ui-accent-hover: #4f1d1d;
+  --ui-accent-dim:   #f0e3e3;
+  --ui-accent-text:  #ffffff;
+
+  /* BookWorms-specific token */
+  --bw-bg-alt:       #efe9df;
+}
+
+/* ==========================================================================
+   2. Component styles (var() only — no hex values below this line)
+   ========================================================================== */
+
+body { line-height: 1.6; }
+
+/* --------------------------------------------------------------------------
+   Shell (centred max-width wrapper)
+   -------------------------------------------------------------------------- */
+.bw-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 var(--ui-space-6);
+}
+
+/* --------------------------------------------------------------------------
+   Hero
+   -------------------------------------------------------------------------- */
+.bw-hero {
+  padding: var(--ui-space-20) 0 var(--ui-space-16);
+  border-bottom: 1px solid var(--ui-border);
+  overflow: hidden;
+}
+
+.bw-hero__inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ui-space-12);
+  align-items: center;
+}
+
+.bw-hero__content {
+  min-width: 0;
+}
+
+.bw-hero__image {
+  position: relative;
+  border-radius: var(--ui-radius-lg);
+  overflow: hidden;
+  aspect-ratio: 3 / 4;
+}
+
+.bw-hero__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 700px) {
+  .bw-hero__inner {
+    grid-template-columns: 1fr;
+  }
+  .bw-hero__image {
+    aspect-ratio: 4 / 3;
+    order: -1;
+  }
+}
+
+.bw-eyebrow {
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+  margin-bottom: var(--ui-space-6);
+}
+
+.bw-hero-title {
+  font-family: var(--ui-font-display);
+  font-size: clamp(2.5rem, 7vw, 5.5rem);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  color: var(--ui-text);
+  margin-bottom: var(--ui-space-8);
+  max-width: 18ch;
+}
+
+.bw-hero-lede {
+  font-size: var(--ui-text-xl);
+  line-height: 1.55;
+  color: var(--ui-muted);
+  max-width: 60ch;
+  margin-bottom: var(--ui-space-8);
+}
+
+/* --------------------------------------------------------------------------
+   Section template
+   -------------------------------------------------------------------------- */
+.bw-section {
+  padding: var(--ui-space-16) 0;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.bw-section-label {
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+  margin-bottom: var(--ui-space-8);
+}
+
+.bw-section-title {
+  font-family: var(--ui-font-display);
+  font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ui-text);
+  margin-bottom: var(--ui-space-10);
+  max-width: 24ch;
+}
+
+/* --------------------------------------------------------------------------
+   Staff picks grid
+   -------------------------------------------------------------------------- */
+.bw-picks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ui-space-10);
+}
+
+@media (max-width: 800px) {
+  .bw-picks {
+    grid-template-columns: 1fr;
+    gap: var(--ui-space-8);
+  }
+}
+
+.bw-pick-cover-wrap {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: var(--ui-space-6);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.08);
+}
+
+.bw-pick-cover {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--bw-bg-alt);
+}
+
+.bw-pick-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--ui-space-6);
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
+}
+
+/* First book only — text at top */
+.bw-picks article:first-child .bw-pick-overlay {
+  justify-content: flex-start;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.2) 50%, transparent 100%);
+}
+
+.bw-picks article:first-child .bw-pick-overlay-title {
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Second book — solid semi-transparent block behind text */
+.bw-picks article:nth-child(2) .bw-pick-overlay {
+  inset: auto 0 0 0;
+  background: rgba(0, 0, 0, 0.55);
+  padding: var(--ui-space-5) var(--ui-space-6);
+}
+
+/* Third book — Arial, no italic on author */
+.bw-picks article:nth-child(3) .bw-pick-overlay-title {
+  font-family: Arial, sans-serif;
+  font-size: 3.75rem;
+}
+
+.bw-picks article:nth-child(3) .bw-pick-overlay-author {
+  font-family: Arial, sans-serif;
+  font-style: normal;
+}
+
+.bw-pick-overlay-tag {
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: var(--ui-space-2);
+}
+
+.bw-pick-overlay-title {
+  font-family: var(--ui-font);
+  font-size: var(--ui-text-2xl);
+  font-weight: 600;
+  line-height: 1.15;
+  color: #fff;
+  margin-bottom: var(--ui-space-1);
+}
+
+.bw-pick-overlay-author {
+  font-style: italic;
+  font-family: var(--ui-font);
+  font-size: var(--ui-text-sm);
+  color: rgba(255,255,255,0.7);
+}
+
+.bw-pick-meta {
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ui-accent);
+  margin-bottom: var(--ui-space-3);
+}
+
+.bw-pick-title {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-2xl);
+  font-weight: 500;
+  line-height: 1.2;
+  margin-bottom: var(--ui-space-2);
+  color: var(--ui-text);
+}
+
+.bw-pick-author {
+  font-style: italic;
+  color: var(--ui-muted);
+  margin-bottom: var(--ui-space-4);
+}
+
+.bw-pick-note {
+  font-size: var(--ui-text-base);
+  line-height: 1.6;
+  color: var(--ui-text);
+}
+
+/* --------------------------------------------------------------------------
+   Pull-quote
+   -------------------------------------------------------------------------- */
+.bw-pull {
+  padding: var(--ui-space-20) 0;
+  text-align: center;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.bw-pull-quote {
+  font-family: var(--ui-font-display);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--ui-text);
+  max-width: 32ch;
+  margin: 0 auto var(--ui-space-6);
+}
+
+.bw-pull-cite {
+  font-size: var(--ui-text-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Feature grid (what we do)
+   -------------------------------------------------------------------------- */
+.bw-features {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ui-space-12) var(--ui-space-16);
+}
+
+@media (max-width: 800px) {
+  .bw-features {
+    grid-template-columns: 1fr;
+    gap: var(--ui-space-10);
+  }
+}
+
+.bw-feature-title {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-xl);
+  font-weight: 500;
+  margin-bottom: var(--ui-space-2);
+  color: var(--ui-text);
+}
+
+.bw-feature-body {
+  color: var(--ui-muted);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   Events list
+   -------------------------------------------------------------------------- */
+.bw-events {
+  display: flex;
+  flex-direction: column;
+}
+
+.bw-event {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  align-items: baseline;
+  gap: var(--ui-space-8);
+  padding: var(--ui-space-6) 0;
+  border-top: 1px solid var(--ui-border);
+}
+
+.bw-event:last-child {
+  border-bottom: 1px solid var(--ui-border);
+}
+
+@media (max-width: 700px) {
+  .bw-event {
+    grid-template-columns: 1fr;
+    gap: var(--ui-space-2);
+  }
+}
+
+.bw-event-date {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-lg);
+  color: var(--ui-accent);
+  letter-spacing: 0.02em;
+}
+
+.bw-event-title {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-xl);
+  font-weight: 500;
+  color: var(--ui-text);
+}
+
+.bw-event-host {
+  color: var(--ui-muted);
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------------------
+   CTA section
+   -------------------------------------------------------------------------- */
+.bw-cta {
+  padding: var(--ui-space-24) 0;
+  text-align: center;
+}
+
+.bw-cta-title {
+  font-family: var(--ui-font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--ui-space-6);
+  color: var(--ui-text);
+  max-width: 20ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bw-cta-sub {
+  color: var(--ui-muted);
+  font-size: var(--ui-text-lg);
+  margin-bottom: var(--ui-space-8);
+  max-width: 50ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bw-cta-actions {
+  display: flex;
+  gap: var(--ui-space-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.bw-cta-actions--start {
+  justify-content: flex-start;
+}

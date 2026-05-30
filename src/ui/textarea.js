@@ -42,6 +42,7 @@ export function textarea({
   const wrapClasses = ['ui-field', error ? 'ui-field--error' : '', cls].filter(Boolean).join(' ')
 
   const attrsStr = Object.entries(attrs)
+    .filter(([, v]) => v !== undefined)
     .map(([k, v]) => ` ${e(k)}="${e(String(v))}"`)
     .join('')
 

@@ -126,6 +126,32 @@ meta: {
 }`, 'js'))}
       ${callout('note', 'For maximum performance, host your own fonts rather than using Google Fonts. External stylesheet requests add render-blocking latency and a DNS lookup.')}
 
+      ${section('vibe', 'Personality presets (meta.vibe)')}
+      <p>Set <code>meta.vibe</code> to apply a personality preset that adjusts typography, border radius, and letter-spacing across all components on the page. The preset sets a <code>data-vibe</code> attribute on <code>&lt;body&gt;</code> — pair it with a <code>theme.css</code> for complete brand expression.</p>
+      ${codeBlock(highlight(`export default {
+  route: '/landing',
+  meta: {
+    vibe:   'playful',
+    styles: ['/pulse-ui.css', '/theme.css'],
+  },
+}`, 'js'))}
+      ${table(
+        ['Vibe', 'Character', 'Best for'],
+        [
+          ['<code>warm</code>',       'Friendly, rounded (14px), humanist feel',                   'Local businesses, wellness, food, services'],
+          ['<code>editorial</code>',  'Serif display, zero radius, tight tracking',                  'Publications, blogs, journalism, literary'],
+          ['<code>playful</code>',    'Extra-large radius (22px), loose spacing',                    'Consumer apps, kids, lifestyle, creators'],
+          ['<code>minimal</code>',    'Ultra-low radius (2px), refined whitespace',                  'Portfolios, luxury, developer tools'],
+          ['<code>bold</code>',       'Tight tracking, strong presence',                             'Agencies, startups, sports'],
+          ['<code>brutalist</code>',  'Zero radius, oversized Arial Black / Impact headings',         'Art, fashion, counter-culture, zines'],
+          ['<code>retro</code>',      'Slab serif, medium radius (8px), nostalgic geometry',          'Craft, breweries, vintage, heritage brands'],
+          ['<code>corporate</code>',  'Conservative radius (4px), tight tracking, professional',     'B2B, finance, legal, consultancies'],
+          ['<code>neon</code>',       'Monospace headline, futuristic, sharp edges',                  'Gaming, crypto, dark-tech, cyberpunk'],
+          ['<code>paper</code>',      'Organic radius (10px), serif body, tactile feel',              'Journals, bookshops, newsletters, diaries'],
+        ]
+      )}
+      ${callout('tip', 'Vibe only adjusts shape and type tokens — it does not set colours. Add a <code>theme.css</code> that defines <code>--ui-accent</code>, <code>--color-bg</code>, and other colour tokens to complete the personality.')}
+
       ${section('seo-tips', 'SEO tips')}
       <ul>
         <li>Write a unique <code>title</code> and <code>description</code> for every page — duplicate metadata prevents pages from competing in search results.</li>

@@ -1,0 +1,235 @@
+/*
+ * shop.css — Template: Shop / Product Page
+ * Theme tokens + layout styles for the Tech Stuff Inc. product page template.
+ */
+
+/* ── Theme tokens ─────────────────────────────────────────────────────────── */
+
+[data-theme="light"] {
+  --accent: #1D4ED8;
+  --ui-color-muted: #374151;
+  --ui-surface: #F5F5F5;
+  --cart-bubble-text: #ffffff;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  line-height: 1.6;
+  background: var(--ui-bg);
+}
+
+#pulse-root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Constrain content to match nav width (1100px) */
+.page-body {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* ── Product display ──────────────────────────────────────────────────────── */
+
+.product-display {
+  padding: var(--ui-space-16) var(--ui-space-6) var(--ui-space-8);
+}
+
+.product-display .ui-display-heading {
+  font-size: clamp(3rem, 10vw, 8rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+  color: var(--ui-text);
+}
+
+.product-display .product-tagline {
+  margin-top: var(--ui-space-4);
+  font-size: var(--ui-text-xl);
+  color: var(--ui-color-muted);
+  max-width: 48ch;
+}
+
+.product-display .product-meta-row {
+  margin-top: var(--ui-space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+  flex-wrap: wrap;
+}
+
+/* ── Product photo ────────────────────────────────────────────────────────── */
+
+.product-photo {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Purchase section ─────────────────────────────────────────────────────── */
+
+.product-purchase {
+  padding: var(--ui-space-10) var(--ui-space-6);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.product-price {
+  font-size: var(--ui-text-4xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ui-text);
+  line-height: 1;
+  margin-bottom: var(--ui-space-6);
+}
+
+.qty-control {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  margin-bottom: var(--ui-space-6);
+}
+
+.qty-value {
+  font-size: var(--ui-text-lg);
+  font-weight: 600;
+  min-width: 2ch;
+  text-align: center;
+}
+
+.cart-actions {
+  display: flex;
+  gap: var(--ui-space-3);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--ui-space-4);
+}
+
+.added-confirm {
+  font-size: var(--ui-text-sm);
+  color: var(--ui-color-muted);
+}
+
+/* ── Specs section ────────────────────────────────────────────────────────── */
+
+.product-specs {
+  padding: var(--ui-space-10) var(--ui-space-6);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--ui-space-6);
+  margin-top: var(--ui-space-6);
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+}
+
+.spec-label {
+  font-size: var(--ui-text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ui-color-muted);
+  font-weight: 600;
+}
+
+.spec-value {
+  font-size: var(--ui-text-base);
+  font-weight: 500;
+  color: var(--ui-text);
+}
+
+/* ── Stats section ────────────────────────────────────────────────────────── */
+
+.product-stats {
+  padding: var(--ui-space-10) var(--ui-space-6);
+}
+
+.product-stats-grid {
+  margin-top: var(--ui-space-6);
+}
+
+/* ── Qty buttons — icon only, hide text span visually ─────────────────────── */
+
+.qty-btn > span:not(.ui-btn-icon) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Nav cart trigger button ──────────────────────────────────────────────── */
+
+.cart-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--ui-space-2);
+  color: var(--ui-text);
+  border-radius: var(--ui-radius);
+}
+
+.cart-trigger:hover { color: var(--ui-accent); }
+
+.cart-bubble {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  background: var(--ui-accent);
+  color: var(--cart-bubble-text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Cart modal table ─────────────────────────────────────────────────────── */
+
+.cart-table {
+  width: 100%;
+  margin-top: var(--ui-space-2);
+}
+
+.cart-col-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cart-total-row td {
+  padding-top: var(--ui-space-3);
+  border-top: 2px solid var(--ui-border);
+}
+
+/* ── View error fallback ──────────────────────────────────────────────────── */
+
+.view-error {
+  padding: var(--ui-space-16) var(--ui-space-6);
+  text-align: center;
+  color: var(--ui-color-muted);
+}

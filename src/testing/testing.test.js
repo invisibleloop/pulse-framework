@@ -214,6 +214,24 @@ await test('matches attribute selector [attr="value"] (negative)', async () => {
   assert(!result.has('input[type="password"]'), 'Expected no password input')
 })
 
+await test('matches attribute selector [attr="value with spaces"]', async () => {
+  const spec = {
+    route: '/test-attr-spaces',
+    view: () => `<div><span aria-label="3 items in cart">3</span></div>`,
+  }
+  const result = renderSync(spec)
+  assert(result.has('span[aria-label="3 items in cart"]'), 'Expected span with aria-label containing spaces')
+})
+
+await test('descendant selector not confused by spaces in attr value', async () => {
+  const spec = {
+    route: '/test-desc-attr',
+    view: () => `<nav><a href="/cart" aria-label="3 items in cart">Cart</a></nav>`,
+  }
+  const result = renderSync(spec)
+  assert(result.has('nav a[aria-label="3 items in cart"]'), 'Expected descendant with spaced attr value')
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nresult.find() and result.get()\n')
@@ -442,6 +460,46 @@ await test('count() handles multiple disjoint elements', async () => {
 await test('renderSync returns raw html string', async () => {
   const result = renderSync(counterSpec)
   assert(typeof result.html === 'string', 'Expected html to be a string')
+})
+
+console.log('\nDescendant selectors\n')
+
+await test('descendant selector finds nested elements', async () => {
+  const spec = {
+    route: '/list',
+    state: {},
+    view:  () => `<div><ul class="items"><li>A</li><li>B</li></ul><ul class="other"><li>X</li></ul></div>`,
+  }
+  const result = renderSync(spec)
+  assertEqual(result.count('.items li'), 2)
+  assertEqual(result.count('.other li'), 1)
+  assertEqual(result.count('ul li'), 3)
+})
+
+await test('descendant selector with multiple levels', async () => {
+  const spec = {
+    route: '/table',
+    state: {},
+    view:  () => `<table><thead><tr><th>Name</th></tr></thead><tbody><tr><td>Alice</td></tr><tr><td>Bob</td></tr></tbody></table>`,
+  }
+  const result = renderSync(spec)
+  assertEqual(result.count('tbody tr'), 2)
+  assertEqual(result.count('thead tr'), 1)
+  const cells = result.findAll('tbody td')
+  assertEqual(cells.length, 2)
+  assertEqual(cells[0].text, 'Alice')
+  assertEqual(cells[1].text, 'Bob')
+})
+
+await test('descendant selector returns empty for no matches', async () => {
+  const spec = {
+    route: '/empty',
+    state: {},
+    view:  () => `<div class="container"><span>text</span></div>`,
+  }
+  const result = renderSync(spec)
+  assertEqual(result.count('.container li'), 0)
+  assertEqual(result.find('.container li'), null)
 })
 
 // ---------------------------------------------------------------------------

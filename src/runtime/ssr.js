@@ -314,7 +314,10 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   const meta  = spec.meta  || {}
   const title = meta.title || 'Pulse'
 
-  const bodyAttr = meta.theme ? ` data-theme="${esc(meta.theme)}"` : ''
+  const bodyAttr = [
+    meta.theme ? `data-theme="${esc(meta.theme)}"` : '',
+    meta.vibe  ? `data-vibe="${esc(meta.vibe)}"` : '',
+  ].filter(Boolean).map(a => ` ${a}`).join('')
 
   const metaTags = [
     meta.description ? `<meta name="description" content="${esc(meta.description)}">` : '',

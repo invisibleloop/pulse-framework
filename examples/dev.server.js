@@ -12,6 +12,12 @@
  *   http://localhost:3001/quiz      — multi-step state machine
  *   http://localhost:3001/products  — server data + search/filter/sort
  *   http://localhost:3001/pricing   — landing page components + billing toggle
+ *   http://localhost:3001/swish     — editorial fashion branding + light theme
+ *   http://localhost:3001/bookworms   — independent bookshop, Fraunces font, picsum covers
+ *   http://localhost:3001/retrowheels  — vintage bicycle shop, slab-serif, booking form
+ *   http://localhost:3001/suzukibento  — artist portfolio, dark brutalist, asymmetric grid
+ *   http://localhost:3001/andypixel   — blog article, editorial light, newsletter action
+ *   http://localhost:3001/journey     — app landing page, dark split-screen, sticky timeline
  */
 
 import fs   from 'fs'
@@ -81,6 +87,12 @@ await createServer(
     new URL('./quiz.js',     import.meta.url),
     new URL('./products.js', import.meta.url),
     new URL('./pricing.js',  import.meta.url),
+    new URL('./swish.js',    import.meta.url),
+    new URL('./bookworms.js',    import.meta.url),
+    new URL('./retrowheels.js', import.meta.url),
+    new URL('./suzukibento.js', import.meta.url),
+    new URL('./andypixel.js',   import.meta.url),
+    new URL('./journey.js',     import.meta.url),
   ],
   {
     port:       3001,
@@ -89,5 +101,10 @@ await createServer(
     root:       new URL('..', import.meta.url),  // pulse2/ — specs served at /examples/*
     onRequest:  staticHandler,
     extraBody:  themeScript,
+    csp: {
+      'style-src': ['https://fonts.googleapis.com'],
+      'font-src':  ['https://fonts.gstatic.com'],
+      'img-src':   ['https://images.unsplash.com', 'https://picsum.photos', 'https://fastly.picsum.photos'],
+    },
   }
 )

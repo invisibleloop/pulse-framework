@@ -33,6 +33,13 @@ for (let i = 0; i < rawArgs.length; i++) {
 const command = args[0]
 const CWD     = process.cwd()
 
+// Parse --agent flag before routing to commands
+let agentFlag = null
+const agentIdx = args.indexOf('--agent')
+if (agentIdx !== -1 && args[agentIdx + 1]) {
+  agentFlag = args[agentIdx + 1]
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -91,7 +98,7 @@ function isDirEmpty(dir) {
   return fs.readdirSync(dir).length === 0
 }
 
-async function runDefault(root) {
+async function runDefault(root, agentFlag = null) {
   if (!isPulseProject(root)) {
     console.log(`\n⚡ No Pulse project found here.\n`)
 
@@ -343,7 +350,11 @@ async function runUpdate(root) {
     process.exit(1)
   }
 
+  // Copy assets from the package this CLI binary lives in (import.meta.url).
+  // When globally npm-linked to the dev repo, this resolves to dev source.
+  // When installed normally, this resolves to the installed version.
   const pkgPublic = new URL('../../public', import.meta.url).pathname
+  const pkgSrc    = new URL('..', import.meta.url).pathname
   const assets    = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
   const publicDir = path.join(root, 'public')
   const updated   = []
@@ -359,11 +370,10 @@ async function runUpdate(root) {
 
   // Sync agent files into .claude/
   const agentFiles = [
-    ['../agent/checklist.md',      'pulse-checklist.md'],
-    ['../agent/coverage-check.js', 'coverage-check.js'],
+    [path.join(pkgSrc, 'agent', 'checklist.md'),      'pulse-checklist.md'],
+    [path.join(pkgSrc, 'agent', 'coverage-check.js'), 'coverage-check.js'],
   ]
-  for (const [rel, dst] of agentFiles) {
-    const src = new URL(rel, import.meta.url).pathname
+  for (const [src, dst] of agentFiles) {
     if (fs.existsSync(src)) {
       const dstPath = path.join(root, '.claude', dst)
       fs.mkdirSync(path.dirname(dstPath), { recursive: true })
@@ -373,7 +383,7 @@ async function runUpdate(root) {
   }
 
   // Sync slash commands into .claude/commands/
-  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsSrc = path.join(pkgSrc, 'agent', 'commands')
   const commandsDst = path.join(root, '.claude', 'commands')
   if (fs.existsSync(commandsSrc)) {
     fs.mkdirSync(commandsDst, { recursive: true })
@@ -410,9 +420,16 @@ async function runUpdate(root) {
   const versionFile = path.join(publicDir, '.pulse-ui-version')
   const version     = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : '?'
 
-  console.log(`\n⚡ Pulse updated to ${version}\n`)
-  for (const f of updated) console.log(`  ✓ ${f}`)
-  for (const f of missing) console.log(`  ✗ ${f} not found in package`)
+  const { c, ok: fmtOk, fail: fmtFail, icon } = await import('./fmt.js').catch(() => ({
+    c: { dim: s => s, bold: s => s },
+    ok: s => `  ✓ ${s}`,
+    fail: s => `  ✗ ${s}`,
+    icon: { bolt: () => '⚡' },
+  }))
+
+  console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')} updated to ${c.bold(version)}\n`)
+  for (const f of updated) console.log(fmtOk(f))
+  for (const f of missing) console.log(fmtFail(`${f} not found in package`))
   console.log()
 }
 
@@ -446,29 +463,37 @@ switch (command) {
     process.exit(0)
   }
   case '--help':
-  case '-h':
+  case '-h': {
+    const { c, icon } = await import('./fmt.js').catch(() => ({
+      c: { bold: s => s, dim: s => s, cyan: s => s, purple: s => s, white: s => s },
+      icon: { bolt: () => '⚡' },
+    }))
     console.log(`
-  ⚡ Pulse — spec-first frontend framework
+  ${icon.bolt()} ${c.bold('Pulse')}  ${c.dim('— spec-first frontend framework')}
 
-  Usage: pulse [command] [options]
+  ${c.bold('Usage:')}  pulse ${c.dim('[command] [options]')}
 
-  Commands:
-    (none)      detect project or start scaffold wizard
-    dev         start dev server
-    build       production build → public/dist/
-    start       production server (requires prior build)
-    update      re-copy pulse-ui assets from installed package → public/
+  ${c.bold('Commands:')}
+    ${c.cyan('(none)')}           detect project, or launch the scaffold wizard
+    ${c.cyan('dev')}              start the dev server
+    ${c.cyan('build')}            production build  ${c.dim('→ public/dist/')}
+    ${c.cyan('start')}            production server ${c.dim('(requires prior build)')}
+    ${c.cyan('update')}           re-copy pulse-ui assets from installed package
 
-  Options:
-    --agent <name>  AI agent to use: claude (default) or copilot
-    -v, --version   print version and exit
-    -h, --help      show this help
+  ${c.bold('Options:')}
+    ${c.cyan('--agent')} ${c.dim('<name>')}     use specific agent ${c.dim('(claude | copilot)')}
+    ${c.cyan('-v')}, ${c.cyan('--version')}      print version and exit
+    ${c.cyan('-h')}, ${c.cyan('--help')}         show this help
 
-  Examples:
-    pulse                    start with Claude (default)
-    pulse --agent copilot    start with GitHub Copilot CLI
+  ${c.bold('Examples:')}
+    ${c.dim('pulse                      # new project wizard')}
+    ${c.dim('pulse --agent copilot      # launch with GitHub Copilot CLI')}
+    ${c.dim('pulse dev                  # dev server')}
+    ${c.dim('pulse build                # bundle for production')}
+    ${c.dim('pulse start                # serve production build')}
 `)
     process.exit(0)
+  }
   case 'dev':
     await runDev(CWD)
     break
@@ -496,6 +521,14 @@ switch (command) {
   case 'update':
     await runUpdate(CWD)
     break
+  case 'link': {
+    // DEV-ONLY: npm link the local dev repo into this project, then pulse update.
+    const { execSync } = await import('child_process')
+    console.log('\n  Linking @invisibleloop/pulse from dev repo…\n')
+    execSync('npm link @invisibleloop/pulse', { cwd: CWD, stdio: 'inherit' })
+    await runUpdate(CWD)
+    break
+  }
   default:
-    await runDefault(CWD)
+    await runDefault(CWD, agentFlag)
 }

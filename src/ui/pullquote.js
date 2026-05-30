@@ -1,12 +1,18 @@
 /**
  * Pulse UI — Pullquote
  *
- * Styled blockquote with accent left border and optional attribution.
+ * Styled blockquote with optional attribution.
+ *
+ * Two variants:
+ *  - Default: left accent border — for inline editorial quotes in prose or sidebars
+ *  - 'editorial': centred large italic serif, no border — for brand voice statements
+ *    in fashion, luxury, or magazine contexts
  *
  * @param {object} opts
  * @param {string} opts.quote  - The quote text
  * @param {string} opts.cite   - Attribution (name, role, etc.)
  * @param {'md'|'lg'} opts.size - Size variant (default: 'md')
+ * @param {'default'|'editorial'} opts.variant - Visual style (default: 'default')
  * @param {string} opts.class
  */
 
@@ -16,10 +22,15 @@ export function pullquote({
   quote      = '',
   cite       = '',
   size       = 'md',
+  variant    = 'default',
   class: cls = '',
 } = {}) {
-  const sizeClass   = size === 'lg' ? 'ui-pullquote--lg' : ''
-  const figClasses  = ['ui-pullquote', sizeClass, cls].filter(Boolean).join(' ')
+  const figClasses  = [
+    'ui-pullquote',
+    size === 'lg'           && 'ui-pullquote--lg',
+    variant === 'editorial' && 'ui-pullquote--editorial',
+    cls,
+  ].filter(Boolean).join(' ')
 
   const citeHtml = cite
     ? `<figcaption class="ui-pullquote-cite">${e(cite)}</figcaption>`

@@ -57,7 +57,15 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
   const stampPath  = path.join(PUBLIC_DIR, '.pulse-ui-version')
   const stamp      = fs.existsSync(stampPath) ? fs.readFileSync(stampPath, 'utf8').trim() : null
 
-  if (stamp === pkgVersion) return
+  // Compare CSS byte-length so any content change triggers a re-copy, even
+  // within the same version (e.g. when iterating locally with npm link).
+  const srcCss    = path.join(pkgPublic, 'pulse-ui.css')
+  const dstCss    = path.join(PUBLIC_DIR, 'pulse-ui.css')
+  const srcSize   = fs.existsSync(srcCss) ? fs.statSync(srcCss).size : -1
+  const dstSize   = fs.existsSync(dstCss) ? fs.statSync(dstCss).size : -2
+  const cssStale  = srcSize !== dstSize
+
+  if (stamp === pkgVersion && !cssStale) return
 
   fs.mkdirSync(PUBLIC_DIR, { recursive: true })
   for (const asset of ['pulse-ui.css', 'pulse-ui.js']) {
@@ -135,16 +143,40 @@ process.on('SIGTERM', closeReloadClients)
 process.on('SIGINT',  closeReloadClients)
 
 let reloadTimer = null
-fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => {
+let lastReload = 0
+
+async function triggerReload(label = 'File changed') {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(async () => {
+    // Debounce rapid file changes (e.g. multiple Edit tool calls)
+    const now = Date.now()
+    if (now - lastReload < 100) return
+    lastReload = now
+    
+    console.log(`  ⟳ ${label}, reloading specs...`)
     try {
-      const fresh = await loadPages(ROOT, Date.now())
+      const fresh = await loadPages(ROOT, now)
       updateSpecs(fresh)
-    } catch { /* spec error — browser will show the old page, not crash */ }
+      console.log('  ✓ Specs reloaded')
+    } catch (err) {
+      console.error('  ✗ Spec reload failed:', err.message)
+      /* spec error — browser will show the old page, not crash */
+    }
     notifyReload()
-  }, 50)
-})
+  }, 200)
+}
+
+// Watch src/ for changes to existing files (spec edits, component edits)
+fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => triggerReload('File changed'))
+
+// Also watch the pages directory explicitly so macOS reliably fires on new file creation.
+// On macOS, fs.watch with recursive=true watches subdirectory contents but may not fire
+// for the parent dir entry when a brand-new file is created. Watching the dir non-recursively
+// catches the "new entry added to this directory" event.
+const pagesDir = path.join(ROOT, 'src', 'pages')
+if (fs.existsSync(pagesDir)) {
+  fs.watch(pagesDir, { recursive: false }, () => triggerReload('New page detected'))
+}
 
 // Tiny script injected into every page — connects to SSE and reloads on change
 // Passed as a function so the server can inject the per-request CSP nonce
@@ -160,7 +192,7 @@ const reloadScript = (nonce) => `<script nonce="${nonce}">
   })();
 </script>`
 
-const { updateSpecs } = createServer(specs, {
+const { updateSpecs } = await createServer(specs, {
   port:      PORT,
   stream:    true,
   staticDir: fs.existsSync(PUBLIC_DIR) ? PUBLIC_DIR : null,

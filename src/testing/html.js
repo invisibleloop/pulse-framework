@@ -3,7 +3,7 @@
  *
  * No dependencies. Handles common HTML patterns well enough for test assertions.
  * Supports: tag, .class, #id, [attr], [attr="value"] and combinations thereof.
- * Does NOT support descendant combinators (div p) — match within el.findAll() instead.
+ * Supports descendant combinators (div p, .parent span) — findFirst/findAll walk the ancestor stack.
  */
 
 // ---------------------------------------------------------------------------
@@ -153,13 +153,63 @@ export function tokenize(html) {
 // ---------------------------------------------------------------------------
 
 /**
- * Parse a simple CSS selector string.
- * Supports: tag  .class  #id  [attr]  [attr="value"]  and combinations.
+ * Split a selector on whitespace that is NOT inside [...] attribute brackets.
+ * "span[aria-label="foo bar"]" → ["span[aria-label="foo bar"]"]  (single part)
+ * "div p span"                 → ["div", "p", "span"]
  *
  * @param {string} selector
- * @returns {{ tag: string|null, id: string|null, classes: string[], attrs: Array<{name,value}> }}
+ * @returns {string[]}
+ */
+function splitDescendant(selector) {
+  const parts = []
+  let current = ''
+  let inBracket = false
+  let inQuote   = false
+  let quoteChar = ''
+
+  for (let i = 0; i < selector.length; i++) {
+    const c = selector[i]
+    if (inQuote) {
+      current += c
+      if (c === quoteChar) inQuote = false
+    } else if (inBracket) {
+      current += c
+      if (c === '"' || c === "'") { inQuote = true; quoteChar = c }
+      else if (c === ']') inBracket = false
+    } else if (c === '[') {
+      inBracket = true
+      current += c
+    } else if (c === ' ') {
+      if (current.trim()) parts.push(current.trim())
+      current = ''
+    } else {
+      current += c
+    }
+  }
+  if (current.trim()) parts.push(current.trim())
+  return parts
+}
+
+/**
+ * Parse a simple CSS selector string.
+ * Supports: tag  .class  #id  [attr]  [attr="value"]  and combinations.
+ * Also supports descendant combinators: parent child grandchild
+ *
+ * @param {string} selector
+ * @returns {{ tag: string|null, id: string|null, classes: string[], attrs: Array<{name,value}> }} | Array of same
  */
 export function parseSelector(selector) {
+  const trimmed = selector.trim()
+  const parts   = splitDescendant(trimmed)
+
+  if (parts.length > 1) {
+    return parts.map(parseSingleSelector)
+  }
+
+  return parseSingleSelector(trimmed)
+}
+
+function parseSingleSelector(selector) {
   const result = { tag: null, id: null, classes: [], attrs: [] }
   let s = selector.trim()
 
@@ -255,29 +305,105 @@ export function extractText(tokens) {
 
 /**
  * Find the first token matching selector.
+ * Supports descendant combinators: parent child
  * @param {Array}  tokens
  * @param {string} selector
  * @returns {{ token, index } | null}
  */
 export function findFirst(tokens, selector) {
   const sel = parseSelector(selector)
+  
+  // Simple selector (no spaces)
+  if (!Array.isArray(sel)) {
+    for (let i = 0; i < tokens.length; i++) {
+      if (matchesToken(tokens[i], sel)) return { token: tokens[i], index: i }
+    }
+    return null
+  }
+  
+  // Descendant selector (array of selectors)
+  const target = sel[sel.length - 1]  // Last selector is the element we're looking for
+  const ancestors = sel.slice(0, -1)  // Earlier selectors are ancestor requirements
+  
   for (let i = 0; i < tokens.length; i++) {
-    if (matchesToken(tokens[i], sel)) return { token: tokens[i], index: i }
+    if (matchesToken(tokens[i], target)) {
+      // Check if all ancestor requirements are met
+      if (hasAncestors(tokens, i, ancestors)) {
+        return { token: tokens[i], index: i }
+      }
+    }
   }
   return null
 }
 
 /**
+ * Check if a token at index has all required ancestors.
+ * @param {Array} tokens
+ * @param {number} index - index of the target token
+ * @param {Array} ancestorSels - array of ancestor selectors to match
+ */
+function hasAncestors(tokens, index, ancestorSels) {
+  if (ancestorSels.length === 0) return true
+  
+  // Build a stack of open tags from start to index
+  const stack = []
+  for (let i = 0; i < index; i++) {
+    if (tokens[i].type === 'open') {
+      stack.push(tokens[i])
+    } else if (tokens[i].type === 'close') {
+      stack.pop()
+    }
+  }
+  
+  // Now check if the stack contains all required ancestors in order
+  // We need to find each ancestor selector somewhere in the stack, in order
+  let stackIdx = 0
+  for (const ancestorSel of ancestorSels) {
+    let found = false
+    while (stackIdx < stack.length) {
+      if (matchesToken(stack[stackIdx], ancestorSel)) {
+        found = true
+        stackIdx++  // Move past this one for the next ancestor search
+        break
+      }
+      stackIdx++
+    }
+    if (!found) return false
+  }
+  
+  return true
+}
+
+/**
  * Find all tokens matching selector.
+ * Supports descendant combinators: parent child
  * @param {Array}  tokens
  * @param {string} selector
  * @returns {Array<{ token, index }>}
  */
 export function findAll(tokens, selector) {
   const sel = parseSelector(selector)
+  
+  // Simple selector (no spaces)
+  if (!Array.isArray(sel)) {
+    const results = []
+    for (let i = 0; i < tokens.length; i++) {
+      if (matchesToken(tokens[i], sel)) results.push({ token: tokens[i], index: i })
+    }
+    return results
+  }
+  
+  // Descendant selector (array of selectors)
+  const target = sel[sel.length - 1]
+  const ancestors = sel.slice(0, -1)
+  
   const results = []
   for (let i = 0; i < tokens.length; i++) {
-    if (matchesToken(tokens[i], sel)) results.push({ token: tokens[i], index: i })
+    if (matchesToken(tokens[i], target)) {
+      if (hasAncestors(tokens, i, ancestors)) {
+        results.push({ token: tokens[i], index: i })
+      }
+    }
   }
   return results
 }

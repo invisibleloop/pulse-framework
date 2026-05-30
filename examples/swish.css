@@ -1,0 +1,394 @@
+/*
+ * swish.css — Swish editorial fashion example
+ *
+ * Palette: warm off-white paper, deep ink, oxblood accent.
+ * Font:    Playfair Display (display headings), system-ui (body)
+ *
+ * Split into two logical sections:
+ *   1. Token overrides — hex values, palette definitions ([data-theme="light"])
+ *   2. Component styles — layout, typography, custom elements (var() only)
+ */
+
+/* ==========================================================================
+   1. Token overrides (hex values live here)
+   ========================================================================== */
+
+/* Override --font-display so --ui-font-display cascades to Playfair Display */
+:root {
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+}
+
+[data-theme="light"] {
+  --ui-bg:           #f5f1ea;
+  --ui-surface:      #faf7f1;
+  --ui-surface-2:    #ede7dc;
+  --ui-border:       #d8cfc0;
+  --ui-text:         #14110d;
+  --ui-muted:        #6b6357;
+  --ui-accent:       #6b1d1d;
+  --ui-accent-hover: #4a1212;
+  --ui-accent-dim:   rgba(107, 29, 29, 0.10);
+  --ui-accent-text:  #faf7f1;
+
+  /* Swish-specific tokens */
+  --swish-paper:         #faf7f1;
+  --swish-ink:           #14110d;
+  --swish-hero-veil:     rgba(20, 17, 13, 0.55);
+  --swish-hero-veil-top: rgba(20, 17, 13, 0.05);
+  --swish-label-bg:      rgba(20, 17, 13, 0.55);
+}
+
+/* Primary button on light theme — needs paper text, not default */
+[data-theme="light"] .ui-btn--primary {
+  color: var(--swish-paper);
+}
+
+/* Frosted nav over editorial imagery */
+[data-theme="light"] .ui-nav {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: rgba(245, 241, 234, 0.78);
+}
+
+[data-theme="light"] .ui-nav-mobile .ui-nav-link,
+[data-theme="light"] .ui-nav-mobile .ui-nav-mega-item-label,
+[data-theme="light"] .ui-nav-mobile-section {
+  color: var(--ui-text);
+}
+
+/* ==========================================================================
+   2. Component styles (var() only — no hex values below this line)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Skip link
+   -------------------------------------------------------------------------- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--ui-text);
+  color: var(--ui-bg);
+  padding: var(--ui-space-2) var(--ui-space-4);
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: var(--ui-space-4);
+  top: var(--ui-space-4);
+}
+
+/* --------------------------------------------------------------------------
+   Brand wordmark
+   -------------------------------------------------------------------------- */
+.swish-mark {
+  font-family: var(--ui-font-display);
+  font-weight: 400;
+  font-size: var(--ui-text-2xl);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Full-bleed hero
+   -------------------------------------------------------------------------- */
+.swish-hero {
+  position: relative;
+  min-height: 88vh;
+  display: flex;
+  align-items: center;
+  background-image:
+    linear-gradient(180deg, var(--swish-hero-veil-top) 0%, var(--swish-hero-veil) 100%),
+    url('/images/swish/1490481651871-ab68de25d43d.jpg');
+  background-size: cover;
+  background-position: center;
+  color: var(--swish-paper);
+  padding: var(--ui-space-12) var(--ui-space-6) var(--ui-space-16);
+}
+
+.swish-hero__inner {
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.swish-hero__eyebrow {
+  display: inline-block;
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--swish-ink);
+  background: var(--swish-paper);
+  padding: var(--ui-space-1) var(--ui-space-3);
+  margin-bottom: var(--ui-space-5);
+}
+
+.swish-hero__title {
+  font-family: var(--ui-font-display);
+  font-weight: 400;
+  font-size: clamp(3rem, 9vw, 7rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--ui-space-6);
+}
+
+.swish-hero__deck {
+  font-size: var(--ui-text-lg);
+  line-height: 1.6;
+  max-width: 36rem;
+  margin-bottom: var(--ui-space-8);
+  opacity: 0.92;
+}
+
+/* Ghost button inside the hero — force white so it's visible over the dark veil */
+.swish-hero .ui-btn--ghost {
+  color: #fff;
+  border-color: rgba(255,255,255,0.6);
+}
+.swish-hero .ui-btn--ghost:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: #fff;
+}
+
+/* Quote section — reduce bottom padding to match visual weight of top */
+.swish-quote-section { padding-bottom: var(--ui-space-16); }
+
+/* --------------------------------------------------------------------------
+   Section eyebrow / issue marker
+   -------------------------------------------------------------------------- */
+.swish-issue {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+  margin-bottom: var(--ui-space-6);
+}
+
+.swish-issue::before,
+.swish-issue::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ui-border);
+}
+
+.swish-issue--left::after {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Featured looks (product cards)
+   -------------------------------------------------------------------------- */
+.swish-look {
+  display: block;
+  text-decoration: none;
+  color: var(--ui-text);
+}
+
+.swish-look__frame {
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--ui-surface-2);
+  margin-bottom: var(--ui-space-4);
+}
+
+.swish-look__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 600ms ease;
+}
+
+.swish-look:hover .swish-look__frame img {
+  transform: scale(1.04);
+}
+
+.swish-look__name {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-lg);
+  font-weight: 400;
+  margin-bottom: var(--ui-space-1);
+}
+
+.swish-look__meta {
+  font-size: var(--ui-text-sm);
+  color: var(--ui-muted);
+  letter-spacing: 0.04em;
+}
+
+/* --------------------------------------------------------------------------
+   Atelier split layout
+   -------------------------------------------------------------------------- */
+.swish-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ui-space-12);
+  align-items: center;
+}
+
+.swish-split__media {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--ui-surface-2);
+}
+
+.swish-split__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.swish-split__title {
+  font-family: var(--ui-font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin-bottom: var(--ui-space-5);
+}
+
+.swish-split__body p {
+  font-size: var(--ui-text-lg);
+  line-height: 1.75;
+  color: var(--ui-text);
+  margin-bottom: var(--ui-space-4);
+}
+
+@media (max-width: 720px) {
+  .swish-split {
+    grid-template-columns: 1fr;
+    gap: var(--ui-space-8);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Lookbook strip
+   -------------------------------------------------------------------------- */
+.swish-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--ui-space-4);
+}
+
+.swish-strip__cell {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  background: var(--ui-surface-2);
+}
+
+.swish-strip__cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.swish-strip__label {
+  position: absolute;
+  left: var(--ui-space-4);
+  bottom: var(--ui-space-4);
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--swish-paper);
+  background: var(--swish-label-bg);
+  padding: var(--ui-space-2) var(--ui-space-3);
+}
+
+@media (max-width: 720px) {
+  .swish-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Journal cards
+   -------------------------------------------------------------------------- */
+.swish-journal-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-3);
+}
+
+.swish-journal-card__frame {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--ui-surface-2);
+}
+
+.swish-journal-card__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.swish-journal-card__category {
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ui-accent);
+}
+
+.swish-journal-card__title {
+  font-family: var(--ui-font-display);
+  font-size: var(--ui-text-xl);
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.swish-journal-card__deck {
+  font-size: var(--ui-text-base);
+  color: var(--ui-muted);
+  line-height: 1.6;
+}
+
+.swish-journal-card__byline {
+  font-size: var(--ui-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ui-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Newsletter section
+   -------------------------------------------------------------------------- */
+.swish-newsletter {
+  text-align: center;
+}
+
+.swish-newsletter__title {
+  font-family: var(--ui-font-display);
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--ui-space-4);
+}
+
+.swish-newsletter__deck {
+  max-width: 32rem;
+  margin: 0 auto var(--ui-space-8);
+  color: var(--ui-muted);
+  line-height: 1.6;
+}
+
+.swish-newsletter__form {
+  max-width: 32rem;
+  margin: 0 auto;
+  display: flex;
+  gap: var(--ui-space-3);
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Safe area padding for mobile devices (home indicator bar) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  footer { padding-bottom: max(var(--ui-space-6), env(safe-area-inset-bottom)); }
+}

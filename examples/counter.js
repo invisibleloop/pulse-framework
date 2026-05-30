@@ -20,6 +20,7 @@ export default {
     title:       'Counter — Pulse',
     description: 'An interactive counter built with Pulse. Demonstrates mutations, constraints, and data-event binding.',
     styles:      ['/pulse-ui.css'],
+    theme:       'dark',
   },
 
   state: {

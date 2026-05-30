@@ -21,7 +21,7 @@
 
 import { escHtml as e } from '../html.js'
 
-const VARIANTS = new Set(['default', 'alt', 'dark'])
+const VARIANTS = new Set(['default', 'alt', 'dark', 'diagonal', 'paper', 'spotlight'])
 const PADDINGS = new Set(['sm', 'md', 'lg'])
 const GAPS     = new Set(['none', 'sm', 'md', 'lg'])
 

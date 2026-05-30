@@ -5,7 +5,7 @@
  * All visual variation goes through CSS modifier classes — never inline styles.
  *
  * @param {object} opts
- * @param {string}  opts.label     - Visible text (required)
+ * @param {string}  opts.label     - Visible text — HTML is escaped. For SVG/icon content use opts.icon or opts.iconAfter.
  * @param {'primary'|'secondary'|'ghost'|'danger'} opts.variant
  * @param {'sm'|'md'|'lg'} opts.size
  * @param {string}  opts.href      - Renders as <a> when set
@@ -39,6 +39,16 @@ export function button({
   if (!VARIANTS.has(variant)) variant = 'primary'
   if (!SIZES.has(size))       size    = 'md'
 
+  // Warn if href passed via attrs instead of the href prop (produces invalid <button href>)
+  if (typeof window === 'undefined' && !href && attrs.href) {
+    console.warn('[Pulse button] href passed via attrs produces invalid HTML (<button href>). Use button({ href: "..." }) instead — it renders an <a> automatically.')
+  }
+
+  // Warn if label contains HTML — it will be escaped. Use icon/iconAfter for SVG content.
+  if (typeof window === 'undefined' && label && label.includes('<')) {
+    console.warn('[Pulse button] label is HTML-escaped — SVG/HTML passed as label will render as text. Use icon: svgString or iconAfter: svgString instead.')
+  }
+
   const classes = [
     'ui-btn',
     `ui-btn--${variant}`,
@@ -59,6 +69,7 @@ export function button({
   }
 
   const attrsStr = Object.entries(attrs)
+    .filter(([, v]) => v !== undefined)
     .map(([k, v]) => ` ${e(k)}="${e(String(v))}"`)
     .join('')
 

@@ -318,23 +318,30 @@ For multi-brand setups, each brand theme file just overrides `--font` in `:root`
 
 ## Overriding Theme Colours
 
-`pulse-ui.css` defines light theme variables under `[data-theme="light"]`, which has **higher specificity than `:root`**. Overrides written only to `:root` will be silently beaten by those rules.
-
-Always target `[data-theme="light"]` when overriding colours for the light theme:
+Use **input tokens** (unprefixed: `--accent`, `--bg`, `--text`, etc.) in `theme.css`. `pulse-ui.css` maps them to output tokens via `var()` in **both** the dark (`:root`) and light (`[data-theme="light"]`) blocks:
 
 ```css
-/* WRONG — loses to [data-theme="light"] rules in pulse-ui.css */
+/* Dark theme — in :root */
 :root {
-  --color-accent: #e25;
+  --accent: #9b8dff;
 }
 
-/* CORRECT */
+/* Light theme — in [data-theme="light"] */
 [data-theme="light"] {
-  --color-accent: #e25;
+  --accent: #e25;   /* overrides the light default */
 }
 ```
 
-If a colour must apply in both themes, set it in both `:root` and `[data-theme="light"]`.
+Setting `--accent` in `[data-theme="light"]` works correctly — `pulse-ui.css` resolves `var(--accent, ...)` there just like it does in `:root`.
+
+If you need to override an output token directly (e.g. one with no input equivalent), target `[data-theme="light"]` explicitly:
+
+```css
+/* Direct output token override for light theme only */
+[data-theme="light"] {
+  --ui-nav-sticky-bg: rgba(255, 255, 255, 0.95);
+}
+```
 
 ## CSS File Responsibilities
 
@@ -342,10 +349,10 @@ There are two CSS files and they have distinct roles — do not mix them:
 
 | File | Purpose | Allowed content |
 |---|---|---|
-| `public/theme.css` | Token definitions — hex values, raw colours, font URLs | Hex values, `rgb()`, raw values, `@font-face`, `@import` |
-| `app.css` (or per-page) | Layout and component overrides | `var()` tokens **only** — no hex, no raw colour values |
+| `public/theme.css` | Token definitions — hex values, raw colours, font URLs | Hex values, `rgb()`, `rgba()`, `hsl()`, `hsla()`, raw values, `@font-face`, `@import` |
+| `app.css` (or per-page) | Layout and component overrides | `var()` tokens **only** — no hex values |
 
-**`app.css` must never contain hex values or raw colour values.** A lint hook enforces this. If you need to define or override a colour token, put it in `public/theme.css` and reference it via `var()` in `app.css`.
+**`app.css` must never contain hex values.** `rgba()` and `hsla()` are allowed for translucency — but if the same translucent colour is used more than once, extract it as a token in `theme.css` (e.g. `--brand-overlay-12: rgba(0,0,0,0.12)`). If you need to define or override a colour token, put it in `public/theme.css` and reference it via `var()` in `app.css`.
 
 ```css
 /* public/theme.css — hex values live here */
@@ -422,7 +429,8 @@ const result = await render(mySpec, { server: { product: mockProduct } })
 const result = await render(mySpec, { ctx: { params: { id: '1' } } }) // real fetchers
 ```
 
-**Supported selectors:** `button`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations: `button.primary[type="submit"]`.
+**Supported selectors:** `button`, `.class`, `#id`, `[attr]`, `[attr="value"]`, and combinations: `button.primary[type="submit"]`. **Descendant combinators are supported:** `result.count('.parent li')` or `result.find('tbody tr')`.
+
 `Element` also has `.find()`, `.findAll()`, `.has()`, `.attr()`, `.text`, `.tag`, `.attrs`.
 
 ## Key Decisions (Do Not Reverse)
@@ -439,6 +447,25 @@ const result = await render(mySpec, { ctx: { params: { id: '1' } } }) // real fe
 
 ## Build Workflow
 
+### New page or new site? Start with intake — always
+
+For any **new page, landing page, or branded site**, run this sequence first. Do not skip to building.
+
+```
+0. pulse_extract_inspiration(url/image)       → structured design brief  [if user shares reference]
+1. pulse_intake(name, pitch, features, ...)   → product brief + contrast check
+2. pulse_sketch(brief, vibe?, antiStyle?)     → 3 layout directions to choose from
+3. pulse_intent(description)                  → archetype + scaffold + guide list
+```
+
+**Before calling `pulse_intake`**, gather the required information by asking the user — one question at a time, in plain prose, no bullet lists. You need at minimum: the product name, what it does (pitch), and its key features. Ask for inspiration references, palette, vibe, and anti-style if the user hasn't mentioned them.
+
+**`pulse_sketch` is mandatory** for `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes — those vibes fight the default centred-hero layout. Skip it only for `corporate` or `minimal` when no structural preference has been stated.
+
+For **small edits, bug fixes, or "add X to existing Y"** — skip intake/sketch and go straight to Understand below.
+
+---
+
 Every build task follows this sequence. Each phase has a pass gate — do not advance until it clears.
 
 **Before calling any slow tool (`pulse_build`, `lighthouse_audit`), output a status message to the user first** — e.g. "Building for production — ~30 s…" or "Running Lighthouse desktop audit…". Never call a slow tool silently.
@@ -449,14 +476,16 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 | 2. Plan | Present plan to user, wait for confirmation | User confirms |
 | 3. Build | Write spec + related files | — |
 | 4. Validate | `pulse_validate` — fix all errors + warnings | Clean output |
-| 5. Browser | Screenshot + Lighthouse desktop + mobile | 100/100/100 (Accessibility, Best Practices, SEO) both strategies |
+| 5. Browser | Screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → `/verify` (Lighthouse desktop + mobile + `pulse_review`) | ⛔ Do not skip: all gates must pass + `.pulse-verified` stamp written |
 | 6. Tests | Write tests, run them, fix failures | All pass |
-| 7. Review Agent | Invoke review — **only after phases 4–6 all pass** | — |
+| 7. Code Review | `pulse_review` — only after phases 4–6 pass | — |
 | 8. Fix | Fix every review issue, re-run affected gates | All gates still pass |
 
 **Skip phase 2 confirmation only for trivially small, unambiguous tasks.** When in doubt, confirm.
 
-**The Review Agent is always last.** Never invoke it before validate, Lighthouse, and tests all pass.
+**Template mode exception:** when adapting a pre-built template (see `pulse://guide/templates`), replace the full plan with a single compact confirmation block — template, substitutions, files. One turn is enough; do not run the full phase 2 ceremony.
+
+**The Code Review is always last.** Never invoke `pulse_review` before validate, Lighthouse, design review, and tests all pass.
 
 The `/verify` command runs the browser check loop (phases 4–5) automatically. Use it.
 
@@ -520,6 +549,18 @@ export default {
 ## Check Components Before Building
 
 Before writing any UI HTML by hand, check `src/ui/index.js` — there are 50+ components available. Use them. Do not reinvent `button`, `card`, `alert`, `modal`, `spinner`, `badge`, `input`, etc.
+
+**Common patterns with dedicated components — never write these from scratch:**
+
+- Hero sections → `hero({ title, subtitle, actions, image, layout })`
+- Product/service cards → `card({ title, body, image, footer })`
+- Image + text layouts → `media({ image, content, reverse })`
+- Horizontal strips → `banner({ content, variant })`
+- Feature tiles → `feature({ icon, title, description })`
+- Testimonials → `testimonial({ quote, name, role, src })`
+- Call-to-action sections → `cta({ title, subtitle, actions })`
+
+If you're about to write `class="hero"` or `class="product-card"`, stop — import the component instead. You can add custom CSS on top of components for brand-specific styling, but the structure and accessibility must come from the component.
 
 @src/agent/checklist.md
 

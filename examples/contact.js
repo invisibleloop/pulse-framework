@@ -33,6 +33,7 @@ export default {
     title:       'Contact — Pulse',
     description: 'A contact form built with Pulse. Demonstrates server data, validation, and async action lifecycle.',
     styles:      ['/pulse-ui.css'],
+    theme:       'dark',
   },
 
   server: {

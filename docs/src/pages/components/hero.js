@@ -137,6 +137,7 @@ hero({ title: 'Headline', background: 'linear-gradient(135deg, #1e1b4b, #312e81)
           ['<code>subtitle</code>',    'string',        '—',          ''],
           ['<code>actions</code>',     'string (HTML)', '—',          'Raw HTML slot — buttons, badges, etc.'],
           ['<code>image</code>',       'string (HTML)', '—',          'Raw HTML slot — activates split layout when set'],
+          ['<code>layout</code>',      'string',        "'split'",    "When <code>image</code> is set: <code>'split'</code> (even columns) · <code>'asymmetric'</code> (wider text, narrower image) · <code>'overlap'</code> (image overlaps below text)"],
           ['<code>imageAlign</code>',  'string',        "'right'",    "'right' (text left) or 'left' (text right) — only applies when image is set"],
           ['<code>align</code>',       'string',        "'center'",   "'center' or 'left' — text alignment when no image"],
           ['<code>size</code>',        'string',        "'md'",       "'md' (5rem padding) or 'sm' (2.5rem top, no bottom) — use sm for inner-page headers"],

@@ -1,0 +1,237 @@
+/*
+ * andypixel.css — Andy Pixel blog article example
+ *
+ * Token definitions (hex values) + layout styles (var() only).
+ * Orange accent palette — editorial light theme.
+ */
+
+/* ─── Token definitions ──────────────────────────────────────── */
+
+[data-theme="light"] {
+  --accent:       #f97316;
+  --accent-hover: #ea6c0a;
+  --accent-dim:   #fff3e8;
+  --surface-2:    #f0f0f0;
+  --border:       #e5e5e5;
+  --muted-bg:     #f5f5f5;
+
+  /* Code block dark-shell tokens — defined here so app.css stays hex-free */
+  --ap-code-shell:      #1e1e1e;
+  --ap-code-text:       #d4d4d4;
+  --ap-btn-dark:        #1a1a1a;
+  --ap-btn-dark-hover:  #333333;
+}
+
+/* ─── Base ───────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--ui-font, system-ui, sans-serif);
+  line-height: 1.6;
+  background: var(--ui-bg);
+  color: var(--ui-text);
+}
+
+/* ─── Contrast fixes ─────────────────────────────────────────── */
+
+/* Badge: muted on surface-2 fails WCAG AA at small size */
+.ui-badge--default {
+  color: var(--ui-text);
+}
+
+/* Inline code: accent on surface-2 fails WCAG AA */
+.ui-prose code {
+  color: var(--ui-text);
+}
+
+/* ─── Reading column ─────────────────────────────────────────── */
+
+.ap-reading-col {
+  max-width: 72ch;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--ui-space-6);
+  padding-right: var(--ui-space-6);
+}
+
+/* ─── Article header ─────────────────────────────────────────── */
+
+.ap-article-header {
+  padding: var(--ui-space-12) 0 var(--ui-space-8);
+  border-bottom: 3px solid var(--ui-accent);
+  margin-bottom: var(--ui-space-10);
+}
+
+.ap-article-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--ui-space-5);
+}
+
+.ap-article-title {
+  font-family: var(--ui-font-display, system-ui, serif);
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ui-text);
+  margin-bottom: var(--ui-space-4);
+}
+
+.ap-article-subtitle {
+  font-size: var(--ui-text-xl);
+  color: var(--ui-muted);
+  line-height: 1.55;
+  margin-bottom: var(--ui-space-6);
+  max-width: 56ch;
+}
+
+.ap-article-author-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+}
+
+/* ─── Article body ───────────────────────────────────────────── */
+
+.ap-article-body {
+  padding-bottom: var(--ui-space-12);
+}
+
+.ap-article-lead {
+  font-size: var(--ui-text-xl) !important;
+  line-height: 1.65 !important;
+  color: var(--ui-text) !important;
+}
+
+/* ─── Code block ─────────────────────────────────────────────── */
+
+.ap-code-block {
+  margin: var(--ui-space-6) 0;
+  border-radius: var(--ui-radius);
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+}
+
+.ap-code-block__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-2) var(--ui-space-4);
+  background: var(--ui-text);
+  color: var(--ui-accent);
+  font-family: var(--ui-mono, monospace);
+  font-size: var(--ui-text-sm);
+}
+
+.ap-code-block__pre {
+  background: var(--ap-code-shell);
+  padding: var(--ui-space-5) var(--ui-space-6);
+  overflow-x: auto;
+  margin: 0;
+}
+
+.ap-code-block__code {
+  font-family: var(--ui-mono, monospace);
+  font-size: var(--ui-text-sm);
+  line-height: 1.75;
+  color: var(--ap-code-text);
+}
+
+/* ─── Pullquote ──────────────────────────────────────────────── */
+
+.ap-pullquote {
+  margin: var(--ui-space-8) 0;
+  padding: var(--ui-space-5) var(--ui-space-6);
+  border-left: 4px solid var(--ui-accent);
+  background: var(--accent-dim);
+  border-radius: 0 var(--ui-radius) var(--ui-radius) 0;
+}
+
+.ap-pullquote p {
+  font-family: var(--ui-font-display, system-ui, serif);
+  font-size: var(--ui-text-xl);
+  font-style: italic;
+  color: var(--ui-text);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* ─── Author bio ─────────────────────────────────────────────── */
+
+.ap-author-bio-wrap {
+  border-top: 1px solid var(--ui-border);
+  border-bottom: 1px solid var(--ui-border);
+  padding: var(--ui-space-8) 0;
+  margin-bottom: var(--ui-space-10);
+}
+
+.ap-author-bio {
+  display: flex;
+  gap: var(--ui-space-4);
+  align-items: flex-start;
+}
+
+.ap-author-bio__name {
+  font-weight: 700;
+  font-size: var(--ui-text-base);
+  margin-bottom: var(--ui-space-1);
+}
+
+/* ─── Newsletter ─────────────────────────────────────────────── */
+
+.ap-newsletter-section {
+  max-width: 540px;
+  margin: 0 auto;
+  text-align: center;
+  padding: var(--ui-space-12) var(--ui-space-6);
+  border-top: 3px solid var(--ui-accent);
+}
+
+.ap-newsletter-eyebrow {
+  font-family: var(--ui-mono, monospace);
+  font-size: var(--ui-text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ui-text);
+  margin-bottom: var(--ui-space-2);
+}
+
+.ap-newsletter-title {
+  font-family: var(--ui-font-display, system-ui, serif);
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ui-text);
+  margin-bottom: var(--ui-space-3);
+  line-height: 1.15;
+}
+
+.ap-newsletter-form {
+  display: flex;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-6);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* Orange bg on small text fails WCAG AA — use near-black for contrast (15:1) */
+.ap-newsletter-form .ui-btn--primary {
+  background: var(--ap-btn-dark);
+}
+.ap-newsletter-form .ui-btn--primary:hover {
+  background: var(--ap-btn-dark-hover);
+}
+
+.ap-newsletter-error {
+  color: var(--ui-error, #dc2626);
+  margin-top: var(--ui-space-3);
+}
+
+.ap-newsletter-success {
+  padding: var(--ui-space-12) var(--ui-space-6);
+  text-align: center;
+}

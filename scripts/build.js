@@ -19,6 +19,7 @@ import path         from 'path'
 import { createHash } from 'crypto'
 import { discoverPages } from '../src/cli/discover.js'
 import { renderToString } from '../src/runtime/ssr.js'
+import { c, header, table, ok, fail, info, elapsed, icon } from '../src/cli/fmt.js'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -386,9 +387,15 @@ const TMP_DIR = path.join(ROOT, '.pulse-build')
 const pages = discoverPages(ROOT)
 
 if (pages.length === 0) {
-  console.error('No pages found in src/pages/. Nothing to build.')
+  console.error(fail('No pages found in src/pages/ — nothing to build.'))
   process.exit(1)
 }
+
+// ---------------------------------------------------------------------------
+// Timing
+// ---------------------------------------------------------------------------
+
+const BUILD_START = Date.now()
 
 // ---------------------------------------------------------------------------
 // Clean output directories
@@ -399,7 +406,7 @@ for (const dir of [OUT_DIR, TMP_DIR]) {
   fs.mkdirSync(dir, { recursive: true })
 }
 
-console.log('⚡ Building Pulse client bundles...\n')
+console.log(header(`Building ${pages.length} page${pages.length === 1 ? '' : 's'}`))
 
 // ---------------------------------------------------------------------------
 // Generate bootstrap entry points
@@ -518,20 +525,66 @@ await purgeCssStep(pages, manifest, ROOT, OUT_DIR)
 await jsAssetsStep(ROOT, OUT_DIR, manifest)
 
 // ---------------------------------------------------------------------------
-// Report
+// Summary table
 // ---------------------------------------------------------------------------
 
-console.log('Bundles:\n')
-for (const [src, bundle] of Object.entries(manifest)) {
-  if (bundle.startsWith('/dist/')) {
+{
+  const rows = []
+
+  for (const [src, bundle] of Object.entries(manifest)) {
+    // Skip runtime chunk and static assets — only show per-page bundles + CSS
+    if (!bundle.startsWith('/dist/')) continue
     const filePath = path.join(ROOT, 'public', bundle)
-    if (fs.existsSync(filePath)) {
-      const size = fs.statSync(filePath).size
-      console.log(`  ${src.padEnd(36)} → ${bundle}  (${(size / 1024).toFixed(1)} kB)`)
+    if (!fs.existsSync(filePath)) continue
+
+    const sizeBytes = fs.statSync(filePath).size
+    const sizeKb    = (sizeBytes / 1024).toFixed(1)
+    const ext       = path.extname(bundle)
+
+    if (ext === '.js' && src.startsWith('/src/pages/')) {
+      // Per-page JS bundle — find if it's hydrated
+      const srcPath = path.join(ROOT, src.replace(/^\//, ''))
+      let route = src.replace('/src/pages', '').replace(/\.js$/, '')
+      // Try to extract route from the spec
+      try {
+        const specSrc = fs.readFileSync(srcPath, 'utf8')
+        const m = specSrc.match(/route\s*:\s*['"`]([^'"`]+)['"`]/)
+        if (m) route = m[1]
+      } catch { /* use filename-derived route */ }
+      rows.push([
+        c.cyan(route),
+        c.dim(bundle.replace('/dist/', '')),
+        `${sizeKb} kB`,
+        c.dim('js'),
+      ])
+    } else if (ext === '.css') {
+      rows.push([
+        c.dim(src),
+        c.dim(bundle.replace('/dist/', '')),
+        `${sizeKb} kB`,
+        c.dim('css'),
+      ])
     }
   }
+
+  // Sort: pages first, then CSS, then other
+  rows.sort((a, b) => {
+    const aIsPage = a[3].includes('js')
+    const bIsPage = b[3].includes('js')
+    if (aIsPage && !bIsPage) return -1
+    if (!aIsPage && bIsPage) return 1
+    return 0
+  })
+
+  console.log('\n' + table(
+    ['Route / Asset', 'Bundle', 'Size', 'Type'],
+    rows,
+    { align: ['left', 'left', 'right', 'left'] }
+  ))
+
+  const totalMs = Date.now() - BUILD_START
+  console.log(`\n${ok(`Build complete`)}  ${c.dim(elapsed(totalMs))}  ${c.dim('→')}  ${c.dim('public/dist/')}\n`)
 }
-console.log('\n✓ manifest written to public/dist/manifest.json\n')
 
 // ---------------------------------------------------------------------------
 // JS static assets implementation
@@ -544,7 +597,7 @@ async function jsAssetsStep(root, outDir, manifest) {
   const jsFiles = fs.readdirSync(publicDir).filter(f => f.endsWith('.js'))
   if (jsFiles.length === 0) return
 
-  console.log('⚡ Hashing static JS assets...\n')
+  console.log(info('Hashing static JS assets…'))
 
   for (const file of jsFiles) {
     const srcPath = path.join(publicDir, file)
@@ -559,11 +612,11 @@ async function jsAssetsStep(root, outDir, manifest) {
 
     const origKb = (Buffer.byteLength(source) / 1024).toFixed(1)
     const minKb  = (Buffer.byteLength(code)   / 1024).toFixed(1)
-    console.log(`  /${file.padEnd(24)} → /dist/${outName}  (${minKb} kB from ${origKb} kB)`)
+    // silent — summary table covers this
   }
 
   fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
-  console.log('\n✓ JS asset entries added to manifest\n')
+  // silent — summary table covers this
 }
 
 // ---------------------------------------------------------------------------
@@ -571,7 +624,7 @@ async function jsAssetsStep(root, outDir, manifest) {
 // ---------------------------------------------------------------------------
 
 async function purgeCssStep(pages, manifest, root, outDir) {
-  console.log('⚡ Purging CSS...\n')
+  console.log(info('Purging CSS…'))
 
   const htmlContents = []
   const jsContents   = []
@@ -633,7 +686,7 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   }
 
   if (cssFiles.size === 0) {
-    console.log('  No CSS files referenced — skipping.\n')
+    console.log(info('No CSS files referenced — skipping.'))
     return
   }
 
@@ -658,14 +711,14 @@ async function purgeCssStep(pages, manifest, root, outDir) {
     const purgKb  = (Buffer.byteLength(purged)   / 1024).toFixed(1)
     const pct     = Math.round((1 - Buffer.byteLength(purged) / Buffer.byteLength(original)) * 100)
 
-    console.log(`  ${cssHref.padEnd(28)} → /dist/${outName}  (${purgKb} kB, ${pct}% removed from ${origKb} kB)`)
+    // silent — summary table covers this
 
     manifest[cssHref] = `/dist/${outName}`
   }
 
   // Re-write manifest with CSS entries added
   fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
-  console.log('\n✓ CSS entries added to manifest\n')
+  // silent — summary table covers this
 }
 
 // ---------------------------------------------------------------------------
@@ -798,7 +851,8 @@ function minifyCss(css) {
   return css
     .replace(/\/\*[\s\S]*?\*\//g, '')   // strip comments
     .replace(/\s+/g, ' ')               // collapse whitespace
-    .replace(/\s*([{}:;,>~+])\s*/g, '$1') // remove spaces around punctuation
+    // Remove spaces around safe punctuation — NOT + or - (would break calc() expressions)
+    .replace(/\s*([{}:;,>~])\s*/g, '$1')
     .replace(/;}/g, '}')                // remove trailing semicolons
     .trim()
 }
