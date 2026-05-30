@@ -12,13 +12,24 @@
  *   pulse -v           alias for --version
  *   pulse --help       show usage and exit
  *   pulse -h           alias for --help
+ *   pulse --agent copilot   use GitHub Copilot CLI instead of Claude
  */
 
 import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 
-const args    = process.argv.slice(2)
+// Extract --agent flag before routing, so it works alongside any subcommand
+const rawArgs   = process.argv.slice(2)
+let agentFlag   = null
+const args      = []
+for (let i = 0; i < rawArgs.length; i++) {
+  if (rawArgs[i] === '--agent' && rawArgs[i + 1] && !rawArgs[i + 1].startsWith('-')) {
+    agentFlag = rawArgs[++i]
+  } else {
+    args.push(rawArgs[i])
+  }
+}
 const command = args[0]
 const CWD     = process.cwd()
 
@@ -119,7 +130,7 @@ async function runDefault(root, agentFlag = null) {
     }
 
     console.log()
-    await scaffold(targetDir, { name })
+    await scaffold(targetDir, { name, agent: agentFlag })
 
     if (targetDir !== root) {
       console.log(`\n✓ Project created at ./${name}/\n`)
@@ -144,7 +155,7 @@ async function launchSession(root, agentOverride = null) {
   const { spawn } = await import('child_process')
   const os        = await import('os')
 
-  // Load project config for agent preference
+  // Load project config for agent preference — CLI flag takes priority
   const configPath = path.join(root, 'pulse.config.js')
   let agent = agentOverride || 'claude'
   if (!agentOverride && fs.existsSync(configPath)) {
@@ -164,18 +175,30 @@ async function launchSession(root, agentOverride = null) {
       }
     }
   }
-  const mcpConfigPath = path.join(os.default.tmpdir(), `pulse-mcp-${Date.now()}.json`)
-  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2))
 
   console.log(`\n⚡ Pulse project: ${root}`)
   console.log(`   Use /pulse-dev to start the dev server, /pulse-stop to stop it, /pulse-build to build, /pulse-start to run production.`)
   console.log(`   Tell me what you'd like to build — a new page, a component, a form, or anything else.\n`)
 
+  if (agent === 'copilot') {
+    await launchCopilotSession(root, mcpServerPath, spawn, os.default)
+  } else {
+    await launchClaudeSession(root, mcpConfig, spawn, os.default)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Claude session — temp MCP config file passed via --mcp-config flag
+// ---------------------------------------------------------------------------
+
+async function launchClaudeSession(root, mcpConfig, spawn, os) {
+  const mcpConfigPath = path.join(os.tmpdir(), `pulse-mcp-${Date.now()}.json`)
+  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2))
+
   // Launch the agent with MCP config — don't spawn a dev server here,
   // Claude Code cannot be launched as a child process from within a Claude session.
   // The dev server is started via the /dev slash command instead.
-  const agentCmd  = agentCommand(agent, mcpConfigPath)
-  const agentProc = spawn(agentCmd.cmd, agentCmd.args, {
+  const agentProc = spawn('claude', ['--mcp-config', mcpConfigPath], {
     stdio: 'inherit',
     cwd:   root,
   })
@@ -186,16 +209,55 @@ async function launchSession(root, agentOverride = null) {
   })
 }
 
-function agentCommand(agent, mcpConfigPath) {
-  if (agent === 'claude') {
-    return { cmd: 'claude', args: ['--mcp-config', mcpConfigPath] }
+// ---------------------------------------------------------------------------
+// Copilot session — pulse entry injected into ~/.copilot/mcp-config.json
+// ---------------------------------------------------------------------------
+
+async function launchCopilotSession(root, mcpServerPath, spawn, os) {
+  const mcpConfigPath = path.join(os.homedir(), '.copilot', 'mcp-config.json')
+
+  // Read existing Copilot MCP config (or start fresh)
+  let config = { mcpServers: {} }
+  if (fs.existsSync(mcpConfigPath)) {
+    try { config = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8')) } catch { /* use default */ }
   }
-  if (agent === 'copilot') {
-    return { cmd: 'copilot', args: ['--additional-mcp-config', `@${mcpConfigPath}`] }
+  config.mcpServers ??= {}
+
+  const hadPulse      = 'pulse' in config.mcpServers
+  const originalPulse = hadPulse ? config.mcpServers.pulse : undefined
+
+  // Inject pulse MCP server
+  config.mcpServers.pulse = {
+    type:    'local',
+    command: process.execPath,
+    args:    [mcpServerPath, '--root', root],
+    tools:   ['*'],
   }
-  // Unknown agent — fall back to claude
-  console.warn(`Unknown agent "${agent}", falling back to claude`)
-  return { cmd: 'claude', args: ['--mcp-config', mcpConfigPath] }
+  fs.mkdirSync(path.dirname(mcpConfigPath), { recursive: true })
+  fs.writeFileSync(mcpConfigPath, JSON.stringify(config, null, 2))
+
+  // Restore config on exit — removes pulse entry (or restores original if it existed)
+  let cleaned = false
+  const cleanup = () => {
+    if (cleaned) return
+    cleaned = true
+    try {
+      const current = JSON.parse(fs.readFileSync(mcpConfigPath, 'utf8'))
+      if (hadPulse) {
+        current.mcpServers.pulse = originalPulse
+      } else {
+        delete current.mcpServers.pulse
+      }
+      fs.writeFileSync(mcpConfigPath, JSON.stringify(current, null, 2))
+    } catch { /* ignore cleanup errors */ }
+    process.exit(0)
+  }
+
+  process.on('SIGINT',  cleanup)
+  process.on('SIGTERM', cleanup)
+
+  const agentProc = spawn('copilot', [], { stdio: 'inherit', cwd: root })
+  agentProc.on('exit', cleanup)
 }
 
 // ---------------------------------------------------------------------------
@@ -331,6 +393,29 @@ async function runUpdate(root) {
     }
   }
 
+  // Sync Copilot skills into .copilot/skills/
+  const skillsSrc = new URL('../agent/skills', import.meta.url).pathname
+  if (fs.existsSync(skillsSrc)) {
+    for (const skillDir of fs.readdirSync(skillsSrc)) {
+      const skillMd = path.join(skillsSrc, skillDir, 'SKILL.md')
+      if (fs.existsSync(skillMd)) {
+        const dstDir = path.join(root, '.copilot', 'skills', skillDir)
+        fs.mkdirSync(dstDir, { recursive: true })
+        fs.copyFileSync(skillMd, path.join(dstDir, 'SKILL.md'))
+        updated.push(`.copilot/skills/${skillDir}/SKILL.md`)
+      }
+    }
+  }
+
+  // Sync checklist to .github/instructions/ for Copilot
+  const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
+  if (fs.existsSync(checklistSrc)) {
+    const checklistDst = path.join(root, '.github', 'instructions', 'pulse-checklist.instructions.md')
+    fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
+    fs.copyFileSync(checklistSrc, checklistDst)
+    updated.push('.github/instructions/pulse-checklist.instructions.md')
+  }
+
   // Read the new version for the success message
   const versionFile = path.join(publicDir, '.pulse-ui-version')
   const version     = fs.existsSync(versionFile) ? fs.readFileSync(versionFile, 'utf8').trim() : '?'
@@ -401,11 +486,11 @@ switch (command) {
     ${c.cyan('-h')}, ${c.cyan('--help')}         show this help
 
   ${c.bold('Examples:')}
-    ${c.dim('pulse                # new project wizard')}
-    ${c.dim('pulse --agent copilot   # launch with GitHub Copilot CLI')}
-    ${c.dim('pulse dev            # dev server')}
-    ${c.dim('pulse build          # bundle for production')}
-    ${c.dim('pulse start          # serve production build')}
+    ${c.dim('pulse                      # new project wizard')}
+    ${c.dim('pulse --agent copilot      # launch with GitHub Copilot CLI')}
+    ${c.dim('pulse dev                  # dev server')}
+    ${c.dim('pulse build                # bundle for production')}
+    ${c.dim('pulse start                # serve production build')}
 `)
     process.exit(0)
   }

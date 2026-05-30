@@ -20,6 +20,8 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 - **Do not set `hydrate` in specs.** It is auto-derived by the framework from the URL entry passed to `createServer`. Specs with `mutations`, `actions`, or `persist` are hydrated automatically. Purely server-rendered specs get zero JavaScript — no configuration needed.
 
+- **Always restart the server and reload the browser after every file edit — before checking the result.** The dev server restarts on file changes but the browser tab stays stale. The required sequence is: `pulse_restart_server` → `navigate_page`. Never attempt to debug a visual problem without doing both steps first.
+
 ### Components first
 
 - **Before writing any HTML by hand, check `src/ui/index.js`.** There are 50+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
@@ -37,6 +39,20 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   If you find yourself writing `class="hero"` or `class="product-card"` or `class="testimonial"`, stop — import the component instead.
 
 - **Exception — brutalist, editorial, and playful vibes:** these vibes intentionally break from polished templates. `pulse://guide/explore` explicitly endorses zone-based raw HTML for distinctive layouts. For `brutalist`, `editorial`, `retro`, or `neon` vibes, raw structural HTML is correct — components can still be used for functional atoms (`button`, `input`, `modal`) but structural sections do not need to come from components. When reviewing a brutalist or editorial spec, do not flag raw section HTML as a violation.
+
+- **Never write App Store or Google Play download buttons by hand.** Always use `appBadge({ store: 'apple', href })` and `appBadge({ store: 'google', href })`. Raw `<a>` tags with badge images are incorrect — `appBadge` renders the correct accessible, styled badge for each store.
+
+  ```js
+  import { appBadge } from '@invisibleloop/pulse/ui'
+
+  // In a hero() actions slot:
+  ${hero({
+    actions: `
+      ${appBadge({ store: 'apple',  href: 'https://apps.apple.com/...' })}
+      ${appBadge({ store: 'google', href: 'https://play.google.com/...' })}
+    `,
+  })}
+  ```
 
 ### Reuse (DRY)
 
@@ -109,6 +125,12 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   assert.equal(result.attr('img', 'src'), mockProduct.image)
   ```
   Supported selectors: `tag`, `.class`, `#id`, `[attr]`, `[attr="value"]`, combinations (`button.primary[disabled]`), and **descendant combinators** (`result.count('.parent li')`, `result.find('tbody tr')`). Descendant selectors match the rightmost token within the ancestor context — they do not return 0 if the ancestor doesn't exist, they simply find no matching descendants.
+
+### Markdown
+
+- **Use `md()` from `@invisibleloop/pulse/md` for `.md` file content.** Never read and parse markdown manually. Pass the result's `html` to `prose()`.
+- **Call the same `md()` fetcher in both `meta` and `server`** — it caches on `ctx._mdCache` so the file is only read once per request. Do not create two separate fetchers for the same file.
+- **Always add `onViewError` on dynamic markdown routes** (routes with `:param` segments loading `.md` files). A missing file throws `{ status: 404 }` which must be caught gracefully.
 
 ### Markdown
 

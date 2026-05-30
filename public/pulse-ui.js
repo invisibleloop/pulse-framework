@@ -129,6 +129,9 @@ document.addEventListener('keydown', (e) => {
 // ─── Nav (mobile burger) ────────────────────────────────────────────────────
 
 function initNav(el) {
+  if (el.dataset.pulseNavInit) return
+  el.dataset.pulseNavInit = '1'
+
   const burger = el.querySelector('.ui-nav-burger')
   const mobile = el.querySelector('.ui-nav-mobile')
 
@@ -170,6 +173,9 @@ document.addEventListener('pulse:navigate', runNavs)
 // ─── Carousel ───────────────────────────────────────────────────────────────
 
 function initCarousel(el) {
+  if (el.dataset.pulseCarouselInit) return
+  el.dataset.pulseCarouselInit = '1'
+
   const track  = el.querySelector('.ui-carousel-track')
   const prev   = el.querySelector('.ui-carousel-prev')
   const next   = el.querySelector('.ui-carousel-next')
