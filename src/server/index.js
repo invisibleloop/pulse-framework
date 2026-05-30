@@ -499,7 +499,9 @@ export async function createServer(entries, options = {}) {
     healthCheck    = '/healthz',    // path for health check endpoint, or false to disable
     csp            = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
     onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
-    onRequest
+    onRequest,
+    agentMode      = false,        // show agent-active indicator in banner
+    quiet          = false,        // suppress request logging
   } = options
 
   // Resolve URL entries → spec objects, auto-setting hydrate where needed
@@ -553,6 +555,15 @@ export async function createServer(entries, options = {}) {
   let router = buildRouter(specs)
 
   const server = http.createServer(async (req, res) => {
+    const reqStart = Date.now()
+    res.on('finish', () => {
+      if (!quiet) {
+        import('../cli/logger.js').then(({ request: logRequest }) => {
+          const url = new URL(req.url, `http://localhost:${port}`)
+          logRequest({ method: req.method, pathname: url.pathname, status: res.statusCode, ms: Date.now() - reqStart })
+        }).catch(() => {})
+      }
+    })
     try {
       // Parse URL — needed before health check and routing
       const url      = new URL(req.url, `http://localhost:${port}`)
@@ -754,7 +765,7 @@ export async function createServer(entries, options = {}) {
     if (draining) return
     draining = true
 
-    console.log('⚡ Pulse shutting down gracefully…')
+    import('../cli/logger.js').then(({ shutdown: logShutdown }) => logShutdown()).catch(() => {})
 
     // Stop background cache eviction timers
     serverDataCache.stopEviction()
@@ -771,7 +782,7 @@ export async function createServer(entries, options = {}) {
 
     // Force-exit after shutdownTimeout so a stuck request can't block a deploy
     setTimeout(() => {
-      console.error(`⚡ Pulse force-exiting after ${shutdownTimeout}ms shutdown timeout`)
+      import('../cli/logger.js').then(({ shutdown: logShutdown }) => logShutdown(true)).catch(() => {})
       process.exit(1)
     }, shutdownTimeout).unref()
   }
@@ -780,20 +791,13 @@ export async function createServer(entries, options = {}) {
   process.on('SIGINT',  shutdown)
 
   server.listen(port, () => {
-    import('../cli/fmt.js').then(({ c, table, icon }) => {
-      const url  = `http://localhost:${port}`
-      const rows = specs.map(s => {
-        const hydrated = s.hydrate ? c.green('✓') : c.dim('—')
-        const method   = s.method?.toUpperCase() || 'GET'
-        const route    = s.route || '?'
-        return [c.cyan(route), c.dim(method), hydrated]
+    import('../cli/logger.js').then(({ banner }) => {
+      banner({
+        url:       `http://localhost:${port}`,
+        version,
+        specs,
+        agentMode,
       })
-      console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')}  ${c.dim(`→  ${url}`)}\n`)
-      if (rows.length > 0) {
-        const tbl = table(['Route', 'Method', 'Hydrated'], rows)
-        console.log(tbl.split('\n').map(l => '  ' + l).join('\n'))
-        console.log()
-      }
     }).catch(() => {
       console.log(`⚡ Pulse running at http://localhost:${port}`)
     })
