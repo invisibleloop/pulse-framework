@@ -25,6 +25,8 @@
   --ui-accent-hover: var(--accent-hover,  #b5aaff);
   --ui-accent-dim:   var(--accent-dim,    rgba(155,141,255,.12));
   --ui-accent-text:  var(--accent-text,   #0d0a20);
+  /* Inline code in dark theme — accent passes WCAG AA on surface-2 by default */
+  --ui-code-color:   var(--code-color,    var(--ui-accent));
   --ui-green:        var(--green,         #3dd68c);
   --ui-green-dim:    rgba(61, 214, 140, .12);
   --ui-red:          var(--red,           #ff6b6b);
@@ -1802,6 +1804,9 @@ hr.ui-divider {
 .u-opacity-50  { opacity: .5; }
 .u-opacity-75  { opacity: .75; }
 
+/* Numeric formatting */
+.u-tabular-nums { font-variant-numeric: tabular-nums; }
+
 /* ─── Section header ─────────────────────────────────────────────────────────
    Optional heading block prepended to section() when eyebrow/title/subtitle
    props are supplied. Sits above the content slot.                           */
@@ -3155,7 +3160,7 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
 
 .ui-prose code {
   background:    var(--ui-surface-2);
-  color:         var(--ui-accent);
+  color:         var(--ui-code-color);
   padding:       .1em .35em;
   border-radius: var(--ui-radius-sm);
   font-size:     .875em;
@@ -3242,24 +3247,29 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
    All --ui-* tokens are overridden; component markup stays identical.        */
 [data-theme="light"],
 .ui-theme-light {
-  --ui-bg:              #ffffff;
-  --ui-surface:         #f8f8fc;
-  --ui-surface-2:       #f0f0f8;
-  --ui-border:          #d8d8e8;
-  --ui-text:            #111118;
-  --ui-muted:           #60607a;
-  --ui-accent:          #6b5ce7;
-  --ui-accent-hover:    #5847d6;
-  --ui-accent-dim:      rgba(107, 92, 231, .12);
-  --ui-green:           #166534;
+  --ui-bg:              var(--bg,           #ffffff);
+  --ui-surface:         var(--surface,      #f8f8fc);
+  --ui-surface-2:       var(--surface-2,    #f0f0f8);
+  --ui-border:          var(--border,       #d8d8e8);
+  --ui-text:            var(--text,         #111118);
+  --ui-muted:           var(--muted,        #60607a);
+  --ui-accent:          var(--accent,       #6b5ce7);
+  --ui-accent-hover:    var(--accent-hover, #5847d6);
+  --ui-accent-dim:      var(--accent-dim,   rgba(107, 92, 231, .12));
+  --ui-accent-text:     var(--accent-text,  #ffffff);
+  /* Inline code uses a slightly darker accent so it passes WCAG AA on --ui-surface-2 */
+  --ui-code-color:      var(--code-color,   #4a3db5);
+  --ui-green:           var(--green,        #166534);
   --ui-green-dim:       rgba(22, 163, 74,  .12);
-  --ui-red:             #991b1b;
+  --ui-red:             var(--red,          #991b1b);
   --ui-red-dim:         rgba(220,  38,  38, .12);
   --ui-yellow:          #92400e;
   --ui-yellow-dim:      rgba(217, 119,   6, .12);
   --ui-blue:            #1e40af;
   --ui-blue-dim:        rgba( 30,  64, 175, .12);
   --ui-nav-sticky-bg:   rgba(255, 255, 255, .85);
+  --ui-muted-bg:        var(--muted-bg,     rgba(0, 0, 0, .04));
+  --ui-shadow:          var(--shadow,       0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06));
   --tok-kw:             #7c3aed;
   --tok-str:            #15803d;
   --tok-cmt:            #6b7280;
@@ -3844,4 +3854,163 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   font-size:   0.6em;
   vertical-align: middle;
   line-height: 0;
+}
+
+/* ─── Editorial Components ───────────────────────────────────────────────────
+   Components for editorial/typographic layouts: entryList, displayHeading,
+   sectionLabel, dropCap, colophon.                                           */
+
+/* Entry List — tabular list for backlists, release notes, changelogs */
+.ui-entry-list {
+  display:        flex;
+  flex-direction: column;
+  gap:            1.5rem;
+}
+
+.ui-entry-list-item {
+  display:               grid;
+  grid-template-columns: minmax(4rem, max-content) 1fr;
+  gap:                   2rem;
+  align-items:           baseline;
+}
+
+@media (max-width: 640px) {
+  .ui-entry-list-item {
+    grid-template-columns: 1fr;
+    gap:                   0.5rem;
+  }
+}
+
+.ui-entry-list-meta {
+  font-size:            0.9rem;
+  color:                var(--ui-muted);
+  font-weight:          600;
+  text-transform:       uppercase;
+  letter-spacing:       0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ui-entry-list-content {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.5rem;
+}
+
+.ui-entry-list-title {
+  font-size:   1.1rem;
+  font-weight: 600;
+  color:       var(--ui-text);
+  line-height: 1.4;
+  margin:      0;
+}
+
+.ui-entry-list-description {
+  font-size:   0.9rem;
+  color:       var(--ui-muted);
+  line-height: 1.6;
+  margin:      0;
+}
+
+/* Display Heading — large typographic moments */
+.ui-display-heading {
+  font-size:   clamp(2.5rem, 6vw, 5rem);
+  font-weight: 800;
+  color:       var(--ui-text);
+  line-height: 1.1;
+  margin:      0;
+}
+
+/* Section Label — eyebrow + h2 + rule */
+.ui-section-label {
+  display:        flex;
+  flex-direction: column;
+  gap:            0.75rem;
+  margin-bottom:  2rem;
+}
+
+.ui-section-label--center {
+  align-items: center;
+  text-align:  center;
+}
+
+.ui-section-label-eyebrow {
+  font-size:      0.85rem;
+  color:          var(--ui-muted);
+  font-weight:    600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin:         0;
+}
+
+.ui-section-label-heading {
+  font-size:   1.75rem;
+  font-weight: 700;
+  color:       var(--ui-text);
+  line-height: 1.2;
+  margin:      0;
+}
+
+.ui-section-label-rule {
+  width:        100%;
+  max-width:    8rem;
+  height:       2px;
+  background:   var(--ui-border);
+  border:       none;
+  margin:       0;
+}
+
+.ui-section-label--center .ui-section-label-rule {
+  margin-left:  auto;
+  margin-right: auto;
+}
+
+/* Drop Cap — first-letter treatment */
+.ui-drop-cap {
+  margin:      0;
+  line-height: 1.75;
+  color:       var(--ui-text);
+}
+
+.ui-drop-cap-letter {
+  font-weight: 700;
+  color:       var(--ui-text);
+}
+
+/* Colophon — minimal footer for editorial pages */
+.ui-colophon {
+  padding:       3rem 1.5rem 2rem;
+  border-top:    1px solid var(--ui-border);
+  margin-top:    4rem;
+  text-align:    center;
+}
+
+.ui-colophon--left {
+  text-align: left;
+}
+
+.ui-colophon-inner {
+  max-width:   640px;
+  margin:      0 auto;
+  font-size:   0.85rem;
+  color:       var(--ui-muted);
+  line-height: 1.6;
+}
+
+.ui-colophon-inner p {
+  margin:        0.5em 0;
+}
+
+.ui-colophon-inner p:last-child {
+  margin-bottom: 0;
+}
+
+.ui-colophon-inner a {
+  color:           var(--ui-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition:      color 0.15s;
+}
+
+.ui-colophon-inner a:hover {
+  color: var(--ui-text);
 }
