@@ -263,11 +263,12 @@ const { updateSpecs } = await createServer(specs, {
 // ---------------------------------------------------------------------------
 
 if (USE_TUI) {
-  const { startTUI } = await import('./tui.js')
-  const { version }  = await import('../../package.json', { with: { type: 'json' } })
+  const { startTUI }   = await import('./tui.js')
+  const pkg            = await import('../../package.json', { with: { type: 'json' } })
+  const pkgVersion     = pkg.default?.version ?? pkg.version
   startTUI({
     url:       `http://localhost:${PORT}`,
-    version:   version.default ?? version,
+    version:   pkgVersion,
     specs,
     agentMode,
   })
