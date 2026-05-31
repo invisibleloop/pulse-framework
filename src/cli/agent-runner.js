@@ -153,7 +153,7 @@ function parseStreamLine(line, progress) {
 
 export function composeBuildPrompt(answers) {
   const parts = [
-    `Build a new page for this project.`,
+    `Build a new page for this project. Work autonomously — do not stop to ask for confirmation at any point.`,
     ``,
     `**What to build:** ${answers.intent}`,
     answers.name     && `**Product name:** ${answers.name}`,
@@ -161,9 +161,10 @@ export function composeBuildPrompt(answers) {
     answers.features && `**Key features:** ${answers.features}`,
     answers.vibe     && `**Visual vibe:** ${answers.vibe}`,
     ``,
-    `Follow the full build workflow: pulse_intake → pulse_sketch → pulse_intent → write spec → pulse_validate → browser check → Lighthouse → pulse_review.`,
-    `Start the dev server when the page is ready.`,
-    `Be concise in status updates — single lines only.`,
+    `Run the full build workflow end-to-end without pausing:`,
+    `pulse_intake → pulse_sketch → pulse_intent → write spec file → pulse_validate → pulse_fetch_page → screenshot → pulse_design_review → pulse_layout_review → Lighthouse desktop → Lighthouse mobile → pulse_review → fix any issues → pulse_dev (start the dev server).`,
+    ``,
+    `Keep status messages to a single line each. When complete, confirm the URL.`,
   ]
   return parts.filter(Boolean).join('\n')
 }
@@ -178,7 +179,13 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
 
   const args = verbose
     ? ['--mcp-config', mcpConfigPath, '--', prompt]
-    : ['-p', '--output-format', 'stream-json', '--mcp-config', mcpConfigPath, '--', prompt]
+    : [
+        '-p',
+        '--output-format', 'stream-json',
+        '--permission-mode', 'auto',
+        '--mcp-config', mcpConfigPath,
+        '--', prompt,
+      ]
 
   const proc = spawn('claude', args, {
     stdio:  verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
@@ -208,6 +215,10 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
   return new Promise(resolve => {
     proc.on('exit', code => {
       if (progress) progress.stop()
+      if (code && code !== 0) {
+        process.stdout.write(`\n  ${C.red}Agent exited with code ${code}${C.reset}\n`)
+        process.stdout.write(`  Run ${C.cyan}pulse --verbose${C.reset} to see full output.\n\n`)
+      }
       resolve(code ?? 0)
     })
     proc.on('error', err => {
