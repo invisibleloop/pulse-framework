@@ -791,13 +791,16 @@ export async function createServer(entries, options = {}) {
   process.on('SIGINT',  shutdown)
 
   server.listen(port, () => {
-    if (!quiet) {
-      import('../cli/logger.js').then(({ banner }) => {
-        banner({ url: `http://localhost:${port}`, version, specs, agentMode })
-      }).catch(() => {
-        console.log(`⚡ Pulse running at http://localhost:${port}`)
+    import('../cli/logger.js').then(({ banner }) => {
+      banner({
+        url:       `http://localhost:${port}`,
+        version,
+        specs,
+        agentMode,
       })
-    }
+    }).catch(() => {
+      console.log(`⚡ Pulse running at http://localhost:${port}`)
+    })
   })
 
   return {
