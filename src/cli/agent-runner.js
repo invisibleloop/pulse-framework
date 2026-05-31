@@ -134,12 +134,19 @@ function normalizeToolName(raw) {
     .replace(/^mcp__chrome-devtools__/, '')
 }
 
+// Returns detected URL if found in agent text, otherwise null
 function parseStreamLine(line, progress) {
   let event
-  try { event = JSON.parse(line) } catch { return }
+  try { event = JSON.parse(line) } catch { return null }
 
   if (event.type === 'assistant' && event.message?.content) {
+    let detectedUrl = null
     for (const block of event.message.content) {
+      if (block.type === 'text') {
+        // Look for "Ready → http://..." in the agent's final message
+        const match = block.text?.match(/https?:\/\/localhost:\d+\S*/i)
+        if (match) detectedUrl = match[0].replace(/[.,;)]$/, '')
+      }
       if (block.type !== 'tool_use') continue
       const name  = normalizeToolName(block.name)
       const label = TOOL_LABELS[name]
@@ -147,6 +154,7 @@ function parseStreamLine(line, progress) {
       pending.set(block.id, label)
       progress.toolStart(label, block.id)
     }
+    if (detectedUrl) return detectedUrl
   }
 
   // Tool result — only commit if it's one we're tracking
@@ -157,6 +165,8 @@ function parseStreamLine(line, progress) {
       progress.toolDone(event.tool_use_id)
     }
   }
+
+  return null
 }
 
 // ---------------------------------------------------------------------------
@@ -194,7 +204,7 @@ export function composeBuildPrompt(answers) {
 // Launch Claude (normal — non-interactive with progress)
 // ---------------------------------------------------------------------------
 
-async function launchClaude(root, mcpConfigPath, prompt, verbose) {
+async function launchClaude(root, mcpConfigPath, prompt, verbose, answers) {
   const progress = verbose ? null : new Progress()
   if (progress) progress.start()
 
@@ -213,6 +223,8 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
     cwd:   root,
   })
 
+  let detectedUrl = null
+
   if (!verbose) {
     let buf = ''
     proc.stdout.on('data', chunk => {
@@ -220,7 +232,8 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
       const lines = buf.split('\n')
       buf = lines.pop()
       for (const line of lines) {
-        if (line.trim()) parseStreamLine(line.trim(), progress)
+        const url = line.trim() ? parseStreamLine(line.trim(), progress) : null
+        if (url) detectedUrl = url
       }
     })
   }
@@ -229,15 +242,20 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
     proc.on('exit', code => {
       if (progress) progress.stop()
       if (code && code !== 0) {
-        process.stdout.write(`\n  ${C.red}Agent exited with code ${code}${C.reset}\n`)
+        process.stdout.write(`\n  ${C.red}✗  Agent exited with code ${code}${C.reset}\n`)
         process.stdout.write(`  Run ${C.cyan}pulse --verbose${C.reset} to see full output.\n\n`)
+      } else {
+        // Completion banner
+        const url = detectedUrl || `http://localhost:3000`
+        process.stdout.write(`\n  ${C.green}${C.bold}✓ Done!${C.reset}  ${answers.name || 'Your page'} is ready\n`)
+        process.stdout.write(`\n  ${C.cyan}${url}${C.reset}\n\n`)
       }
       resolve(code ?? 0)
     })
     proc.on('error', err => {
       if (progress) progress.stop()
-      console.error(`\n  ${C.red}✗${C.reset}  Could not start claude: ${err.message}`)
-      console.error(`  Make sure Claude Code is installed: https://claude.ai/code\n`)
+      process.stderr.write(`\n  ${C.red}✗${C.reset}  Could not start claude: ${err.message}\n`)
+      process.stderr.write(`  Make sure Claude Code is installed: https://claude.ai/code\n\n`)
       resolve(1)
     })
   })
@@ -298,7 +316,7 @@ export async function runAgent({ root, answers, agent = 'claude', verbose = fals
     if (agent === 'copilot') {
       await launchCopilot(root, mcpServerPath, prompt, verbose)
     } else {
-      await launchClaude(root, mcpConfigPath, prompt, verbose)
+      await launchClaude(root, mcpConfigPath, prompt, verbose, answers)
     }
   } finally {
     try { fs.unlinkSync(mcpConfigPath) } catch { /* ignore */ }
