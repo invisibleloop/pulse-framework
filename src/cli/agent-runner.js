@@ -177,8 +177,8 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
   if (progress) progress.start()
 
   const args = verbose
-    ? ['--mcp-config', mcpConfigPath, prompt]
-    : ['-p', '--output-format', 'stream-json', '--mcp-config', mcpConfigPath, prompt]
+    ? ['--mcp-config', mcpConfigPath, '--', prompt]
+    : ['-p', '--output-format', 'stream-json', '--mcp-config', mcpConfigPath, '--', prompt]
 
   const proc = spawn('claude', args, {
     stdio:  verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
