@@ -164,7 +164,7 @@ async function launchSession(root, agentOverride = null, verbose = false) {
 
   // Run conversational wizard to gather what the user wants to build
   const { runWizard } = await import('./wizard.js')
-  const answers = await runWizard({ version, root })
+  const answers = await runWizard({ version, root, agent })
 
   // runAgent handles both new builds (_isEdit: false) and edits (_isEdit: true)
   const { runAgent } = await import('./agent-runner.js')
