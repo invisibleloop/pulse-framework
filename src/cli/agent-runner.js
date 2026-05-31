@@ -61,67 +61,54 @@ const SPINNER = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
 
 class Progress {
   constructor() {
-    this.completed     = []  // { label, status: 'done'|'error' }
-    this.active        = null
-    this.spinnerIdx    = 0
-    this.interval      = null
-    this._lines        = 0
+    this.active     = null
+    this.spinnerIdx = 0
+    this.interval   = null
   }
 
   start() {
     this.interval = setInterval(() => {
       this.spinnerIdx = (this.spinnerIdx + 1) % SPINNER.length
-      this._draw()
+      if (this.active) this._tick()
     }, 80)
   }
 
   stop() {
     clearInterval(this.interval)
-    if (this.active) {
-      this.completed.push({ label: this.active, status: 'done' })
-      this.active = null
-    }
-    this._draw()
-    process.stdout.write('\n')
+    if (this.active) this._commit(this.active, 'done')
+    this.active = null
   }
 
   toolStart(label) {
-    if (this.active) {
-      this.completed.push({ label: this.active, status: 'done' })
-    }
+    if (this.active) this._commit(this.active, 'done')
     this.active = label
-    this._draw()
+    this._tick()
   }
 
-  toolDone(label) {
-    // mark previous active as done, or find by label
-    if (this.active === label || this.active) {
-      this.completed.push({ label: this.active || label, status: 'done' })
-      this.active = null
-      this._draw()
-    }
-  }
-
-  toolError(label) {
-    this.completed.push({ label: label || this.active, status: 'error' })
+  toolDone() {
+    if (!this.active) return
+    this._commit(this.active, 'done')
     this.active = null
-    this._draw()
   }
 
-  _draw() {
-    if (this._lines > 0) {
-      process.stdout.write(`\x1b[${this._lines}A\x1b[0J`)
-    }
-    let out = ''
-    for (const { label, status } of this.completed) {
-      if (status === 'done')  out += `  ${C.green}✓${C.reset}  ${label}\n`
-      if (status === 'error') out += `  ${C.red}✗${C.reset}  ${label}\n`
-    }
-    if (this.active) {
-      out += `  ${C.cyan}${SPINNER[this.spinnerIdx]}${C.reset}  ${this.active}\n`
-    }
-    process.stdout.write(out)
-    this._lines = this.completed.length + (this.active ? 1 : 0)
+  toolError() {
+    if (!this.active) return
+    this._commit(this.active, 'error')
+    this.active = null
+  }
+
+  // Overwrite the current line in-place (spinner update)
+  _tick() {
+    const spin = `${C.cyan}${SPINNER[this.spinnerIdx]}${C.reset}`
+    process.stdout.write(`\r  ${spin}  ${this.active}  `)
+  }
+
+  // Finalise the current line and move to next
+  _commit(label, status) {
+    const icon = status === 'done'
+      ? `${C.green}✓${C.reset}`
+      : `${C.red}✗${C.reset}`
+    process.stdout.write(`\r  ${icon}  ${label}\n`)
   }
 }
 
@@ -141,9 +128,9 @@ function parseStreamLine(line, progress) {
       }
     }
   }
+  // tool result received — commit the active step as done
   if (event.type === 'tool') {
-    // tool result — mark active as done
-    progress.toolDone(progress.active)
+    progress.toolDone()
   }
 }
 
@@ -188,8 +175,8 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
       ]
 
   const proc = spawn('claude', args, {
-    stdio:  verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
-    cwd:    root,
+    stdio: verbose ? 'inherit' : ['ignore', 'pipe', 'ignore'],  // ignore stderr in normal mode
+    cwd:   root,
   })
 
   if (!verbose) {
@@ -200,14 +187,6 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose) {
       buf = lines.pop()
       for (const line of lines) {
         if (line.trim()) parseStreamLine(line.trim(), progress)
-      }
-    })
-
-    proc.stderr.on('data', chunk => {
-      // Only surface real errors, not warnings
-      const text = chunk.toString().trim()
-      if (text && !text.startsWith('Warning') && !text.startsWith('Note')) {
-        process.stderr.write(`${C.dim}${text}${C.reset}\n`)
       }
     })
   }
