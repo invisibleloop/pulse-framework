@@ -213,7 +213,7 @@ async function launchClaude(root, mcpConfigPath, prompt, verbose, answers) {
     : [
         '-p',
         '--output-format', 'stream-json',
-        '--permission-mode', 'auto',
+        '--permission-mode', 'bypassPermissions',
         '--mcp-config', mcpConfigPath,
         '--', prompt,
       ]
