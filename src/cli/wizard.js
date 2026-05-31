@@ -19,7 +19,8 @@ const VIBES = [
   'playful', 'brutalist', 'retro', 'neon', 'paper',
 ]
 
-const QUESTIONS = [
+// Questions for a NEW page (no pages exist yet)
+const NEW_BUILD_QUESTIONS = [
   {
     key:      'intent',
     label:    'What would you like to build?',
@@ -52,6 +53,17 @@ const QUESTIONS = [
     type:     'choice',
     options:  VIBES,
     required: false,
+  },
+]
+
+// Questions for an EXISTING project (pages already built)
+const EDIT_QUESTIONS = [
+  {
+    key:      'intent',
+    label:    'What would you like to build or change?',
+    type:     'text',
+    hint:     'e.g. add a pricing page, make the hero darker, fix the mobile layout',
+    required: true,
   },
 ]
 
@@ -115,19 +127,19 @@ function ChoiceInput({ options, selectedIndex, onChange, onSubmit, onSkip }) {
 // Main wizard app
 // ---------------------------------------------------------------------------
 
-function WizardApp({ version, onComplete }) {
+function WizardApp({ version, questions, existingPages, onComplete }) {
   const [step, setStep]         = useState(0)
   const [answers, setAnswers]   = useState({})
   const [inputVal, setInputVal] = useState('')
   const [vibeIdx, setVibeIdx]   = useState(0)
 
-  const question = QUESTIONS[step]
+  const question = questions[step]
 
   function advance(key, value) {
     const next = { ...answers, [key]: value }
     setAnswers(next)
     setInputVal('')
-    if (step + 1 >= QUESTIONS.length) {
+    if (step + 1 >= questions.length) {
       onComplete(next)
     } else {
       setStep(step + 1)
@@ -135,20 +147,35 @@ function WizardApp({ version, onComplete }) {
   }
 
   function skip() {
-    const defaultValue = question.type === 'choice' ? null : null
-    advance(question.key, defaultValue)
+    advance(question.key, null)
   }
+
+  const isExisting = existingPages && existingPages.length > 0
 
   return h(Box, { flexDirection: 'column', paddingLeft: 1, paddingRight: 1 },
 
     // Header
     h(Box, { marginBottom: 1 },
       h(Text, { bold: true, color: 'cyan' }, '⚡ Pulse '),
-      h(Text, { color: 'gray', dimColor: true }, `v${version}  —  new build`),
+      h(Text, { color: 'gray', dimColor: true },
+        isExisting
+          ? `v${version}  —  ${existingPages.length} page${existingPages.length !== 1 ? 's' : ''}`
+          : `v${version}  —  new build`
+      ),
+    ),
+
+    // Existing pages list (brief, dim)
+    isExisting && h(Box, { flexDirection: 'column', marginBottom: 1 },
+      ...existingPages.slice(0, 5).map(p =>
+        h(Text, { key: p, color: 'gray', dimColor: true }, `  ${p}`)
+      ),
+      existingPages.length > 5 && h(Text, { color: 'gray', dimColor: true },
+        `  + ${existingPages.length - 5} more`
+      ),
     ),
 
     // Completed answers
-    ...QUESTIONS.slice(0, step).map(q =>
+    ...questions.slice(0, step).map(q =>
       h(Box, { key: q.key },
         h(Text, { color: 'gray', dimColor: true }, `  ${q.label}  `),
         h(Text, { color: 'white' }, answers[q.key] || h(Text, { color: 'gray', dimColor: true }, '—')),
@@ -156,7 +183,7 @@ function WizardApp({ version, onComplete }) {
     ),
 
     // Current question
-    step < QUESTIONS.length && h(Box, { flexDirection: 'column', marginTop: step > 0 ? 1 : 0 },
+    step < questions.length && h(Box, { flexDirection: 'column', marginTop: step > 0 ? 1 : 0 },
       h(Box, {},
         h(Text, { bold: true, color: 'white' }, `  ${question.label}`),
         !question.required && h(Text, { color: 'gray', dimColor: true }, '  (optional)'),
@@ -186,19 +213,31 @@ function WizardApp({ version, onComplete }) {
 // Export
 // ---------------------------------------------------------------------------
 
-export async function runWizard({ version }) {
+export async function runWizard({ version, root }) {
+  // Detect existing pages to choose question mode
+  let existingPages = []
+  try {
+    const { loadPages } = await import('./discover.js')
+    const pages = await loadPages(root)
+    existingPages = pages.map(p => p.spec?.route || p.route).filter(Boolean)
+  } catch { /* ignore — treat as new project */ }
+
+  const questions = existingPages.length > 0 ? EDIT_QUESTIONS : NEW_BUILD_QUESTIONS
+
   return new Promise(resolve => {
     let done = false
     const { unmount } = render(
       h(WizardApp, {
         version,
+        questions,
+        existingPages,
         onComplete: answers => {
           if (done) return
           done = true
           setTimeout(() => {
             unmount()
-            resolve(answers)
-          }, 80) // brief pause so user sees completed state
+            resolve({ ...answers, _isEdit: existingPages.length > 0 })
+          }, 80)
         },
       })
     )

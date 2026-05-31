@@ -341,15 +341,23 @@ export async function runAgent({ root, answers, agent = 'claude', verbose = fals
 
   process.env.PULSE_AGENT_MODE = '1'
 
-  // Initial build
+  const isEdit = answers._isEdit === true
+
+  // Status line
   if (!verbose) {
-    process.stdout.write(`\n  Building ${answers.name || 'your page'}…\n\n`)
+    const action = isEdit ? 'Working on' : 'Building'
+    const subject = answers.name || (isEdit ? 'your project' : 'your page')
+    process.stdout.write(`\n  ${action} ${subject}…\n\n`)
   }
 
   const runClaude = (prompt) => launchClaude(root, mcpConfigPath, prompt, verbose, answers)
 
   try {
-    const initialPrompt = composeBuildPrompt(answers)
+    // For existing-project edits, skip the full intake workflow
+    const initialPrompt = isEdit
+      ? composeEditPrompt(answers.intent, answers)
+      : composeBuildPrompt(answers)
+
     let code = agent === 'copilot'
       ? await launchCopilot(root, mcpServerPath, initialPrompt, verbose)
       : await runClaude(initialPrompt)
