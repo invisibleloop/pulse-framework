@@ -21,32 +21,68 @@ import fs         from 'fs'
 // are not listed here and will never appear in the progress display.
 // ---------------------------------------------------------------------------
 
+// Group tools into build phases for header announcements
+const PHASE_MAP = {
+  pulse_list_structure:      'planning',
+  pulse_extract_inspiration: 'planning',
+  pulse_intake:              'planning',
+  pulse_sketch:              'planning',
+  pulse_intent:              'planning',
+  pulse_tokens:              'planning',
+  pulse_list_icons:          'planning',
+  pulse_create_page:         'building',
+  pulse_create_component:    'building',
+  pulse_check_contrast:      'building',
+  pulse_validate:            'checking',
+  pulse_suggest:             'checking',
+  pulse_fetch_page:          'checking',
+  navigate_page:             'checking',
+  take_screenshot:           'checking',
+  pulse_design_review:       'checking',
+  pulse_layout_review:       'checking',
+  lighthouse_audit:          'checking',
+  performance_start_trace:   'checking',
+  list_console_messages:     'checking',
+  pulse_run_tests:           'finishing',
+  pulse_review:              'finishing',
+  pulse_build:               'finishing',
+  pulse_update:              'finishing',
+  pulse_restart_server:      'finishing',
+}
+
+const PHASE_LABELS = {
+  planning:  'Planning',
+  building:  'Building',
+  checking:  'Checking',
+  finishing: 'Wrapping up',
+}
+
 const TOOL_LABELS = {
-  // Pulse MCP tools
-  pulse_intake:             'Understanding your brief',
-  pulse_extract_inspiration:'Extracting design inspiration',
-  pulse_sketch:             'Exploring layout directions',
-  pulse_intent:             'Planning the build',
-  pulse_create_page:        'Writing page spec',
-  pulse_create_component:   'Writing component',
-  pulse_validate:           'Checking spec',
-  pulse_suggest:            'Reviewing draft',
-  pulse_review:             'Code review',
-  pulse_design_review:      'Design review',
-  pulse_layout_review:      'Layout check',
-  pulse_restart_server:     'Starting dev server',
-  pulse_fetch_page:         'Testing page render',
-  pulse_run_tests:          'Running tests',
-  pulse_build:              'Production build',
-  pulse_list_structure:     'Reading project structure',
-  pulse_check_contrast:     'Checking colour contrast',
-  pulse_update:             'Updating assets',
-  // Chrome DevTools MCP
-  navigate_page:            'Navigating browser',
-  take_screenshot:          'Taking screenshot',
-  lighthouse_audit:         'Running Lighthouse',
-  performance_start_trace:  'Profiling performance',
-  list_console_messages:    'Checking console',
+  pulse_list_structure:      'Reading project',
+  pulse_extract_inspiration: 'Extracting design inspiration',
+  pulse_intake:              'Processing brief',
+  pulse_sketch:              'Sketching layout options',
+  pulse_intent:              'Mapping out the build',
+  pulse_tokens:              'Reading design tokens',
+  pulse_list_icons:          'Browsing icons',
+  pulse_create_page:         'Writing page',
+  pulse_create_component:    'Writing component',
+  pulse_check_contrast:      'Checking colour contrast',
+  pulse_validate:            'Validating',
+  pulse_suggest:             'Reviewing draft',
+  pulse_fetch_page:          'Testing server render',
+  navigate_page:             'Opening in browser',
+  take_screenshot:           'Taking screenshot',
+  pulse_design_review:       'Design review',
+  pulse_layout_review:       'Layout check',
+  lighthouse_audit:          'Lighthouse audit',
+  performance_start_trace:   'Performance trace',
+  list_console_messages:     'Checking console',
+  pulse_run_tests:           'Running tests',
+  pulse_review:              'Code review',
+  pulse_build:               'Production build',
+  pulse_update:              'Updating assets',
+  pulse_restart_server:      'Starting dev server',
 }
 
 // ---------------------------------------------------------------------------
@@ -68,9 +104,10 @@ const SPINNER = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
 
 class Progress {
   constructor() {
-    this.active     = null   // { label, id }
-    this.spinnerIdx = 0
-    this.interval   = null
+    this.active      = null   // { label, id }
+    this.spinnerIdx  = 0
+    this.interval    = null
+    this.currentPhase = null
   }
 
   start() {
@@ -86,15 +123,24 @@ class Progress {
     this.active = null
   }
 
-  toolStart(label, id) {
+  toolStart(label, id, toolName) {
     if (this.active) this._commit(this.active.label, 'done')
+
+    // Print phase header when we enter a new phase
+    const phase = PHASE_MAP[toolName]
+    if (phase && phase !== this.currentPhase) {
+      this.currentPhase = phase
+      const phaseLabel = PHASE_LABELS[phase] || phase
+      process.stdout.write(`\n  ${C.bold}${C.white}${phaseLabel}${C.reset}\n`)
+    }
+
     this.active = { label, id }
     this._tick()
   }
 
   toolDone(id) {
     if (!this.active) return
-    if (id !== undefined && this.active.id !== id) return  // not our tool
+    if (id !== undefined && this.active.id !== id) return
     this._commit(this.active.label, 'done')
     this.active = null
   }
@@ -106,13 +152,11 @@ class Progress {
     this.active = null
   }
 
-  // Overwrite the current line in-place (spinner update)
   _tick() {
     const spin = `${C.cyan}${SPINNER[this.spinnerIdx]}${C.reset}`
-    process.stdout.write(`\r  ${spin}  ${this.active.label}  `)
+    process.stdout.write(`\r  ${spin}  ${C.dim}${this.active.label}${C.reset}  `)
   }
 
-  // Finalise the current line and move to next
   _commit(label, status) {
     const icon = status === 'done'
       ? `${C.green}✓${C.reset}`
@@ -150,9 +194,9 @@ function parseStreamLine(line, progress) {
       if (block.type !== 'tool_use') continue
       const name  = normalizeToolName(block.name)
       const label = TOOL_LABELS[name]
-      if (!label) continue  // skip internal tools (Edit, Read, Bash, ToolSearch…)
+      if (!label) continue
       pending.set(block.id, label)
-      progress.toolStart(label, block.id)
+      progress.toolStart(label, block.id, name)
     }
     if (detectedUrl) return detectedUrl
   }
