@@ -1,20 +1,27 @@
 /**
  * Pulse CLI — structured terminal logger
  *
- * Single module that owns all terminal output. Produces clean, scannable
- * output: one-time startup banner, then a timestamped scrolling log.
+ * Single module that owns all terminal output. In non-TTY mode (CI, piped),
+ * produces clean timestamped lines. In TTY mode, emits events to the bus
+ * so the Ink TUI can render them instead.
  *
- * Rules:
- *  - Static asset requests (JS, CSS, images, fonts) are dimmed and collapsed
- *  - Errors always stand out (red ✗ prefix)
- *  - Agent activity gets a distinct indicator
- *  - Respects NO_COLOR and CI env vars
+ * Call setTuiMode(true) before the first request to switch to event mode.
  */
 
 import { c, icon, elapsed, visLen } from './fmt.js'
+import { bus } from './events.js'
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Mode
+// ---------------------------------------------------------------------------
+
+let tuiMode = false
+
+/** Switch to TUI mode — logger emits events instead of writing to stdout. */
+export function setTuiMode(enabled) { tuiMode = enabled }
+
+// ---------------------------------------------------------------------------
+// Helpers (plain logger)
 // ---------------------------------------------------------------------------
 
 const STATIC_EXT = /\.(js|css|map|ico|png|jpg|jpeg|gif|svg|woff2?|ttf|eot|webp|avif|json)$/i
@@ -42,14 +49,16 @@ function methodColor(method) {
 }
 
 // ---------------------------------------------------------------------------
-// Banner — printed once at startup
+// Banner — printed once at startup (plain mode only)
 // ---------------------------------------------------------------------------
 
 /**
- * Print the startup banner.
- * @param {{ url: string, version: string, specs: Array<{route:string, method?:string, hydrate?:string}>, agentMode?: boolean }} opts
+ * Print the startup banner (plain logger mode).
+ * In TUI mode the banner is rendered by the Ink app directly.
  */
 export function banner({ url, version, specs = [], agentMode = false }) {
+  if (tuiMode) return
+
   const agentLabel = agentMode ? `  ${c.cyan('●')} ${c.dim('Agent active')}` : ''
 
   process.stdout.write('\n')
@@ -57,11 +66,10 @@ export function banner({ url, version, specs = [], agentMode = false }) {
   process.stdout.write('\n')
 
   if (specs.length > 0) {
-    // Column widths
     const routeW  = Math.max(5, ...specs.map(s => (s.route || '?').length))
     const methodW = 6
 
-    const header = `  ${c.dim('Route'.padEnd(routeW))}  ${c.dim('Method'.padEnd(methodW))}  ${c.dim('JS')}`
+    const header  = `  ${c.dim('Route'.padEnd(routeW))}  ${c.dim('Method'.padEnd(methodW))}  ${c.dim('JS')}`
     const divider = `  ${c.dim('─'.repeat(routeW + methodW + 8))}`
 
     process.stdout.write(header + '\n')
@@ -73,7 +81,6 @@ export function banner({ url, version, specs = [], agentMode = false }) {
       const hydrate = s.hydrate ? c.green('✓ hydrated') : c.dim('— static')
       process.stdout.write(`  ${c.cyan(route)}  ${c.dim(method)}  ${hydrate}\n`)
     }
-
     process.stdout.write('\n')
   }
 
@@ -83,27 +90,25 @@ export function banner({ url, version, specs = [], agentMode = false }) {
 }
 
 // ---------------------------------------------------------------------------
-// Request log — one line per request
+// Request log
 // ---------------------------------------------------------------------------
 
-/**
- * Log a completed HTTP request.
- * @param {{ method: string, pathname: string, status: number, ms: number }} opts
- */
 export function request({ method, pathname, status, ms }) {
+  if (pathname === '/healthz' || pathname === '/_pulse/health' || pathname === '/_pulse/reload') return
+
+  if (tuiMode) {
+    bus.emit('request', { method, pathname, status, ms, timestamp: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) })
+    return
+  }
+
   const isAsset = isStatic(pathname)
-
-  // Skip health check noise
-  if (pathname === '/healthz' || pathname === '/_pulse/health') return
-
-  const ts     = timestamp()
-  const m      = methodColor(method)
-  const p      = isAsset ? c.dim(pathname) : pathname
-  const s      = statusColor(status)
-  const t      = c.dim(elapsed(ms))
+  const ts      = timestamp()
+  const m       = methodColor(method)
+  const p       = isAsset ? c.dim(pathname) : pathname
+  const s       = statusColor(status)
+  const t       = c.dim(elapsed(ms))
 
   if (isAsset) {
-    // Static assets — dim the whole line, no leading symbol
     process.stdout.write(`${ts}  ${c.dim(method.padEnd(4))}  ${p}  ${c.dim(String(status))}  ${t}\n`)
   } else if (status >= 500) {
     process.stdout.write(`${ts}  ${icon.fail()}  ${m}  ${c.red(pathname)}  ${s}  ${t}\n`)
@@ -115,14 +120,16 @@ export function request({ method, pathname, status, ms }) {
 }
 
 // ---------------------------------------------------------------------------
-// Named events — server lifecycle
+// Named events
 // ---------------------------------------------------------------------------
 
 export function ready(url) {
+  if (tuiMode) return
   process.stdout.write(`${timestamp()}  ${icon.ok()}  ${c.dim('Server ready')}  ${c.dim(url)}\n`)
 }
 
 export function shutdown(forced = false) {
+  if (tuiMode) { bus.emit('shutdown', { forced }); return }
   process.stdout.write('\n')
   if (forced) {
     process.stdout.write(`  ${icon.fail()}  ${c.red('Force-exiting after shutdown timeout')}\n`)
@@ -132,14 +139,17 @@ export function shutdown(forced = false) {
 }
 
 export function error(msg, err) {
+  if (tuiMode) { bus.emit('error', { msg }); return }
   process.stdout.write(`${timestamp()}  ${icon.fail()}  ${c.red(msg)}\n`)
   if (err?.stack) process.stdout.write(c.dim(err.stack.split('\n').slice(1, 4).map(l => '    ' + l).join('\n')) + '\n')
 }
 
 export function info(msg) {
+  if (tuiMode) { bus.emit('info', { msg }); return }
   process.stdout.write(`${timestamp()}  ${icon.info()}  ${c.dim(msg)}\n`)
 }
 
 export function warn(msg) {
+  if (tuiMode) { bus.emit('warn', { msg }); return }
   process.stdout.write(`${timestamp()}  ${icon.warn()}  ${c.yellow(msg)}\n`)
 }

@@ -14,6 +14,9 @@ import { createServer } from '../server/index.js'
 import { loadPages }    from './discover.js'
 import * as log         from './logger.js'
 
+// TUI mode — enabled when stdout is a real TTY (not CI, not piped)
+const USE_TUI = process.stdout.isTTY && !process.env.CI && !process.env.NO_TUI
+
 // ---------------------------------------------------------------------------
 // Args
 // ---------------------------------------------------------------------------
@@ -184,6 +187,11 @@ const reloadScript = (nonce) => `<script nonce="${nonce}">
   })();
 </script>`
 
+const agentMode = !!process.env.PULSE_AGENT_MODE
+
+// In TUI mode, switch logger to event mode so Ink renders instead of stdout
+if (USE_TUI) log.setTuiMode(true)
+
 const { updateSpecs } = await createServer(specs, {
   port:      PORT,
   stream:    true,
@@ -191,7 +199,8 @@ const { updateSpecs } = await createServer(specs, {
   manifest:  {},        // never use a build manifest in dev — always serve source files
   extraBody: reloadScript,
   dev:       true,
-  agentMode: !!process.env.PULSE_AGENT_MODE,
+  agentMode,
+  quiet:     USE_TUI,   // server won't call log.banner itself — TUI handles it
   ...(_config.csp ? { csp: _config.csp } : {}),
 
   onRequest(req, res) {
@@ -248,3 +257,18 @@ const { updateSpecs } = await createServer(specs, {
     if (serveDir('/@pulse/', path.join(FRAMEWORK_ROOT, 'src'))) return false
   }
 })
+
+// ---------------------------------------------------------------------------
+// Launch TUI or plain banner
+// ---------------------------------------------------------------------------
+
+if (USE_TUI) {
+  const { startTUI } = await import('./tui.js')
+  const { version }  = await import('../../package.json', { with: { type: 'json' } })
+  startTUI({
+    url:       `http://localhost:${PORT}`,
+    version:   version.default ?? version,
+    specs,
+    agentMode,
+  })
+}
