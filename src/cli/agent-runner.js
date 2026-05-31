@@ -291,6 +291,41 @@ async function launchCopilot(root, mcpServerPath, prompt, verbose) {
 // Main export
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Follow-up prompt — ask for changes after a completed build
+// ---------------------------------------------------------------------------
+
+function askFollowUp() {
+  return new Promise(resolve => {
+    process.stdout.write(`  ${C.gray}What would you like to change?${C.reset}  ${C.dim}(↵ to exit)${C.reset}  `)
+    process.stdin.setEncoding('utf8')
+    process.stdin.resume()
+    process.stdin.once('data', d => {
+      process.stdin.pause()
+      resolve(d.trim())
+    })
+  })
+}
+
+function composeEditPrompt(feedback, answers) {
+  return [
+    `Edit the page you just built for "${answers.name || answers.intent}".`,
+    ``,
+    `Requested changes: ${feedback}`,
+    ``,
+    `Rules:`,
+    `- Do NOT re-run pulse_intake, pulse_sketch, or pulse_intent`,
+    `- Make only the changes requested — do not rebuild from scratch`,
+    `- After editing, run pulse_validate, take a screenshot, run Lighthouse if layout changed`,
+    `- Keep the dev server running throughout`,
+    `- When done, output: "Ready → http://localhost:PORT"`,
+  ].join('\n')
+}
+
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+
 export async function runAgent({ root, answers, agent = 'claude', verbose = false }) {
   const mcpServerPath = new URL('../mcp/server.js', import.meta.url).pathname
   const mcpConfigPath = path.join(os.tmpdir(), `pulse-mcp-${Date.now()}.json`)
@@ -304,19 +339,32 @@ export async function runAgent({ root, answers, agent = 'claude', verbose = fals
     }
   }, null, 2))
 
-  const prompt = composeBuildPrompt(answers)
-
   process.env.PULSE_AGENT_MODE = '1'
 
+  // Initial build
   if (!verbose) {
     process.stdout.write(`\n  Building ${answers.name || 'your page'}…\n\n`)
   }
 
+  const runClaude = (prompt) => launchClaude(root, mcpConfigPath, prompt, verbose, answers)
+
   try {
-    if (agent === 'copilot') {
-      await launchCopilot(root, mcpServerPath, prompt, verbose)
-    } else {
-      await launchClaude(root, mcpConfigPath, prompt, verbose, answers)
+    const initialPrompt = composeBuildPrompt(answers)
+    let code = agent === 'copilot'
+      ? await launchCopilot(root, mcpServerPath, initialPrompt, verbose)
+      : await runClaude(initialPrompt)
+
+    // Follow-up loop — let user request changes until they press Enter
+    if (code === 0 && !verbose && process.stdin.isTTY) {
+      while (true) {
+        const feedback = await askFollowUp()
+        if (!feedback) {
+          process.stdout.write('\n')
+          break
+        }
+        process.stdout.write(`\n  Making changes…\n\n`)
+        await runClaude(composeEditPrompt(feedback, answers))
+      }
     }
   } finally {
     try { fs.unlinkSync(mcpConfigPath) } catch { /* ignore */ }
