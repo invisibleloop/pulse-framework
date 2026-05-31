@@ -36,31 +36,31 @@ const pl = (s = '') => process.stdout.write(s + '\n')
 const SYSTEM_NEW = `\
 You are Pulse — a friendly, direct AI assistant that helps developers build web pages with the Pulse framework.
 
-Your job right now: have a natural conversation to understand what the user wants to build. Ask follow-up questions. Give opinions when asked. Suggest ideas. Be brief — this is a terminal, not a document. 2-4 short back-and-forth messages is plenty.
+Your job: have a natural, back-and-forth conversation to understand what the user wants to build. Be conversational and opinionated — share suggestions, give a view on what would work well. Keep each response SHORT: 1-3 sentences maximum. Ask only ONE question per message, never a list.
 
-Once you feel you have enough to start (you don't need to be exhaustive — a clear intent and rough direction is sufficient), output the PULSE_BUILD signal on its own line immediately followed by a short confirmation message:
+Once you have enough to start (a clear intent, name, audience, and rough feel is sufficient — usually 2-4 exchanges), output PULSE_BUILD on its own line followed immediately by a brief "starting" message (1 sentence):
 
 PULSE_BUILD:{"intent":"...","name":"...","audience":"...","features":"...","vibe":"..."}
 
-Rules for the JSON:
+JSON rules:
 - intent: one sentence describing what to build
-- name: product/site name, or null if unknown
-- audience: who it's for, or null if not mentioned
-- features: comma-separated selling points, or null
-- vibe: one of warm, minimal, bold, editorial, playful, brutalist, retro, neon, paper — pick what fits, don't ask unless the user has a strong preference
-- All values must be valid JSON strings or null (no undefined)
+- name: product/site name (or null)
+- audience: who it's for (or null)
+- features: comma-separated selling points (or null)
+- vibe: one of warm, minimal, bold, editorial, playful, brutalist, retro, neon, paper — pick what fits best, don't ask unless they've mentioned visual style
+- All values must be JSON strings or null
 
-Do not output the PULSE_BUILD line until you're ready to build.`
+Do not output PULSE_BUILD until you're confident you have enough. Do not ask more than 4 questions total.`
 
 const SYSTEM_EDIT = `\
 You are Pulse — a friendly AI assistant helping a developer modify an existing web project built with the Pulse framework.
 
-Have a brief, natural conversation to understand what the user wants to change or add. If their first message is clear enough, you can go straight to building.
+Have a brief natural conversation to understand the change. Keep responses SHORT: 1-2 sentences. If their first message is clear enough, go straight to building.
 
-Once you understand the request, output:
+Once you understand, output:
 PULSE_BUILD:{"intent":"...","name":null,"audience":null,"features":null,"vibe":null}
 
-intent should capture exactly what they want done. Then say something brief like "On it."`
+Then say one brief sentence like "On it — making that change now."`
 
 // Extract PULSE_BUILD:{...} from Claude's response
 function extractBuildSignal(text) {
@@ -86,16 +86,19 @@ function cleanResponse(text) {
     .trimEnd()
 }
 
-// Show a simple animated "thinking…" indicator
+// Thinking spinner with elapsed time after 8s
 function startSpinner() {
   const frames = ['·', '··', '···', '····']
   let i = 0
+  let elapsed = 0
   const id = setInterval(() => {
-    pr(`\r  ${C.dim}${frames[i++ % frames.length]}${C.reset}  `)
-  }, 200)
+    elapsed += 300
+    const slow = elapsed > 8000 ? `${C.reset}${C.dim}  (this can take a moment)` : ''
+    pr(`\r  ${C.dim}${frames[i++ % frames.length]}${slow}${C.reset}  `)
+  }, 300)
   return () => {
     clearInterval(id)
-    pr('\r\x1b[K')  // clear line
+    pr('\r\x1b[K')
   }
 }
 
@@ -210,6 +213,9 @@ async function runChatWizard({ version, existingPages }) {
       printResponse(response)
 
       if (signal) {
+        pl()
+        pl(`  ${C.dim}─────────────────────────────────────${C.reset}`)
+        pl()
         rl.close()
         return { ...signal, _isEdit: isExisting }
       }
