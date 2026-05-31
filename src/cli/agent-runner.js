@@ -16,9 +16,13 @@ import fs         from 'fs'
 
 // ---------------------------------------------------------------------------
 // Tool call → human label map
+// Only tools in this map are shown — everything else is silently skipped.
+// Internal claude tools (Edit, Read, Write, Bash, Glob, ToolSearch etc.)
+// are not listed here and will never appear in the progress display.
 // ---------------------------------------------------------------------------
 
 const TOOL_LABELS = {
+  // Pulse MCP tools
   pulse_intake:             'Understanding your brief',
   pulse_extract_inspiration:'Extracting design inspiration',
   pulse_sketch:             'Exploring layout directions',
@@ -27,7 +31,7 @@ const TOOL_LABELS = {
   pulse_create_component:   'Writing component',
   pulse_validate:           'Checking spec',
   pulse_suggest:            'Reviewing draft',
-  pulse_review:             'Final code review',
+  pulse_review:             'Code review',
   pulse_design_review:      'Design review',
   pulse_layout_review:      'Layout check',
   pulse_restart_server:     'Starting dev server',
@@ -35,11 +39,14 @@ const TOOL_LABELS = {
   pulse_run_tests:          'Running tests',
   pulse_build:              'Production build',
   pulse_list_structure:     'Reading project structure',
-  pulse_list_icons:         'Browsing icon library',
   pulse_check_contrast:     'Checking colour contrast',
-  pulse_check_version:      'Checking package version',
-  pulse_update:             'Updating pulse-ui assets',
-  pulse_tokens:             'Reading design tokens',
+  pulse_update:             'Updating assets',
+  // Chrome DevTools MCP
+  navigate_page:            'Navigating browser',
+  take_screenshot:          'Taking screenshot',
+  lighthouse_audit:         'Running Lighthouse',
+  performance_start_trace:  'Profiling performance',
+  list_console_messages:    'Checking console',
 }
 
 // ---------------------------------------------------------------------------
@@ -61,7 +68,7 @@ const SPINNER = ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
 
 class Progress {
   constructor() {
-    this.active     = null
+    this.active     = null   // { label, id }
     this.spinnerIdx = 0
     this.interval   = null
   }
@@ -75,32 +82,34 @@ class Progress {
 
   stop() {
     clearInterval(this.interval)
-    if (this.active) this._commit(this.active, 'done')
+    if (this.active) this._commit(this.active.label, 'done')
     this.active = null
   }
 
-  toolStart(label) {
-    if (this.active) this._commit(this.active, 'done')
-    this.active = label
+  toolStart(label, id) {
+    if (this.active) this._commit(this.active.label, 'done')
+    this.active = { label, id }
     this._tick()
   }
 
-  toolDone() {
+  toolDone(id) {
     if (!this.active) return
-    this._commit(this.active, 'done')
+    if (id !== undefined && this.active.id !== id) return  // not our tool
+    this._commit(this.active.label, 'done')
     this.active = null
   }
 
-  toolError() {
+  toolError(id) {
     if (!this.active) return
-    this._commit(this.active, 'error')
+    if (id !== undefined && this.active.id !== id) return
+    this._commit(this.active.label, 'error')
     this.active = null
   }
 
   // Overwrite the current line in-place (spinner update)
   _tick() {
     const spin = `${C.cyan}${SPINNER[this.spinnerIdx]}${C.reset}`
-    process.stdout.write(`\r  ${spin}  ${this.active}  `)
+    process.stdout.write(`\r  ${spin}  ${this.active.label}  `)
   }
 
   // Finalise the current line and move to next
@@ -116,21 +125,37 @@ class Progress {
 // Parse claude stream-json events
 // ---------------------------------------------------------------------------
 
+// Tracked tool_use_id → label for in-flight meaningful tool calls
+const pending = new Map()
+
+function normalizeToolName(raw) {
+  return raw
+    .replace(/^mcp__pulse__/, '')
+    .replace(/^mcp__chrome-devtools__/, '')
+}
+
 function parseStreamLine(line, progress) {
   let event
   try { event = JSON.parse(line) } catch { return }
 
   if (event.type === 'assistant' && event.message?.content) {
     for (const block of event.message.content) {
-      if (block.type === 'tool_use') {
-        const label = TOOL_LABELS[block.name] || block.name
-        progress.toolStart(label)
-      }
+      if (block.type !== 'tool_use') continue
+      const name  = normalizeToolName(block.name)
+      const label = TOOL_LABELS[name]
+      if (!label) continue  // skip internal tools (Edit, Read, Bash, ToolSearch…)
+      pending.set(block.id, label)
+      progress.toolStart(label, block.id)
     }
   }
-  // tool result received — commit the active step as done
-  if (event.type === 'tool') {
-    progress.toolDone()
+
+  // Tool result — only commit if it's one we're tracking
+  if (event.type === 'tool' && event.tool_use_id) {
+    const label = pending.get(event.tool_use_id)
+    if (label) {
+      pending.delete(event.tool_use_id)
+      progress.toolDone(event.tool_use_id)
+    }
   }
 }
 
@@ -140,7 +165,7 @@ function parseStreamLine(line, progress) {
 
 export function composeBuildPrompt(answers) {
   const parts = [
-    `Build a new page for this project. Work autonomously — do not stop to ask for confirmation at any point.`,
+    `Build a new page for this project. Work fully autonomously — do not stop or ask for confirmation at any point.`,
     ``,
     `**What to build:** ${answers.intent}`,
     answers.name     && `**Product name:** ${answers.name}`,
@@ -148,10 +173,19 @@ export function composeBuildPrompt(answers) {
     answers.features && `**Key features:** ${answers.features}`,
     answers.vibe     && `**Visual vibe:** ${answers.vibe}`,
     ``,
-    `Run the full build workflow end-to-end without pausing:`,
-    `pulse_intake → pulse_sketch → pulse_intent → write spec file → pulse_validate → pulse_fetch_page → screenshot → pulse_design_review → pulse_layout_review → Lighthouse desktop → Lighthouse mobile → pulse_review → fix any issues → pulse_dev (start the dev server).`,
+    `Run these steps once, in order, without repeating any earlier steps:`,
+    `1. pulse_intake`,
+    `2. pulse_sketch`,
+    `3. pulse_intent`,
+    `4. Write the spec file`,
+    `5. pulse_validate — fix errors in the spec, then continue`,
+    `6. pulse_fetch_page — confirm server renders the page`,
+    `7. Screenshot + pulse_design_review + pulse_layout_review`,
+    `8. Lighthouse (desktop then mobile) — fix any score below 100, do NOT re-run intake/sketch`,
+    `9. pulse_review — fix issues found, do NOT re-run intake/sketch`,
+    `10. Start the dev server`,
     ``,
-    `Keep status messages to a single line each. When complete, confirm the URL.`,
+    `When complete, output a single line: "Ready → http://localhost:PORT"`,
   ]
   return parts.filter(Boolean).join('\n')
 }
