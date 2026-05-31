@@ -16,9 +16,11 @@
 // ---------------------------------------------------------------------------
 
 import readline from 'readline'
-import { spawn } from 'child_process'
-import process   from 'process'
-import os        from 'os'
+import { spawn }  from 'child_process'
+import process    from 'process'
+import os         from 'os'
+import fs         from 'fs'
+import path       from 'path'
 
 // ANSI helpers
 const C = {
@@ -35,31 +37,29 @@ const pl = (s = '') => process.stdout.write(s + '\n')
 
 // System prompt — tells Claude to have a conversation, then emit the build signal
 const SYSTEM_NEW = `\
-You are Pulse — a friendly, direct AI assistant that helps developers build web pages with the Pulse framework.
+You are Pulse — a friendly assistant helping a developer decide what to build.
 
-IMPORTANT: You have NO tools in this conversation. Do not attempt to write files, run commands, or use any tools. You can only respond with text. A separate process will handle the actual building once you output the PULSE_BUILD signal.
+STRICT RULES FOR THIS CONVERSATION:
+- You have NO tools, NO file system access, NO ability to read or write files.
+- Do NOT mention project directories, file paths, or Claude Code sessions.
+- Do NOT ask the user to open anything or grant any access.
+- Do NOT try to run anything or create anything. You can ONLY output text.
+- If you find yourself thinking about file paths or directories, stop — that is irrelevant here.
 
-Your job: have a natural, back-and-forth conversation to understand what the user wants to build. Be conversational and opinionated — share suggestions, give a view on what would work well. Keep each response SHORT: 1-3 sentences maximum. Ask only ONE question per message, never a list.
+Your ONLY job: have a short, friendly conversation to understand what the user wants to build. Be conversational, opinionated, share suggestions. Keep each response to 1-3 sentences. Ask ONE question at a time.
 
-Cover these four topics through conversation (in whatever order feels natural):
+Cover these four topics through the conversation:
 1. What they're building and who it's for
 2. The product or company name
 3. Key features or selling points
-4. Visual vibe — always ask this. Frame it as a choice based on context, e.g. "Should it feel warm and friendly, or clean and professional?" Never skip this.
+4. Visual vibe — always ask this, frame it as a concrete choice e.g. "Should it feel warm and local, or sharp and professional?"
 
-Once you have all four covered, output PULSE_BUILD on its own line followed immediately by a brief confirmation (1 sentence):
+Once you have all four, output this on its own line then a brief confirmation:
 
 PULSE_BUILD:{"intent":"...","name":"...","audience":"...","features":"...","vibe":"..."}
 
-JSON rules:
-- intent: one sentence describing what to build
-- name: product/site name (or null)
-- audience: who it's for (or null)
-- features: comma-separated selling points (or null)
-- vibe: one of warm, minimal, bold, editorial, playful, brutalist, retro, neon, paper
-- All values must be JSON strings or null
-
-Do not output PULSE_BUILD until you have discussed all four topics.`
+vibe must be one of: warm, minimal, bold, editorial, playful, brutalist, retro, neon, paper
+All JSON values must be strings or null. Do not output PULSE_BUILD until all four topics are covered.`
 
 const SYSTEM_EDIT = `\
 You are Pulse — a friendly AI assistant helping a developer modify an existing web project built with the Pulse framework.
@@ -112,24 +112,36 @@ function startSpinner() {
 }
 
 // Call claude -p with the full conversation history.
-// Runs from os.tmpdir() so it doesn't pick up the project's .claude/ config
-// and Claude doesn't attempt to use MCP tools during the chat phase.
+// Creates an isolated temp dir with a restrictive .claude/settings.json so
+// Claude has no tools and no project memory bleeding in from other sessions.
 function askClaude(messages, systemPrompt) {
   const history = messages
     .map(m => `${m.role === 'user' ? 'User' : 'Pulse'}: ${m.content}`)
     .join('\n\n')
   const prompt = `${systemPrompt}\n\n---\n\n${history}\n\nPulse:`
 
+  // Isolated temp workspace — no project tools, no stale project memory
+  const chatDir   = path.join(os.tmpdir(), `pulse-chat-${process.pid}`)
+  const claudeDir = path.join(chatDir, '.claude')
+  fs.mkdirSync(claudeDir, { recursive: true })
+  fs.writeFileSync(path.join(claudeDir, 'settings.json'), JSON.stringify({
+    permissions: {
+      allow: [],
+      deny: ['Bash', 'Edit', 'Write', 'Read', 'MultiEdit', 'Glob', 'Grep', 'mcp__*'],
+    },
+  }))
+
   return new Promise((resolve, reject) => {
     let stdout = ''
     let stderr = ''
     const proc = spawn('claude', ['-p', '--output-format', 'text', '--', prompt], {
       stdio: ['ignore', 'pipe', 'pipe'],
-      cwd: os.tmpdir(),  // neutral dir — no .claude/ project config loaded
+      cwd: chatDir,
     })
     proc.stdout.on('data', d => { stdout += d.toString() })
     proc.stderr.on('data', d => { stderr += d.toString() })
     proc.on('close', code => {
+      try { fs.rmSync(chatDir, { recursive: true, force: true }) } catch {}
       if (code !== 0) {
         const detail = stderr.trim() || `exit code ${code}`
         reject(new Error(detail))
