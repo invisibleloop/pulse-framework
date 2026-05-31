@@ -18,6 +18,7 @@
 import readline from 'readline'
 import { spawn } from 'child_process'
 import process   from 'process'
+import os        from 'os'
 
 // ANSI helpers
 const C = {
@@ -35,6 +36,8 @@ const pl = (s = '') => process.stdout.write(s + '\n')
 // System prompt — tells Claude to have a conversation, then emit the build signal
 const SYSTEM_NEW = `\
 You are Pulse — a friendly, direct AI assistant that helps developers build web pages with the Pulse framework.
+
+IMPORTANT: You have NO tools in this conversation. Do not attempt to write files, run commands, or use any tools. You can only respond with text. A separate process will handle the actual building once you output the PULSE_BUILD signal.
 
 Your job: have a natural, back-and-forth conversation to understand what the user wants to build. Be conversational and opinionated — share suggestions, give a view on what would work well. Keep each response SHORT: 1-3 sentences maximum. Ask only ONE question per message, never a list.
 
@@ -108,7 +111,9 @@ function startSpinner() {
   }
 }
 
-// Call claude -p with the full conversation history
+// Call claude -p with the full conversation history.
+// Runs from os.tmpdir() so it doesn't pick up the project's .claude/ config
+// and Claude doesn't attempt to use MCP tools during the chat phase.
 function askClaude(messages, systemPrompt) {
   const history = messages
     .map(m => `${m.role === 'user' ? 'User' : 'Pulse'}: ${m.content}`)
@@ -118,9 +123,9 @@ function askClaude(messages, systemPrompt) {
   return new Promise((resolve, reject) => {
     let stdout = ''
     let stderr = ''
-    // Prompt must come after -- (same pattern as agent-runner.js)
     const proc = spawn('claude', ['-p', '--output-format', 'text', '--', prompt], {
       stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: os.tmpdir(),  // neutral dir — no .claude/ project config loaded
     })
     proc.stdout.on('data', d => { stdout += d.toString() })
     proc.stderr.on('data', d => { stderr += d.toString() })
