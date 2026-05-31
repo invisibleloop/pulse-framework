@@ -101,21 +101,27 @@ function startSpinner() {
 
 // Call claude -p with the full conversation history
 function askClaude(messages, systemPrompt) {
-  // Reconstruct conversation as a prompt
   const history = messages
     .map(m => `${m.role === 'user' ? 'User' : 'Pulse'}: ${m.content}`)
     .join('\n\n')
   const prompt = `${systemPrompt}\n\n---\n\n${history}\n\nPulse:`
 
   return new Promise((resolve, reject) => {
-    let output = ''
-    const proc = spawn('claude', ['-p', prompt, '--output-format', 'text'], {
-      stdio: ['ignore', 'pipe', 'ignore'],
+    let stdout = ''
+    let stderr = ''
+    // Prompt must come after -- (same pattern as agent-runner.js)
+    const proc = spawn('claude', ['-p', '--output-format', 'text', '--', prompt], {
+      stdio: ['ignore', 'pipe', 'pipe'],
     })
-    proc.stdout.on('data', d => { output += d.toString() })
+    proc.stdout.on('data', d => { stdout += d.toString() })
+    proc.stderr.on('data', d => { stderr += d.toString() })
     proc.on('close', code => {
-      if (code !== 0) reject(new Error(`claude exited ${code}`))
-      else resolve(output.trim())
+      if (code !== 0) {
+        const detail = stderr.trim() || `exit code ${code}`
+        reject(new Error(detail))
+      } else {
+        resolve(stdout.trim())
+      }
     })
   })
 }
