@@ -148,7 +148,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 
 | Component | Key props |
 |-----------|-----------|
-| `button` | `label`, `variant` (primary/secondary/ghost/danger), `size` (sm/md/lg), `href`, `type`, `disabled`, `fullWidth`, `icon`, `iconAfter`, `attrs` |
+| `button` | `label`, `variant` (primary/secondary/ghost/**ghost-light**/danger), `size` (sm/md/lg), `href`, `type`, `disabled`, `fullWidth`, `icon`, `iconAfter`, `attrs` — **use `ghost-light` when the button sits on a dark background** (hero, `section--dark`, navy wrapper); `ghost` uses `--ui-muted` text which fails contrast on dark backgrounds in light theme |
 | `input` | `name`, `label`, `type`, `placeholder`, `value`, `error`, `hint`, `required`, `disabled`, `attrs` |
 | `search` | `name`, `label`, `labelHidden`, `placeholder`, `value`, `event` (e.g. `'input:setSearch'`), `debounce` (ms, default 200), `clearEvent` (shown when value non-empty), `disabled`, `attrs` — search input with icon + clear button. **Use this instead of `input({ type: 'search' })`.** |
 | `select` | `name`, `label`, `options` (strings or `{value,label}`), `value`, `error`, `required`, `event` |
@@ -299,7 +299,7 @@ This is by design: vibes are a paint job, not a structural transformation. Compo
 | Component | Key props |
 |-----------|-----------|
 | `container` | `content`, `size` (sm/md/lg/xl) |
-| `section` | `content`, `variant` (default/alt/dark/diagonal/paper/spotlight), `padding` (sm/md/lg), `id`, `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `align` — `diagonal`: tapered bottom edge; `paper`: dot-grid texture; `spotlight`: radial gradient focus |
+| `section` | `content`, `variant` (default/alt/dark/diagonal/paper/spotlight), `padding` (sm/md/lg), `id`, `eyebrow`, `title`, `level` (1–6, default 2), `subtitle`, `align` — `diagonal`: tapered bottom edge; `paper`: dot-grid texture; `spotlight`: radial gradient focus; **`dark`: in light theme renders navy `#1a1a2e` background (not light grey) with automatic light text and ghost-button overrides; customise via `--ui-dark-bg`/`--ui-dark-text`** |
 | `grid` | `content`, `cols` (1–4), `gap` (sm/md/lg) — responsive, collapses on mobile |
 | `stack` | `content`, `gap` (xs–xl), `align` — flex column |
 | `cluster` | `content`, `gap`, `justify`, `align` — flex row with wrap |

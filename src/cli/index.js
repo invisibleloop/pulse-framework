@@ -33,13 +33,6 @@ for (let i = 0; i < rawArgs.length; i++) {
 const command = args[0]
 const CWD     = process.cwd()
 
-// Parse --agent flag before routing to commands
-let agentFlag = null
-const agentIdx = args.indexOf('--agent')
-if (agentIdx !== -1 && args[agentIdx + 1]) {
-  agentFlag = args[agentIdx + 1]
-}
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -176,13 +169,14 @@ async function launchSession(root, agentOverride = null) {
     }
   }
 
-  console.log(`\n⚡ Pulse project: ${root}`)
-  console.log(`   Use /pulse-dev to start the dev server, /pulse-stop to stop it, /pulse-build to build, /pulse-start to run production.`)
-  console.log(`   Tell me what you'd like to build — a new page, a component, a form, or anything else.\n`)
+  console.log(`\n  ⚡ Pulse  →  ${root}`)
+  console.log(`  ${agent === 'copilot' ? '● Copilot' : '● Claude'} agent starting — tell me what you'd like to build.\n`)
 
   if (agent === 'copilot') {
+    process.env.PULSE_AGENT_MODE = '1'
     await launchCopilotSession(root, mcpServerPath, spawn, os.default)
   } else {
+    process.env.PULSE_AGENT_MODE = '1'
     await launchClaudeSession(root, mcpConfig, spawn, os.default)
   }
 }

@@ -12,6 +12,7 @@ import path    from 'path'
 import fs      from 'fs'
 import { createServer } from '../server/index.js'
 import { loadPages }    from './discover.js'
+import * as log         from './logger.js'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -106,18 +107,12 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
 // Start
 // ---------------------------------------------------------------------------
 
-console.log(`⚡ Pulse dev server starting...\n`)
-
 const specs = await loadPages(ROOT)
 
 if (specs.length === 0) {
-  console.error('No pages found in src/pages/. Create a page to get started.')
+  log.error('No pages found in src/pages/. Create a page to get started.')
   process.exit(1)
 }
-
-console.log('Pages:\n')
-specs.forEach(spec => console.log(`  ${spec.route}`))
-console.log()
 
 // ---------------------------------------------------------------------------
 // Hot reload — SSE clients + file watcher
@@ -148,19 +143,16 @@ let lastReload = 0
 async function triggerReload(label = 'File changed') {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(async () => {
-    // Debounce rapid file changes (e.g. multiple Edit tool calls)
     const now = Date.now()
     if (now - lastReload < 100) return
     lastReload = now
-    
-    console.log(`  ⟳ ${label}, reloading specs...`)
+
     try {
       const fresh = await loadPages(ROOT, now)
       updateSpecs(fresh)
-      console.log('  ✓ Specs reloaded')
+      log.info(`${label} — specs reloaded`)
     } catch (err) {
-      console.error('  ✗ Spec reload failed:', err.message)
-      /* spec error — browser will show the old page, not crash */
+      log.error(`Spec reload failed: ${err.message}`)
     }
     notifyReload()
   }, 200)
@@ -199,6 +191,7 @@ const { updateSpecs } = await createServer(specs, {
   manifest:  {},        // never use a build manifest in dev — always serve source files
   extraBody: reloadScript,
   dev:       true,
+  agentMode: !!process.env.PULSE_AGENT_MODE,
   ...(_config.csp ? { csp: _config.csp } : {}),
 
   onRequest(req, res) {

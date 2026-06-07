@@ -187,6 +187,134 @@ for (const { name, uri, title, description, content } of GUIDE_RESOURCES) {
   )
 }
 
+// pulse://quickstart — combined essentials for simple/targeted tasks.
+// Reduces cold-start fetch round-trips from 4 (workflow + spec + components + styles)
+// to 1 for edits, bug fixes, and one-shot page builds that don't need the full guides.
+server.registerResource(
+  'quickstart',
+  'pulse://quickstart',
+  {
+    title:       'Pulse Quickstart — Essentials in One Fetch',
+    description: 'Workflow phases, spec skeleton, key component rules, and theming essentials combined. Use for targeted edits, bug fixes, or simple page builds instead of fetching pulse://workflow + pulse://guide/spec + pulse://guide/components separately.',
+    mimeType:    'text/plain',
+  },
+  async () => ({
+    contents: [{
+      uri:      'pulse://quickstart',
+      mimeType: 'text/plain',
+      text: `# Pulse Quickstart
+
+> **When to use this resource**
+> - Editing an existing page, fixing a bug, or adding a section to a known page
+> - One-shot "build me X" requests where you already know what to build
+> - Any task where you don't need intake, sketch, or design direction
+>
+> **When to use the full guides instead**
+> - New project or new branded page → \`pulse://workflow\` then \`pulse://guide/templates\` + \`pulse://guide/design-references\`
+> - Unfamiliar component props → \`pulse://guide/components\`
+> - Server data, store, auth → \`pulse://guide/server\`
+> - CSS / theming deep-dive → \`pulse://guide/styles\`
+
+---
+
+## Workflow (abbreviated)
+
+\`\`\`
+New page:   pulse_intake → pulse_sketch → pulse_intent → build → validate → screenshot → design approval → /verify
+Edit/fix:   read file → change → validate → /verify
+\`\`\`
+
+Tier 1 (static/read-only): phases 3 → 4 → 5a (design approval) → 5b (/verify)
+Tier 2 (interactive):       phases 3 → 4 → 5a → 5b → 6 (tests) → 7 (review)
+
+Pass bar — ALL must pass before done:
+- \`pulse_validate\` clean (no errors, no warnings)
+- Lighthouse desktop + mobile: Accessibility, Best Practices, SEO all 100
+- CLS: 0.00
+- No console errors
+
+---
+
+## Spec skeleton
+
+\`\`\`js
+import { nav, hero, section, container, grid, button, footer } from '@invisibleloop/pulse/ui'
+
+export default {
+  route: '/',
+  meta: {
+    title:       'Page Title',
+    description: 'Meta description.',
+    theme:       'light',          // omit for dark (default)
+    vibe:        'editorial',      // warm|editorial|playful|minimal|bold|brutalist|retro|corporate|neon|paper
+    styles:      ['/pulse-ui.css', '/theme.css', '/app.css'],
+  },
+  // state + mutations only if interactive:
+  state: { status: 'idle' },
+  mutations: { setStatus: (state, e) => ({ status: e.target.value }) },
+  // server fetchers (SSR, optional):
+  server: { items: async () => fetchItems() },
+  view: (state, server) => \`
+    <a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;...">Skip to main content</a>
+    \${nav({ logo: 'My Site', links: [...], action: button({ label: 'CTA', href: '/signup' }) })}
+    <main id="main-content">
+      <!-- sections here -->
+    </main>
+    \${footer({ logo: 'My Site', links: [...], legal: '© 2026 My Site' })}
+  \`,
+}
+\`\`\`
+
+**Critical rules:**
+- \`meta\` is always a plain object — never \`meta: async (ctx) => ({...})\`
+- Never set \`hydrate\` — the framework sets it automatically
+- \`onSuccess\` AND \`onError\` are both required in every action
+- Never use \`data-event\` on text inputs — use FormData in \`onStart\`/\`run\`
+- Every interactive element must be \`<button>\`, \`<a>\`, or have \`tabindex="0"\`
+- \`<main id="main-content">\` is required on every page
+
+---
+
+## Key components (quick reference)
+
+Import from \`@invisibleloop/pulse/ui\`. Always include \`/pulse-ui.css\` in \`meta.styles\`.
+
+| Component | Key props |
+|---|---|
+| \`nav\` | \`logo\`, \`logoHref\`, \`links\` ([{label,href}]), \`action\` (HTML slot), \`sticky\` |
+| \`hero\` | \`title\`, \`subtitle\`, \`eyebrow\`, \`actions\` (HTML slot), \`image\` (HTML slot), \`background\` |
+| \`button\` | \`label\`, \`variant\` (primary/secondary/ghost/**ghost-light**/danger), \`size\` (sm/md/lg), \`href\` — use **ghost-light** on dark backgrounds |
+| \`section\` | \`content\`, \`variant\` (default/alt/**dark**/diagonal/paper/spotlight), \`padding\`, \`id\` — **dark** in light theme = navy bg |
+| \`container\` | \`content\`, \`size\` (sm/md/lg/xl) |
+| \`grid\` | \`content\`, \`cols\` (1–4), \`gap\` (sm/md/lg) |
+| \`card\` | \`title\`, \`content\`, \`footer\`, \`variant\` (default/elevated/bordered/flat/glass/tinted) |
+| \`feature\` | \`icon\`, \`title\`, \`description\`, \`level\`, \`center\` |
+| \`stat\` | \`label\`, \`value\`, \`change\`, \`trend\`, \`center\` |
+| \`testimonial\` | \`quote\`, \`name\`, \`role\`, \`rating\` |
+| \`cta\` | \`title\`, \`subtitle\`, \`actions\` (HTML slot), \`eyebrow\` |
+| \`footer\` | \`logo\`, \`logoHref\`, \`links\`, \`legal\`, \`columns\` |
+| \`input\` | \`name\`, \`label\`, \`type\`, \`required\`, \`error\` |
+| \`modal\` | \`id\`, \`title\`, \`content\`, \`footer\` — always in DOM, never conditional |
+| \`displayHeading\` | \`text\`, \`level\`, \`tracking\` — editorial large type |
+| \`sectionLabel\` | \`eyebrow\`, \`heading\`, \`level\`, \`rule\` — editorial section divider |
+| \`pullquote\` | \`quote\`, \`cite\`, \`size\` |
+| \`entryList\` | \`items\` ([{meta, title, description}]), \`metaLabel\` — tabular editorial list |
+
+---
+
+## Theming essentials
+
+- Hex values → \`public/theme.css\` only. \`app.css\` uses \`var()\` references only.
+- Load order: \`/pulse-ui.css\` → \`/theme.css\` → \`/app.css\`
+- Light theme overrides target \`[data-theme="light"]\`, NOT \`\:root\`
+- \`--ui-accent\` must pass WCAG AA 4.5:1 on \`--ui-bg\` for body text
+- \`--ui-muted\` on warm/light palettes often fails contrast — always override \`--muted\` when changing \`--bg\` and run \`pulse_check_contrast\`
+- Ghost buttons on dark backgrounds: use \`variant: 'ghost-light'\` not \`'ghost'\`
+`,
+    }]
+  })
+)
+
 server.registerResource(
   'workflow',
   'pulse://workflow',
@@ -675,7 +803,7 @@ server.registerTool(
       res.on('data', d => chunks.push(d))
       res.on('end', () => {
         const body = Buffer.concat(chunks).toString('utf-8')
-        const reminder = res.statusCode === 200 ? `\n\n---\n⚠ POST-BUILD CHECKLIST — run these before telling the user you're done:\n1. Take a screenshot with chrome-devtools\n2. pulse_design_review (if you ran pulse_intake)\n3. pulse_layout_review <url>\n4. /verify  ← runs Lighthouse desktop + mobile + pulse_review + writes stamp\nDo NOT skip to reporting done after a screenshot.` : ''
+        const reminder = res.statusCode === 200 ? `\n\n---\n⚠ POST-BUILD CHECKLIST — run these before telling the user you're done:\n1. Take a screenshot with chrome-devtools\n2. If this was a NEW build (pulse_intake ran): show the screenshot to the user and ASK for design approval before continuing\n3. Once the user approves (or this is an edit/fix): pulse_design_review → pulse_layout_review → /verify\nDo NOT run Lighthouse before the user has approved the design.` : ''
         resolve(text(`HTTP ${res.statusCode}\n\n${body.slice(0, 8000)}${reminder}`))
       })
     })
@@ -896,10 +1024,17 @@ ${(() => {
     const reactPatterns = /(className|htmlFor|onClick)=/.test(renderedHtml)
     checks.push(reactPatterns ? '✗ **React patterns found** — use class, for, data-event instead' : '✓ No React patterns (className/htmlFor/onClick)')
     
-    // Emoji in HTML
-    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u
-    const hasEmoji = emojiRegex.test(renderedHtml)
-    checks.push(hasEmoji ? '✗ **Emoji in HTML** — use icon components or aria-label instead' : '✓ No emoji in view HTML')
+    // Emoji in HTML — strip SVG, data URIs, and aria-hidden elements before checking.
+    // Mathematical/decorative Unicode in aria-hidden elements is intentional and accessible.
+    const htmlNoSvg = renderedHtml
+      .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+      .replace(/data:[^"']+/g, '')
+      .replace(/<[^>]+aria-hidden=["']true["'][^>]*>[\s\S]*?<\/[^>]+>/gi, '')
+    // Restrict to the emoji Unicode blocks only — excludes math symbols (∑, π, ∞, etc.),
+    // arrows, and other non-emoji Unicode that are commonly used as decorative text.
+    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/u
+    const hasEmoji = emojiRegex.test(htmlNoSvg)
+    checks.push(hasEmoji ? '⚠ **Emoji in HTML** — use icon components or aria-label instead (verify: may be intentional icon)' : '✓ No emoji in view HTML')
     
     // Main landmark
     const hasMain = /<main[^>]*id=["']?main-content/.test(renderedHtml)
@@ -907,13 +1042,21 @@ ${(() => {
   }
   
   // Check spec source
-  // Hex colours in view (rough check — may have false positives from comments)
-  const hexInView = /#[0-9a-fA-F]{3,6}/.test(source) && source.includes('view:')
+  // Hex colours in view — exclude anchor hrefs (#id), CSS selector strings, and comments
+  // Only flag actual colour values: # followed by exactly 3 or 6 hex chars with no trailing word chars
+  const viewBlock = source.slice(source.indexOf('view:'))
+  const hexInView = /(?<!href=["']?)#[0-9a-fA-F]{6}\b|(?<!href=["']?)#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlock)
   if (hexInView) {
-    checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only')
+    checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only (verify: may be an anchor #id href)')
   } else {
     checks.push('✓ No obvious hex colours in view')
   }
+  
+  // Creative override detection — check if spec declares component-free mode
+  const creativeOverride = /component.free|creative\s+override|raw\s+HTML\s+throughout/i.test(source)
+  checks.push(creativeOverride
+    ? '⚡ **Creative override declared** — component pattern checks are advisory only. Lighthouse 100/100/100/100 is the pass bar.'
+    : '○ No creative override declared — component checks apply')
   
   return checks.join('\n')
 })()}
@@ -941,19 +1084,23 @@ Work through every item. Fix anything that fails. Refer to the spec source at ${
 
 ### Components & HTML
 - [ ] Components from the UI library are used — no hand-written \`<button>\`, \`<input>\`, \`<table>\` etc where a component exists
-- [ ] **No reinvented component patterns** — if the view contains any of these class names, you MUST refactor to use the component:
-  - \`.hero\`, \`.-hero\`, \`__hero\` → use \`hero()\` component
-  - \`.card\`, \`.product-card\`, \`.service-card\` → use \`card()\` component  
-  - Any two-column image + text layout → use \`media()\` component
-  - \`.banner\`, \`.strip\`, \`.bar\` → use \`banner()\` component
-  - \`.feature\`, \`.feature-card\` → use \`feature()\` component
-  - \`.testimonial\` → use \`testimonial()\` component
-  
-  Grep the rendered HTML for these patterns. If found, rewrite using the component. Custom utility classes on top of components are fine (\`hero({ ... })\` + override CSS) — but do not write the entire structure from scratch.
+- [ ] **Component patterns check** — grep the rendered HTML for these class names:
+  - \`.hero\`, \`.-hero\`, \`__hero\` → should use \`hero()\` component
+  - \`.card\`, \`.product-card\`, \`.service-card\` → should use \`card()\` component
+  - Any two-column image + text layout → should use \`media()\` component
+  - \`.banner\`, \`.strip\`, \`.bar\` → should use \`banner()\` component
+  - \`.feature\`, \`.feature-card\` → should use \`feature()\` component
+  - \`.testimonial\` → should use \`testimonial()\` component
+
+  **Before flagging a pattern match**, ask: *can the \`hero()\` (or relevant) component actually reproduce this layout?* If the design uses full-viewport height, custom gradient glows, clamp-scaled display type, asymmetric layout, or other features the component doesn't support — that is a **creative override**, not a violation. Check the auto-checked items above: if "creative override declared" is shown, these checks are advisory only and Lighthouse is the pass bar.
+
+  If no creative override is declared and a component *could* reproduce the design, refactor to use it. Custom utility classes on top of components are fine (\`hero({ ... })\` + override CSS) — but do not write the entire structure from scratch when the component supports the layout.
+
+- [ ] **Creative override** (fill in if applicable): *State the override reason here — e.g. "full-viewport gradient hero not achievable with hero() component"*. Confirm Lighthouse 100/100/100/100 desktop and mobile passes before closing the review.
 - [ ] No \`data-event\` on text inputs — this destroys focus on every keystroke
 - [ ] No \`className\`, \`htmlFor\`, \`onClick=\`, or other React patterns
-- [ ] No hardcoded hex colours — only \`var(--ui-*)\` tokens
-- [ ] No emoji in the view HTML
+- [ ] No hardcoded hex colours in view — only \`var(--ui-*)\` tokens (anchor \`href="#id"\` values are fine — those are not colours)
+- [ ] No emoji in view HTML (decorative emoji without accessible text is a fail; emoji with \`aria-label\` or inside \`<span aria-hidden="true">\` is acceptable)
 - [ ] **CTA must be wrapped in section/container** — grep the rendered HTML for \`<div class="ui-cta"\`. If it appears as a direct child of \`<main>\` or \`<div id="app">\` without a section or container wrapper, wrap it. CTA has no padding of its own.
 
 ### Accessibility
@@ -1606,10 +1753,10 @@ server.registerTool(
   {
     description: `Run a multi-viewport layout review on the current page. Returns a structured set of browser steps to execute using chrome-devtools tools.
 
-Use this AFTER the initial screenshot but BEFORE Lighthouse. It catches layout issues (overflow, collapsed sections, broken images) that Lighthouse doesn't check and that are invisible at a single viewport width.
+Use this AFTER design approval (user has seen the screenshot and signed off on the layout) but BEFORE Lighthouse. It catches layout issues (overflow, collapsed sections, broken images) that Lighthouse doesn't check and that are invisible at a single viewport width.
 
-Call this as part of the Phase 5 browser check:
-  screenshot → pulse_design_review → pulse_layout_review → Lighthouse`,
+Call this as part of the Phase 5b verification flow (after design approval):
+  design approval → pulse_design_review → pulse_layout_review → Lighthouse`,
     inputSchema: {
       url: z.string().describe('The full URL to check, e.g. http://localhost:3001/about'),
     },
@@ -3153,7 +3300,7 @@ async function validateContent(content) {
 
     // Append browser check reminder on clean pass so agents don't skip Lighthouse
     if (finalOutput.startsWith('Valid ✓') && !finalOutput.includes('Invalid')) {
-      finalOutput += '\n\n---\n**Next: browser check sequence** (do not skip)\n1. `pulse_fetch_page` → screenshot\n2. `pulse_design_review` (if intake ran)\n3. `pulse_layout_review <url>`\n4. `/verify` — Lighthouse desktop + mobile + pulse_review\nDo not report done until `/verify` passes.'
+      finalOutput += '\n\n---\n**Next: browser check sequence** (do not skip)\n1. `pulse_fetch_page` → screenshot\n2. **New build?** Show screenshot to user and ask for design approval before continuing\n3. Once approved (or edit/fix): `pulse_design_review` (if intake ran) → `pulse_layout_review <url>` → `/verify`\nDo not run Lighthouse before the user approves the design. Do not report done until `/verify` passes.'
     }
 
     return text(finalOutput)
@@ -3230,7 +3377,8 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 
 | Resource | When to fetch |
 |---|---|
-| \`pulse://workflow\` | **First. Always. Before any guide sections or code.** |
+| \`pulse://quickstart\` | **Editing, bug-fixing, or a simple one-shot build** — workflow + spec skeleton + components + theming in one fetch. Skip the 4-resource cold-start for targeted tasks. |
+| \`pulse://workflow\` | **New project or new page** — full phase/gate sequence before writing any code. |
 | \`pulse://guide/spec\` | Building a spec — state, mutations, actions, streaming SSR, key rules, form layout |
 | \`pulse://guide/server\` | Server data, global store, persist, cookies, redirects, POST handling |
 | \`pulse://guide/styles\` | CSS tokens, theming, custom fonts, utility classes |
@@ -3245,8 +3393,8 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 ## Tools available
 
 **Pulse MCP tools** (always available):
-- \`pulse_extract_inspiration(source, focus?)\` — **Extract a structured design brief from a URL or image.** Call this when the user shares a website URL, a site name they admire, or pastes an inspiration image. Returns a structured extraction template — you fill it in using your browsing or vision tools, then feed the results into pulse_intake. Maps directly to palette, vibe, styleNotes, and font fields.
-- \`pulse_intake(name, pitch, features, targetUser?, palette?, font?, theme?, vibe?, styleNotes?, antiStyle?, inspiration?)\` — **Capture product details before scaffolding.** Run this first for any new project or branded template — before pulse_sketch or pulse_intent. **Gather answers by asking the user one free-form question at a time — never use multi-choice lists for open-ended intake questions.** After intake, call pulse_sketch to explore structural directions before writing code.
+- \`pulse_extract_inspiration(source, focus?)\` — **Extract a structured design brief from a URL or image.** Call this when the user shares a website URL, a site name they admire, or pastes/attaches an inspiration image. Returns a structured extraction template — you fill it in using your browsing or vision tools, then feed the results into pulse_intake. Maps directly to palette, vibe, styleNotes, and font fields. **Always check \`public/intake/\` for images at the start of a new build — if any exist, call this before pulse_intake.**
+- \`pulse_intake(name, pitch, features, targetUser?, palette?, font?, theme?, vibe?, styleNotes?, antiStyle?, inspiration?)\` — **Capture product details before scaffolding.** Run this first for any new project or branded template — before pulse_sketch or pulse_intent. **Gather answers by asking the user one free-form question at a time — never use multi-choice lists for open-ended intake questions.** The final intake question must always be: "Do you have any design inspiration — a site you love, a screenshot, or a mood board? Drop images into \`public/intake/\` or share a URL." If the user provides references, call \`pulse_extract_inspiration\` before proceeding. After intake, call pulse_sketch to explore structural directions before writing code.
 - \`pulse_sketch(brief, vibe?, antiStyle?, pageType?)\` — **Generate 3 structurally distinct layout directions before writing any code.** Call after pulse_intake. Returns three named directions (full-bleed, asymmetric split, typography-only, editorial flow, dense grid, story scroll, content-first) with wireframes, key decisions, and component strategies. Prevents defaulting to "centred hero + three columns" on every project. After choosing a direction, fetch \`pulse://guide/explore\` for raw HTML patterns.
 - \`pulse_intent(description)\` — Describe what you want to build in plain language and get back a matched archetype, component recommendations, a ready-to-adapt spec scaffold, and which guides to read. Use after pulse_intake and pulse_sketch, before fetching guides.
 - \`pulse_suggest(content)\` — **Draft-mode feedback.** Paste a partial or complete spec and get constructive, non-blocking suggestions: missing pieces, likely omissions, component upgrades, empty-state reminders. A collaborator, not a gate. Use mid-build before running the hard validator.

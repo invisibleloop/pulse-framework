@@ -21,13 +21,17 @@
 For any **new page, landing page, or branded site**, run the intake sequence first:
 
 ```
-0. pulse_extract_inspiration(url/image) → structured design brief  [if user shares reference]
+0. ASK:  "Do you have any design inspiration — a site you love, a screenshot, or a mood board
+          image? Drop images into public/intake/ or paste a URL and I'll extract the design
+          intent before we start."   ← MANDATORY. Ask this before doing anything else.
+0b. pulse_extract_inspiration(url/image) → structured design brief  [if user supplies reference]
 1. pulse_intake(name, pitch, features, ...)   → product brief + contrast check
 2. pulse_sketch(brief, vibe?, antiStyle?)     → 3 layout directions to choose from
 3. pulse_intent(description)                  → archetype + scaffold + guide list
 ```
 
-- **`pulse_extract_inspiration`** — call this first if the user shares a URL, site name, or image they like. Gives you a structured extraction template: visit the URL or analyse the image with your vision tools, extract colours, layout, typography, and feel, then feed those findings into pulse_intake. If no inspiration is shared, skip this step.
+- **Step 0 — Ask for inspiration first (mandatory):** Before calling any tool or presenting any plan, ask the user: *"Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop images into `public/intake/` or paste a URL and I'll extract the design intent before we start."* Wait for the answer. Do not skip this question, even if the user's brief already seems detailed. Check `public/intake/` for any images already dropped there.
+- **`pulse_extract_inspiration`** — call this after step 0 if the user supplies a URL, site name, or image they like. Also call it for any images already present in `public/intake/`. Gives you a structured extraction template: visit the URL or analyse the image with your vision tools, extract colours, layout, typography, and feel, then feed those findings into pulse_intake. If the user explicitly says they have no reference, skip this step.
 - **`pulse_intake`** — captures the real content (name, pitch, features, palette, vibe, what it should NOT look like). Returns a brief with copy-ready content and early contrast warnings. Always ask the user one question at a time — never multi-choice for open-ended questions.
 - **`pulse_sketch`** — generates 3 structurally distinct layout directions (full-bleed, asymmetric split, typography-only, editorial, dense grid, story scroll, content-first). **Call this before writing any code.** Prevents defaulting to centred hero + three-column features every time.
 - **Skip `pulse_sketch` only** when the vibe is `corporate` or `minimal` AND the user hasn't expressed any structural preference. For `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes, `pulse_sketch` is mandatory — templates have default section orders that actively fight these vibes.
@@ -86,7 +90,8 @@ Not every task needs all 8 phases. Match the tier to the task:
 | 1 | Intent + Understand | — |
 | 2 | Build | announce brief → write files |
 | 3 | Validate | `pulse_validate` clean |
-| 4 | Browser | screenshot + Lighthouse desktop + mobile (100/100/100) |
+| 4a | Design approval | screenshot → show user → **wait for approval** *(new-build only)* |
+| 4b | Verify | `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile (100/100/100) |
 
 No tests required for pure view specs with no logic. Add tests if the view has non-trivial helper functions.
 
@@ -100,15 +105,16 @@ No tests required for pure view specs with no logic. Add tests if the view has n
 | 2 | Plan | user confirmation (skip if unambiguous) |
 | 3 | Build | announce brief → write files |
 | 4 | Validate | `pulse_validate` clean |
-| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
+| 5a | Design approval | screenshot → show user → **wait for approval** *(new-build only)* |
+| 5b | Verify | `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile (100/100/100) + CLS 0.00 |
 | 6 | Tests | mutations, view landmarks, any utility functions |
-| 7 | Code review | `pulse_review` — only after 4–6 pass |
+| 7 | Code review | `pulse_review` — only after 5–6 pass |
 
 ### Tier 3 — Complex (multi-step, shared state, or security-sensitive)
 
 *Applies to:* multi-step wizards, pages with guards and auth, store-connected pages, anything touching sensitive data or complex branching state.
 
-All phases as originally defined — full 8-phase flow with every gate.
+All phases as originally defined — full flow with every gate.
 
 | Phase | Action | Gate |
 |---|---|---|
@@ -116,7 +122,8 @@ All phases as originally defined — full 8-phase flow with every gate.
 | 2 | Plan | **user confirmation required** |
 | 3 | Build | announce brief → write files |
 | 4 | Validate | `pulse_validate` clean |
-| 5 | Browser | screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
+| 5a | Design approval | screenshot → show user → **wait for approval** *(new-build only)* |
+| 5b | Verify | `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse 100/100/100 + CLS 0.00, desktop + mobile |
 | 6 | Tests | full coverage: mutations, actions, guards, view |
 | 7 | Code review | `pulse_review` |
 | 8 | Fix + re-verify | re-run all gates |
@@ -209,7 +216,7 @@ Run `pulse_validate` on the spec file.
 
 ---
 
-## Phase 5 — Browser check (pass gate)
+## Phase 5 — Browser check
 
 **After every file edit, restart the server and reload the browser before checking anything.** The dev server auto-restarts on file changes but the browser tab stays stale. Always:
 1. Call `pulse_restart_server` — waits for the server to be ready
@@ -217,15 +224,40 @@ Run `pulse_validate` on the spec file.
 
 Do this before every screenshot, console check, or visual inspection. Never debug a problem that might just be a stale tab.
 
-**Run `/verify` now — as soon as the first build is working.** Do not defer it to the end. Do not execute these steps manually.
+---
+
+### Phase 5a — Design approval *(new builds from `pulse_intake` only)*
+
+**This phase applies when `pulse_intake` ran** — i.e. you are building a new page or site from scratch, not editing an existing one. For edits, bug fixes, or "add X to existing Y", skip to Phase 5b immediately.
+
+1. Take a screenshot of the built page
+2. Describe what you see in 2–3 plain sentences — layout structure, visual tone, key sections. Do NOT list features or code details.
+3. **Ask the user directly:** *"Happy with the layout and direction, or any changes before I run tests and Lighthouse?"*
+4. **Wait for their response before doing anything else.** Do not run design_review, layout_review, or Lighthouse until you have a clear go-ahead.
+
+**If the user requests changes:**
+- Make the edits
+- Take a new screenshot
+- Describe what changed
+- Ask again
+- Repeat until approved — each iteration is design-only, no Lighthouse between rounds
+
+**If the user approves (or says "looks good", "go ahead", "yes", etc.):**
+- Continue to Phase 5b
+
+> The point of this gate is to let the user redirect the design before expensive, slow checks run. A Lighthouse build takes ~90 seconds — do not start it until the user has seen and approved the visual result.
+
+---
+
+### Phase 5b — Full verification (pass gate)
+
+**Run `/verify` now.** Do not execute these steps manually.
 
 `/verify` validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and writes the `.pulse-verified` stamp. Running steps manually does not write the stamp.
 
 > **Lighthouse pre-flight:** `/verify` calls `pulse_build` automatically before running Lighthouse, and audits against the production server on port 3001. If you ever call `lighthouse_audit` manually outside `/verify`, you must first run `pulse_build` and navigate to `http://localhost:3001/your-route`. Auditing the dev server (port 3000) will produce misleading results.
 
-### ⛔ After every screenshot — mandatory steps before continuing
-
-Taking a screenshot is NOT the end of phase 5. After every screenshot, you **must** run:
+### ⛔ After design approval — mandatory steps before continuing
 
 1. `pulse_design_review` (if `pulse_intake` ran) — work through all 7 signals, fix any Fail
 2. `pulse_layout_review <url>` — 390/768/1280px overflow, broken images, collapsed sections
@@ -234,7 +266,7 @@ Taking a screenshot is NOT the end of phase 5. After every screenshot, you **mus
 **Do not report the page as done until `/verify` writes the `.pulse-verified` stamp.** Skipping Lighthouse means broken contrast, missing landmarks, and Best Practices failures ship to the user.
 
 Pass gates:
-- Screenshot: no layout or rendering issues
+- Design approval: user has explicitly said they're happy with the layout
 - Design review: all 7 signals pass (or intake didn't run)
 - Layout review: no overflow, broken images, or collapsed sections at any viewport
 - Lighthouse desktop: Accessibility, Best Practices, SEO all 100
@@ -282,7 +314,9 @@ Only declare the task done after all gates still pass.
 
 ```
 New project / new page:
-  pulse_extract_inspiration  → (if user shares a URL or image) extract palette/layout/feel
+  ASK first              → "Do you have any design inspiration — a site, screenshot, or
+                            mood board? Drop into public/intake/ or paste a URL."
+  pulse_extract_inspiration  → (if user supplies a URL or image, or images found in public/intake/)
   pulse_intake               → capture real content, palette, vibe, anti-style
   pulse_sketch               → choose 1 of 3 structural layout directions
   pulse_intent               → get scaffold + guide list
@@ -293,8 +327,10 @@ Targeted edit / bug fix:
 Step 1   Understand        pulse_list_structure + relevant guides
 Step 2   Plan             confirm with user if non-trivial
 
-Tier 1  Simple     → phases 3 → 4 → 5
-Tier 2  Standard   → phases 3 → 4 → 5 → 6 → 7
-Tier 3  Complex    → phases 3 → 4 → 5 → 6 → 7 → 8
+Tier 1  Simple     → phases 3 → 4 → 5a (design approval) → 5b (verify)
+Tier 2  Standard   → phases 3 → 4 → 5a (design approval) → 5b (verify) → 6 → 7
+Tier 3  Complex    → phases 3 → 4 → 5a (design approval) → 5b (verify) → 6 → 7 → 8
+
+Phase 5a is skipped for edits, bug fixes, and "add X to existing Y".
 ```
 

@@ -27,6 +27,7 @@ export async function scaffold(targetDir, options = {}) {
   fs.mkdirSync(path.join(targetDir, 'src', 'pages'),      { recursive: true })
   fs.mkdirSync(path.join(targetDir, 'src', 'components'), { recursive: true })
   fs.mkdirSync(path.join(targetDir, 'public'),             { recursive: true })
+  fs.mkdirSync(path.join(targetDir, 'public', 'intake'),   { recursive: true })
 
   // package.json
   write(targetDir, 'package.json', JSON.stringify({
@@ -61,6 +62,9 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
   // Stylesheets — theme.css holds hex token definitions, app.css uses only var() references
   write(targetDir, 'public/theme.css', themeCSS())
   write(targetDir, 'public/app.css',   baseCSS())
+
+  // Intake directory — drop inspiration images here before running pulse_intake
+  write(targetDir, 'public/intake/README.md', intakeReadme())
 
   // Copy pulse-ui assets from the package into public/ so they're served immediately
   const pkgPublic = new URL('../../public', import.meta.url).pathname
@@ -124,13 +128,18 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
           hooks: [
             {
               type: 'command',
-              command: `node -e "process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'SessionStart',additionalContext:'START OF SESSION: Before doing anything else — (1) run pulse_list_structure to see the current project structure, (2) read pulse://guide from MCP for the complete Pulse reference. Both are mandatory. Do not skip them.'}}))"`,
+              command: `node -e "process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'SessionStart',additionalContext:'START OF SESSION: Before doing anything else — (1) run pulse_list_structure to see the current project structure, (2) read pulse://guide from MCP for the complete Pulse reference. Both are mandatory. Do not skip them.\\n\\nBUILD RULE — ALWAYS ASK BEFORE PLANNING: If the user is requesting a new page or site, your FIRST action must be to ask: \\'Do you have any design inspiration — a site you love, a screenshot, a mood board image? Drop images into public/intake/ or paste a URL and I will extract the design intent before we start.\\' Do not present a plan or write any code until you have asked this question and received an answer. This question is not optional and cannot be skipped.'}}))"`,
               statusMessage: 'Loading Pulse session...',
             },
             {
               type: 'command',
               command: `node -e "const{execSync}=require('child_process');let out='';let ok=true;try{out=execSync('npm test 2>&1',{encoding:'utf8',timeout:60000});}catch(e){ok=false;out=e.stdout||e.message;}const lines=out.trim().split('\\n');const summary=lines[lines.length-1]||'';const msg=ok?'TEST BASELINE — all tests passing: '+summary+'. Note this result. If tests fail after your changes, you introduced the regression.':'PRE-EXISTING TEST FAILURES detected before you wrote any code:\\n'+out.slice(-2000)+'\\nDo not treat these as regressions you caused. Fix them first if they are related to your task, otherwise note them and proceed.';process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'SessionStart',additionalContext:msg}}))"`,
               statusMessage: 'Running test baseline...',
+            },
+            {
+              type: 'command',
+              command: `node -e "const fs=require('fs');const path=require('path');const intakeDir='public/intake';let images=[];try{images=fs.readdirSync(intakeDir).filter(f=>/\\.(jpe?g|png|gif|webp|avif)$/i.test(f));}catch{}if(!images.length){process.exit(0);}const list=images.map(f=>'  • '+f).join('\\n');process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'SessionStart',additionalContext:'DESIGN REFERENCES FOUND in public/intake/:\\n'+list+'\\n\\nBefore running pulse_intake, call pulse_extract_inspiration on each image to extract palette, vibe, layout density, and type signals. This gives the design much more precision than text descriptions alone.\\n\\nWorkflow: pulse_extract_inspiration(image) → fill in the template using your vision → feed results into pulse_intake(inspiration: \\'...\\')'}}));"`,
+              statusMessage: 'Checking for design references...',
             }
           ]
         }
@@ -209,6 +218,13 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
     'public/dist',
     '.pulse-build',
     '.DS_Store',
+    '# Intake images — local design references, not committed',
+    'public/intake/*.jpg',
+    'public/intake/*.jpeg',
+    'public/intake/*.png',
+    'public/intake/*.gif',
+    'public/intake/*.webp',
+    'public/intake/*.avif',
   ].join('\n') + '\n')
 
   console.log('  ✓ Project files created')
@@ -349,6 +365,42 @@ function themeCSS() {
 `
 }
 
+function intakeReadme() {
+  return `\
+# Design References
+
+Drop inspiration images here before starting a new build.
+
+The session start hook will detect them and remind the agent to run
+\`pulse_extract_inspiration\` on each one before \`pulse_intake\`.
+
+## What to put here
+
+- Screenshots of sites whose design you admire
+- Your brand mood board or style guide
+- Product photography that anchors the visual direction
+- Competitor sites you want to differentiate from
+- Any image that captures the feeling you're going for
+
+## How the agent uses them
+
+1. \`pulse_extract_inspiration(image)\` — reads the image and extracts palette,
+   type weight, spacing density, radius signals, and layout intent
+2. The extracted values feed into \`pulse_intake\` as concrete constraints
+3. \`pulse_sketch\` uses them to generate layout directions matched to the actual
+   visual reference, not just a text description of a vibe
+
+## File formats
+
+JPEG, PNG, WebP, AVIF, GIF — any image the model can read.
+
+## Note
+
+These files are listed in .gitignore and will not be committed.
+Only this README is tracked.
+`
+}
+
 function baseCSS() {
   return `\
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -377,12 +429,14 @@ src/pages/        ← one .js file per page, auto-discovered
 src/components/   ← shared view fragments (JS functions returning HTML strings)
 public/theme.css  ← token definitions (hex values, colour overrides) — hex allowed here only
 public/app.css    ← layout and component overrides — var() references only, no hex
+public/intake/    ← drop design reference images here before starting (not committed to git)
 \`\`\`
 
 ## Start of every session
 
 1. Run \`pulse_list_structure\` to see what already exists
 2. Read \`pulse://guide\` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns
+3. If images are present in \`public/intake/\`, call \`pulse_extract_inspiration\` on each before \`pulse_intake\` — the session hook will remind you if you forget
 
 The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
 

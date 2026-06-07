@@ -1,11 +1,13 @@
 ---
 name: verify
-description: "Run the full verification loop on the current page or the page specified in $ARGUMENTS. If $ARGUMENTS is provided, use it as the file path or route. Otherwise, identify the most recently edited spec file from context. Use `pulse_validate` with the spec file content. If validation fails, report every error clearly and stop — do not proceed to screenshot until the spec is valid."
+description: "Run the full verification loop on the current page or the page specified in $ARGUMENTS. If $ARGUMENTS is provided, use it as the file path or route. Otherwise, identify the most recently edited spec file from context."
 ---
 
 # Verify
 
 Run the full verification loop on the current page or the page specified in $ARGUMENTS.
+
+**Output style:** be terse throughout. One sentence per step. Do not quote raw tool output — summarise findings only. Reserve detail for failures that need explaining.
 
 ## Steps
 
@@ -15,53 +17,87 @@ If $ARGUMENTS is provided, use it as the file path or route. Otherwise, identify
 
 ### 2. Validate the spec
 
-Use `pulse_validate` with the spec file content. If validation fails, report every error clearly and stop — do not proceed to screenshot until the spec is valid.
+Run `pulse_validate` on the spec file. Report clean or list errors. Stop if there are errors — do not continue until the spec is valid.
 
 ### 3. Check the dev server
 
-Use `pulse_fetch_page` to confirm the server is responding for the route. If it errors, use `pulse_restart_server` and retry once.
+Run `pulse_fetch_page` to confirm the server is responding. If it errors, run `pulse_restart_server` and retry once. Report HTTP status only — do not quote the HTML body.
+
+**If the response has no `X-Pulse` header**, the wrong server is running on that port — stop and tell the user before continuing.
 
 ### 4. Screenshot
 
-Use the chrome-devtools navigate_page tool to load the page route, then take_screenshot to capture the result. Describe what you see — layout, content, any obvious rendering issues.
+Navigate to the page route with `mcp__chrome-devtools__navigate_page`, then take a screenshot with `mcp__chrome-devtools__take_screenshot`. Describe what you see in 2–3 plain sentences — layout structure, visual tone, key sections. Do not list features or code details.
 
-### 5. Lighthouse — desktop
+### 4a. Design approval gate *(new builds only)*
 
-Run lighthouse_audit on the route in desktop mode.
+**If `pulse_intake` ran earlier in this session** (i.e. this is a new page or site, not an edit or bug fix):
 
-**Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Report the actual scores. If any score is below 100, identify the failing audit(s), fix the issue, and restart from step 2.
+1. Show the screenshot to the user.
+2. Ask: *"Happy with the layout and direction, or any changes before I run Lighthouse?"*
+3. **Stop and wait for their response.** Do not proceed to step 4b or Lighthouse until the user explicitly approves.
 
-### 6. Lighthouse — mobile
+If the user requests changes: make edits, restart the server, take a new screenshot, describe what changed, ask again. Repeat until approved. No Lighthouse between design rounds.
 
-Run lighthouse_audit on the same route in mobile mode.
+**For edits, bug fixes, or "add X to existing Y"** — skip this step and go straight to 4b.
 
-**Same pass bar: all three categories must be 100.** Report the actual scores. If any score is below 100, fix and restart from step 2.
+### 4b. Design review *(if `pulse_intake` ran)*
 
-### 7. Performance
+Run `pulse_design_review`. Work through every signal it returns. Fix any Fail before continuing. Report pass/fail count only — do not quote the full output.
 
-Navigate to the page route, then run performance_start_trace with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
+### 4c. Layout review
 
-### 8. Console errors
+Run `pulse_layout_review` with the page URL. It checks 390/768/1280px viewports for overflow, broken images, and collapsed sections. Fix any failures before continuing. Report pass or list failures only.
 
-Use list_console_messages — report any errors or unexpected warnings.
+### 5. Production build
 
-### 9. Code review
+Run `pulse_build` to start the production server on port 3001. Tell the user: "Building for production — ~30s…" before calling it.
 
-Use `pulse_review` to switch into reviewer mode. Read the spec against the checklist in `.github/instructions/pulse-checklist.instructions.md`. Work through every item. Fix anything that fails before proceeding.
+### 6. Lighthouse — desktop
 
-### 10. Close the browser
+Navigate to `http://localhost:3001/<route>` with `mcp__chrome-devtools__navigate_page`, then run `mcp__chrome-devtools__lighthouse_audit` with `device: "desktop"`.
 
-Use list_pages to get all open pages, then call close_page for every page ID returned.
+**Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Report scores as a single line, e.g. `Accessibility 100 · Best Practices 100 · SEO 100`. If any score is below 100, identify the failing audit(s), fix, and restart from step 2.
 
-### 11. Report
+### 7. Lighthouse — mobile
 
-Summarise:
-- Validation: pass or fail (with errors if any)
-- Visual: what was visible in the screenshot
-- Lighthouse desktop: scores for all three categories
-- Lighthouse mobile: scores for all three categories
-- Performance: LCP and CLS values, any flagged insights
-- Console: any errors
-- Review: pass or issues found and fixed
+Run `mcp__chrome-devtools__lighthouse_audit` with `device: "mobile"` against the same production URL. Same pass bar. Report scores as a single line. Fix failures and restart from step 2 if needed.
 
-Only confirm the page is good when validation passes, both Lighthouse runs are 100/100/100, CLS is 0.00, and there are no console errors. Otherwise, fix and run `/verify` again.
+**To inspect mobile layout** use `mcp__chrome-devtools__emulate` with `viewport: "390x844x2,mobile,touch"` — not `resize_page`. Reset with `"1440x900x1"` afterward.
+
+### 8. Performance
+
+Navigate to the page route, then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.
+
+### 9. Console errors
+
+Run `mcp__chrome-devtools__list_console_messages` filtered to errors and warnings. Report count only if clean. List any errors found.
+
+### 10. Code review
+
+Run `pulse_review` with the absolute path to the spec file. Work through every item in the checklist it returns. Fix every issue before proceeding. Report pass or list what was fixed — do not quote the full review output.
+
+### 11. Close the browser
+
+Run `mcp__chrome-devtools__list_pages`, then `mcp__chrome-devtools__close_page` for every page ID returned. `pageId` must be a JSON number, not a string.
+
+### 12. Write verification stamp
+
+```bash
+date +%s > .pulse-verified
+```
+
+**This must be the last write before stopping.** Do not edit any spec file after writing the stamp.
+
+### 13. Report
+
+One short paragraph covering: validation, Lighthouse desktop/mobile scores, LCP, CLS, console, review. Flag anything that needed fixing. No raw tool output.
+
+**Pass bar — all must be met:**
+- Validation: clean
+- Lighthouse desktop: Accessibility, Best Practices, SEO all 100
+- Lighthouse mobile: same
+- CLS: 0.00
+- Console: no errors
+
+If any gate fails, fix and run `/verify` again.

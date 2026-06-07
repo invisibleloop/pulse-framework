@@ -41,7 +41,7 @@ Use `pulse_validate` on the spec. Fix any errors before continuing.
 
 Check the project's server entry file (e.g. `src/server.js` or `pulse.config.js`) and add the new spec if needed.
 
-### 6. Screenshot
+### 6. Screenshot and design approval
 
 Use `mcp__chrome-devtools__navigate_page` to load the page, then `mcp__chrome-devtools__take_screenshot`.
 
@@ -49,6 +49,10 @@ Check for:
 - Page renders without a blank screen or error
 - Layout looks correct
 - No console errors via `mcp__chrome-devtools__list_console_messages`
+
+Then use `ask_user` to ask: "Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?" with choices: `["Yes, looks good — run tests and Lighthouse", "I'd like some changes first"]`
+
+**Do not proceed to step 7 until the user explicitly confirms.** If they want changes, make them and return to step 6.
 
 ### 7. Run the checklist
 
