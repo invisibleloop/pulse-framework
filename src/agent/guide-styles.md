@@ -89,6 +89,15 @@ meta: {
 
 **Colour tokens:** `--ui-bg`, `--ui-surface`, `--ui-surface-2`, `--ui-border`, `--ui-text`, `--ui-muted`, `--ui-accent`, `--ui-accent-hover`, `--ui-accent-dim`, `--ui-accent-text`, `--ui-green`, `--ui-red`, `--ui-yellow`, `--ui-blue`, `--ui-radius`, `--ui-radius-sm`, `--ui-font`, `--ui-font-display`, `--ui-mono`. Never hardcode hex values — override the tokens.
 
+> **⚠ `--ui-muted` contrast on warm/light palettes** — The default `--ui-muted` value (`#60607a` in light theme) achieves 4.5:1 on the default white `--ui-bg`. When you set a warm or coloured background (`--bg: #f5e6d3` etc.) the luminance difference shrinks and `--ui-muted` can drop below the WCAG AA threshold of 4.5:1. **Always override `--muted` when changing `--bg`**, and run `pulse_check_contrast` immediately after writing your `theme.css`. A common failure mode: stat labels, nav links, and feature descriptions all use `--ui-muted` and will fail contrast silently if this token is not rechecked against your actual background colour.
+
+> **⚠ `section--dark` in light theme** — `section({ variant: 'dark' })` uses `--ui-surface-2` as its background, which in the default light theme resolves to `#f0f0f8` — a light grey, not a dark background. The framework now auto-corrects this via a `[data-theme="light"] .ui-section--dark` override (navy `#1a1a2e`), and ghost buttons inside it get automatic light-text treatment. If you use a custom `--surface-2` override in your theme, set `--ui-dark-bg` and `--ui-dark-text` to pin the dark section to specific values:
+> ```css
+> [data-theme="light"] { --ui-dark-bg: #1a1a2e; --ui-dark-text: #e8e0d0; }
+> ```
+
+> **Ghost buttons on dark backgrounds** — use `variant: 'ghost-light'` instead of `variant: 'ghost'` whenever the button sits on a dark background (custom hero div, `section--dark`, navy sections). `ghost-light` renders white text with a subtle white border, maintaining 4.5:1 contrast regardless of the surrounding theme. `ghost` uses `--ui-muted` text which fails on dark backgrounds in light theme.
+
 **Display font token:** `--ui-font-display` is used for hero titles and section headings. By default it inherits `--ui-font`. Override it separately to get a display/heading face that differs from body text:
 ```css
 /* app.css */
@@ -218,6 +227,12 @@ createServer(specs, {
 | Imgix | your subdomain, e.g. `https://mysite.imgix.net` |
 
 > **picsum CDN note:** `picsum.photos` redirects image requests through `fastly.picsum.photos`. You must whitelist **both** domains — whitelisting only `https://picsum.photos` will still block the actual image bytes and the browser error will point to the `fastly.picsum.photos` URL, which is confusing to debug.
+
+> **⚠ Unsplash and third-party cookies — Lighthouse Best Practices failure:** `images.unsplash.com` sets tracking cookies (`azk`, `azk-ss`) on every image request. These are classified as third-party cookies and cause Lighthouse Best Practices to drop to ~77, failing the 100 pass bar. **For production builds, download images locally instead of referencing Unsplash URLs directly.** Use `curl` to save images to `public/images/`:
+> ```bash
+> curl -sL "https://images.unsplash.com/photo-ID?w=900&q=85" -o public/images/hero.jpg
+> ```
+> Then reference `/images/hero.jpg` in your spec. This also improves performance (no external DNS lookup) and avoids rate limiting. `picsum.photos` does **not** set tracking cookies and is safe to use via CDN for prototypes.
 
 Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
 

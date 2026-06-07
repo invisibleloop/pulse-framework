@@ -376,6 +376,22 @@ export function validateSpec(spec) {
     warnings.push('spec.hydrate is set manually — it is auto-derived by the framework from the URL entry passed to createServer. Remove it from the spec.')
   }
 
+  // meta — warn on unrecognised fields (e.g. meta.vibe is silently ignored; the correct
+  // field is top-level spec.meta.vibe which IS supported, but an agent might write
+  // meta: { vibe: 'bold' } expecting it to work when the real effect comes from
+  // the framework reading spec.meta.vibe directly — this check catches unknown keys)
+  if (spec.meta && typeof spec.meta === 'object' && !Array.isArray(spec.meta)) {
+    const KNOWN_META_KEYS = new Set([
+      'title', 'description', 'styles', 'scripts', 'theme', 'vibe',
+      'ogTitle', 'ogDescription', 'ogImage', 'canonical', 'schema',
+      'robots', 'viewport', 'charset', 'lang',
+    ])
+    const unknown = Object.keys(spec.meta).filter(k => typeof spec.meta[k] !== 'function' && !KNOWN_META_KEYS.has(k))
+    if (unknown.length) {
+      warnings.push(`spec.meta has unrecognised field${unknown.length > 1 ? 's' : ''}: ${unknown.map(k => `"${k}"`).join(', ')} — these are silently ignored by the framework. Known fields: ${[...KNOWN_META_KEYS].join(', ')}.`)
+    }
+  }
+
   // meta quality
   if (!spec.meta) {
     warnings.push('spec.meta is missing — add at minimum title and description for SEO')
@@ -389,9 +405,9 @@ export function validateSpec(spec) {
     } else if (typeof desc === 'string' && desc.trim() === 'Built with Pulse') {
       warnings.push('spec.meta.description is still the default "Built with Pulse" — replace it with a real description')
     }
-    // If meta.theme is not set, Pulse defaults to dark — warn so agents don't accidentally
-    // ship a dark-themed page when they intended light, or forget to declare intent.
-    if (spec.meta.theme === undefined && typeof spec.meta.theme !== 'function') {
+    // If meta.theme is not set (and not a function), Pulse defaults to dark — warn so agents
+    // don't accidentally ship a dark-themed page when they intended light.
+    if (typeof spec.meta.theme !== 'string' && typeof spec.meta.theme !== 'function') {
       warnings.push('spec.meta.theme is not set — Pulse defaults to dark. Add meta.theme: \'dark\' (or \'light\') to make the intent explicit and suppress this warning.')
     }
   }

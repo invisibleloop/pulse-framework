@@ -89,8 +89,11 @@ Run `pulse_intake` before presenting the confirmation. It collects the product d
 6. "Any specific font, or system-ui?"
 7. "Light or dark theme preference?"
 8. "How should it feel visually? (e.g. warm and friendly, editorial and sharp, playful, minimal, bold — or describe in your own words)"
+9. "Do you have any design inspiration — a site you love, a screenshot, a mood board image? Drop images into `public/intake/` or paste a URL and I'll extract the design intent before we start."
 
 Ask each question and wait for the answer before asking the next. Do not present a list of preset choices for any of these — the answers are arbitrary text.
+
+**Question 9 is not optional.** Always ask it. If the user provides an image in `public/intake/`, call `pulse_extract_inspiration` on it before calling `pulse_intake`. If they provide a URL, call `pulse_extract_inspiration` with the URL. If they say no or skip it, proceed without — but always ask.
 
 Once you have the answers, call `pulse_intake` with the collected details. It returns a product brief + early contrast warnings.
 

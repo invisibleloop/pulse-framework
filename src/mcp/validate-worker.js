@@ -53,12 +53,6 @@ if (!valid) {
 // Render the view and run additional HTML checks
 const warnings = [...schemaWarnings]
 
-// meta.theme missing — a page without theme set will use the user's system preference,
-// which can produce unexpected dark/light rendering for spec authors who built for one mode.
-if (!spec.meta?.theme) {
-  warnings.push('meta.theme is not set — the page will follow the user\'s system colour-scheme preference. Add meta: { theme: \'light\' } or meta: { theme: \'dark\' } to lock the appearance. Most Pulse pages should set this explicitly.')
-}
-
 // Raw-response specs (contentType + render) produce non-HTML output —
 // skip all view rendering and HTML-specific checks for them.
 const isRawResponse = typeof spec.render === 'function' ||
@@ -91,6 +85,18 @@ try {
   }
   if (levels.length > 0 && levels[0] !== 1) {
     warnings.push(`Heading order: page starts with h${levels[0]}, expected h1`)
+  }
+
+  // Duplicate h2s inside a single section — inner item headings should be h3
+  // A section with an h2 title and child items that also use h2 creates a flat
+  // outline that is semantically incorrect. Flag when a <section> contains 2+ h2s.
+  const sectionBlocks = [...html.matchAll(/<section[\s>][^]*?<\/section>/gi)]
+  for (const [sectionHtml] of sectionBlocks) {
+    const h2s = [...sectionHtml.matchAll(/<h2[\s>]/gi)]
+    if (h2s.length > 1) {
+      warnings.push(`Multiple h2 headings inside a single <section> — the first h2 should be the section title; inner item headings should use h3 (or deeper). A flat outline of h2s makes navigation harder for screen reader users.`)
+      break // one warning is enough
+    }
   }
 
   // Missing main landmark
@@ -142,6 +148,15 @@ try {
   // Inline <style> blocks in view — blocked by Pulse CSP nonce policy
   if (/<style[\s>]/i.test(html)) {
     warnings.push('Inline <style> block detected in view — Pulse\'s CSP (style-src with nonces) will silently block these styles at runtime. Move styles to public/app.css instead.')
+  }
+
+  // Hardcoded hex colours in view HTML — must use var(--ui-*) tokens instead.
+  // Matches: style="...color:#hex..." or style="...background:#hex..."
+  // Allows: href="#section-id" (anchor links are not colours)
+  const hexInStyle = [...html.matchAll(/style="[^"]*#[0-9a-fA-F]{3,6}[^"]*"/g)]
+  if (hexInStyle.length) {
+    const samples = [...new Set(hexInStyle.flatMap(m => [...m[0].matchAll(/#[0-9a-fA-F]{3,6}/g)].map(h => h[0])))].slice(0, 3)
+    warnings.push(`Hardcoded hex colour${samples.length > 1 ? 's' : ''} in view HTML (${samples.join(', ')}) — use var(--ui-*) CSS tokens instead. Move the hex value to public/theme.css as a named token, then reference it via var() in public/app.css or as a CSS class on the element.`)
   }
 } catch { /* view may depend on server data — skip HTML checks */ }
 

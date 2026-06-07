@@ -51,7 +51,8 @@ Every build task follows a fixed sequence of phases with explicit pass gates. Fe
 2. **Plan** — present your plan, wait for user confirmation (skip only for trivially small tasks)
 3. **Build** — write the spec and related files
 4. **Validate** — `pulse_validate` must be clean before continuing
-5. **Browser** — screenshot + Lighthouse desktop + Lighthouse mobile, all 100/100/100 before continuing
+5. **Design approval** *(new builds only)* — take a screenshot, show the user, **wait for their go-ahead on layout and direction** before running any slow checks. For edits/fixes, skip this.
+5. **Verify** — `pulse_design_review` → `pulse_layout_review` → Lighthouse desktop + mobile, all 100/100/100 before continuing
 6. **Tests** — write and run tests, all must pass before continuing
 7. **Review Agent** — invoke only after phases 4–6 all pass
 8. **Fix** — fix every review issue, re-run any affected gates

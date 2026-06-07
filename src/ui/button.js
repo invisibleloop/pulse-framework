@@ -20,7 +20,7 @@
 
 import { escHtml as e } from '../html.js'
 
-const VARIANTS = new Set(['primary', 'secondary', 'ghost', 'danger'])
+const VARIANTS = new Set(['primary', 'secondary', 'ghost', 'ghost-light', 'danger'])
 const SIZES    = new Set(['sm', 'md', 'lg'])
 
 export function button({

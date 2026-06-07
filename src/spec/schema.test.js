@@ -384,6 +384,34 @@ test('validateSpec still warns when hydrate is set manually in source', () => {
   assert(warnings.some(w => w.includes('hydrate')), 'Expected hydrate warning from validateSpec')
 })
 
+// meta.theme warnings
+test('warns when meta.theme is not set', () => {
+  const { warnings } = validateSpec({
+    route: '/entry',
+    view:  () => '<main id="main-content"></main>',
+    meta:  { title: 'Entry', description: 'A page' },
+  })
+  assert(warnings.some(w => w.includes('meta.theme')), 'Expected meta.theme warning')
+})
+
+test('does not warn when meta.theme is a string', () => {
+  const { warnings } = validateSpec({
+    route: '/entry',
+    view:  () => '<main id="main-content"></main>',
+    meta:  { title: 'Entry', description: 'A page', theme: 'dark' },
+  })
+  assert(!warnings.some(w => w.includes('meta.theme')), 'Unexpected meta.theme warning when theme is set')
+})
+
+test('does not warn when meta.theme is a function', () => {
+  const { warnings } = validateSpec({
+    route: '/entry',
+    view:  () => '<main id="main-content"></main>',
+    meta:  { title: 'Entry', description: 'A page', theme: (ctx) => ctx.brand?.theme ?? 'dark' },
+  })
+  assert(!warnings.some(w => w.includes('meta.theme')), 'Unexpected meta.theme warning when theme is a function')
+})
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
