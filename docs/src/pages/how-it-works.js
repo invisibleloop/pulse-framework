@@ -87,13 +87,20 @@ export default {
       <p>Together these replace the need to paste documentation into a system prompt or rely on the agent's training data to know how Pulse works.</p>
 
       ${section('resources', 'Resources: what the agent knows')}
-      <p>The MCP server exposes two resources the agent reads before doing any work:</p>
-      <ul>
-        <li><strong><code>pulse://guide</code></strong> — the complete framework reference, split into focused sections so each fits comfortably in a single read. The agent fetches whichever sections are relevant to the task at hand.</li>
-        <li><strong><code>pulse://persona</code></strong> — the quality bar the agent holds itself to: always write correct SSR, always handle errors, never skip empty states, never hardcode colours, never use <code>data-event</code> on text inputs. The persona defines what "done" means.</li>
-      </ul>
+      <p>The MCP server exposes read-only documents the agent fetches at any time. There are two top-level resources and a set of focused guide sections:</p>
 
-      <p>The guide sections are:</p>
+      <dl class="definition-list">
+        <dt><code>pulse://quickstart</code></dt>
+        <dd>Workflow phases, spec skeleton, component rules, and theming essentials combined into a single fetch. Used for targeted edits, bug fixes, or simple one-shot page builds — avoids loading the full guide for small tasks.</dd>
+
+        <dt><code>pulse://workflow</code></dt>
+        <dd>The full build workflow — every phase, pass gate, and ordering rule. The agent reads this before starting any new page or project.</dd>
+
+        <dt><code>pulse://persona</code></dt>
+        <dd>The quality bar the agent holds itself to: always write correct SSR, always handle errors, never skip empty states, never hardcode colours, never use <code>data-event</code> on text inputs. The persona defines what "done" means.</dd>
+      </dl>
+
+      <p>The guide is split into topic sections the agent fetches as needed:</p>
       <dl class="definition-list">
         <dt><code>pulse://guide/spec</code></dt>
         <dd>Spec format — state, mutations, actions, streaming SSR, validation, key rules, and form layout.</dd>
@@ -112,12 +119,51 @@ export default {
 
         <dt><code>pulse://guide/examples</code></dt>
         <dd>Complete working page examples covering common patterns.</dd>
+
+        <dt><code>pulse://guide/templates</code></dt>
+        <dd>Pre-built landing page templates, adaptation rules, and theme CSS patterns. Fetched when building a new branded site or landing page.</dd>
+
+        <dt><code>pulse://guide/design-references</code></dt>
+        <dd>Twelve design directions with vibes, component combinations, palette patterns, and signature moves. Fetched during intake to pick the right aesthetic rather than defaulting to a generic SaaS look.</dd>
+
+        <dt><code>pulse://guide/design-gallery</code></dt>
+        <dd>All templates with visual descriptions and key components. Includes critical prop-name references and component recipes for cards, stat strips, and forms. Fetched when adapting a template or combining components.</dd>
+
+        <dt><code>pulse://guide/explore</code></dt>
+        <dd>Zone-based layout thinking, seven structural gestures, raw HTML patterns without components, and an anti-pattern checklist. Fetched when a distinctive or unusual layout is needed.</dd>
       </dl>
 
       ${callout('note', 'The guide is authoritative. When there is a question about how something should be structured — where state lives, how validation is wired, how streaming works — the guide answers it. The agent does not guess.')}
 
       ${section('tools', 'Tools: what the agent can do')}
-      <p>The MCP server provides tools across four categories:</p>
+      <p>The MCP server provides tools across five categories:</p>
+
+      <h3 class="doc-h3">Design &amp; intake</h3>
+      <dl class="definition-list">
+        <dt><code>pulse_extract_inspiration</code></dt>
+        <dd>Extracts a structured design brief from a URL or image shared as inspiration. Called before <code>pulse_intake</code> when the user says "I like the look of X" — it tells the agent exactly what to observe and capture.</dd>
+
+        <dt><code>pulse_intake</code></dt>
+        <dd>Captures the product name, pitch, features, palette, vibe, and anti-style before scaffolding any new page or branded template. Returns a structured brief with copy-ready content, early contrast warnings, and component suggestions. Always runs before <code>pulse_sketch</code>.</dd>
+
+        <dt><code>pulse_sketch</code></dt>
+        <dd>Generates three structurally distinct layout directions (full-bleed, asymmetric split, editorial flow, etc.) before any code is written. Called after <code>pulse_intake</code> — prevents every project from defaulting to the same centred-hero layout.</dd>
+
+        <dt><code>pulse_intent</code></dt>
+        <dd>Intent engine — describe what you want to build and get back a matched archetype, recommended components, a ready-to-adapt spec scaffold, and which guide sections to read first. An alternative entry point to <code>pulse://workflow</code> for targeted tasks.</dd>
+
+        <dt><code>pulse_design_review</code></dt>
+        <dd>Reviews the built page's visual design against the original product brief from <code>pulse_intake</code>. Checks whether the design looks and feels appropriate for the product, audience, and vibe. Runs after screenshot, before Lighthouse.</dd>
+
+        <dt><code>pulse_layout_review</code></dt>
+        <dd>Multi-viewport layout review — checks for overflow, collapsed sections, and broken images at different screen widths. Runs after design approval but before Lighthouse, catching layout issues that Lighthouse doesn't flag.</dd>
+
+        <dt><code>pulse_tokens</code></dt>
+        <dd>Lists all available <code>--ui-*</code> CSS custom property tokens from the installed <code>pulse-ui.css</code>. Used before writing theme overrides to avoid guessing token names.</dd>
+
+        <dt><code>pulse_check_contrast</code></dt>
+        <dd>Static WCAG contrast checker. Extracts colour variable definitions from a theme file and checks common foreground/background pairings for WCAG AA compliance. Run immediately after writing a theme file to catch palette mistakes before Lighthouse.</dd>
+      </dl>
 
       <h3 class="doc-h3">Scaffolding</h3>
       <dl class="definition-list">
@@ -136,11 +182,17 @@ export default {
 
       <h3 class="doc-h3">Inspection</h3>
       <dl class="definition-list">
+        <dt><code>pulse_status</code></dt>
+        <dd>Project health snapshot — pages, routes, server status, last build. Called at the start of a session to orient quickly without reading files individually.</dd>
+
         <dt><code>pulse_list_structure</code></dt>
         <dd>Lists every page, component, and store that already exists in the project. The agent calls this before creating anything — to avoid duplication and to understand what the codebase already provides.</dd>
 
         <dt><code>pulse_fetch_page</code></dt>
         <dd>Reads the full source of an existing spec file. Used when the agent needs to understand an existing page before editing it, or when a review of the current state is needed.</dd>
+
+        <dt><code>pulse_list_icons</code></dt>
+        <dd>Lists all available Pulse UI icon names, grouped by category. Called before importing icons — the agent never guesses a name.</dd>
       </dl>
 
       <h3 class="doc-h3">Validation &amp; review</h3>
@@ -148,26 +200,29 @@ export default {
         <dt><code>pulse_validate</code></dt>
         <dd>Validates a spec against the Pulse schema. Returns errors (which block progress) and warnings (which must also be resolved). The agent calls this after writing or editing every spec file.</dd>
 
+        <dt><code>pulse_suggest</code></dt>
+        <dd>Draft-mode feedback — paste a partial or complete spec and get constructive suggestions before running the hard validator. Unlike <code>pulse_validate</code>, it is collaborative rather than a gate: it notices patterns, spots likely omissions, and offers ideas. Used mid-build for a second opinion.</dd>
+
         <dt><code>pulse_review</code></dt>
         <dd>Switches the agent into reviewer mode. Returns the spec source, the rendered HTML output, and a structured checklist covering accessibility, empty states, error handling, component usage, security, and correctness. The agent reads its own output critically and fixes every issue before continuing.</dd>
+
+        <dt><code>pulse_run_tests</code></dt>
+        <dd>Runs the project test suite (<code>npm test</code>) and returns the full output. Called after writing or editing specs to verify nothing is broken.</dd>
       </dl>
 
-      <h3 class="doc-h3">Server</h3>
+      <h3 class="doc-h3">Server &amp; maintenance</h3>
       <dl class="definition-list">
         <dt><code>pulse_restart_server</code></dt>
         <dd>Restarts the Pulse dev server. Called after structural changes — adding a new page, modifying the server entry — to reload all specs and re-register routes.</dd>
 
         <dt><code>pulse_build</code></dt>
         <dd>Builds the project for production. Bundles specs, hashes assets, and writes the manifest. Called when the agent needs to verify the production build or prepare a release.</dd>
-      </dl>
 
-      <h3 class="doc-h3">Maintenance</h3>
-      <dl class="definition-list">
         <dt><code>pulse_check_version</code></dt>
         <dd>Reports the installed Pulse version and whether an update is available.</dd>
 
         <dt><code>pulse_update</code></dt>
-        <dd>Updates the Pulse package to the latest version.</dd>
+        <dd>Updates the Pulse package to the latest version and copies the latest UI assets and agent files into the project.</dd>
       </dl>
 
       ${section('flow', 'What happens when you ask for something')}

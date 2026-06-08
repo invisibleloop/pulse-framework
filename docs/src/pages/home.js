@@ -1,4 +1,6 @@
-import { highlight }     from '../lib/highlight.js'
+// component-free — creative override: brutalist design intent; asymmetric typography-driven layout with exposed grid structure, raw borders, and oversized type that component patterns cannot express
+import { highlight }                                        from '../lib/highlight.js'
+import { iconZap, iconShield, iconSettings }               from '../../../src/ui/icons.js'
 import { metricsStore }  from '../lib/metrics-store.js'
 import { codeWindow }    from '../../../src/ui/code-window.js'
 import pkg from '../../../package.json' with { type: 'json' }
@@ -38,7 +40,7 @@ export default {
   meta: {
     title: 'Pulse — The spec-first web framework',
     description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap', '/pulse-ui.css', '/docs.css', '/home-brut.css'],
     schema: {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
@@ -57,361 +59,282 @@ export default {
     metrics: () => metricsStore.current,
   },
   view: (state, server) => `
-    <div class="home">
-      <nav class="home-nav" aria-label="Site navigation">
-        <a href="/" class="logo-link">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1" stroke-linejoin="round"/>
+    <div class="brut">
+
+      <nav class="brut-nav" aria-label="Site navigation">
+        <a href="/" class="brut-nav-logo" aria-label="Pulse home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="#f0e642" stroke="#f0e642" stroke-width="1" stroke-linejoin="round"/>
           </svg>
-          Pulse
+          <span>PULSE</span>
         </a>
-        <div class="home-nav-links">
+        <div class="brut-nav-links">
           <a href="/getting-started">Docs</a>
           <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a>
+          <a href="/getting-started" class="brut-nav-cta">Get Started</a>
         </div>
       </nav>
 
       <main id="main-content">
-      <section class="hero">
-        <div class="hero-icon" aria-hidden="true">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="hero-badge">v${version} — EARLY ACCESS</div>
-        <p class="hero-kicker">A server-first Node.js framework. Zero runtime dependencies.</p>
-        <h1 class="hero-title">One spec. One way to build. Production quality by design.</h1>
-        <p class="hero-subtitle">Each page is a single plain JS object — server data, client state, mutations, and view co-located in one place. Streaming SSR, security headers, and production caching are enforced by the framework, not left to configuration.<br><strong>Designed for AI agents. Simple enough to write yourself.</strong></p>
-        <div class="hero-ctas">
-          <a href="/getting-started" class="btn-primary">Get Started</a>
-          <a href="/spec" class="btn-secondary">Read the Spec</a>
-        </div>
-      </section>
 
-      <section class="home-stats">
-        <div class="home-stat">
-          <span class="home-stat-value">Fast LCP</span>
-          <span class="home-stat-label">SSR-first architecture</span>
-        </div>
-        <div class="home-stat-divider"></div>
-        <div class="home-stat">
-          <span class="home-stat-value">4 kB</span>
-          <span class="home-stat-label">Runtime JS, first visit (brotli)</span>
-        </div>
-        <div class="home-stat-divider"></div>
-        <div class="home-stat">
-          <span class="home-stat-value">0.00</span>
-          <span class="home-stat-label">Cumulative Layout Shift</span>
-        </div>
-        <div class="home-stat-divider"></div>
-        <div class="home-stat">
-          <span class="home-stat-value">100</span>
-          <span class="home-stat-label">Lighthouse score, by design</span>
-        </div>
-      </section>
+        <section class="brut-hero">
+          <div class="brut-hero-tag">v${version} — EARLY ACCESS</div>
+          <h1 class="brut-hero-h1">
+            <span class="brut-hero-line1">ONE</span>
+            <span class="brut-hero-line2" role="img" aria-label="SPEC.">
+              <svg class="brut-hero-svg" aria-hidden="true">
+                <text class="brut-hero-svg-text" y="0.82em" dominant-baseline="auto"
+                  font-family="Inter, system-ui, sans-serif" font-weight="900"
+                  fill="var(--brut-bg)" stroke="var(--brut-ink)" stroke-width="0.055em" paint-order="stroke fill">SPEC.</text>
+              </svg>
+            </span>
+            <span class="brut-hero-line3">ONE WAY<br>TO BUILD.</span>
+          </h1>
+          <div class="brut-hero-aside">
+            <p class="brut-hero-desc">A server-first Node.js framework. Zero runtime dependencies. Streaming SSR, security headers, and production caching enforced by the architecture — not left to configuration.</p>
+            <p class="brut-hero-sub"><strong>Designed for AI agents. Simple enough to write yourself.</strong></p>
+            <div class="brut-hero-ctas">
+              <a href="/getting-started" class="brut-btn-primary">Get Started</a>
+              <a href="/spec" class="brut-btn-ghost">Read the Spec</a>
+            </div>
+          </div>
+        </section>
 
-      <section class="how">
-        <div class="how-inner">
-        <h2 class="section-label">The idea</h2>
-        <div class="how-steps">
-          <div class="how-step">
-            <div class="how-step-num">1</div>
-            <h3>The spec is the page</h3>
-            <p>Everything a page needs lives in one plain JS object — server data, client state, mutations, and view. One format, no split files, no hidden conventions.</p>
+        <div class="brut-stats-bar">
+          <div class="brut-stat">
+            <span class="brut-stat-val">4 kB</span>
+            <span class="brut-stat-lbl">Runtime JS · first visit</span>
           </div>
-          <div class="how-connector" aria-hidden="true"></div>
-          <div class="how-step">
-            <div class="how-step-num">2</div>
-            <h3>The schema is the contract</h3>
-            <p>Every spec is validated at startup. Either it's correct or it's rejected — no ambiguity, no misconfiguration that surfaces later in production.</p>
+          <div class="brut-stat">
+            <span class="brut-stat-val">0.00</span>
+            <span class="brut-stat-lbl">Cumulative Layout Shift</span>
           </div>
-          <div class="how-connector" aria-hidden="true"></div>
-          <div class="how-step">
-            <div class="how-step-num">3</div>
-            <h3>The framework is the guarantee</h3>
-            <p>Streaming SSR, security headers, and production caching come from the architecture. You write the product logic. The framework ships the quality.</p>
+          <div class="brut-stat">
+            <span class="brut-stat-val">100</span>
+            <span class="brut-stat-lbl">Lighthouse · by design</span>
+          </div>
+          <div class="brut-stat">
+            <span class="brut-stat-val">0</span>
+            <span class="brut-stat-lbl">Runtime dependencies</span>
           </div>
         </div>
-        </div>
-      </section>
 
-      <section class="home-code">
-        <div class="home-code-inner">
-          <div class="home-code-header">
-            <h2>Everything a page needs. Nothing it doesn't.</h2>
-            <p>Server fetchers, client state, mutations, and view are co-located in one object. No split files. No magic exports. The spec <strong>is</strong> the page — readable, predictable, complete.</p>
+        <section class="brut-idea">
+          <div class="brut-idea-label">THE IDEA</div>
+          <div class="brut-idea-grid">
+            <div class="brut-idea-step">
+              <div class="brut-idea-num" aria-hidden="true">01</div>
+              <h2>The spec is the page</h2>
+              <p>Everything a page needs lives in one plain JS object — server data, client state, mutations, and view. One format. No split files. No hidden conventions.</p>
+            </div>
+            <div class="brut-idea-step">
+              <div class="brut-idea-num" aria-hidden="true">02</div>
+              <h2>The schema is the contract</h2>
+              <p>Every spec is validated at startup. Either it's correct or it's rejected — no ambiguity, no misconfiguration that surfaces later in production.</p>
+            </div>
+            <div class="brut-idea-step">
+              <div class="brut-idea-num" aria-hidden="true">03</div>
+              <h2>The framework is the guarantee</h2>
+              <p>Streaming SSR, security headers, and production caching come from the architecture. You write the product logic. The framework ships the quality.</p>
+            </div>
           </div>
-          <div class="home-code-block">
+        </section>
+
+        <section class="brut-code-section">
+          <div class="brut-code-header">
+            <h2>Everything a page needs.<br>Nothing it doesn't.</h2>
+            <p>Server fetchers, client state, mutations, and view — co-located in one object. The spec <em>is</em> the page.</p>
+          </div>
+          <div class="brut-code-block">
             ${codeWindow({ content: exampleSpec, filename: 'src/pages/dashboard.js', lang: 'JavaScript' })}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="ai-first">
-        <div class="section-label">AI + Pulse</div>
-        <h2 class="ai-first-title">The constraint is the point. For humans and agents&nbsp;alike.</h2>
-        <p class="ai-first-lead">Pulse was designed around a simple observation: when there is only one correct way to build a page, every page is built correctly — whether you wrote it or an AI did. The spec format is the advantage. The schema is the enforcement.</p>
-        <div class="ai-cols">
-          <div class="ai-col">
-            <h3 class="ai-col-title">For developers</h3>
-            <ul class="ai-col-list">
-              <li>One format to learn — server, state, mutations, view in one place.</li>
-              <li>Production quality is the starting point, not a final audit.</li>
-              <li>Specs are short, self-contained, and easy to review.</li>
-              <li>Nothing to misconfigure — the framework doesn't give you the choice.</li>
-            </ul>
-          </div>
-          <div class="ai-col ai-col--pulse">
-            <h3 class="ai-col-title ai-col-title--good">For AI agents</h3>
-            <ul class="ai-col-list">
-              <li>One valid structure per page — agents can't pick the wrong pattern.</li>
-              <li>The schema rejects bad output at startup, not in production.</li>
-              <li>Security, SSR, and caching can't be accidentally omitted.</li>
-              <li>Consistent output across agents, sessions, and team members.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section class="versus">
-        <div class="section-label">How Pulse compares</div>
-        <h2 class="versus-title">Constraints enforced. Not recommended.</h2>
-        <p class="versus-sub">Pulse enforces correctness out of the box. Other frameworks leave production quality to the developer.</p>
-        <div class="versus-table-wrap table-sticky-col">
-          <table class="versus-table">
-            <thead>
-              <tr>
-                <th></th>
-                <th>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="vertical-align:middle;margin-right:.35rem">
-                    <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1" stroke-linejoin="round"/>
-                  </svg>Pulse
-                </th>
-                <th>Next.js / Remix</th>
-                <th>SvelteKit</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Ways to write a page</th>
-                <td class="v-yes">One — the spec schema</td>
-                <td class="v-no">App Router, Pages Router, RSC, client components, loaders…</td>
-                <td class="v-no">+page.svelte, +page.server.js, load(), form actions…</td>
-              </tr>
-              <tr>
-                <th scope="row">Agent-readable structure</th>
-                <td class="v-yes">One JS object per page</td>
-                <td class="v-no">Files, folders, magic exports spread across dirs</td>
-                <td class="v-no">Files, folders, Svelte syntax</td>
-              </tr>
-              <tr>
-                <th scope="row">SSR out of the box</th>
-                <td class="v-yes">Streaming SSR, zero config</td>
-                <td class="v-partial">Yes, but client hydration adds JS on every page</td>
-                <td class="v-partial">Yes, but requires an adapter and client runtime on every page</td>
-              </tr>
-              <tr>
-                <th scope="row">Client JS shipped</th>
-                <td class="v-yes">~4 kB brotli on first visit; 0 kB on static pages</td>
-                <td class="v-no">50–200 kB+ depending on features used</td>
-                <td class="v-partial">~15 kB brotli</td>
-              </tr>
-              <tr>
-                <th scope="row">Security headers</th>
-                <td class="v-yes">On every response, built in</td>
-                <td class="v-no">Manual middleware or plugin</td>
-                <td class="v-no">Manual hooks setup</td>
-              </tr>
-              <tr>
-                <th scope="row">CLS</th>
-                <td class="v-yes">Targets 0.00 — shell renders before data arrives</td>
-                <td class="v-partial">Depends on implementation</td>
-                <td class="v-partial">Depends on implementation</td>
-              </tr>
-              <tr>
-                <th scope="row">Runtime dependencies</th>
-                <td class="v-yes">Zero — pure Node.js HTTP</td>
-                <td class="v-no">React, 50+ transitive packages</td>
-                <td class="v-no">Svelte runtime + adapters</td>
-              </tr>
-              <tr>
-                <th scope="row">Production build step</th>
-                <td class="v-yes">Server needs none — <code>node server.js</code> is production. Client bundles are optional.</td>
-                <td class="v-no">Required — <code>next build</code></td>
-                <td class="v-no">Required — <code>vite build</code></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="usp-blocks">
-
-        <div class="usp-block">
-          <div class="usp-block-aside">
-            <div class="usp-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round"/>
-              </svg>
+        <section class="brut-constraint">
+          <div class="brut-constraint-inner">
+            <div class="brut-constraint-label">AI + PULSE</div>
+            <h2 class="brut-constraint-h2">The constraint<br>is the point.</h2>
+            <p class="brut-constraint-lead">When there is only one correct way to build a page, every page is built correctly — whether you wrote it or an AI did. The spec format is the advantage. The schema is the enforcement.</p>
+            <div class="brut-constraint-cols">
+              <div class="brut-col">
+                <div class="brut-col-head">For developers</div>
+                <ul class="brut-col-list">
+                  <li>One format to learn — server, state, mutations, view in one place</li>
+                  <li>Production quality is the starting point, not a final audit</li>
+                  <li>Specs are short, self-contained, and easy to review</li>
+                  <li>Nothing to misconfigure — the framework doesn't give you the choice</li>
+                </ul>
+              </div>
+              <div class="brut-col brut-col--hi">
+                <div class="brut-col-head brut-col-head--hi">For AI agents</div>
+                <ul class="brut-col-list">
+                  <li>One valid structure per page — agents can't pick the wrong pattern</li>
+                  <li>The schema rejects bad output at startup, not in production</li>
+                  <li>Security, SSR, and caching can't be accidentally omitted</li>
+                  <li>Consistent output across agents, sessions, and team members</li>
+                </ul>
+              </div>
             </div>
-            <h2>Performance by design</h2>
-            <p>Performance is not a Pulse feature — it is a structural outcome. A high Lighthouse score is the baseline. There is nothing to configure because the architecture makes the right choices automatically.</p>
           </div>
-          <ul class="usp-points">
-            <li>
-              <strong>Fast LCP by design.</strong>
-              The shell streams to the browser instantly. Deferred segments arrive as data resolves — no blocking, no flash, no placeholder juggling.
-            </li>
-            <li>
-              <strong>~4 kB of JS on first visit.</strong>
-              The shared runtime is brotli-compressed and cached across all navigations. Subsequent pages cost 0.4–0.9 kB. Static pages ship zero JS.
-            </li>
-            <li>
-              <strong>Zero CLS.</strong>
-              The shell occupies the correct layout before data arrives. No layout shift because there is no placeholder to replace.
-            </li>
-            <li>
-              <strong>Immutable bundle caching.</strong>
-              Production bundles are content-hashed and served with <code>immutable, max-age=31536000</code>. Returning visitors pay no JS cost on deploy.
-            </li>
-          </ul>
-        </div>
+        </section>
 
-        <div class="usp-block usp-block-alt">
-          <div class="usp-block-aside">
-            <div class="usp-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
+        <section class="brut-versus">
+          <div class="brut-versus-header">
+            <div class="brut-versus-label">HOW PULSE COMPARES</div>
+            <h2 class="brut-versus-h2">Constraints enforced.<br>Not recommended.</h2>
+          </div>
+          <div class="versus-table-wrap table-sticky-col">
+            <table class="brut-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="brut-th-pulse">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="vertical-align:middle;margin-right:.3rem">
+                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="#f0e642" stroke="#f0e642" stroke-width="1" stroke-linejoin="round"/>
+                    </svg>PULSE
+                  </th>
+                  <th>Next.js / Remix</th>
+                  <th>SvelteKit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Ways to write a page</th>
+                  <td class="v-yes">One — the spec schema</td>
+                  <td class="v-no">App Router, Pages Router, RSC, client components, loaders…</td>
+                  <td class="v-no">+page.svelte, +page.server.js, load(), form actions…</td>
+                </tr>
+                <tr>
+                  <th scope="row">Agent-readable structure</th>
+                  <td class="v-yes">One JS object per page</td>
+                  <td class="v-no">Files, folders, magic exports spread across dirs</td>
+                  <td class="v-no">Files, folders, Svelte syntax</td>
+                </tr>
+                <tr>
+                  <th scope="row">SSR out of the box</th>
+                  <td class="v-yes">Streaming SSR, zero config</td>
+                  <td class="v-partial">Yes, but client hydration adds JS on every page</td>
+                  <td class="v-partial">Yes, but requires an adapter and client runtime on every page</td>
+                </tr>
+                <tr>
+                  <th scope="row">Client JS shipped</th>
+                  <td class="v-yes">~4 kB brotli on first visit; 0 kB on static pages</td>
+                  <td class="v-no">50–200 kB+ depending on features used</td>
+                  <td class="v-partial">~15 kB brotli</td>
+                </tr>
+                <tr>
+                  <th scope="row">Security headers</th>
+                  <td class="v-yes">On every response, built in</td>
+                  <td class="v-no">Manual middleware or plugin</td>
+                  <td class="v-no">Manual hooks setup</td>
+                </tr>
+                <tr>
+                  <th scope="row">Runtime dependencies</th>
+                  <td class="v-yes">Zero — pure Node.js HTTP</td>
+                  <td class="v-no">React, 50+ transitive packages</td>
+                  <td class="v-no">Svelte runtime + adapters</td>
+                </tr>
+                <tr>
+                  <th scope="row">Production build step</th>
+                  <td class="v-yes">Server needs none — <code>node server.js</code> is production</td>
+                  <td class="v-no">Required — <code>next build</code></td>
+                  <td class="v-no">Required — <code>vite build</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="brut-pillars">
+          <div class="brut-pillar">
+            <div class="brut-pillar-icon">${iconZap({ size: 36 })}</div>
+            <div class="brut-pillar-body">
+              <h3>Performance by design</h3>
+              <p>The shell streams to the browser instantly. Deferred segments arrive as data resolves. ~4 kB of JS on first visit. Zero CLS. Immutable bundle caching on deploy. Not configured — structural.</p>
             </div>
-            <h2>Safe by design</h2>
-            <p>Security is not a plugin in Pulse — it is part of the response pipeline. Every response ships the headers most frameworks leave to the developer to remember to add.</p>
           </div>
-          <ul class="usp-points">
-            <li>
-              <strong>Security headers on every response.</strong>
-              <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>, <code>Cross-Origin-Opener-Policy</code> — set automatically, including on 404 and 500 pages.
-            </li>
-            <li>
-              <strong>Declarative state constraints.</strong>
-              <code>constraints</code> enforce min/max bounds on state after every mutation. Values can never go out of range regardless of what the client sends.
-            </li>
-            <li>
-              <strong>Co-located validation.</strong>
-              Validation rules live next to the state they guard. Easy to read, easy to review, impossible to misplace.
-            </li>
-            <li>
-              <strong>Guard before data.</strong>
-              The <code>guard</code> function runs before any server fetcher executes — authentication and authorisation checks cannot be accidentally bypassed.
-            </li>
-          </ul>
-        </div>
-
-        <div class="usp-block">
-          <div class="usp-block-aside">
-            <div class="usp-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+          <div class="brut-pillar brut-pillar--alt">
+            <div class="brut-pillar-icon">${iconShield({ size: 36 })}</div>
+            <div class="brut-pillar-body">
+              <h3>Safe by design</h3>
+              <p>Security headers on every response — including 404 and 500. Declarative constraints enforce state bounds after every mutation. Guard runs before any server fetcher. Not a plugin. Part of the pipeline.</p>
             </div>
-            <h2>Nothing to configure</h2>
-            <p>No bundler config. No framework boilerplate. No runtime dependencies to install, audit, or upgrade. Pulse eliminates the category of problems that come from misconfiguration.</p>
           </div>
-          <ul class="usp-points">
-            <li>
-              <strong>Zero runtime dependencies.</strong>
-              The server is pure Node.js HTTP. No Express, no Fastify, no React. Nothing to add to <code>package.json</code> to run a production server.
-            </li>
-            <li>
-              <strong>No server build step.</strong>
-              <code>node server.js</code> is production. The optional build step generates content-hashed client bundles — the server runs without it.
-            </li>
-            <li>
-              <strong>esbuild only in development.</strong>
-              The one dev dependency that compiles client bundles is esbuild. Fast, zero plugins to configure, never part of the production runtime.
-            </li>
-            <li>
-              <strong>No breaking upgrades.</strong>
-              Page files have no framework imports. The spec is a plain JS object. There is no framework API surface in your code to break across versions.
-            </li>
-          </ul>
-        </div>
+          <div class="brut-pillar">
+            <div class="brut-pillar-icon">${iconSettings({ size: 36 })}</div>
+            <div class="brut-pillar-body">
+              <h3>Nothing to configure</h3>
+              <p>No bundler config. No runtime dependencies to install, audit, or upgrade. <code>node server.js</code> is production. No breaking upgrades — page files have no framework imports to version.</p>
+            </div>
+          </div>
+        </section>
 
-      </section>
-
-      ${server.metrics ? `<section class="metrics-report" aria-labelledby="metrics-title">
-        <div class="metrics-header">
-          <div class="section-label">By the numbers</div>
-          <h2 id="metrics-title" class="metrics-title">Performance you can measure.</h2>
-          <p class="metrics-generated">Report generated ${server.metrics.generatedAt} · measured from a real Pulse build</p>
-        </div>
-        <div class="metrics-groups">
-          <div class="metrics-group">
-            <div class="metrics-group-label">Lighthouse</div>
-            <div class="metrics-items">
+        ${server.metrics ? `<section class="brut-metrics">
+          <div class="brut-metrics-label">BY THE NUMBERS</div>
+          <h2 class="brut-metrics-h2">Performance you can measure.</h2>
+          <p class="brut-metrics-sub">Report generated ${server.metrics.generatedAt} · measured from a real Pulse build</p>
+          <div class="brut-metrics-grid">
+            <div class="brut-metrics-group">
+              <div class="brut-metrics-group-label">Lighthouse</div>
               ${server.metrics.lighthouse.map(m => `
-                <div class="metric-item">
-                  <span class="metric-val metric-val--green">${m.value}</span>
-                  <span class="metric-label">${m.label}</span>
+                <div class="brut-metric">
+                  <span class="brut-metric-val brut-metric-val--hi">${m.value}</span>
+                  <span class="brut-metric-lbl">${m.label}</span>
                 </div>`).join('')}
             </div>
-          </div>
-          <div class="metrics-group">
-            <div class="metrics-group-label">Bundle sizes</div>
-            <div class="metrics-items">
+            <div class="brut-metrics-group">
+              <div class="brut-metrics-group-label">Bundle sizes</div>
               ${server.metrics.bundles.map(m => `
-                <div class="metric-item">
-                  <span class="metric-val">${m.value}</span>
-                  <span class="metric-label">${m.label}</span>
+                <div class="brut-metric">
+                  <span class="brut-metric-val">${m.value}</span>
+                  <span class="brut-metric-lbl">${m.label}</span>
                 </div>`).join('')}
             </div>
-          </div>
-          <div class="metrics-group">
-            <div class="metrics-group-label">Web Vitals</div>
-            <div class="metrics-items">
+            <div class="brut-metrics-group">
+              <div class="brut-metrics-group-label">Web Vitals</div>
               ${server.metrics.vitals.map(m => `
-                <div class="metric-item">
-                  <span class="metric-val metric-val--green">${m.value}</span>
-                  <span class="metric-label">${m.label}</span>
+                <div class="brut-metric">
+                  <span class="brut-metric-val brut-metric-val--hi">${m.value}</span>
+                  <span class="brut-metric-lbl">${m.label}</span>
                 </div>`).join('')}
             </div>
-          </div>
-          <div class="metrics-group">
-            <div class="metrics-group-label">Architecture</div>
-            <div class="metrics-items">
+            <div class="brut-metrics-group">
+              <div class="brut-metrics-group-label">Architecture</div>
               ${server.metrics.architecture.map(m => `
-                <div class="metric-item">
-                  <span class="metric-val metric-val--accent">${m.value}</span>
-                  <span class="metric-label">${m.label}</span>
+                <div class="brut-metric">
+                  <span class="brut-metric-val brut-metric-val--accent">${m.value}</span>
+                  <span class="brut-metric-lbl">${m.label}</span>
                 </div>`).join('')}
             </div>
           </div>
-        </div>
-      </section>` : ''}
+        </section>` : ''}
 
-      <section class="home-cta">
-        <h2>One format. Every page. Production ready.</h2>
-        <ul class="home-cta-checks">
-          <li>One spec object per page — always valid, always readable</li>
-          <li>Streaming SSR and security headers, zero configuration</li>
-          <li>100 Lighthouse built into the architecture</li>
-          <li>Works with AI agents — and without them</li>
-          <li>MIT licensed, zero runtime dependencies</li>
-        </ul>
-        <p>Pulse is in early access. The goal is not to compete on features — it is to eliminate the class of problems that come from having too many of them.</p>
-        <div class="home-cta-actions">
-          <a href="/getting-started" class="btn-primary">Get Started</a>
-          <a href="/spec" class="btn-secondary">Read the Spec</a>
-        </div>
-      </section>
+        <section class="brut-cta">
+          <h2 class="brut-cta-h2">One format.<br>Every page.<br>Production ready.</h2>
+          <ul class="brut-cta-list">
+            <li>One spec object per page — always valid, always readable</li>
+            <li>Streaming SSR and security headers, zero configuration</li>
+            <li>100 Lighthouse built into the architecture</li>
+            <li>Works with AI agents — and without them</li>
+            <li>MIT licensed, zero runtime dependencies</li>
+          </ul>
+          <p class="brut-cta-note">Pulse is in early access. The goal is not to compete on features — it is to eliminate the class of problems that come from having too many of them.</p>
+          <div class="brut-cta-actions">
+            <a href="/getting-started" class="brut-btn-primary brut-btn-primary--inv">Get Started</a>
+            <a href="/spec" class="brut-btn-ghost brut-btn-ghost--light">Read the Spec</a>
+          </div>
+        </section>
 
       </main>
-      <footer class="home-footer">
-        <p>MIT License · <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a> · <a href="/getting-started">Get started in 2 minutes</a></p>
+
+      <footer class="brut-footer">
+        <span>MIT License</span>
+        <span class="brut-footer-sep">·</span>
+        <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a>
+        <span class="brut-footer-sep">·</span>
+        <a href="/getting-started">Get started in 2 minutes</a>
       </footer>
+
     </div>
   `,
 }

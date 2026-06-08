@@ -3,7 +3,16 @@ import { createServer }        from '../src/server/index.js'
 import { initLayoutManifest }  from './src/lib/layout.js'
 import { metrics }             from './src/lib/stats.js'
 import { metricsStore }        from './src/lib/metrics-store.js'
+import { NAV }                 from './src/lib/nav.js'
 metricsStore.current = metrics
+
+// Build search index once at startup from nav structure
+const searchIndex = JSON.stringify(
+  NAV.flatMap(({ section, items }) =>
+    items.map(item => ({ title: item.label, href: item.href, section, body: '' }))
+  )
+)
+const searchIndexEtag = `"${Buffer.from(searchIndex).length}-search"`
 
 // Populate hashed asset paths in layout.js before any page renders
 try {
@@ -141,6 +150,21 @@ await createServer(
       'img-src':   ['https://picsum.photos', 'https://fastly.picsum.photos', 'https://images.unsplash.com'],
       'style-src': ['https://fonts.googleapis.com'],
       'font-src':  ['https://fonts.gstatic.com'],
+    },
+    onRequest(req, res) {
+      if (req.url !== '/search-index.json') return
+      if (req.headers['if-none-match'] === searchIndexEtag) {
+        res.writeHead(304)
+        res.end()
+        return false
+      }
+      res.writeHead(200, {
+        'Content-Type':  'application/json; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+        'ETag':          searchIndexEtag,
+      })
+      res.end(searchIndex)
+      return false
     },
   }
 )
