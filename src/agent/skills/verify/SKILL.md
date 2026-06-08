@@ -83,11 +83,9 @@ Run `mcp__chrome-devtools__list_pages`, then `mcp__chrome-devtools__close_page` 
 
 ### 12. Write verification stamp
 
-```bash
-date +%s > .pulse-verified
-```
+Call `pulse_stamp`. This writes `.pulse-verified` via the MCP server, which is more reliable than `date +%s > .pulse-verified` — the MCP write always lands after all spec edits, avoiding the mtime race that causes the stop hook to block immediately after verification.
 
-**This must be the last write before stopping.** Do not edit any spec file after writing the stamp.
+**This must be the last operation before stopping.** Do not edit any spec file after calling `pulse_stamp`.
 
 ### 13. Report
 

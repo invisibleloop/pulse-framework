@@ -150,6 +150,12 @@ try {
     warnings.push('Inline <style> block detected in view — Pulse\'s CSP (style-src with nonces) will silently block these styles at runtime. Move styles to public/app.css instead.')
   }
 
+  // Inline <script> blocks in view — blocked by Pulse CSP nonce policy
+  // meta.scripts is the correct way to add JS: it receives the server nonce automatically.
+  if (/<script[\s>]/i.test(html)) {
+    warnings.push('Inline <script> block detected in view — Pulse\'s CSP (script-src with nonces) will block these scripts at runtime. Move JavaScript to a file in public/ and reference it via meta.scripts: [\'/my-script.js\'] in the spec instead.')
+  }
+
   // Hardcoded hex colours in view HTML — must use var(--ui-*) tokens instead.
   // Matches: style="...color:#hex..." or style="...background:#hex..."
   // Allows: href="#section-id" (anchor links are not colours)

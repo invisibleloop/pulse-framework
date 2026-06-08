@@ -298,7 +298,9 @@ Run the tests. Fix every failure.
 
 Only invoke `pulse_review` after phases 4–6 all pass. It checks the code for correctness, security, accessibility, DRY violations, and checklist adherence.
 
-> Note: `/verify` includes the review step — if you ran `/verify` and it passed, the Review Agent has already run.
+**Ordering:** `pulse_review` runs **after** Lighthouse, not before. Lighthouse catches contrast failures, missing landmarks, and Best Practices issues that `pulse_review` cannot detect statically. Fixing a Lighthouse failure may require spec edits — so the code review always comes last, against the final version of the code.
+
+> Note: `/verify` includes the review step in the correct position — Lighthouse first (steps 6–7), then `pulse_review` (step 10). If you ran `/verify` and it passed, `pulse_review` has already run against the Lighthouse-passing version of the code.
 
 ---
 

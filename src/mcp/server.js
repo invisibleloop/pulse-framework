@@ -18,6 +18,7 @@
  *   pulse_create_page    — create a new page spec with proper template
  *   pulse_create_component — create a reusable component
  *   pulse_validate       — validate a spec against the schema
+ *   pulse_stamp          — write the .pulse-verified stamp (call as last step of /verify)
  *   pulse_check_version  — installed vs static vs npm latest
  *   pulse_update         — re-copy pulse-ui assets from package → public/
  */
@@ -1042,12 +1043,16 @@ ${(() => {
   }
   
   // Check spec source
-  // Hex colours in view — exclude anchor hrefs (#id), CSS selector strings, and comments
-  // Only flag actual colour values: # followed by exactly 3 or 6 hex chars with no trailing word chars
+  // Hex colours in view — strip anchor hrefs and id attributes before checking so
+  // href="#fixtures" / id="main-content" / href="#join" are never flagged as hex colours.
+  // Only flag actual colour values: # followed by exactly 3 or 6 hex chars.
   const viewBlock = source.slice(source.indexOf('view:'))
-  const hexInView = /(?<!href=["']?)#[0-9a-fA-F]{6}\b|(?<!href=["']?)#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlock)
+  const viewBlockStripped = viewBlock
+    .replace(/href=["']#[^"']*["']/g, 'href="#"')   // href="#anchor" → href="#"
+    .replace(/id=["'][^"']*["']/g, 'id=""')          // id="foo" → id=""
+  const hexInView = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlockStripped)
   if (hexInView) {
-    checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only (verify: may be an anchor #id href)')
+    checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only')
   } else {
     checks.push('✓ No obvious hex colours in view')
   }
@@ -1141,12 +1146,39 @@ Fix every issue you find. Then confirm what was changed.
 
 **After confirming fixes: you are back in builder mode. Continue to the verification workflow — navigate to the page in the browser, take a screenshot, run Lighthouse desktop audit, run Lighthouse mobile audit. Do not stop at the review.**`)
 
-    // Write the .pulse-verified stamp from the MCP side so the stop hook
-    // is never blocked by a sub-second mtime race from a Bash touch command.
-    // This is a best-effort write — if it fails, the agent can still Bash-stamp.
+  }
+)
+
+// ---------------------------------------------------------------------------
+// pulse_stamp — write the .pulse-verified stamp
+// ---------------------------------------------------------------------------
+// Called as the final step of /verify, after all Lighthouse gates pass and
+// pulse_review is complete. Using the MCP tool avoids the mtime race that can
+// occur when `date +%s > .pulse-verified` runs in the same second as the last
+// spec write, making the stamp appear older than the spec.
+//
+// The stop hook compares spec mtimeMs against stamp mtimeMs — not the content.
+// Writing via MCP ensures the stamp is always written after all spec edits.
+
+server.registerTool(
+  'pulse_stamp',
+  {
+    description: `Write the .pulse-verified stamp to clear the stop-hook verification gate.
+
+Call this as the **last step** of /verify — after Lighthouse desktop + mobile both pass 100/100/100, pulse_review is complete, and no further spec edits will be made.
+
+The stop hook compares each changed spec's mtime against this stamp. Any spec newer than the stamp blocks the session. Do NOT call this before Lighthouse or before fixing issues found in pulse_review.`,
+    inputSchema: {},
+  },
+  () => {
+    const stampPath = path.join(ROOT, '.pulse-verified')
+    const ts = String(Math.floor(Date.now() / 1000))
     try {
-      fs.writeFileSync(path.join(ROOT, '.pulse-verified'), String(Math.floor(Date.now() / 1000)), 'utf8')
-    } catch { /* non-critical */ }
+      fs.writeFileSync(stampPath, ts, 'utf8')
+      return text(`✓ .pulse-verified written (${ts}). Stop hook cleared — session can end.`)
+    } catch (err) {
+      return text(`Error writing .pulse-verified: ${err.message}\nFallback: run \`date +%s > .pulse-verified\` in Bash.`)
+    }
   }
 )
 
@@ -2220,21 +2252,24 @@ The extracted values map directly to pulse_intake fields (palette, vibe, styleNo
   ({ source, focus = 'all' }) => {
     const lines = []
     lines.push(`# Inspiration Extraction — ${source}\n`)
-    lines.push('Use this template to systematically observe and capture design decisions from the inspiration source.')
-    lines.push('Fill in every section you can observe. Leave a field blank if it cannot be determined.\n')
+    lines.push('**You must fill in this template now** — do not return it blank to the user.')
+    lines.push('Use your browsing tool (for URLs) or vision capability (for images) to observe the source and populate every field you can determine.')
+    lines.push('Leave a cell blank only if it is genuinely unobservable. When done, call `pulse_intake` with the extracted values.\n')
     lines.push('---\n')
 
     const isUrl = /^https?:\/\//.test(source) || /\.(com|io|co|app|design|net|org|dev)\b/.test(source)
 
     if (isUrl) {
-      lines.push('## Step 1 — Visit the site')
+      lines.push('## Step 1 — Visit the site (do this now)')
       lines.push(`Navigate to: **${source}**`)
       lines.push('Observe the rendered page at desktop width (~1440px) and again at mobile (~375px).')
-      lines.push('Take note of the above-the-fold area, then scroll through the full page.\n')
+      lines.push('Take note of the above-the-fold area, then scroll through the full page.')
+      lines.push('**Fill in the sections below based on what you observe. Return a completed extraction, not an empty template.**\n')
     } else {
-      lines.push('## Step 1 — Analyse the source')
+      lines.push('## Step 1 — Analyse the source (do this now)')
       lines.push(`Source: **${source}**`)
-      lines.push('Use your vision capability or knowledge of this reference to fill in the template below.\n')
+      lines.push('Use your vision capability or knowledge of this reference to fill in the template below.')
+      lines.push('**Return a completed extraction with your observations filled in — not a blank template.**\n')
     }
 
     lines.push('---\n')
@@ -2322,7 +2357,9 @@ The extracted values map directly to pulse_intake fields (palette, vibe, styleNo
     lines.push('})')
     lines.push('```')
     lines.push('')
-    lines.push('Then call `pulse_sketch` — pass the layout direction observed above as context in your `brief`.')
+    lines.push('**Now fill in the template above with your observations, then call `pulse_sketch` — pass the layout direction observed above as context in your `brief`.**')
+    lines.push('')
+    lines.push('> Do not return this template blank. The user is waiting for a completed extraction.')
 
     return text(lines.join('\n'))
   }
@@ -2989,15 +3026,21 @@ Run this immediately after writing a theme file — before production build and 
     }
 
     // Standard pairings to check — [foreground token, background token, label, isLargeText]
+    // isLargeText=true → WCAG AA large text threshold (3:1); isLargeText=false → body text (4.5:1)
+    // Muted text is checked at both thresholds: body text pairings always need 4.5:1.
+    // When a muted pairing fails 4.5:1 but passes 3:1, the warning distinguishes the two
+    // so designers know it can be used for captions/eyebrows (large) but not body copy (small).
     const PAIRINGS = [
-      ['--ui-text',         '--ui-bg',       'Body text on page background',        false],
-      ['--ui-muted',        '--ui-bg',       'Muted text on page background',        false],
-      ['--ui-accent',       '--ui-bg',       'Accent text on page background',       false],
-      ['--ui-text',         '--ui-surface',  'Body text on card/surface',            false],
-      ['--ui-muted',        '--ui-surface',  'Muted text on card/surface',           false],
-      ['--ui-accent-text',  '--ui-accent',   'Button text on accent background',     false],
-      ['--ui-accent',       '--ui-surface',  'Accent text on surface',               false],
-      ['--ui-text',         '--ui-surface-2','Text on nested surface',               false],
+      ['--ui-text',         '--ui-bg',       'Body text on page background',                                false],
+      ['--ui-muted',        '--ui-bg',       'Muted/secondary text on page background (body size)',        false],
+      ['--ui-muted',        '--ui-bg',       'Muted text on page background (large text / captions)',      true],
+      ['--ui-accent',       '--ui-bg',       'Accent text on page background',                             false],
+      ['--ui-text',         '--ui-surface',  'Body text on card/surface',                                  false],
+      ['--ui-muted',        '--ui-surface',  'Muted text on card/surface (body size)',                     false],
+      ['--ui-muted',        '--ui-surface',  'Muted text on card/surface (large text / captions)',         true],
+      ['--ui-accent-text',  '--ui-accent',   'Button text on accent background',                           false],
+      ['--ui-accent',       '--ui-surface',  'Accent text on surface',                                     false],
+      ['--ui-text',         '--ui-surface-2','Text on nested surface',                                     false],
     ]
 
     const checkSet = (vars, context) => {
@@ -3082,12 +3125,19 @@ Run this immediately after writing a theme file — before production build and 
         lines.push(`**${r.label}** — ${r.context}`)
         lines.push(`  ${r.fg}  on  ${r.bg}`)
         lines.push(`  Ratio: ${r.ratio}:1  ·  Needed: ${r.threshold}:1  ·  Level: ${r.level}`)
-        
+
+        // Distinguish between body and large-text failures for --ui-muted
+        if (r.label.includes('large text') || r.label.includes('captions')) {
+          lines.push(`  Context: large text / captions (3:1 threshold) — fails even the relaxed threshold.`)
+        } else if (r.label.includes('body size') || r.threshold === 4.5) {
+          lines.push(`  Context: body text (4.5:1 threshold) — only use this colour for large text (≥18pt / ≥14pt bold) or decorative elements, not for body copy or captions.`)
+        }
+
         // Suggest a corrected hex value
         if (r.fgHex && r.bgLum !== null) {
           const suggested = suggestContrastFix(r.fgHex, r.bgLum, r.threshold)
           if (suggested) {
-            lines.push(`  💡 Suggested fix: use ${suggested} instead of ${r.fgHex}`)
+            lines.push(`  Suggested fix: use ${suggested} instead of ${r.fgHex}`)
           }
         }
         lines.push('')
@@ -3105,8 +3155,9 @@ Run this immediately after writing a theme file — before production build and 
     if (failures.length > 0) {
       lines.push('---')
       lines.push('**Fix guidance:**')
+      lines.push('• **WCAG AA thresholds:** 4.5:1 for body text (≤18pt regular / ≤14pt bold); 3:1 for large text (≥18pt / ≥14pt bold), UI components, and decorative elements.')
       lines.push('• Mid-tone accents on near-white backgrounds often fail 4.5:1. Darken the accent token or use it only for large text/icons (3:1 threshold).')
-      lines.push('• For `--ui-muted` failures: muted text on `--ui-bg` needs at minimum a 4.5:1 ratio. Adjust the muted tone.')
+      lines.push('• For `--ui-muted` "body size" failures: muted text on `--ui-bg` needs 4.5:1 for body copy. If you only use this colour for eyebrows, captions, or large labels (≥18pt), the 3:1 "large text" row is the relevant gate — check whether that row passes.')
       lines.push('• Light-theme `--ui-accent` must be distinctly darker than the page background — many default accent hues are too light.')
       lines.push('• After fixing, run this tool again before `pulse_build`.')
     }
@@ -3410,6 +3461,7 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 - \`pulse_create_store\` — register a pulse.store.js you wrote with the Write tool. Write the file first, then call this.
 - \`pulse_create_action\` — generate a correctly-structured action snippet.
 - \`pulse_run_tests\` — run the project test suite (npm test). Use after writing or editing specs.
+- \`pulse_stamp\` — write the \`.pulse-verified\` stamp. Call as the **last step** of \`/verify\`, after Lighthouse and \`pulse_review\` both pass. Using this MCP tool avoids the mtime race that \`date +%s > .pulse-verified\` can cause when the stamp and the last spec write land in the same filesystem second.
 - \`pulse_fetch_page(url)\` — HTTP GET the dev server URL. Use to verify SSR output.
 - \`pulse_restart_server\` — stop and restart the dev server.
 - \`pulse_build\` — production build + starts prod server on devPort+1 for Lighthouse. Returns the URL. Call \`pulse_restart_server\` after to return to dev. **Slow — takes 30–60 s. Tell the user before calling.**

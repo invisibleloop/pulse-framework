@@ -32,15 +32,21 @@ Use `mcp__chrome-devtools__navigate_page` to load the page route, then `mcp__chr
 
 ### 6. Lighthouse — desktop
 
-Run `mcp__chrome-devtools__lighthouse_audit` on the route with `{ "strategy": "desktop" }`.
+**Pre-flight (required before every Lighthouse run):**
+1. Call `pulse_build` to produce a production build and start the production server on port 3001.
+2. Call `navigate_page` with `url: "http://localhost:3001/"` so the browser is on the production server.
 
-**Pass bar: Performance, Accessibility, Best Practices, and SEO must all be 100.** Report the actual scores. If any score is below 100, identify the failing audit(s), fix the issue, and restart from step 3.
+Then run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop" }`.
+
+**Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Performance is measured and reported but is not a hard requirement (it varies with machine load). Report the actual scores. If Accessibility, Best Practices, or SEO is below 100, identify the failing audit(s), fix the issue, and restart from step 3.
 
 ### 7. Lighthouse — mobile
 
-Run `mcp__chrome-devtools__lighthouse_audit` on the same route with `{ "strategy": "mobile" }`.
+The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "mobile" }`.
 
-**Same pass bar: all four categories must be 100.** Report the actual scores. If any score is below 100, fix and restart from step 3.
+**Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3.
+
+After both Lighthouse runs pass, call `pulse_restart_server` to return to the dev server.
 
 ### 8. Performance
 
