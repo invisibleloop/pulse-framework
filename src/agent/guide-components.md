@@ -172,7 +172,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | `stat` | `label`, `value`, `change`, `trend` (up/down/neutral), `size` (sm/md/lg — lg for hero KPIs), `center` |
 | `avatar` | `src`, `alt`, `size` (sm/md/lg/xl), `initials` |
 | `empty` | `title`, `description`, `action` ({label,href,variant}) |
-| `table` | `headers`, `rows` (2D array of HTML strings), `caption` |
+| `table` | `headers`, `rows` (2D array of HTML strings), `caption` | ⚠ Each cell item must be **raw HTML content** — `table()` wraps each item in `<td>` itself. Do NOT pass `<td>...</td>` strings or you will get double-nested cells. |
 | `spinner` | `size` (sm/md/lg), `color` (accent/muted/white), `label` |
 | `progress` | `value`, `max` (100), `label`, `showLabel`, `showValue`, `variant`, `size` |
 | `breadcrumbs` | `items` ([{label,href}] — last item has no href), `separator` |
