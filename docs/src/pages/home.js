@@ -39,8 +39,8 @@ export default {
   route: '/',
   meta: {
     title: 'Pulse — The spec-first web framework',
-    description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page — server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
-    styles: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap', '/pulse-ui.css', '/docs.css', '/home-brut.css'],
+    description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page: server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
+    styles: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap', '/pulse-ui.css', '/theme.css', '/docs.css', '/home-brut.css'],
     schema: {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
@@ -80,19 +80,21 @@ export default {
         <section class="brut-hero">
           <div class="brut-hero-tag">v${version} — EARLY ACCESS</div>
           <h1 class="brut-hero-h1">
-            <span class="brut-hero-line1">ONE</span>
-            <span class="brut-hero-line2" role="img" aria-label="SPEC.">
+            <span class="brut-hero-kicker">with Pulse</span>
+            <span class="brut-hero-line1">YOU CAN'T</span>
+            <span class="brut-hero-line2" role="img" aria-label="SHIP">
               <svg class="brut-hero-svg" aria-hidden="true">
                 <text class="brut-hero-svg-text" y="0.82em" dominant-baseline="auto"
                   font-family="Inter, system-ui, sans-serif" font-weight="900"
-                  fill="var(--brut-bg)" stroke="var(--brut-ink)" stroke-width="0.055em" paint-order="stroke fill">SPEC.</text>
+                  fill="var(--brut-yellow)" stroke="var(--brut-ink)" stroke-width="0.055em" paint-order="stroke fill">SHIP</text>
               </svg>
             </span>
-            <span class="brut-hero-line3">ONE WAY<br>TO BUILD.</span>
+            <span class="brut-hero-line3">A BAD PAGE.</span>
           </h1>
           <div class="brut-hero-aside">
-            <p class="brut-hero-desc">A server-first Node.js framework. Zero runtime dependencies. Streaming SSR, security headers, and production caching enforced by the architecture — not left to configuration.</p>
-            <p class="brut-hero-sub"><strong>Designed for AI agents. Simple enough to write yourself.</strong></p>
+            <p class="brut-hero-tag-inline">ONE SPEC. ONE WAY TO BUILD.</p>
+            <p class="brut-hero-desc">A server-first Node.js framework. Streaming SSR, security headers, and production caching are enforced by the architecture, not left to configuration.</p>
+            <p class="brut-hero-sub"><strong>So constrained that doing it wrong isn't an option. Whether you write it or an AI does.</strong></p>
             <div class="brut-hero-ctas">
               <a href="/getting-started" class="brut-btn-primary">Get Started</a>
               <a href="/spec" class="brut-btn-ghost">Read the Spec</a>
@@ -125,12 +127,12 @@ export default {
             <div class="brut-idea-step">
               <div class="brut-idea-num" aria-hidden="true">01</div>
               <h2>The spec is the page</h2>
-              <p>Everything a page needs lives in one plain JS object — server data, client state, mutations, and view. One format. No split files. No hidden conventions.</p>
+              <p>Everything a page needs lives in one plain JS object: server data, client state, mutations, and view. One format. No split files. No hidden conventions.</p>
             </div>
             <div class="brut-idea-step">
               <div class="brut-idea-num" aria-hidden="true">02</div>
               <h2>The schema is the contract</h2>
-              <p>Every spec is validated at startup. Either it's correct or it's rejected — no ambiguity, no misconfiguration that surfaces later in production.</p>
+              <p>Every spec is validated at startup. Either it's correct or it's rejected. No ambiguity, no misconfiguration that surfaces later in production.</p>
             </div>
             <div class="brut-idea-step">
               <div class="brut-idea-num" aria-hidden="true">03</div>
@@ -143,7 +145,7 @@ export default {
         <section class="brut-code-section">
           <div class="brut-code-header">
             <h2>Everything a page needs.<br>Nothing it doesn't.</h2>
-            <p>Server fetchers, client state, mutations, and view — co-located in one object. The spec <em>is</em> the page.</p>
+            <p>Server fetchers, client state, mutations, and view. All co-located in one object. The spec <em>is</em> the page.</p>
           </div>
           <div class="brut-code-block">
             ${codeWindow({ content: exampleSpec, filename: 'src/pages/dashboard.js', lang: 'JavaScript' })}
@@ -153,25 +155,25 @@ export default {
         <section class="brut-constraint">
           <div class="brut-constraint-inner">
             <div class="brut-constraint-label">AI + PULSE</div>
-            <h2 class="brut-constraint-h2">The constraint<br>is the point.</h2>
-            <p class="brut-constraint-lead">When there is only one correct way to build a page, every page is built correctly — whether you wrote it or an AI did. The spec format is the advantage. The schema is the enforcement.</p>
+            <h2 class="brut-constraint-h2">Constrained enough<br>to be trusted.<br>Free enough<br>to be creative.</h2>
+            <p class="brut-constraint-lead">The spec format tells an agent exactly how to wire up data, state, and behaviour. What it doesn't do is dictate the design. Layout, typography, CSS — those are still real decisions. The agent makes them. Pulse just makes sure the page it builds actually works.</p>
             <div class="brut-constraint-cols">
               <div class="brut-col">
-                <div class="brut-col-head">For developers</div>
+                <div class="brut-col-head">The structure is fixed</div>
                 <ul class="brut-col-list">
-                  <li>One format to learn — server, state, mutations, view in one place</li>
-                  <li>Production quality is the starting point, not a final audit</li>
-                  <li>Specs are short, self-contained, and easy to review</li>
-                  <li>Nothing to misconfigure — the framework doesn't give you the choice</li>
+                  <li>One spec format. No ambiguity about how a page should be built</li>
+                  <li>Schema validation at startup. Bad output is rejected before it ships</li>
+                  <li>Security, SSR, and caching are part of the architecture. Not optional</li>
+                  <li>Consistent, reviewable output across every agent and every session</li>
                 </ul>
               </div>
               <div class="brut-col brut-col--hi">
-                <div class="brut-col-head brut-col-head--hi">For AI agents</div>
+                <div class="brut-col-head brut-col-head--hi">The design is not</div>
                 <ul class="brut-col-list">
-                  <li>One valid structure per page — agents can't pick the wrong pattern</li>
-                  <li>The schema rejects bad output at startup, not in production</li>
-                  <li>Security, SSR, and caching can't be accidentally omitted</li>
-                  <li>Consistent output across agents, sessions, and team members</li>
+                  <li>The view is a plain JS function. The agent writes whatever HTML it wants</li>
+                  <li>CSS, layout, and typography are entirely up to the agent</li>
+                  <li>A component library is there when needed. Custom HTML when it isn't</li>
+                  <li>The result looks considered because the agent had room to make it so</li>
                 </ul>
               </div>
             </div>
@@ -200,7 +202,7 @@ export default {
               <tbody>
                 <tr>
                   <th scope="row">Ways to write a page</th>
-                  <td class="v-yes">One — the spec schema</td>
+                  <td class="v-yes">One: the spec schema</td>
                   <td class="v-no">App Router, Pages Router, RSC, client components, loaders…</td>
                   <td class="v-no">+page.svelte, +page.server.js, load(), form actions…</td>
                 </tr>
@@ -230,15 +232,15 @@ export default {
                 </tr>
                 <tr>
                   <th scope="row">Runtime dependencies</th>
-                  <td class="v-yes">Zero — pure Node.js HTTP</td>
+                  <td class="v-yes">Zero. Pure Node.js HTTP</td>
                   <td class="v-no">React, 50+ transitive packages</td>
                   <td class="v-no">Svelte runtime + adapters</td>
                 </tr>
                 <tr>
                   <th scope="row">Production build step</th>
-                  <td class="v-yes">Server needs none — <code>node server.js</code> is production</td>
-                  <td class="v-no">Required — <code>next build</code></td>
-                  <td class="v-no">Required — <code>vite build</code></td>
+                  <td class="v-yes">Server needs none. <code>node server.js</code> is production</td>
+                  <td class="v-no">Required: <code>next build</code></td>
+                  <td class="v-no">Required: <code>vite build</code></td>
                 </tr>
               </tbody>
             </table>
@@ -250,21 +252,21 @@ export default {
             <div class="brut-pillar-icon">${iconZap({ size: 36 })}</div>
             <div class="brut-pillar-body">
               <h3>Performance by design</h3>
-              <p>The shell streams to the browser instantly. Deferred segments arrive as data resolves. ~4 kB of JS on first visit. Zero CLS. Immutable bundle caching on deploy. Not configured — structural.</p>
+              <p>The shell streams to the browser instantly. Deferred segments arrive as data resolves. ~4 kB of JS on first visit. Zero CLS. Immutable bundle caching on deploy. Not configured. Structural.</p>
             </div>
           </div>
           <div class="brut-pillar brut-pillar--alt">
             <div class="brut-pillar-icon">${iconShield({ size: 36 })}</div>
             <div class="brut-pillar-body">
               <h3>Safe by design</h3>
-              <p>Security headers on every response — including 404 and 500. Declarative constraints enforce state bounds after every mutation. Guard runs before any server fetcher. Not a plugin. Part of the pipeline.</p>
+              <p>Security headers on every response, including 404 and 500. Declarative constraints enforce state bounds after every mutation. Guard runs before any server fetcher. Not a plugin. Part of the pipeline.</p>
             </div>
           </div>
           <div class="brut-pillar">
             <div class="brut-pillar-icon">${iconSettings({ size: 36 })}</div>
             <div class="brut-pillar-body">
               <h3>Nothing to configure</h3>
-              <p>No bundler config. No runtime dependencies to install, audit, or upgrade. <code>node server.js</code> is production. No breaking upgrades — page files have no framework imports to version.</p>
+              <p>No bundler config. No runtime dependencies to install, audit, or upgrade. <code>node server.js</code> is production. No breaking upgrades. Page files have no framework imports to version.</p>
             </div>
           </div>
         </section>
@@ -310,15 +312,9 @@ export default {
         </section>` : ''}
 
         <section class="brut-cta">
-          <h2 class="brut-cta-h2">One format.<br>Every page.<br>Production ready.</h2>
-          <ul class="brut-cta-list">
-            <li>One spec object per page — always valid, always readable</li>
-            <li>Streaming SSR and security headers, zero configuration</li>
-            <li>100 Lighthouse built into the architecture</li>
-            <li>Works with AI agents — and without them</li>
-            <li>MIT licensed, zero runtime dependencies</li>
-          </ul>
-          <p class="brut-cta-note">Pulse is in early access. The goal is not to compete on features — it is to eliminate the class of problems that come from having too many of them.</p>
+          <h2 class="brut-cta-h2">Your first page<br>in under<br>2 minutes.</h2>
+          <p class="brut-cta-lead">One spec object. Server data, client state, mutations, and view. In one place. Streaming SSR, security headers, and 100 Lighthouse scores come with it. Nothing to configure.</p>
+          <p class="brut-cta-note">Pulse is in early access. The goal is not to compete on features. It is to eliminate the class of problems that come from having too many of them.</p>
           <div class="brut-cta-actions">
             <a href="/getting-started" class="brut-btn-primary brut-btn-primary--inv">Get Started</a>
             <a href="/spec" class="brut-btn-ghost brut-btn-ghost--light">Read the Spec</a>

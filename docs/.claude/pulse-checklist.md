@@ -36,13 +36,15 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - Navigation → `nav({ logo, links, actions })`
   - Footers → `footer({ logo, links, columns, legal, ... })`
 
-- **Creative override — raw HTML throughout is permitted** when the design intent genuinely calls for it: a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe where components would constrain the expression. This is a deliberate design decision, not a shortcut. When taking this path:
-  - State it explicitly in the build brief: *"Building component-free — raw HTML throughout for creative control."*
+- **Creative override — raw HTML throughout is permitted** when the design intent genuinely calls for it: a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe where components would constrain the expression, or a layout that requires features a component simply doesn't support (e.g. full-viewport height, custom gradient glows, clamp-scaled display type). This is a deliberate design decision, not a shortcut. When taking this path:
+  - **Declare it in a comment at the top of the spec** so the reviewer recognises it: `// component-free — creative override: <reason>`. This is the signal the review tool reads.
   - Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason not to.
   - `/pulse-ui.css` is always required — it provides the token system your custom CSS will use.
   - The quality gate replaces the component checklist: **100/100/100/100 Lighthouse on both desktop and mobile is the pass bar.** A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
 
-- When reviewing a spec built under creative override, do not flag raw section HTML as a violation — check the Lighthouse results instead.
+- **When reviewing**: before flagging a class name like `.hero` as a violation, first ask whether the `hero()` component could actually reproduce the layout. If the answer is no, it is a creative override — check Lighthouse instead of refactoring. Do not flatten a good custom layout into a generic component just to clear a pattern-match.
+
+- **The review tool auto-detects creative override** from the spec comment. When detected, component pattern checks are shown as advisory (`⚡`) not as failures, and the Lighthouse gate is the stated pass bar.
 
 - **Never write App Store or Google Play download buttons by hand.** Always use `appBadge({ store: 'apple', href })` and `appBadge({ store: 'google', href })`. Raw `<a>` tags with badge images are incorrect — `appBadge` renders the correct accessible, styled badge for each store.
 

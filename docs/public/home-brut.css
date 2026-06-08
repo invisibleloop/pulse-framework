@@ -4,17 +4,10 @@
 /* ─── Layout root ─────────────────────────────────────────────────────────── */
 .brut {
   min-height: 100vh;
-  background: var(--brut-bg);
-  color: var(--brut-text);
-  font-family: 'Inter', var(--font);
-  --brut-bg: #f0e642;
-  --brut-text: #0a0a0a;
-  --brut-border: #0a0a0a;
-  --brut-muted: rgba(10, 10, 10, 0.65);
-  --brut-surface: #ffffff;
-  --brut-ink: #0a0a0a;
-  --brut-yellow: #f0e642;
-  --brut-accent: #0a0a0a;
+  background: var(--brut-yellow);
+  color: var(--brut-ink);
+  font-family: "Inter", var(--font);
+  --brut-muted: var(--brut-ink);
 }
 
 /* ─── Nav ─────────────────────────────────────────────────────────────────── */
@@ -42,7 +35,7 @@
   text-decoration: none;
 }
 .brut-nav-logo:hover {
-  color: #ffffff;
+  color: var(--brut-surface);
 }
 
 .brut-nav-links {
@@ -61,10 +54,12 @@
   display: flex;
   align-items: center;
   border-left: 1px solid rgba(255, 255, 255, 0.1);
-  transition: color 0.1s, background 0.1s;
+  transition:
+    color 0.1s,
+    background 0.1s;
 }
 .brut-nav-links a:hover {
-  color: #ffffff;
+  color: var(--brut-surface);
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -75,18 +70,18 @@
   letter-spacing: 0.04em;
 }
 .brut-nav-cta:hover {
-  background: #ffffff !important;
+  background: var(--brut-surface) !important;
   color: var(--brut-ink) !important;
 }
 
 /* ─── Hero ────────────────────────────────────────────────────────────────── */
 .brut-hero {
   display: grid;
-  grid-template-columns: 1fr 420px;
-  grid-template-rows: auto auto;
+  grid-template-columns: 1fr 50%;
+  grid-template-rows: auto 1fr;
   gap: 0;
   border-bottom: 3px solid var(--brut-ink);
-  min-height: 82vh;
+  min-height: 60vh;
   position: relative;
 }
 
@@ -116,13 +111,23 @@
   align-self: stretch;
 }
 
+.brut-hero-kicker {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--brut-muted);
+  margin-bottom: 1rem;
+}
+
 .brut-hero-line1 {
-  font-size: clamp(6rem, 18vw, 16rem);
+  font-size: clamp(4rem, 11vw, 10rem);
   display: block;
 }
 .brut-hero-line2 {
   display: block;
-  font-size: clamp(6rem, 18vw, 16rem);
+  font-size: clamp(4rem, 11vw, 10rem);
   line-height: 0.88;
 }
 .brut-hero-svg {
@@ -133,14 +138,14 @@
   overflow: visible;
 }
 .brut-hero-svg-text {
-  font-size: clamp(6rem, 18vw, 16rem);
+  font-size: clamp(4rem, 11vw, 10rem);
   letter-spacing: 0.01em;
 }
 .brut-hero-line3 {
-  font-size: clamp(3rem, 7.5vw, 7rem);
+  font-size: clamp(2rem, 5.5vw, 5rem);
   display: block;
-  line-height: 0.92;
-  margin-top: 1.5rem;
+  line-height: 1;
+  margin-top: 0.5rem;
 }
 
 .brut-hero-aside {
@@ -151,6 +156,14 @@
   flex-direction: column;
   gap: 1.5rem;
   justify-content: flex-end;
+}
+
+.brut-hero-tag-inline {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--brut-muted);
 }
 
 .brut-hero-desc {
@@ -186,7 +199,9 @@
   text-transform: uppercase;
   text-decoration: none;
   border: 3px solid var(--brut-ink);
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
 }
 .brut-btn-primary:hover {
   background: var(--brut-yellow);
@@ -332,7 +347,7 @@
 
 /* ─── Code section ────────────────────────────────────────────────────────── */
 .brut-code-section {
-  background: #111114;
+  background: var(--brut-dark);
   border-bottom: 3px solid var(--brut-yellow);
   padding: 5rem 2.5rem 6rem;
 }
@@ -347,7 +362,7 @@
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.03em;
-  color: #ffffff;
+  color: var(--brut-surface);
   margin-bottom: 1rem;
 }
 
@@ -410,7 +425,7 @@
   padding: 2rem 0 2rem 2.5rem;
   border-right: none;
   background: var(--brut-ink);
-  color: #ffffff;
+  color: var(--brut-surface);
   margin: 0;
   padding: 2rem 2.5rem;
 }
@@ -483,7 +498,7 @@
   font-weight: 900;
   line-height: 1;
   letter-spacing: -0.04em;
-  color: #ffffff;
+  color: var(--brut-surface);
 }
 
 .brut-table {
@@ -515,7 +530,7 @@
 
 .brut-table thead th:first-child,
 .brut-table th[scope="row"] {
-  background: #0a0a0a;
+  background: var(--brut-ink);
 }
 
 .brut-table tbody tr:nth-child(odd) {
@@ -523,7 +538,7 @@
 }
 
 .brut-table tbody tr:nth-child(odd) th[scope="row"] {
-  background: #111214;
+  background: var(--brut-darker);
 }
 
 .brut-table td {
@@ -723,7 +738,7 @@
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.04em;
-  color: #ffffff;
+  color: var(--brut-surface);
   margin-bottom: 3rem;
 }
 
@@ -751,6 +766,14 @@
   left: 0;
   color: var(--brut-yellow);
   font-weight: 700;
+}
+
+.brut-cta-lead {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.75;
+  max-width: 60ch;
+  margin-bottom: 2rem;
 }
 
 .brut-cta-note {
@@ -814,11 +837,11 @@
 
   .brut-hero-line1,
   .brut-hero-line2 {
-    font-size: clamp(4.5rem, 22vw, 8rem);
+    font-size: clamp(3rem, 14vw, 6rem);
   }
 
   .brut-hero-line3 {
-    font-size: clamp(2.2rem, 10vw, 4rem);
+    font-size: clamp(3rem, 14vw, 6rem);
   }
 
   .brut-stats-bar {
@@ -847,11 +870,22 @@
     border-bottom: 2px solid var(--brut-ink);
     padding: 2rem 0;
   }
-  .brut-idea-step:first-child { padding-left: 0; padding-right: 0; }
-  .brut-idea-step:last-child  { border-bottom: none; padding-left: 0; padding-right: 0; }
-  .brut-idea-step:not(:first-child):not(:last-child) { padding-left: 0; }
+  .brut-idea-step:first-child {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .brut-idea-step:last-child {
+    border-bottom: none;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .brut-idea-step:not(:first-child):not(:last-child) {
+    padding-left: 0;
+  }
 
-  .brut-idea { padding: 3rem 1.5rem; }
+  .brut-idea {
+    padding: 3rem 1.5rem;
+  }
 
   .brut-constraint-cols {
     grid-template-columns: 1fr;
@@ -868,11 +902,21 @@
     margin: 0;
   }
 
-  .brut-constraint-inner { padding: 3rem 1.5rem; }
-  .brut-versus { padding: 3rem 1.5rem; }
-  .brut-metrics { padding: 3rem 1.5rem; }
-  .brut-cta { padding: 4rem 1.5rem; }
-  .brut-code-section { padding: 3.5rem 1.5rem 4rem; }
+  .brut-constraint-inner {
+    padding: 3rem 1.5rem;
+  }
+  .brut-versus {
+    padding: 3rem 1.5rem;
+  }
+  .brut-metrics {
+    padding: 3rem 1.5rem;
+  }
+  .brut-cta {
+    padding: 4rem 1.5rem;
+  }
+  .brut-code-section {
+    padding: 3.5rem 1.5rem 4rem;
+  }
 
   .brut-pillar {
     grid-template-columns: 60px 1fr;
@@ -900,7 +944,7 @@
   }
 
   .brut-metrics-group:last-child,
-  .brut-metrics-group:nth-last-child(-n+2):nth-child(odd):last-child {
+  .brut-metrics-group:nth-last-child(-n + 2):nth-child(odd):last-child {
     border-bottom: none;
   }
 
@@ -928,7 +972,7 @@
     border-top: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .brut-stat:nth-child(-n+2) {
+  .brut-stat:nth-child(-n + 2) {
     border-top: none;
   }
 

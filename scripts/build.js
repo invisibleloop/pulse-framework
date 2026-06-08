@@ -19,7 +19,7 @@ import path         from 'path'
 import { createHash } from 'crypto'
 import { discoverPages } from '../src/cli/discover.js'
 import { renderToString } from '../src/runtime/ssr.js'
-import { c, header, table, ok, fail, info, elapsed, icon } from '../src/cli/fmt.js'
+import { c, header, table, ok, fail, info, warn, elapsed, icon } from '../src/cli/fmt.js'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -381,6 +381,23 @@ const OUT_DIR = path.join(ROOT, 'public', 'dist')
 const TMP_DIR = path.join(ROOT, '.pulse-build')
 
 // ---------------------------------------------------------------------------
+// Load pulse.config.js (optional)
+// ---------------------------------------------------------------------------
+
+let _projectConfig = {}
+const _configPath = path.join(ROOT, 'pulse.config.js')
+if (fs.existsSync(_configPath)) {
+  try { _projectConfig = (await import(_configPath)).default ?? {} } catch { /* ignore */ }
+}
+
+// css.safelist — array of class name strings or RegExp patterns to always keep
+// even if the purger would otherwise remove them.
+// Example in pulse.config.js:
+//   export default { css: { safelist: ['my-class', /^js-/] } }
+const CSS_SAFELIST = (_projectConfig.css?.safelist ?? [])
+  .map(entry => typeof entry === 'string' ? entry : entry)
+
+// ---------------------------------------------------------------------------
 // Discover pages
 // ---------------------------------------------------------------------------
 
@@ -516,7 +533,7 @@ fs.rmSync(TMP_DIR, { recursive: true })
 // CSS Purge — strip unused styles, write content-hashed CSS bundles
 // ---------------------------------------------------------------------------
 
-await purgeCssStep(pages, manifest, ROOT, OUT_DIR)
+const cssPurgeStats = await purgeCssStep(pages, manifest, ROOT, OUT_DIR)
 
 // ---------------------------------------------------------------------------
 // JS static assets — minify + hash any .js files directly in public/
@@ -556,13 +573,17 @@ await jsAssetsStep(ROOT, OUT_DIR, manifest)
         c.dim(bundle.replace('/dist/', '')),
         `${sizeKb} kB`,
         c.dim('js'),
+        '',
       ])
     } else if (ext === '.css') {
+      const pct = cssPurgeStats?.[src]
+      const pctLabel = pct != null ? c.dim(`−${pct}%`) : ''
       rows.push([
         c.dim(src),
         c.dim(bundle.replace('/dist/', '')),
         `${sizeKb} kB`,
         c.dim('css'),
+        pctLabel,
       ])
     }
   }
@@ -577,9 +598,9 @@ await jsAssetsStep(ROOT, OUT_DIR, manifest)
   })
 
   console.log('\n' + table(
-    ['Route / Asset', 'Bundle', 'Size', 'Type'],
+    ['Route / Asset', 'Bundle', 'Size', 'Type', 'Purged'],
     rows,
-    { align: ['left', 'left', 'right', 'left'] }
+    { align: ['left', 'left', 'right', 'left', 'right'] }
   ))
 
   const totalMs = Date.now() - BUILD_START
@@ -599,9 +620,28 @@ async function jsAssetsStep(root, outDir, manifest) {
 
   console.log(info('Hashing static JS assets…'))
 
+  // Collect fetch/XHR origins used in static JS for CSP connect-src checking
+  const cspConnectSrc = new Set([
+    ...(_projectConfig.csp?.['connect-src'] ?? []),
+    'self',
+  ])
+
   for (const file of jsFiles) {
     const srcPath = path.join(publicDir, file)
     const source  = fs.readFileSync(srcPath, 'utf8')
+
+    // Warn if the file contains fetch/XMLHttpRequest calls to origins not in
+    // the project's CSP connect-src — these will silently fail in production.
+    const fetchUrls = [...source.matchAll(/fetch\s*\(\s*['"`](https?:\/\/[^'"`]+)['"`]/g)].map(m => m[1])
+    for (const url of fetchUrls) {
+      try {
+        const origin = new URL(url).origin
+        if (!cspConnectSrc.has(origin) && !cspConnectSrc.has('*')) {
+          console.log(warn(`${file}: fetch to ${origin} may be blocked — add to csp.connect-src in pulse.config.js`))
+        }
+      } catch { /* ignore malformed URLs */ }
+    }
+
     const { code } = await esbuild.transform(source, { minify: true, target: 'es2018' })
     const hash    = createHash('sha256').update(code).digest('hex').slice(0, 8)
     const name    = path.basename(file, '.js')
@@ -610,8 +650,6 @@ async function jsAssetsStep(root, outDir, manifest) {
     fs.writeFileSync(path.join(outDir, outName), code)
     manifest[`/${file}`] = `/dist/${outName}`
 
-    const origKb = (Buffer.byteLength(source) / 1024).toFixed(1)
-    const minKb  = (Buffer.byteLength(code)   / 1024).toFixed(1)
     // silent — summary table covers this
   }
 
@@ -629,6 +667,7 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   const htmlContents = []
   const jsContents   = []
   const cssFiles     = new Set()
+  const cssStats     = {}
 
   for (const { filePath } of pages) {
     try {
@@ -667,6 +706,16 @@ async function purgeCssStep(pages, manifest, root, outDir) {
     }
   }
 
+  // Scan public/*.js static assets — these often contain classList.toggle() or
+  // classList.add() calls that reference CSS classes not present in any page spec,
+  // which would otherwise be incorrectly purged from the built CSS.
+  const publicDir = path.join(root, 'public')
+  if (fs.existsSync(publicDir)) {
+    for (const f of fs.readdirSync(publicDir).filter(f => f.endsWith('.js'))) {
+      try { jsContents.push(fs.readFileSync(path.join(publicDir, f), 'utf8')) } catch {}
+    }
+  }
+
   // Scan pulse UI package source — class names generated by UI components
   // (breadcrumbs, avatar, container, etc.) only appear in the package source,
   // not in the project's own pages, so they'd otherwise be purged.
@@ -687,10 +736,10 @@ async function purgeCssStep(pages, manifest, root, outDir) {
 
   if (cssFiles.size === 0) {
     console.log(info('No CSS files referenced — skipping.'))
-    return
+    return cssStats
   }
 
-  const usedClasses = extractUsedClasses(htmlContents, jsContents)
+  const usedClasses = extractUsedClasses(htmlContents, jsContents, CSS_SAFELIST)
 
   for (const cssHref of cssFiles) {
     // CSS path is relative to public/ (e.g. '/pulse-ui.css' → public/pulse-ui.css)
@@ -698,6 +747,21 @@ async function purgeCssStep(pages, manifest, root, outDir) {
     if (!fs.existsSync(cssPath)) continue
 
     const original = fs.readFileSync(cssPath, 'utf8')
+
+    // Warn about classes defined in this CSS file that weren't found in any
+    // scanned source — these will be purged and may indicate a missing scan source
+    // (e.g. a JS file that toggles classes via classList but wasn't picked up).
+    // Only warn for project-owned CSS files (not pulse-ui.css framework styles).
+    if (!cssHref.includes('pulse-ui')) {
+      const definedClasses = [...original.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)\s*[{,:\[]/g)]
+        .map(m => m[1])
+        .filter((cls, i, arr) => arr.indexOf(cls) === i) // dedupe
+      const purgedClasses = definedClasses.filter(cls => !usedClasses.has(cls))
+      if (purgedClasses.length > 0) {
+        console.log(warn(`${cssHref}: ${purgedClasses.length} class${purgedClasses.length === 1 ? '' : 'es'} purged (not found in any scanned source): ${purgedClasses.slice(0, 5).map(c => `.${c}`).join(', ')}${purgedClasses.length > 5 ? ` … +${purgedClasses.length - 5} more` : ''}`))
+      }
+    }
+
     const purged   = minifyCss(purgeCss(original, usedClasses))
 
     const hash    = createHash('sha256').update(purged).digest('hex').slice(0, 8)
@@ -707,25 +771,24 @@ async function purgeCssStep(pages, manifest, root, outDir) {
 
     fs.writeFileSync(outPath, purged)
 
-    const origKb  = (Buffer.byteLength(original) / 1024).toFixed(1)
-    const purgKb  = (Buffer.byteLength(purged)   / 1024).toFixed(1)
-    const pct     = Math.round((1 - Buffer.byteLength(purged) / Buffer.byteLength(original)) * 100)
-
-    // silent — summary table covers this
+    const origBytes = Buffer.byteLength(original)
+    const purgBytes = Buffer.byteLength(purged)
+    const pct       = Math.round((1 - purgBytes / origBytes) * 100)
+    cssStats[cssHref] = pct
 
     manifest[cssHref] = `/dist/${outName}`
   }
 
   // Re-write manifest with CSS entries added
   fs.writeFileSync(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
-  // silent — summary table covers this
+  return cssStats
 }
 
 // ---------------------------------------------------------------------------
 // CSS class extractor
 // ---------------------------------------------------------------------------
 
-function extractUsedClasses(htmlContents, jsContents) {
+function extractUsedClasses(htmlContents, jsContents, safelist = []) {
   const used = new Set()
 
   // Extract from class="..." in both rendered HTML and JS template literals
@@ -749,6 +812,21 @@ function extractUsedClasses(htmlContents, jsContents) {
         if (cls && cls.includes('-')) used.add(cls)
       }
     }
+  }
+
+  // Apply safelist from pulse.config.js — css.safelist accepts strings or RegExp.
+  // String entries are added directly; RegExp entries are matched against all
+  // class names defined in the CSS (resolved later in purgeCss via selectorUsed
+  // because we don't have the CSS text here). To handle RegExp, we mark them as
+  // a sentinel that selectorUsed checks separately.
+  for (const entry of safelist) {
+    if (typeof entry === 'string') {
+      used.add(entry)
+    }
+    // RegExp entries are stored on the Set as a symbol property for selectorUsed to check
+  }
+  if (safelist.some(e => e instanceof RegExp)) {
+    used._safelistPatterns = safelist.filter(e => e instanceof RegExp)
   }
 
   return used
@@ -820,7 +898,17 @@ function parseCssBlocks(css) {
 
 /**
  * Return true if any selector in the rule should be kept.
- * Keeps: element selectors, *, :root, and any rule where a used class appears.
+ *
+ * Matching strategy: check the *rightmost* class token in the selector (the
+ * subject of the rule). A rule like `.parent .child` should survive only when
+ * `.child` is used — keeping it whenever `.parent` is used would retain dead
+ * rules whose actual target class was never referenced.
+ *
+ * Pseudo-classes/elements and attribute selectors are stripped before checking
+ * so `.btn:hover` is treated as `.btn`, `.btn--active::before` as `.btn--active`.
+ *
+ * Element-only selectors (`a`, `*`, `:root`) and rules that contain no class
+ * tokens at all are always kept.
  */
 function selectorUsed(selector, usedClasses) {
   const selectors = selector.split(',').map(s => s.trim())
@@ -832,12 +920,21 @@ function selectorUsed(selector, usedClasses) {
       .replace(/\[[^\]]*\]/g, '')
       .trim()
 
-    // Keep element selectors, *, :root — no class tokens
+    // Keep element-only selectors — no class tokens present
     if (!base.includes('.')) return true
 
-    // Keep if any class in the selector is in the used set
-    const classes = [...sel.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(m => m[1])
-    if (classes.some(cls => usedClasses.has(cls))) return true
+    // Extract all class tokens and check the rightmost one (the rule subject).
+    // Using the rightmost class correctly handles descendant selectors:
+    //   .nav .link  → subject is .link
+    //   .btn--active → subject is .btn--active
+    const classes = [...base.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(m => m[1])
+    if (classes.length === 0) return true
+    const subject = classes[classes.length - 1]
+    if (usedClasses.has(subject)) return true
+
+    // Check RegExp safelist patterns if any were provided
+    const patterns = usedClasses._safelistPatterns
+    if (patterns && patterns.some(re => re.test(subject))) return true
   }
 
   return false
@@ -868,9 +965,18 @@ function purgeCss(cssText, usedClasses) {
       const p = block.prelude.toLowerCase()
       if (/^@(?:keyframes|font-face|charset)/.test(p)) {
         kept.push(block.raw)
-      } else if (/^@(?:media|supports|layer)/.test(p)) {
+      } else if (/^@(?:media|supports)/.test(p)) {
         const innerPurged = purgeCss(block.inner, usedClasses)
         if (innerPurged.trim()) kept.push(`${block.prelude} {\n${innerPurged}\n}`)
+      } else if (/^@layer/.test(p)) {
+        // Always preserve empty @layer declarations — they establish cascade order
+        // and removing them silently changes specificity even when no rules remain.
+        const innerPurged = purgeCss(block.inner, usedClasses)
+        if (innerPurged.trim()) {
+          kept.push(`${block.prelude} {\n${innerPurged}\n}`)
+        } else {
+          kept.push(`${block.prelude} {}`)
+        }
       } else {
         kept.push(block.raw) // unknown at-blocks — keep to be safe
       }
