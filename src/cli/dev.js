@@ -140,6 +140,48 @@ process.on('SIGINT',  closeReloadClients)
 let reloadTimer = null
 let lastReload = 0
 
+/**
+ * Check rendered HTML class names against CSS files in public/ and warn about
+ * any classes that are used in templates but not defined in any stylesheet.
+ * Only checks project-owned CSS (not pulse-ui.css) to avoid noise.
+ */
+async function checkUndefinedClasses(specs) {
+  try {
+    // Collect all class names defined in project CSS files
+    const cssDir = path.join(ROOT, 'public')
+    const definedClasses = new Set()
+    if (fs.existsSync(cssDir)) {
+      for (const file of fs.readdirSync(cssDir).filter(f => f.endsWith('.css') && f !== 'pulse-ui.css')) {
+        const css = fs.readFileSync(path.join(cssDir, file), 'utf8')
+        for (const [, cls] of css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)\s*[{,:\[]/g)) {
+          definedClasses.add(cls)
+        }
+      }
+    }
+    if (definedClasses.size === 0) return
+
+    // Render each spec and collect used class names from the HTML output
+    const { renderToString } = await import('../runtime/ssr.js')
+    for (const spec of specs) {
+      if (!spec.view) continue
+      try {
+        const { html } = await renderToString(spec, {})
+        const usedInSpec = new Set()
+        for (const [, classes] of html.matchAll(/class="([^"]+)"/g)) {
+          for (const cls of classes.trim().split(/\s+/)) {
+            if (cls && !cls.startsWith('ui-')) usedInSpec.add(cls)
+          }
+        }
+        const undefined_ = [...usedInSpec].filter(cls => !definedClasses.has(cls))
+        if (undefined_.length > 0) {
+          const route = spec.route ?? spec.filePath ?? '(unknown)'
+          log.warn(`${route}: class${undefined_.length === 1 ? '' : 'es'} used but not defined in any CSS: ${undefined_.slice(0, 5).map(c => `.${c}`).join(', ')}${undefined_.length > 5 ? ` … +${undefined_.length - 5} more` : ''}`)
+        }
+      } catch { /* render failures are not our concern here */ }
+    }
+  } catch { /* never crash the dev server over a lint warning */ }
+}
+
 async function triggerReload(label = 'File changed') {
   clearTimeout(reloadTimer)
   reloadTimer = setTimeout(async () => {
@@ -151,6 +193,7 @@ async function triggerReload(label = 'File changed') {
       const fresh = await loadPages(ROOT, now)
       updateSpecs(fresh)
       log.info(`${label} — specs reloaded`)
+      checkUndefinedClasses(fresh)
     } catch (err) {
       log.error(`Spec reload failed: ${err.message}`)
     }

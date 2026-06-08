@@ -150,6 +150,20 @@ html, body {
   color:      var(--ui-text);
 }
 
+/* ghost-light — use on dark section backgrounds (e.g. navy hero, section--dark).
+   Renders with light/white text and a subtle light border so it remains legible
+   regardless of whether the surrounding theme is light or dark.               */
+.ui-btn--ghost-light {
+  background:   transparent;
+  color:        rgba(255, 255, 255, 0.9);
+  border:       1px solid rgba(255, 255, 255, 0.35);
+}
+.ui-btn--ghost-light:hover:not(.ui-btn--disabled):not([disabled]) {
+  background:   rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.65);
+  color:        #ffffff;
+}
+
 .ui-btn--danger {
   background: var(--ui-red-dim);
   color:      var(--ui-red);
@@ -681,6 +695,36 @@ html, body {
 .ui-section--lg    { padding-top: 7rem; padding-bottom: 7rem; }
 .ui-section--alt   { background: var(--ui-surface,   var(--surface,   #111116)); }
 .ui-section--dark  { background: var(--ui-surface-2, var(--surface-2, #18181f)); }
+
+/* In light theme, --ui-surface-2 resolves to a light grey — not "dark".
+   Override so section--dark always renders a genuinely dark background that
+   contrasts with the page, regardless of the active theme.                  */
+[data-theme="light"] .ui-section--dark,
+.ui-theme-light .ui-section--dark {
+  background:  var(--ui-dark-bg,  #1a1a2e);
+  color:       var(--ui-dark-text, #e2e2ea);
+}
+/* Ensure text children inherit the light colour in the dark section */
+[data-theme="light"] .ui-section--dark .ui-section-title,
+[data-theme="light"] .ui-section--dark .ui-section-eyebrow,
+[data-theme="light"] .ui-section--dark .ui-section-subtitle,
+.ui-theme-light .ui-section--dark .ui-section-title,
+.ui-theme-light .ui-section--dark .ui-section-eyebrow,
+.ui-theme-light .ui-section--dark .ui-section-subtitle {
+  color: inherit;
+}
+/* Ghost button inside a dark section on a light-theme page */
+[data-theme="light"] .ui-section--dark .ui-btn--ghost,
+.ui-theme-light .ui-section--dark .ui-btn--ghost {
+  color:        var(--ui-dark-text, #e2e2ea);
+  border-color: rgba(226, 226, 234, 0.35);
+}
+[data-theme="light"] .ui-section--dark .ui-btn--ghost:hover:not(.ui-btn--disabled):not([disabled]),
+.ui-theme-light .ui-section--dark .ui-btn--ghost:hover:not(.ui-btn--disabled):not([disabled]) {
+  background:   rgba(226, 226, 234, 0.1);
+  border-color: rgba(226, 226, 234, 0.65);
+  color:        var(--ui-dark-text, #e2e2ea);
+}
 
 /* diagonal — tapered bottom edge; follow with a section that starts flush */
 .ui-section--diagonal {

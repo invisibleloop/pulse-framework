@@ -22,7 +22,7 @@ export default {
       ${section('requirements', 'Requirements')}
       <ul>
         <li><strong>Node.js 22 or later</strong> — <a href="https://nodejs.org" target="_blank" rel="noopener" aria-label="nodejs.org (opens in new tab)">nodejs.org</a></li>
-        <li><strong>Google Chrome</strong> — used by the agent for screenshots and Lighthouse audits — <a href="https://www.google.com/chrome" target="_blank" rel="noopener" aria-label="Download Google Chrome (opens in new tab)">google.com/chrome</a></li>
+        <li><strong>Google Chrome</strong> — used by the agent for screenshots and Lighthouse audits — <a href="https://www.google.com/chrome" target="_blank" rel="noopener" aria-label="google.com/chrome (opens in new tab)">google.com/chrome</a></li>
         <li><strong>An AI agent</strong> — Claude Code or GitHub Copilot CLI (pick one):</li>
       </ul>
       <ul>

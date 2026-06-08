@@ -34,7 +34,7 @@ function sidebar(currentHref) {
   }).join('')
 
   return `
-    <aside class="docs-sidebar" aria-label="Documentation navigation">
+    <aside class="docs-sidebar" id="docs-sidebar" aria-label="Documentation navigation">
       <div class="sidebar-logo">
         <a href="/" class="logo-link" aria-label="Pulse home">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -44,10 +44,58 @@ function sidebar(currentHref) {
         </a>
         <span class="version-badge">v${version}</span>
       </div>
-      <nav class="sidebar-nav">
+      <div class="sidebar-search-wrap">
+        <svg class="sidebar-search-icon" width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+        </svg>
+        <input
+          type="search"
+          id="sidebar-search"
+          class="sidebar-search"
+          placeholder="Filter pages…"
+          aria-label="Filter documentation pages"
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <button class="sidebar-search-full" aria-label="Search all docs content" title="Search all docs">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+      <nav class="sidebar-nav" id="sidebar-nav">
         ${sections}
+        <p class="sidebar-no-results" hidden>No pages found</p>
       </nav>
-    </aside>`
+    </aside>
+    <div class="search-overlay" id="search-overlay" role="dialog" aria-modal="true" aria-label="Search documentation" hidden>
+      <div class="search-overlay-backdrop"></div>
+      <div class="search-overlay-panel">
+        <div class="search-overlay-header">
+          <div class="search-overlay-input-wrap">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+            </svg>
+            <input
+              type="search"
+              id="search-overlay-input"
+              class="search-overlay-input"
+              placeholder="Search all docs…"
+              aria-label="Search all documentation"
+              autocomplete="off"
+              spellcheck="false"
+            >
+          </div>
+          <button class="search-overlay-close" aria-label="Close search">ESC</button>
+        </div>
+        <div class="search-overlay-results" id="search-overlay-results" role="listbox" aria-label="Search results"></div>
+        <div class="search-overlay-footer">
+          <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+          <span><kbd>↵</kbd> open</span>
+          <span><kbd>ESC</kbd> close</span>
+        </div>
+      </div>
+    </div>`
 }
 
 function prevNextBar(prev, next) {
