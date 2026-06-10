@@ -1,3 +1,94 @@
+## Multi-page sites — the right patterns
+
+### Shared layout component
+
+When a project has more than one page, **never repeat the nav and footer in every spec**. Extract them into a shared component:
+
+```js
+// src/components/layout.js
+import { nav, footer, button } from '@invisibleloop/pulse/ui'
+
+export const NAV_LINKS = [
+  { label: 'Home',    href: '/' },
+  { label: 'About',  href: '/about' },
+  { label: 'Blog',   href: '/blog' },
+]
+
+export const layout = ({ content, activePath = '' }) => `
+  ${nav({
+    logo: 'My Site',
+    logoHref: '/',
+    links: NAV_LINKS.map(l => ({
+      ...l,
+      attrs: activePath === l.href ? 'aria-current="page"' : '',
+    })),
+    action: button({ label: 'Sign up', href: '/signup', variant: 'primary', size: 'sm' }),
+  })}
+  <main id="main-content">
+    ${content}
+  </main>
+  ${footer({
+    logo: 'My Site',
+    links: NAV_LINKS,
+    legal: '© 2026 My Site',
+  })}
+`
+```
+
+Each page spec uses it:
+```js
+import { layout } from '../components/layout.js'
+
+export default {
+  route: '/about',
+  view: () => layout({
+    activePath: '/about',
+    content: `<h1>About us</h1>`,
+  }),
+}
+```
+
+**Rules:**
+- Add new nav links in `src/components/layout.js` only — never hardcode nav links in individual page specs.
+- Pass `activePath` so the active nav item gets `aria-current="page"` — this is required for Lighthouse accessibility.
+- The `layout()` component must include `<main id="main-content">` — do not add it again inside `content`.
+
+### Skip link
+
+Add a skip link before the nav for keyboard users. It must be the first focusable element on every page:
+
+```js
+// src/components/layout.js
+export const SKIP_LINK = `<a href="#main-content" class="skip-link">Skip to main content</a>`
+
+// public/app.css
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: var(--ui-space-2);
+  z-index: 9999;
+  padding: var(--ui-space-2) var(--ui-space-4);
+  background: var(--ui-accent);
+  color: var(--ui-bg);
+  font-weight: 600;
+}
+.skip-link:focus { left: var(--ui-space-2); }
+```
+
+Include it at the top of every layout: `${SKIP_LINK}${nav({...})}`.
+
+### Active nav state
+
+The active page link must have `aria-current="page"`. Without it Lighthouse accessibility fails.
+
+The pattern above uses `attrs` — alternatively, use CSS with `:not` and a body class, or check `ctx` in the server fetcher and pass a flag to the view. Any approach is fine; the output must be `aria-current="page"` on the matching link.
+
+### Shared state across pages
+
+Use the global store (`pulse.store.js`) for state that needs to be consistent across pages — user session, cart count, theme preference. Do not duplicate server fetchers across specs for the same data.
+
+See `pulse://guide/server` for the full store API.
+
 ## Site navigation
 
 Projects define navigation in src/components/layout.js via a NAV_LINKS array.
