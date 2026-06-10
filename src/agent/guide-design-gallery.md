@@ -15,7 +15,7 @@ Warm cream background, hand-crafted feel. Photo-forward hero with a split layout
 **Key components:** `hero({ layout:'split' })`, `section`, `container`, `grid`, `card` (with `footer`), `stat`, `testimonial`, `cta`, `badge`
 
 **Distinguishing moves:**
-- Gradient hero `linear-gradient(135deg, #fdf6ee, #fdebd0)` with `color:#3d2b1e`
+- Gradient hero `linear-gradient(135deg, #fdf6ee, #fdebd0)` with `color:#3d2b1e` — define these hex values as tokens in `public/theme.css` and reference them via `var()`; the lint hook blocks raw hex in any other stylesheet
 - Nav with `background: rgba(255,250,245,0.92)` and matching text colour
 - Cards with price footer: `<div class="u-flex u-items-center u-justify-between"><span>From</span><strong>£35</strong></div>`
 - Credentials list: icon + span with `iconCheckCircle`
@@ -104,6 +104,8 @@ Long-form article layout with `prose` component for markdown rendering, breadcru
 ---
 
 ## Component Combinations by Use Case
+
+> Inline `style=""` in these snippets is limited to structural image properties (`aspect-ratio`, `object-fit`, fixed heights) that have no utility-class equivalent — this is the permitted exception to the no-inline-style rule. Colours and theming still belong in tokens.
 
 ### Image Card (Card with Cover Photo)
 Card doesn't have a native image slot — use `flush:true` and put the image inside `content`:
@@ -218,16 +220,16 @@ section({
 ```
 
 ### Booking / Contact Form Inside a Card
+Use the `input()` component for fields — it renders the label, id wiring, and required marker accessibly. Do not write raw `<input>`/`<label>` HTML:
+
 ```js
 card({
   title:   'Book an Appointment',
   content: `
     <p class="u-text-muted u-text-sm u-mb-4">Fill in the form and we'll confirm within a few hours.</p>
     <form class="u-flex u-flex-col u-gap-3" data-action="submit">
-      <div class="u-flex u-flex-col u-gap-1">
-        <label class="u-text-sm u-font-medium" for="name">Your name</label>
-        <input id="name" name="name" type="text" class="u-input" required>
-      </div>
+      ${input({ label: 'Your name', name: 'name', required: true })}
+      ${input({ label: 'Email', name: 'email', type: 'email', required: true })}
       ${button({ label: 'Send Enquiry', type: 'submit', variant: 'primary', fullWidth: true })}
     </form>
   `,

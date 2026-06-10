@@ -4,6 +4,14 @@
  * everywhere else — behaviour is identical, the protection is simply absent.
  *
  * Policy name 'pulse' must match the trusted-types CSP directive on the server.
+ *
+ * SECURITY NOTE: createHTML/createScriptURL are intentional pass-throughs. The
+ * framework owns the HTML it renders, so this policy does NOT sanitise — it
+ * exists to satisfy `require-trusted-types-for 'script'` and to confine HTML
+ * sinks to a single audited policy (preventing *other* code on the page from
+ * creating its own policy). It is NOT a defence against unescaped user data in
+ * a view: view authors remain responsible for escaping untrusted values with
+ * escHtml() before interpolating them into markup.
  */
 
 let _policy = null

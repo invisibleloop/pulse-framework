@@ -5,7 +5,7 @@ Pulse is a spec-first frontend framework. The spec is the source of truth. No co
 ## Commands
 
 ```bash
-npm run dev    # start dev server at http://localhost:3001
+npm run dev    # start dev server at http://localhost:3000 (pulse_build serves production on 3001)
 npm test       # run all 92 unit tests
 npm run build  # bundle for production → public/dist/
 ```
@@ -56,6 +56,12 @@ export const mySpec = {
 
   // Timeout for all server fetchers on this page (ms). Overrides createServer fetcherTimeout.
   serverTimeout: 5000,
+
+  // Query-string keys that change this page's output, for the in-process page cache.
+  // The cache IGNORES the query string by default — arbitrary ?n=… params cannot mint
+  // unbounded cache entries (memory-DoS guard). If the rendered output depends on a
+  // query param, list it here so distinct values get distinct cache entries.
+  cacheVary: ['q', 'page'],
 
   // Global store keys this page subscribes to — appears in view's server arg
   // Store mutations update all subscribed pages without a server round-trip
@@ -458,7 +464,7 @@ For any **new page, landing page, or branded site**, run this sequence first. Do
 3. pulse_intent(description)                  → archetype + scaffold + guide list
 ```
 
-**Before calling `pulse_intake`**, gather the required information by asking the user — one question at a time, in plain prose, no bullet lists. You need at minimum: the product name, what it does (pitch), and its key features. Ask for inspiration references, palette, vibe, and anti-style if the user hasn't mentioned them.
+**Before calling `pulse_intake`**, gather the required information by asking the user — one question at a time, in plain prose, no bullet lists. You need at minimum: the product name, what it does (pitch), and its key features. **Always ask first whether they have design inspiration** (a site they love, a screenshot, a mood board — dropped into `public/intake/` or pasted as a URL), and check `public/intake/` for images already there. Then ask for palette, vibe, and anti-style if not mentioned.
 
 **`pulse_sketch` is mandatory** for `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes — those vibes fight the default centred-hero layout. Skip it only for `corporate` or `minimal` when no structural preference has been stated.
 
@@ -470,13 +476,16 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 
 **Before calling any slow tool (`pulse_build`, `lighthouse_audit`), output a status message to the user first** — e.g. "Building for production — ~30 s…" or "Running Lighthouse desktop audit…". Never call a slow tool silently.
 
+> **Canonical workflow:** `pulse://workflow` (`src/agent/workflow.md`) is the authoritative version, including complexity tiers (not every task needs all phases). The table below is the summary — if they ever disagree, the MCP resource wins.
+
 | Phase | Action | Gate |
 |---|---|---|
 | 1. Understand | Read guides, call `pulse_list_structure` | — |
 | 2. Plan | Present plan to user, wait for confirmation | User confirms |
 | 3. Build | Write spec + related files | — |
 | 4. Validate | `pulse_validate` — fix all errors + warnings | Clean output |
-| 5. Browser | Screenshot → `pulse_design_review` (if intake ran) → `pulse_layout_review` → `/verify` (Lighthouse desktop + mobile + `pulse_review`) | ⛔ Do not skip: all gates must pass + `.pulse-verified` stamp written |
+| 5a. Design approval *(new builds only)* | Screenshot → describe → ask the user | ⛔ User approves layout before any slow checks run (skip for edits/fixes) |
+| 5b. Browser | `pulse_design_review` (if intake ran) → `pulse_layout_review` → `/verify` (Lighthouse desktop + mobile + `pulse_review`) | ⛔ Do not skip: all gates must pass + `.pulse-verified` stamp written |
 | 6. Tests | Write tests, run them, fix failures | All pass |
 | 7. Code Review | `pulse_review` — only after phases 4–6 pass | — |
 | 8. Fix | Fix every review issue, re-run affected gates | All gates still pass |
@@ -487,7 +496,7 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 
 **The Code Review is always last.** Never invoke `pulse_review` before validate, Lighthouse, design review, and tests all pass.
 
-The `/verify` command runs the browser check loop (phases 4–5) automatically. Use it.
+The `/verify` command runs the browser check loop (phases 4–5b) automatically. Use it.
 
 ## Pulse vs React — Do Not Do These
 

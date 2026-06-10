@@ -22,10 +22,10 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 - **Always restart the server and reload the browser after every file edit — before checking the result.** The dev server restarts on file changes but the browser tab stays stale. The required sequence is: `pulse_restart_server` → `navigate_page`. Never attempt to debug a visual problem without doing both steps first.
 
-### Components first
+### Components first — or creative override
 
 - **Before writing any HTML by hand, check `src/ui/index.js`.** There are 50+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
-- **Do not reinvent component patterns.** These patterns have dedicated components — never write custom HTML for them:
+- **Do not reinvent component patterns.** These patterns have dedicated components — never write custom HTML for them unless a creative override applies (see below):
   - Hero sections → `hero({ title, subtitle, actions, image, ... })`
   - Product/service cards → `card({ title, body, image, footer, ... })`
   - Image + text two-column layouts → `media({ image, content, reverse })`
@@ -35,10 +35,16 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - CTAs → `cta({ title, subtitle, actions })`
   - Navigation → `nav({ logo, links, actions })`
   - Footers → `footer({ logo, links, columns, legal, ... })`
-  
-  If you find yourself writing `class="hero"` or `class="product-card"` or `class="testimonial"`, stop — import the component instead.
 
-- **Exception — brutalist, editorial, and playful vibes:** these vibes intentionally break from polished templates. `pulse://guide/explore` explicitly endorses zone-based raw HTML for distinctive layouts. For `brutalist`, `editorial`, `retro`, or `neon` vibes, raw structural HTML is correct — components can still be used for functional atoms (`button`, `input`, `modal`) but structural sections do not need to come from components. When reviewing a brutalist or editorial spec, do not flag raw section HTML as a violation.
+- **Creative override — raw HTML throughout is permitted** when the design intent genuinely calls for it: a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe where components would constrain the expression, or a layout that requires features a component simply doesn't support (e.g. full-viewport height, custom gradient glows, clamp-scaled display type). This is a deliberate design decision, not a shortcut. When taking this path:
+  - **Declare it in a comment at the top of the spec** so the reviewer recognises it: `// component-free — creative override: <reason>`. This is the signal the review tool reads.
+  - Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason not to.
+  - `/pulse-ui.css` is always required — it provides the token system your custom CSS will use.
+  - The quality gate replaces the component checklist: **Lighthouse 100 on Accessibility, Best Practices, and SEO — desktop and mobile — plus CLS 0.00 is the pass bar.** (Performance is reported but not gated; it varies with machine load.) A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
+
+- **When reviewing**: before flagging a class name like `.hero` as a violation, first ask whether the `hero()` component could actually reproduce the layout. If the answer is no, it is a creative override — check Lighthouse instead of refactoring. Do not flatten a good custom layout into a generic component just to clear a pattern-match.
+
+- **The review tool auto-detects creative override** from the spec comment. When detected, component pattern checks are shown as advisory (`⚡`) not as failures, and the Lighthouse gate is the stated pass bar.
 
 - **Never write App Store or Google Play download buttons by hand.** Always use `appBadge({ store: 'apple', href })` and `appBadge({ store: 'google', href })`. Raw `<a>` tags with badge images are incorrect — `appBadge` renders the correct accessible, styled badge for each store.
 
@@ -125,12 +131,6 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   assert.equal(result.attr('img', 'src'), mockProduct.image)
   ```
   Supported selectors: `tag`, `.class`, `#id`, `[attr]`, `[attr="value"]`, combinations (`button.primary[disabled]`), and **descendant combinators** (`result.count('.parent li')`, `result.find('tbody tr')`). Descendant selectors match the rightmost token within the ancestor context — they do not return 0 if the ancestor doesn't exist, they simply find no matching descendants.
-
-### Markdown
-
-- **Use `md()` from `@invisibleloop/pulse/md` for `.md` file content.** Never read and parse markdown manually. Pass the result's `html` to `prose()`.
-- **Call the same `md()` fetcher in both `meta` and `server`** — it caches on `ctx._mdCache` so the file is only read once per request. Do not create two separate fetchers for the same file.
-- **Always add `onViewError` on dynamic markdown routes** (routes with `:param` segments loading `.md` files). A missing file throws `{ status: 404 }` which must be caught gracefully.
 
 ### Markdown
 

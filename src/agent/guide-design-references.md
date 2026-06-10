@@ -62,12 +62,12 @@ When you choose a design direction, tell the user which one you're using and why
 **Feels like:** Duolingo, Headspace, Loom, Figma landing page, pop-art toy brand  
 **vibe:** `playful`  
 **Geometry:** very rounded (18–24px), friendly icons, colourful  
-**Typography:** rounded or friendly sans, loose spacing, emoji-friendly  
+**Typography:** rounded or friendly sans, loose spacing, friendly icon accents (icon library, never emoji)  
 **Palette pattern:** bright bg (coral / mint / lavender) + dark text  
 **Signature moves (use these, not 3-col feature grids):**
 - **Full-colour section blocks** — each section has its own bg colour (yellow stats strip, cyan testimonials, hot-pink CTA). Palette is structure, not accent.
 - **Oversized hero element** — the product's key visual (a game board, an illustration, an icon) fills most of the hero viewport. `phoneFrame` is one option, not the default.
-- **Marquee strip** — giant repeated glyphs, emoji, or product icons scrolling across the page between sections (`marquee` component)
+- **Marquee strip** — giant repeated icon-library glyphs, brand marks, or product icons scrolling across the page between sections (`marquee` component). Use icons from `src/ui/icons.js`, not emoji — emoji are banned in UI output (not accessible, not theme-aware).
 - **Tilted `photoCard`s** — testimonial or feature cards at ±2–4° with `photoCard` or CSS `transform: rotate()`
 - **Memphis-style geometric shapes** between sections — use `decorate(pattern:'circles')` or CSS background shapes
 - **Social proof as ticker** — a `marquee` of short quotes or star ratings, not a 3-col grid

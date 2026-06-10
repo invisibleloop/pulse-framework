@@ -25,6 +25,33 @@ function esc(s) {
     .replace(/"/g, '&quot;')
 }
 
+/**
+ * Sanitise a markdown link/image URL.
+ *
+ * Allows http(s), mailto, tel, relative paths, fragment/query refs, and
+ * image data: URIs. Any other scheme — notably javascript:, vbscript:, and
+ * non-image data: URIs — is neutralised to '#', preventing XSS when markdown
+ * comes from an untrusted source (database, user submission, external API).
+ *
+ * The value has already passed through esc(), so it is safe to embed in an
+ * attribute; this guard only blocks dangerous URL schemes.
+ *
+ * @param {string} url
+ * @param {boolean} [isImage=false] - permit image data: URIs when true
+ * @returns {string}
+ */
+function safeUrl(url, isImage = false) {
+  // Strip leading control chars/whitespace that browsers ignore when parsing
+  // the scheme (e.g. "java\tscript:"), then test for a scheme prefix.
+  const stripped = url.replace(/[\x00-\x20]+/g, '')
+  const scheme   = stripped.match(/^([a-zA-Z][a-zA-Z0-9+.\-]*):/)
+  if (!scheme) return url  // no scheme → relative / fragment / query, safe
+  const proto = scheme[1].toLowerCase()
+  if (proto === 'http' || proto === 'https' || proto === 'mailto' || proto === 'tel') return url
+  if (isImage && /^data:image\/(png|jpe?g|gif|webp|avif|svg\+xml);/i.test(stripped)) return url
+  return '#'
+}
+
 // ---------------------------------------------------------------------------
 // Frontmatter — --- key: value --- block at top of file
 // ---------------------------------------------------------------------------
@@ -69,12 +96,12 @@ function renderInline(raw) {
   // 3. Images (before links — same syntax with leading !)
   s = s.replace(/!\[([^\]]*)\]\(([^)\s"]+)(?:\s+"([^"]*)")?\)/g,
     (_, alt, src, title) =>
-      `<img src="${src}" alt="${alt}"${title ? ` title="${title}"` : ''}>`)
+      `<img src="${safeUrl(src, true)}" alt="${alt}"${title ? ` title="${title}"` : ''}>`)
 
   // 4. Links
   s = s.replace(/\[([^\]]+)\]\(([^)\s"]+)(?:\s+"([^"]*)")?\)/g,
     (_, label, href, title) =>
-      `<a href="${href}"${title ? ` title="${title}"` : ''}>${label}</a>`)
+      `<a href="${safeUrl(href)}"${title ? ` title="${title}"` : ''}>${label}</a>`)
 
   // 5. Bold + italic (order: *** before ** before *)
   s = s.replace(/\*{3}([^*\n]+)\*{3}/g, (_, t) => `<strong><em>${t}</em></strong>`)

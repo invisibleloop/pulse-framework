@@ -15,7 +15,7 @@ If $ARGUMENTS is provided, use it as the file path or route. Otherwise, identify
 If this is a new page build (came through `pulse_intake` or `build-page`):
 
 1. Take a screenshot and describe what you see to the user.
-2. Use `ask_user` to ask: "Happy with the design and layout, or would you like any changes before I run Lighthouse?" — provide choices: `["Yes, looks good — proceed", "I'd like some changes first"]`
+2. Ask the user: "Happy with the design and layout, or would you like any changes before I run Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — proceed", "I'd like some changes first"]`; otherwise ask in plain prose.
 3. **Do not proceed to step 3 until the user explicitly confirms.** If they want changes, stop here, make the changes, then restart from step 2. Lighthouse takes ~90 seconds — do not waste it on a design the user hasn't approved.
 
 ### 3. Validate the spec

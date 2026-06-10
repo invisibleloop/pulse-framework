@@ -175,6 +175,42 @@ test('HTML is escaped in inline text', () => {
   assert(html.includes('&lt;script&gt;'), `Got: ${html}`)
 })
 
+// --- URL scheme sanitisation (XSS) -----------------------------------------
+
+test('link with javascript: scheme is neutralised to #', () => {
+  const { html } = parseMd('[x](javascript:alert(1))')
+  assert(!html.toLowerCase().includes('javascript:'), `Got: ${html}`)
+  assert(html.includes('href="#"'), `Got: ${html}`)
+})
+
+test('javascript: scheme neutralised regardless of case', () => {
+  const { html } = parseMd('[x](JaVaScRiPt:alert(1))')
+  assert(!html.toLowerCase().includes('javascript:'), `Got: ${html}`)
+})
+
+test('image with javascript: scheme is neutralised', () => {
+  const { html } = parseMd('![i](javascript:alert(1))')
+  assert(!html.toLowerCase().includes('javascript:'), `Got: ${html}`)
+  assert(html.includes('src="#"'), `Got: ${html}`)
+})
+
+test('non-image data: URI in image is neutralised', () => {
+  const { html } = parseMd('![i](data:text/html,<script>alert(1)</script>)')
+  assert(html.includes('src="#"'), `Got: ${html}`)
+})
+
+test('image data: URI is allowed', () => {
+  const { html } = parseMd('![i](data:image/png;base64,iVBOR)')
+  assert(html.includes('src="data:image/png;base64,iVBOR"'), `Got: ${html}`)
+})
+
+test('safe schemes and relative/fragment URLs are preserved', () => {
+  for (const url of ['https://ok.com', 'http://ok.com', '/relative', '#frag', 'mailto:a@b.com', 'tel:+15551234']) {
+    const { html } = parseMd(`[x](${url})`)
+    assert(html.includes(`href="${url}"`), `Expected ${url} preserved, got: ${html}`)
+  }
+})
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)

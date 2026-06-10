@@ -1081,7 +1081,7 @@ ${(() => {
   // Creative override detection — check if spec declares component-free mode
   const creativeOverride = /component.free|creative\s+override|raw\s+HTML\s+throughout/i.test(source)
   checks.push(creativeOverride
-    ? '⚡ **Creative override declared** — component pattern checks are advisory only. Lighthouse 100/100/100/100 is the pass bar.'
+    ? '⚡ **Creative override declared** — component pattern checks are advisory only. Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop + mobile) plus CLS 0.00 is the pass bar.'
     : '○ No creative override declared — component checks apply')
 
   return checks.join('\n')
@@ -1122,7 +1122,7 @@ Work through every item. Fix anything that fails. Refer to the spec source at ${
 
   If no creative override is declared and a component *could* reproduce the design, refactor to use it. Custom utility classes on top of components are fine (\`hero({ ... })\` + override CSS) — but do not write the entire structure from scratch when the component supports the layout.
 
-- [ ] **Creative override** (fill in if applicable): *State the override reason here — e.g. "full-viewport gradient hero not achievable with hero() component"*. Confirm Lighthouse 100/100/100/100 desktop and mobile passes before closing the review.
+- [ ] **Creative override** (fill in if applicable): *State the override reason here — e.g. "full-viewport gradient hero not achievable with hero() component"*. Confirm Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop and mobile) plus CLS 0.00 before closing the review.
 - [ ] No \`data-event\` on text inputs — this destroys focus on every keystroke
 - [ ] No \`className\`, \`htmlFor\`, \`onClick=\`, or other React patterns
 - [ ] No hardcoded hex colours in view — only \`var(--ui-*)\` tokens (anchor \`href="#id"\` values are fine — those are not colours)

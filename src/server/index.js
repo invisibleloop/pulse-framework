@@ -119,16 +119,25 @@ function negotiateEncoding(req) {
   return null
 }
 
+// Brotli quality for on-the-fly (per-request) compression. The library default
+// is 11 — the maximum, intended for build-time compression of static assets.
+// At q11 each dynamic response costs ~10x the CPU of q5 for a marginal size gain
+// on HTML, inflating TTFB and limiting throughput. q5 matches what CDNs/nginx use
+// for dynamic content. Pre-built /dist/* bundles should be compressed at build time.
+const BROTLI_DYNAMIC = {
+  params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 },
+}
+
 /** Compress a Buffer using the given encoding. Returns the original if none. */
 async function compressBuffer(buf, encoding) {
-  if (encoding === 'br')   return brotliAsync(buf)
+  if (encoding === 'br')   return brotliAsync(buf, BROTLI_DYNAMIC)
   if (encoding === 'gzip') return gzipAsync(buf)
   return buf
 }
 
 /** Create a transform stream for the given encoding, or null. */
 function createCompressor(encoding) {
-  if (encoding === 'br')   return zlib.createBrotliCompress()
+  if (encoding === 'br')   return zlib.createBrotliCompress(BROTLI_DYNAMIC)
   if (encoding === 'gzip') return zlib.createGzip()
   return null
 }
@@ -211,21 +220,38 @@ function parseMultipart(buf, boundary) {
 // In-process TTL cache — server data memoization
 // ---------------------------------------------------------------------------
 
-class TtlCache {
-  constructor() {
-    this._store    = new Map()
-    this._interval = null
+export class TtlCache {
+  /**
+   * @param {number} [maxEntries=1000] - hard cap on stored entries. When exceeded,
+   *   the least-recently-used entry is evicted. Bounds memory so cache keys derived
+   *   from attacker-controlled input (query strings, Host header) cannot grow the
+   *   cache without limit.
+   */
+  constructor(maxEntries = 1000) {
+    this._store      = new Map()  // Map preserves insertion order → used for LRU
+    this._interval   = null
+    this._maxEntries = maxEntries
   }
 
   get(key) {
     const entry = this._store.get(key)
     if (!entry) return undefined
     if (Date.now() > entry.expiresAt) { this._store.delete(key); return undefined }
+    // Mark as most-recently-used: re-insert to move to the end of the Map.
+    this._store.delete(key)
+    this._store.set(key, entry)
     return entry.value
   }
 
   set(key, value, ttlSeconds) {
+    // Refresh position if it already exists so LRU ordering stays correct.
+    this._store.delete(key)
     this._store.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
+    // Evict the least-recently-used entry (first in insertion order) when over cap.
+    if (this._store.size > this._maxEntries) {
+      const oldest = this._store.keys().next().value
+      this._store.delete(oldest)
+    }
   }
 
   /** Remove all entries whose TTL has elapsed. */
@@ -308,9 +334,27 @@ function pageCacheTtl(spec, dev, defaultCache) {
   return cfg?.maxAge || 0
 }
 
-/** Build the in-process page cache key scoped to route + request parameters. */
+/**
+ * Build the in-process page cache key.
+ *
+ * The key is scoped to the route + path params + only the query keys the spec
+ * explicitly opts into via `spec.cacheVary`. The full query string is NOT part
+ * of the key by default: an unauthenticated client can append arbitrary query
+ * params (?n=1, ?n=2, …) that don't change a cacheable page's output, and
+ * including them would let that client mint unbounded distinct cache entries
+ * (memory-exhaustion DoS). Pages whose output genuinely depends on a query
+ * param declare it in `cacheVary: ['q']`.
+ */
 function buildCacheKey(spec, ctx) {
-  return spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
+  let varied = ''
+  if (Array.isArray(spec.cacheVary) && spec.cacheVary.length) {
+    const picked = {}
+    for (const k of spec.cacheVary) {
+      if (ctx.query[k] !== undefined) picked[k] = ctx.query[k]
+    }
+    varied = JSON.stringify(picked)
+  }
+  return spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + varied
 }
 
 /**
@@ -517,8 +561,10 @@ export async function createServer(entries, options = {}) {
     }
   }
 
-  // Per-host brand cache — avoids hitting the data store on every request
-  const brandCache = new TtlCache()
+  // Per-host brand cache — avoids hitting the data store on every request.
+  // Capped (Host header is attacker-controlled, so unbounded distinct keys
+  // would otherwise be a memory-exhaustion vector).
+  const brandCache = new TtlCache(500)
   brandCache.startEviction(30_000)  // brand TTL is 60s, scan every 30s
 
   // Load manifest — maps source hydrate paths to production bundle paths
@@ -554,14 +600,19 @@ export async function createServer(entries, options = {}) {
   // Build route table — let so it can be swapped on hot reload
   let router = buildRouter(specs)
 
+  // Resolve the logger module once at startup rather than dynamically importing
+  // it on every request's `finish` event. `logRequest` stays null until loaded.
+  let logRequest = null
+  if (!quiet) {
+    import('../cli/logger.js').then(m => { logRequest = m.request }).catch(() => {})
+  }
+
   const server = http.createServer(async (req, res) => {
     const reqStart = Date.now()
     res.on('finish', () => {
-      if (!quiet) {
-        import('../cli/logger.js').then(({ request: logRequest }) => {
-          const url = new URL(req.url, `http://localhost:${port}`)
-          logRequest({ method: req.method, pathname: url.pathname, status: res.statusCode, ms: Date.now() - reqStart })
-        }).catch(() => {})
+      if (logRequest) {
+        const url = new URL(req.url, `http://localhost:${port}`)
+        logRequest({ method: req.method, pathname: url.pathname, status: res.statusCode, ms: Date.now() - reqStart })
       }
     })
     try {
@@ -691,6 +742,13 @@ export async function createServer(entries, options = {}) {
       // Canonical path follows the trailingSlash mode so the <link> is consistent with redirects.
       // spec.meta.canonical (string or function) is resolved inside each handler, where serverState
       // is available — allowing dynamic canonicals from server fetcher results.
+      //
+      // SECURITY: proto/host come from client-controllable headers (x-forwarded-*,
+      // Host). They are HTML-escaped before being emitted into <link rel=canonical>
+      // and og:* tags, so this is not an XSS vector — but if your edge/proxy does
+      // not pin or validate these headers, an attacker can influence the canonical
+      // URL (SEO/canonical poisoning). Trust x-forwarded-* only behind a proxy you
+      // control; set spec.meta.canonical to a fixed string to opt out entirely.
       const proto        = req.headers['x-forwarded-proto'] || 'http'
       const host         = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`
       const canonicalPath = trailingSlash === 'add' && pathname !== '/'
@@ -1112,7 +1170,7 @@ async function handleRawResponse(spec, ctx, req, res, dev) {
   let content
 
   if (!dev && spec.serverTtl) {
-    const key = 'raw:' + spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + JSON.stringify(ctx.query)
+    const key = 'raw:' + buildCacheKey(spec, ctx)
     content = serverDataCache.get(key)
     if (!content) {
       const serverState = await resolveServerState(spec, ctx)
@@ -1181,9 +1239,15 @@ function matchRoute(router, pathname) {
     if (!match) continue
 
     const params = {}
-    route.params.forEach((name, i) => {
-      params[name] = decodeURIComponent(match[i + 1])
-    })
+    try {
+      route.params.forEach((name, i) => {
+        params[name] = decodeURIComponent(match[i + 1])
+      })
+    } catch {
+      // Malformed percent-encoding (e.g. /%ZZ) — treat as no match (404)
+      // rather than letting decodeURIComponent throw a 500.
+      continue
+    }
 
     return { spec: route.spec, params }
   }
@@ -1433,7 +1497,9 @@ function resolveSpec(spec, hydrateMap) {
  */
 function serveStatic(req, res, staticDir, dev = false) {
   const url      = new URL(req.url, 'http://localhost')
-  const pathname = decodeURIComponent(url.pathname)
+  let pathname
+  try { pathname = decodeURIComponent(url.pathname) }
+  catch { return false }  // malformed percent-encoding → not a static file
 
   // Prevent directory traversal
   const filePath = path.join(staticDir, pathname)
@@ -1516,6 +1582,7 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 function notFoundHtml(pathname) {
