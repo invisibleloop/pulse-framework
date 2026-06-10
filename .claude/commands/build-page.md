@@ -50,7 +50,7 @@ Check for:
 - Layout looks correct
 - No console errors via `mcp__chrome-devtools__list_console_messages`
 
-Then ask the user: "Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — run tests and Lighthouse", "I'd like some changes first"]`; it waits for the answer without ending the turn. If you must ask in plain prose and end your turn, call `pulse_await_approval` first so the Stop hooks let the turn end. If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
+Then **call `pulse_await_approval`** and ask the user: "Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — run tests and Lighthouse", "I'd like some changes first"]`; otherwise ask in plain prose. Always call the tool before asking, whichever way you ask: in some hosts (including Claude Code) even a question tool ends the turn and fires the Stop hooks; the marker is harmless if the turn doesn't end. If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
 
 **Do not proceed to step 7 until the user explicitly confirms.** If they want changes, make them and return to step 6.
 

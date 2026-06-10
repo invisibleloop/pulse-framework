@@ -11,6 +11,9 @@
  * @param {'sm'|'md'|'lg'} opts.gap - Gap between images (default: 'md')
  * @param {boolean} opts.rounded  - Rounded corners on images
  * @param {string}  opts.ratio    - CSS aspect-ratio for grid/strip cells e.g. '4/3', '1/1', '16/9'
+ * @param {boolean} opts.lazy     - loading="lazy" on images (default: true). Set false for
+ *                                  above-the-fold galleries or when full-page screenshots
+ *                                  during development need every image rendered eagerly.
  * @param {string}  opts.class
  */
 
@@ -26,6 +29,7 @@ export function gallery({
   gap     = 'md',
   rounded = false,
   ratio   = '4/3',
+  lazy    = true,
   class: cls = '',
 } = {}) {
   if (!LAYOUTS.has(layout)) layout = 'grid'
@@ -42,7 +46,7 @@ export function gallery({
   ].filter(Boolean).join(' ')
 
   const items = images.map(img => {
-    const imgTag = `<img src="${e(img.src)}" alt="${e(img.alt || '')}" class="ui-gallery-img" loading="lazy" decoding="async">`
+    const imgTag = `<img src="${e(img.src)}" alt="${e(img.alt || '')}" class="ui-gallery-img"${lazy ? ' loading="lazy"' : ''} decoding="async">`
     const cap    = img.caption ? `<figcaption class="ui-gallery-caption">${e(img.caption)}</figcaption>` : ''
     const inner  = img.href
       ? `<a href="${e(img.href)}" class="ui-gallery-link">${imgTag}</a>`

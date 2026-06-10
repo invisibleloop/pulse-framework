@@ -261,7 +261,61 @@ test('approval pause mechanism is wired end to end', () => {
 
   // 5. The workflow must teach the mechanism at the design-approval gate
   assert(workflow.includes('pulse_await_approval'),
-    'workflow.md Phase 5a must explain how to pause: host question tool preferred, pulse_await_approval otherwise')
+    'workflow.md Phase 5a must explain how to pause: always pulse_await_approval before asking')
+
+  // 6. No doc may claim a host question tool avoids ending the turn — field
+  //    testing showed AskUserQuestion in Claude Code still ends the turn and
+  //    fires the Stop hooks. The safe instruction is: always write the marker
+  //    first, regardless of how the question is asked.
+  const claimDocs = agentDocs.filter(f =>
+    fs.existsSync(path.join(ROOT, f)) &&
+    /without ending the turn/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))
+  )
+  if (/without ending the turn.*Stop hooks never fire/is.test(serverSrc)) claimDocs.push('src/mcp/server.js')
+  assert(claimDocs.length === 0,
+    `These docs claim a question tool avoids ending the turn (empirically false in Claude Code): ${claimDocs.join(', ')}. ` +
+    `Instruct: always call pulse_await_approval before asking, whichever way the question is asked.`)
+})
+
+test('pulse_check_contrast extracts variables from [data-theme="light"] blocks', () => {
+  // Regression: the light-theme block pattern was an ungrouped alternation
+  // (a|b) + '\\s*\\{([^}]+)\\}' — the body matcher bound only to the second
+  // alternative, so [data-theme="light"] blocks matched with no body capture
+  // and the checker silently reported nothing for the light theme.
+  // Recreate extractVars with the exact pattern strings from server.js source.
+  const patterns = [...serverSrc.matchAll(/extractVars\(source,\s*'((?:[^'\\]|\\.)*)'\)/g)].map(m =>
+    m[1].replace(/\\\\/g, '\\').replace(/\\'/g, "'")
+  )
+  assert(patterns.length === 2, `Expected 2 extractVars call patterns in server.js, found ${patterns.length}`)
+  const lightPattern = patterns.find(p => p.includes('data-theme'))
+  assert(lightPattern, 'No data-theme pattern found in extractVars calls')
+
+  const sampleCss = `:root { --accent: #112233; }\n[data-theme="light"] { --accent: #445566; --bg: #ffffff; }`
+  const blockRegex = new RegExp(lightPattern + '\\s*\\{([^}]+)\\}', 'gi')
+  const m = blockRegex.exec(sampleCss)
+  assert(m && m[1] && m[1].includes('--accent'),
+    `The light-theme block pattern in pulse_check_contrast fails to capture the block body. ` +
+    `Pattern: ${lightPattern} — alternations must be wrapped in (?:...).`)
+})
+
+test('dark theme default is declared at every spec-writing entry point', () => {
+  // Agents repeatedly assumed the default theme is light, built the page, then
+  // discovered dark at the screenshot — costing an edit → restart → re-approval
+  // cycle. The dark default must be stated wherever a spec is first written:
+  // the spec skeleton, the plan/build brief, and the checklist.
+  const guideSpec = fs.readFileSync(path.join(agentDir, 'guide-spec.md'), 'utf8')
+  const workflow  = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  const checklist = fs.readFileSync(path.join(agentDir, 'checklist.md'), 'utf8')
+  const claudeMd  = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8')
+
+  assert(/theme:/.test(guideSpec) && /DEFAULT IS DARK/i.test(guideSpec),
+    'guide-spec.md meta skeleton must include the theme field with the dark-default warning')
+  assert(/Theme:\s+light \| dark/.test(workflow),
+    'workflow.md build brief template must include a Theme line')
+  assert(/default theme is DARK/i.test(checklist),
+    'checklist.md Critical section must state the dark default')
+  assert(/theme:\s+'light'/.test(claudeMd) && /default is DARK/i.test(claudeMd),
+    'CLAUDE.md spec meta block must show theme with the dark-default warning')
 })
 
 test('identity.md declares the creative override (Design Freedom) carve-out', () => {

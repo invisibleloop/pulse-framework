@@ -25,6 +25,8 @@ import { pricing }     from './pricing.js'
 import { accordion }   from './accordion.js'
 import { nav }         from './nav.js'
 import { appBadge }    from './app-badge.js'
+import { dropCap }     from './drop-cap.js'
+import { gallery }     from './gallery.js'
 import { container }   from './container.js'
 import { section }     from './section.js'
 import { grid }        from './grid.js'
@@ -1316,6 +1318,38 @@ test('uiImage: wraps in aspect-ratio crop when ratio given', () => {
 
 test('uiImage: escapes src to prevent XSS', () => {
   const html = uiImage({ src: '"><script>alert(1)</script>', alt: '' })
+  assert.doesNotMatch(html, /<script>/)
+})
+
+test('dropCap: inline style carries only the dynamic font-size — alignment lives in CSS', () => {
+  // Regression: a relative inline line-height (lines * 0.8 → 2.4 for 3 lines)
+  // made the float box ~3x the glyph height, so serif caps floated below the
+  // opening line instead of top-aligning. line-height/float/margin now live in
+  // .ui-drop-cap-letter (pulse-ui.css) with a fixed ~cap-height value.
+  const html = dropCap({ letter: 'O', content: 'nce upon a time.' })
+  assert.match(html, /class="ui-drop-cap-letter"/)
+  assert.match(html, /style="font-size:3\.6em"/)
+  assert.doesNotMatch(html, /line-height/)
+  assert.doesNotMatch(html, /float:left/)
+})
+
+test('dropCap: lines option scales the font-size', () => {
+  const html = dropCap({ letter: 'O', content: 'nce.', lines: 5 })
+  assert.match(html, /style="font-size:6em"/)
+})
+
+test('gallery: images are lazy by default', () => {
+  const html = gallery({ images: [{ src: '/a.jpg', alt: 'A' }] })
+  assert.match(html, /loading="lazy"/)
+})
+
+test('gallery: lazy:false renders eager images', () => {
+  const html = gallery({ images: [{ src: '/a.jpg', alt: 'A' }], lazy: false })
+  assert.doesNotMatch(html, /loading="lazy"/)
+})
+
+test('dropCap: escapes letter and content', () => {
+  const html = dropCap({ letter: '<', content: '<script>alert(1)</script>' })
   assert.doesNotMatch(html, /<script>/)
 })
 

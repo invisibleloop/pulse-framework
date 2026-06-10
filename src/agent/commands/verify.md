@@ -15,7 +15,7 @@ If $ARGUMENTS is provided, use it as the file path or route. Otherwise, identify
 If this is a new page build (came through `pulse_intake` or `build-page`):
 
 1. Take a screenshot and describe what you see to the user.
-2. Ask the user: "Happy with the design and layout, or would you like any changes before I run Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — proceed", "I'd like some changes first"]`; it waits for the answer without ending the turn. If you must ask in plain prose and end your turn, call `pulse_await_approval` first so the Stop hooks let the turn end.
+2. **Call `pulse_await_approval` first**, then ask the user: "Happy with the design and layout, or would you like any changes before I run Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — proceed", "I'd like some changes first"]`; otherwise ask in plain prose. Always call the tool before asking, whichever way you ask: in some hosts (including Claude Code) even a question tool ends the turn and fires the Stop hooks. The marker is harmless if the turn doesn't end — it is consumed when the user replies.
 3. **Do not proceed to step 3 until the user explicitly confirms.** If they want changes, stop here, make the changes, then restart from step 2. Lighthouse takes ~90 seconds — do not waste it on a design the user hasn't approved. If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
 
 ### 3. Validate the spec
@@ -46,7 +46,7 @@ The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__c
 
 **Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3.
 
-After both Lighthouse runs pass, call `pulse_restart_server` to return to the dev server.
+**Stay on the production server (port 3001)** — steps 8 and 9 use it too. Do not call `pulse_restart_server` yet.
 
 ### 8. Mobile layout check
 
@@ -54,7 +54,7 @@ Emulate a mobile viewport and take a screenshot to catch wrapping, overflow, and
 
 ```
 mcp__chrome-devtools__emulate  viewport: "390x844x2,mobile,touch"
-mcp__chrome-devtools__navigate_page  url: "http://localhost:3000/"
+mcp__chrome-devtools__navigate_page  url: "http://localhost:3001/"
 mcp__chrome-devtools__take_screenshot
 ```
 
@@ -72,7 +72,9 @@ mcp__chrome-devtools__emulate  viewport: "1440x900x1"
 
 ### 9. Performance
 
-Navigate to the page route, then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
+**Run the trace against the production server, not dev.** Navigate to `http://localhost:3001/<route>` first — if the production server is no longer running, run `pulse_build` again. Tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
+
+After the trace, call `pulse_restart_server` to return to the dev server.
 
 ### 10. Console errors
 

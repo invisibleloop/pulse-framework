@@ -34,7 +34,7 @@ Navigate to the page route with `mcp__chrome-devtools__navigate_page`, then take
 **If `pulse_intake` ran earlier in this session** (i.e. this is a new page or site, not an edit or bug fix):
 
 1. Show the screenshot to the user.
-2. Ask: *"Happy with the layout and direction, or any changes before I run Lighthouse?"* — use your host's question tool if it has one (e.g. AskUserQuestion); it waits for the answer without ending the turn. If you must ask in plain prose and end your turn, call `pulse_await_approval` first so the Stop hooks let the turn end.
+2. **Call `pulse_await_approval` first, then ask:** *"Happy with the layout and direction, or any changes before I run Lighthouse?"* Always call the tool before asking, even when using a question tool like AskUserQuestion — in some hosts (including Claude Code) the question still ends the turn and fires the Stop hooks. The marker is harmless if the turn doesn't end; it is consumed when the user replies.
 3. **Stop and wait for their response.** Do not proceed to step 4b or Lighthouse until the user explicitly approves. If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
 
 If the user requests changes: make edits, restart the server, take a new screenshot, describe what changed, ask again. Repeat until approved. No Lighthouse between design rounds.
@@ -67,7 +67,7 @@ Run `mcp__chrome-devtools__lighthouse_audit` with `device: "mobile"` against the
 
 ### 8. Performance
 
-Navigate to the page route, then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.
+**Stay on the production server (port 3001) for the trace** — navigate to `http://localhost:3001/<route>` first; tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.
 
 ### 9. Console errors
 

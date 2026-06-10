@@ -16,6 +16,10 @@ export default {
     title:       'Page Title',             // string or async (ctx) => string
     description: 'Meta description',       // string or async (ctx) => string
     styles:      ['/app.css'],             // string[] or (ctx) => string[]
+    theme:       'light',                  // 'light' | 'dark' — ⚠ DEFAULT IS DARK when unset.
+                                           // Decide at write time: a light design needs
+                                           // meta.theme: 'light' or the page renders dark.
+    vibe:        'minimal',                // optional — radius/weight/spacing preset
     ogTitle:     'Social title',           // optional — falls back to title
     ogImage:     'https://…/og.jpg',       // optional — 1200×630 recommended
     canonical:   'https://mysite.com/…',  // optional — string or (ctx) => string

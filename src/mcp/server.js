@@ -1210,11 +1210,11 @@ The stop hook compares each changed spec's mtime against this stamp. Any spec ne
 server.registerTool(
   'pulse_await_approval',
   {
-    description: `Pause the workflow to wait for the user's answer — call this immediately BEFORE ending your turn with a blocking question (e.g. the design-approval gate: "Happy with the layout and direction…?").
+    description: `Pause the workflow to wait for the user's answer — call this immediately BEFORE asking a blocking question (e.g. the design-approval gate: "Happy with the layout and direction…?").
 
-It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let this one turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn.
+It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let the turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn.
 
-**Prefer your host's question tool if it has one** (e.g. AskUserQuestion in Claude Code): a question tool waits for the answer *without ending the turn*, so the Stop hooks never fire and this marker is unnecessary. Use pulse_await_approval only when you must ask in plain prose and end the turn.
+**Always call this before the approval question, regardless of how you ask.** In some hosts (including Claude Code) even a dedicated question tool like AskUserQuestion ends the turn, which fires the Stop hooks. The marker is harmless if the turn does not end — it is simply consumed when the user replies. Calling it first works in every host; relying on the question tool to keep the turn open does not.
 
 Do NOT use this to skip verification — it buys exactly one turn-end, paired with a question the user must answer. Calling it without asking anything just delays the gates by one message.`,
     inputSchema: {},
@@ -2099,6 +2099,7 @@ Returns observations grouped by category: completeness, data flow, components, s
       if (!content.includes('title:'))       quickWins.push('`meta.title` is missing — every page needs a unique title.')
       if (!content.includes('description:')) quickWins.push('`meta.description` is missing — used for SEO and social previews.')
       if (!content.includes('styles:'))      quickWins.push('`meta.styles` not set — add `[\'/pulse-ui.css\']` if you are using any UI components.')
+      if (!content.includes('theme:'))       quickWins.push('`meta.theme` not set — Pulse renders DARK by default. If this design is light, add `theme: \'light\'` now rather than discovering a dark page at the screenshot.')
     }
 
     // --- Export ---
@@ -2432,7 +2433,7 @@ Accepts antiStyle ("what should this NOT look like?") and inspiration (a site or
       targetUser: z.string().optional().describe('Who this is for — shapes copy tone. E.g. "busy professionals", "indie developers", "home cooks"'),
       palette:    z.string().optional().describe('Brand colours as hex values, comma-separated. E.g. "#6366f1, #f8fafc, #1e1b4b". Used for early contrast check.'),
       font:       z.string().optional().describe('Brand font name, or omit for system-ui'),
-      theme:      z.enum(['light', 'dark']).optional().describe('Colour theme preference'),
+      theme:      z.enum(['light', 'dark']).optional().describe('Colour theme — ALWAYS ask the user for this; Pulse renders DARK when meta.theme is unset, so an unstated light design ships dark and costs a rework cycle. Pass the answer through to meta.theme in the spec.'),
       vibe:       z.enum(['warm', 'editorial', 'playful', 'minimal', 'bold', 'brutalist', 'retro', 'corporate', 'neon', 'paper']).optional().describe('Visual personality — see pulse://guide/design-references for full descriptions. warm (rounded, inviting), editorial (serif, sharp), playful (very rounded), minimal (clean), bold (impact headings), brutalist (zero radius, raw), retro (slab serif, nostalgic), corporate (conservative), neon (monospace, futuristic), paper (organic, serif, journal)'),
       styleNotes: z.string().optional().describe('Free-form style direction — e.g. "like a print poster", "market stall chalkboard feel", "clinical and professional"'),
       antiStyle:  z.string().optional().describe('"What should this NOT look like?" — negative aesthetic constraint. E.g. "not corporate SaaS", "not another Vercel dark card page", "not a startup landing page". Used to steer component and layout choices away from over-used patterns.'),
@@ -2998,6 +2999,78 @@ Returns tokens grouped by category.`,
 )
 
 server.registerTool(
+  'pulse_check_csp',
+  {
+    description: `Resolve the redirect chains of external asset URLs (images, fonts, stylesheets) and return the complete set of origins your CSP must allow — as ready-to-paste config.
+
+Many asset hosts redirect to a CDN origin (picsum.photos → fastly.picsum.photos): allowing only the URL you wrote still blocks the actual bytes, and the browser error names the CDN origin, which is confusing to debug. This tool follows each redirect chain (up to 5 hops) and reports every origin involved.
+
+Call it with the external URLs you plan to use, before your first Lighthouse run. Suggested directive: img-src for images, font-src for font files, style-src for stylesheets.`,
+    inputSchema: {
+      urls:      z.array(z.string()).describe('External asset URLs to check, e.g. ["https://picsum.photos/id/10/1200/600"]'),
+      directive: z.string().optional().describe("CSP directive these assets belong to (default: 'img-src')"),
+    },
+  },
+  async ({ urls, directive = 'img-src' }) => {
+    const MAX_HOPS = 5
+    const origins  = new Set()
+    const lines    = []
+
+    for (const rawUrl of urls.slice(0, 10)) {
+      let url
+      try { url = new URL(rawUrl) } catch { lines.push(`✗ ${rawUrl} — not a valid URL`); continue }
+
+      const chain = [url.origin]
+      let blocked = null
+      try {
+        for (let hop = 0; hop < MAX_HOPS; hop++) {
+          const res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000) })
+          if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
+            url = new URL(res.headers.get('location'), url)
+            chain.push(url.origin)
+            continue
+          }
+          if (res.status === 405) {
+            // Host rejects HEAD — confirm with a ranged GET so we still see redirects
+            const get = await fetch(url, { method: 'GET', redirect: 'manual', headers: { Range: 'bytes=0-0' }, signal: AbortSignal.timeout(5000) })
+            if (get.status >= 300 && get.status < 400 && get.headers.get('location')) {
+              url = new URL(get.headers.get('location'), url)
+              chain.push(url.origin)
+              continue
+            }
+          }
+          break
+        }
+      } catch (err) {
+        blocked = err?.name === 'TimeoutError' ? 'timed out' : (err?.message || 'request failed')
+      }
+
+      const uniqueChain = [...new Set(chain)]
+      for (const o of uniqueChain) origins.add(o)
+      lines.push(
+        blocked
+          ? `⚠ ${rawUrl} — ${blocked}; allowing origin from the URL only: ${uniqueChain.join(' → ')}`
+          : uniqueChain.length > 1
+            ? `↪ ${rawUrl} — redirects: ${uniqueChain.join(' → ')} (allow ALL of these)`
+            : `✓ ${rawUrl} — no redirect, origin: ${uniqueChain[0]}`
+      )
+    }
+
+    const config = [...origins].map(o => `'${o}'`).join(', ')
+    lines.push('')
+    lines.push('Ready to paste:')
+    lines.push('```js')
+    lines.push(`csp: {`)
+    lines.push(`  '${directive}': [${[...origins].map(o => `'${o}'`).join(', ')}],`)
+    lines.push(`}`)
+    lines.push('```')
+    if (config.includes('http://')) lines.push('⚠ An origin resolved to plain http: — use https URLs in production.')
+
+    return text(lines.join('\n'))
+  }
+)
+
+server.registerTool(
   'pulse_check_contrast',
   {
     description: `Static WCAG contrast checker. Provide theme CSS content (or a file path) and it extracts all color variable definitions, then checks common foreground/background pairings for WCAG AA compliance (4.5:1 for normal text, 3:1 for large text and UI components).
@@ -3036,8 +3109,12 @@ Run this immediately after writing a theme file — before production build and 
       return vars
     }
 
+    // NOTE: alternations must be wrapped in a non-capturing group. An ungrouped
+    // pattern (a|b) followed by '\\s*\\{...' binds the body matcher to the second
+    // alternative only — [data-theme="light"] blocks then match the selector
+    // alone with no body capture, silently returning zero variables.
     const rootVars  = extractVars(source, ':root')
-    const lightVars = extractVars(source, '\\[data-theme=["\']light["\']\\]|[.]ui-theme-light')
+    const lightVars = extractVars(source, '(?:\\[data-theme=["\']light["\']\\]|[.]ui-theme-light)')
 
     // pulse-ui.css maps --NAME → --ui-NAME (e.g. --accent → --ui-accent).
     // Theme files written per the guide define bare --* tokens. Synthesize the

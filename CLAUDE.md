@@ -47,6 +47,8 @@ export const mySpec = {
     title:       'Page Title',
     description: 'Meta description',
     styles:      ['/pulse.css'],
+    theme:       'light',        // 'light' | 'dark' — ⚠ default is DARK when unset; decide at write time
+    vibe:        'minimal',      // optional preset: radius, weight, spacing
     ogTitle:     '...',
     ogImage:     '...',
   },
@@ -468,7 +470,7 @@ For any **new page, landing page, or branded site**, run this sequence first. Do
 3. pulse_intent(description)                  → archetype + scaffold + guide list
 ```
 
-**Before calling `pulse_intake`**, gather the required information by asking the user — one question at a time, in plain prose, no bullet lists. You need at minimum: the product name, what it does (pitch), and its key features. **Always ask first whether they have design inspiration** (a site they love, a screenshot, a mood board — dropped into `public/intake/` or pasted as a URL), and check `public/intake/` for images already there. Then ask for palette, vibe, and anti-style if not mentioned.
+**Before calling `pulse_intake`**, gather the required information by asking the user — one question at a time, in plain prose, no bullet lists. You need at minimum: the product name, what it does (pitch), and its key features. **Always ask first whether they have design inspiration** (a site they love, a screenshot, a mood board — dropped into `public/intake/` or pasted as a URL), and check `public/intake/` for images already there. Then ask for palette, **theme (light or dark — Pulse defaults to dark when unset)**, vibe, and anti-style if not mentioned.
 
 **`pulse_sketch` is mandatory** for `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes — those vibes fight the default centred-hero layout. Skip it only for `corporate` or `minimal` when no structural preference has been stated.
 

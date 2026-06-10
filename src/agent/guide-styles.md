@@ -199,6 +199,8 @@ The default CSP does **not** restrict `img-src` — it inherits `default-src 'se
 
 **Do this at build time, before writing any image tags.** If you know you'll use external images, add the CSP entry to `pulse.config.js` first — discovering the block at Lighthouse time costs an extra round-trip.
 
+**Use `pulse_check_csp` to get the origin list right first time.** Many hosts redirect to a CDN origin (picsum.photos → fastly.picsum.photos), and allowing only the URL you wrote still blocks the actual bytes. Pass it the URLs you plan to use and it follows each redirect chain and returns ready-to-paste CSP config with every origin included.
+
 ```js
 // pulse.config.js
 export default {
@@ -213,7 +215,7 @@ Or via `createServer`:
 ```js
 createServer(specs, {
   csp: {
-    'img-src': ['https://images.unsplash.com', 'https://picsum.photos'],
+    'img-src': ['https://images.unsplash.com', 'https://picsum.photos', 'https://fastly.picsum.photos'],
   },
 })
 ```
