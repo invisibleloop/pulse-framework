@@ -34,8 +34,8 @@ Navigate to the page route with `mcp__chrome-devtools__navigate_page`, then take
 **If `pulse_intake` ran earlier in this session** (i.e. this is a new page or site, not an edit or bug fix):
 
 1. Show the screenshot to the user.
-2. Ask: *"Happy with the layout and direction, or any changes before I run Lighthouse?"*
-3. **Stop and wait for their response.** Do not proceed to step 4b or Lighthouse until the user explicitly approves.
+2. Ask: *"Happy with the layout and direction, or any changes before I run Lighthouse?"* — use your host's question tool if it has one (e.g. AskUserQuestion); it waits for the answer without ending the turn. If you must ask in plain prose and end your turn, call `pulse_await_approval` first so the Stop hooks let the turn end.
+3. **Stop and wait for their response.** Do not proceed to step 4b or Lighthouse until the user explicitly approves. If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
 
 If the user requests changes: make edits, restart the server, take a new screenshot, describe what changed, ask again. Repeat until approved. No Lighthouse between design rounds.
 

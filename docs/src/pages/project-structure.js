@@ -82,6 +82,8 @@ export default {
       ${section('one-file-per-page', 'One file per page')}
       <p>Pulse enforces <strong>one spec per file</strong>. Every page is self-contained — state, view, mutations, actions, and validation in one place. This is not a style preference. It is how the framework eliminates the question of where things live.</p>
 
+      <p>This holds for dynamic routes too: <code>route: '/blog/:slug'</code> is <strong>one spec serving every matching URL</strong> — the <code>:param</code> does the multiplying, so a thousand blog posts are still a single file. A site is therefore a small collection of specs, one per route, sharing layouts and sections from <code>src/components/</code> rather than repeating them.</p>
+
       ${callout('tip', 'For large pages, view fragments and helpers can be imported from other modules. The spec file remains the coordination point — the structure is always clear regardless of how the implementation is organised.')}
     `,
   }),

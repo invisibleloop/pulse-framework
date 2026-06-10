@@ -7,7 +7,6 @@ Write a plain JavaScript object that describes what a page does. Pulse handles r
 ```js
 export default {
   route: '/counter',
-  hydrate: '/src/pages/counter.js',
   meta: {
     title: 'Counter',
     styles: ['/app.css'],
@@ -54,7 +53,7 @@ Full documentation: **[pulseframework.dev](https://pulseframework.dev)**
 
 **The spec is the source of truth.** Every page is a single JS object — data fetching, state, mutations, async actions, and view all in one place. No separate files for routes, controllers, or templates.
 
-**Performance is built in.** Streaming SSR, immutable asset caching, and zero layout shift are automatic. Every scaffolded project targets Lighthouse 100 across all four categories.
+**Performance is built in.** Streaming SSR, immutable asset caching, and zero layout shift are automatic. Every scaffolded project targets Lighthouse 100 for Accessibility, Best Practices, and SEO — and is fast by design (streaming HTML before data resolves, CLS 0.00).
 
 **No client-side dependencies.** Pulse ships no runtime framework to the browser — only a small hydration bundle (~2 kB brotli) that binds your spec's mutations and actions to the DOM.
 
@@ -83,12 +82,13 @@ Full reference at [pulseframework.dev](https://pulseframework.dev):
 - **Guard** — authentication and authorisation before data fetches
 - **Validation & constraints** — declarative form validation and state bounds
 - **Raw responses** — RSS feeds, sitemaps, JSON APIs
+- **Markdown** — built-in parser for blog posts and docs pages, zero browser JS
 - **Performance** — how the framework hits Lighthouse 100
 - **UI components** — 50+ built-in components
 
 ## Status
 
-This is an early-access release. The core architecture is stable and production-quality, but the API may evolve before v1. Feedback and issues welcome on [GitHub](https://github.com/invisibleloop/pulse).
+This is an early-access release. The core architecture is stable and production-quality, but the API may evolve before v1. Feedback and issues welcome on [GitHub](https://github.com/invisibleloop/pulse-framework).
 
 ## License
 

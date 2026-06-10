@@ -59,6 +59,8 @@ If the user's request is already very specific (a one-liner edit, a bug fix, "ad
 
 Call `pulse_list_structure` to see what already exists. Fetch only the guide sections relevant to your intent (the `pulse_intent` response tells you which ones).
 
+**Check `src/components/` for shared sections before building.** If a layout, nav, footer, CTA strip, or section you're about to write already exists there — or already exists inline in another spec — reuse or extract it now rather than writing a second copy. Catching duplication here is cheap; catching it at review (phase 7) means the expensive gates already ran against the duplicated version.
+
 Do not fetch every guide section for every task. Fetch what you need.
 
 ---
@@ -157,6 +159,8 @@ Or use the guide-components table. Never write these patterns from scratch in Mo
 
 If you're about to type `class="hero"` or `class="product-card"` in Mode A, stop — use the component instead.
 
+**Reuse across specs (both modes):** one spec = one page; a site is many specs sharing code. Before writing a new section, check `src/components/` — and if a section you're writing already exists in another spec, extract it to `src/components/` *now* and import it from both, rather than pasting a copy. Same for CSS: a shared section's styles go in the shared `app.css` (listed in `meta.styles` by every spec that uses it), never duplicated into per-page stylesheets.
+
 **Mode B — Creative override (raw HTML throughout)**
 When the design intent calls for a more expressive, unconventional, or typographically-driven layout that components would constrain, you may build with raw HTML throughout. This is a deliberate design decision, not a shortcut.
 
@@ -235,6 +239,12 @@ Do this before every screenshot, console check, or visual inspection. Never debu
 2. Describe what you see in 2–3 plain sentences — layout structure, visual tone, key sections. Do NOT list features or code details.
 3. **Ask the user directly:** *"Happy with the layout and direction, or any changes before I run tests and Lighthouse?"*
 4. **Wait for their response before doing anything else.** Do not run design_review, layout_review, or Lighthouse until you have a clear go-ahead.
+
+**How to wait without tripping the Stop hooks.** The project's Stop hooks (missing tests, coverage, verify stamp) block any turn that ends with unverified spec edits — they cannot tell "abandoning the work" from "pausing for the user's answer". So:
+
+- **Preferred:** ask the question with your host's question tool (e.g. AskUserQuestion in Claude Code). A question tool waits for the answer *without ending the turn*, so the Stop hooks never fire.
+- **Otherwise:** call `pulse_await_approval` immediately before asking in plain prose and ending your turn. It writes a one-turn marker the Stop hooks respect; the marker is consumed when the user replies.
+- **Never** respond to a `VERIFY REQUIRED` block by running `/verify` while your approval question is unanswered. The block does not override the approval gate — an unanswered question means the design is not approved, and Lighthouse on an unapproved design wastes ~90 seconds and pre-empts the user's changes.
 
 **If the user requests changes:**
 - Make the edits

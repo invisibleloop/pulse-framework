@@ -66,8 +66,8 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   ```js
   const card = ({ title, body }) => `<div class="card"><h3>${title}</h3><p>${body}</p></div>`
   ```
-- **Create a shared component in `src/ui/` when the same pattern is needed across 2 or more different specs.** Follow the existing pattern: a named export that returns an HTML string.
-- **Do not abstract a pattern that appears only once.** Duplication is cheaper than the wrong abstraction. Wait until the third use before extracting.
+- **Create a shared component in `src/components/` when the same pattern is needed across 2 or more different specs.** A named export that returns an HTML string — same shape as the `layout()` pattern in the routing guide. Never paste a section's HTML into a second spec: extract it at the second use, then import it from both. (`src/ui/` is the framework's own library inside the package — project-level shared code always goes in `src/components/`.)
+- **Do not abstract a pattern that appears only once.** Duplication is cheaper than the wrong abstraction. Within a single spec, wait until the third use before extracting a helper; across specs, extract at the second use.
 
 ### Correctness
 
@@ -106,6 +106,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 - **`app.css` must contain no hex values or raw colour values.** A lint hook enforces this and will block the build. Hex values belong in `public/theme.css` as token definitions; `app.css` references them via `var()` only.
 - **Load order in `meta.styles`:** `pulse-ui.css` → `theme.css` → `app.css`. Theme tokens must be defined before `app.css` references them.
+- **CSS for a shared section lives in the shared `app.css`, once.** Every spec that renders the section lists the same file in `meta.styles`. Never copy a CSS block into a second per-page stylesheet — two copies drift apart. Per-page stylesheets are for styles only one page uses.
 
 ### Security
 
