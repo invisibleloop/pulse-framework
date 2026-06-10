@@ -53,7 +53,7 @@ Check for:
 - Layout looks correct
 - No console errors via list_console_messages
 
-Then ask the user: *"Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?"* — use your host's question tool if it has one (e.g. AskUserQuestion); it waits for the answer without ending the turn. If you must ask in plain prose and end your turn, call `pulse_await_approval` first so the Stop hooks let the turn end. **Do not proceed until the user explicitly approves.** If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
+Then **call `pulse_await_approval`** and ask the user: *"Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?"* Always call the tool before asking, even when using a question tool like AskUserQuestion — in some hosts (including Claude Code) the question still ends the turn and fires the Stop hooks; the marker is harmless if the turn doesn't end. **Do not proceed until the user explicitly approves.** If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
 
 ### 7. Lighthouse
 

@@ -4031,8 +4031,14 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
 }
 
 .ui-drop-cap-letter {
-  font-weight: 700;
-  color:       var(--ui-text);
+  /* line-height ~cap height keeps the float box hugging the glyph so the cap
+     top-aligns with the first text line — a relative line-height makes serif
+     caps float below the opening line. Component sets font-size inline. */
+  float:        left;
+  font-weight:  700;
+  line-height:  0.82;
+  margin-right: 0.1em;
+  color:        var(--ui-text);
 }
 
 /* Colophon — minimal footer for editorial pages */

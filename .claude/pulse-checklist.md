@@ -20,6 +20,8 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 - **Do not set `hydrate` in specs.** It is auto-derived by the framework from the URL entry passed to `createServer`. Specs with `mutations`, `actions`, or `persist` are hydrated automatically. Purely server-rendered specs get zero JavaScript — no configuration needed.
 
+- **The default theme is DARK.** When `meta.theme` is unset, the page renders with the dark palette. If the design calls for a light page, set `meta.theme: 'light'` when you **first write the spec** — do not assume light and discover dark at the screenshot, which costs an edit → restart → re-approval cycle. Declare the theme in your plan/build brief, and ask the user if the brief doesn't say.
+
 - **Always restart the server and reload the browser after every file edit — before checking the result.** The dev server restarts on file changes but the browser tab stays stale. The required sequence is: `pulse_restart_server` → `navigate_page`. Never attempt to debug a visual problem without doing both steps first.
 
 ### Components first — or creative override

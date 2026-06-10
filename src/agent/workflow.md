@@ -32,7 +32,7 @@ For any **new page, landing page, or branded site**, run the intake sequence fir
 
 - **Step 0 — Ask for inspiration first (mandatory):** Before calling any tool or presenting any plan, ask the user: *"Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop images into `public/intake/` or paste a URL and I'll extract the design intent before we start."* Wait for the answer. Do not skip this question, even if the user's brief already seems detailed. Check `public/intake/` for any images already dropped there.
 - **`pulse_extract_inspiration`** — call this after step 0 if the user supplies a URL, site name, or image they like. Also call it for any images already present in `public/intake/`. Gives you a structured extraction template: visit the URL or analyse the image with your vision tools, extract colours, layout, typography, and feel, then feed those findings into pulse_intake. If the user explicitly says they have no reference, skip this step.
-- **`pulse_intake`** — captures the real content (name, pitch, features, palette, vibe, what it should NOT look like). Returns a brief with copy-ready content and early contrast warnings. Always ask the user one question at a time — never multi-choice for open-ended questions.
+- **`pulse_intake`** — captures the real content (name, pitch, features, palette, theme, vibe, what it should NOT look like). Returns a brief with copy-ready content and early contrast warnings. Always ask the user one question at a time — never multi-choice for open-ended questions. **Always ask light or dark** — Pulse renders dark when `meta.theme` is unset, so an unstated light design ships dark.
 - **`pulse_sketch`** — generates 3 structurally distinct layout directions (full-bleed, asymmetric split, typography-only, editorial, dense grid, story scroll, content-first). **Call this before writing any code.** Prevents defaulting to centred hero + three-column features every time.
 - **Skip `pulse_sketch` only** when the vibe is `corporate` or `minimal` AND the user hasn't expressed any structural preference. For `playful`, `bold`, `brutalist`, `retro`, or `neon` vibes, `pulse_sketch` is mandatory — templates have default section orders that actively fight these vibes.
 - **`pulse_intent`** — maps the chosen direction to a spec scaffold and tells you which guides to read.
@@ -70,6 +70,7 @@ Do not fetch every guide section for every task. Fetch what you need.
 Decide the complexity tier (see below) and confirm with the user if the task is non-trivial. Output a concise plan:
 
 - Route, state shape, mutations/actions, server fetchers
+- **Theme: light or dark** — Pulse defaults to **dark** when `meta.theme` is unset. Decide now (ask the user if the brief doesn't say) — discovering a wrong theme at the screenshot costs a full edit → restart → re-approval cycle.
 - Which UI components you will use
 - Files you will create or modify
 
@@ -179,6 +180,7 @@ Before writing any file, output a build brief:
 ```
 Building:   <page name> (<route>)
 Mode:       A — components first | B — creative override (raw HTML, reason: ...)
+Theme:      light | dark (+ vibe, if any) — default is DARK when meta.theme is unset
 State:      <fields and types, or "none">
 Mutations:  <list, or "none">
 Actions:    <list with brief description, or "none">
@@ -242,8 +244,8 @@ Do this before every screenshot, console check, or visual inspection. Never debu
 
 **How to wait without tripping the Stop hooks.** The project's Stop hooks (missing tests, coverage, verify stamp) block any turn that ends with unverified spec edits — they cannot tell "abandoning the work" from "pausing for the user's answer". So:
 
-- **Preferred:** ask the question with your host's question tool (e.g. AskUserQuestion in Claude Code). A question tool waits for the answer *without ending the turn*, so the Stop hooks never fire.
-- **Otherwise:** call `pulse_await_approval` immediately before asking in plain prose and ending your turn. It writes a one-turn marker the Stop hooks respect; the marker is consumed when the user replies.
+- **Always call `pulse_await_approval` immediately before asking** — regardless of whether you ask via a question tool or in plain prose. In some hosts (including Claude Code) even AskUserQuestion ends the turn and fires the Stop hooks. The marker is harmless if the turn doesn't end: it is simply consumed when the user replies.
+- Then ask the question (question tool with choices where available, plain prose otherwise) and end your turn.
 - **Never** respond to a `VERIFY REQUIRED` block by running `/verify` while your approval question is unanswered. The block does not override the approval gate — an unanswered question means the design is not approved, and Lighthouse on an unapproved design wastes ~90 seconds and pre-empts the user's changes.
 
 **If the user requests changes:**
@@ -273,6 +275,16 @@ Do this before every screenshot, console check, or visual inspection. Never debu
 1. `pulse_design_review` (if `pulse_intake` ran) — work through all 7 signals, fix any Fail
 2. `pulse_layout_review <url>` — 390/768/1280px overflow, broken images, collapsed sections
 3. `/verify` — Lighthouse desktop + mobile (100/100/100) + CLS 0.00 + `pulse_review`
+
+**Two different reviews — don't confuse them.** `pulse_design_review` is the *visual* review (7 signals) and runs **before** Lighthouse. `pulse_review` is the *code* review and runs **after** Lighthouse, always last. The canonical end-to-end order is:
+
+```
+pulse_validate → design approval → pulse_design_review → pulse_layout_review
+  → pulse_build → Lighthouse desktop + mobile → performance trace
+  → pulse_review → pulse_stamp
+```
+
+If a step's fixes touch the spec, re-run from `pulse_validate` — never re-run `pulse_review` on code that hasn't re-passed Lighthouse.
 
 **Do not report the page as done until `/verify` writes the `.pulse-verified` stamp.** Skipping Lighthouse means broken contrast, missing landmarks, and Best Practices failures ship to the user.
 

@@ -24,6 +24,6 @@ export function dropCap({
   const classes = ['ui-drop-cap', cls].filter(Boolean).join(' ')
   
   return `<p class="${e(classes)}">
-  <span class="ui-drop-cap-letter" style="float:left;font-size:${lines * 1.2}em;line-height:${lines * 0.8};margin-right:0.1em" aria-hidden="true">${e(letter)}</span>${e(content)}
+  <span class="ui-drop-cap-letter" style="font-size:${+(lines * 1.2).toFixed(2)}em" aria-hidden="true">${e(letter)}</span>${e(content)}
 </p>`
 }
