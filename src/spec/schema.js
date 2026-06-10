@@ -371,6 +371,16 @@ export function validateSpec(spec) {
     }
   }
 
+  // cacheVary — query-string keys that affect the cached HTML for this page.
+  // By default the in-process page cache ignores the query string entirely (so a
+  // client cannot mint unbounded cache entries with arbitrary ?n=… params). Pages
+  // whose output depends on a query param must list it here, e.g. cacheVary: ['q'].
+  if (spec.cacheVary !== undefined) {
+    if (!Array.isArray(spec.cacheVary) || !spec.cacheVary.every(k => typeof k === 'string')) {
+      errors.push('spec.cacheVary must be an array of query-parameter name strings, e.g. [\'q\', \'page\']')
+    }
+  }
+
   // hydrate — auto-derived by the framework, should never be set manually
   if (spec.hydrate !== undefined) {
     warnings.push('spec.hydrate is set manually — it is auto-derived by the framework from the URL entry passed to createServer. Remove it from the spec.')

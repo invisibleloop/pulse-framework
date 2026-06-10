@@ -40,7 +40,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - **Declare it in a comment at the top of the spec** so the reviewer recognises it: `// component-free — creative override: <reason>`. This is the signal the review tool reads.
   - Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason not to.
   - `/pulse-ui.css` is always required — it provides the token system your custom CSS will use.
-  - The quality gate replaces the component checklist: **100/100/100/100 Lighthouse on both desktop and mobile is the pass bar.** A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
+  - The quality gate replaces the component checklist: **Lighthouse 100 on Accessibility, Best Practices, and SEO — desktop and mobile — plus CLS 0.00 is the pass bar.** (Performance is reported but not gated; it varies with machine load.) A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
 
 - **When reviewing**: before flagging a class name like `.hero` as a violation, first ask whether the `hero()` component could actually reproduce the layout. If the answer is no, it is a creative override — check Lighthouse instead of refactoring. Do not flatten a good custom layout into a generic component just to clear a pattern-match.
 

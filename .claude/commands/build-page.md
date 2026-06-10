@@ -50,7 +50,7 @@ Check for:
 - Layout looks correct
 - No console errors via `mcp__chrome-devtools__list_console_messages`
 
-Then use `ask_user` to ask: "Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?" with choices: `["Yes, looks good — run tests and Lighthouse", "I'd like some changes first"]`
+Then ask the user: "Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — run tests and Lighthouse", "I'd like some changes first"]`; otherwise ask in plain prose.
 
 **Do not proceed to step 7 until the user explicitly confirms.** If they want changes, make them and return to step 6.
 

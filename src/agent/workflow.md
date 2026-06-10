@@ -73,7 +73,7 @@ Decide the complexity tier (see below) and confirm with the user if the task is 
 
 **Skip confirmation for trivially small tasks** (add a button, fix a label, swap a component). When in doubt, confirm.
 
-**When asking the user questions:** ask one question at a time. If you present choices, use at most 4 options — the `ask_user` tool enforces this limit and will error if exceeded. For open-ended questions (names, copy, features, hex colours), ask as plain prose with no choices at all.
+**When asking the user questions:** ask one question at a time. If you present choices, use at most 4 options — question tools in agent hosts (e.g. Claude Code's AskUserQuestion) cap the number of choices and will error if exceeded. For open-ended questions (names, copy, features, hex colours), ask as plain prose with no choices at all.
 
 ---
 
@@ -161,11 +161,12 @@ If you're about to type `class="hero"` or `class="product-card"` in Mode A, stop
 When the design intent calls for a more expressive, unconventional, or typographically-driven layout that components would constrain, you may build with raw HTML throughout. This is a deliberate design decision, not a shortcut.
 
 Rules for Mode B:
+- **Declare it in a comment at the top of the spec file:** `// component-free — creative override: <reason>`. The review tool detects creative override by reading this comment from the source — without it, `pulse_review` will flag every component pattern as a violation even though you chose Mode B deliberately. Announcing the mode in chat is not enough; the comment must be in the file.
 - Load `/pulse-ui.css` in `meta.styles` — the token system is still required
 - Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason
-- The quality gate is 100/100/100/100 Lighthouse on both desktop and mobile — this replaces the component checklist as the pass bar
+- The quality gate is Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop and mobile) plus CLS 0.00 — this replaces the component checklist as the pass bar. Performance is reported but not gated.
 
-Announce Mode B explicitly in the build brief: *"Mode B — component-free, raw HTML for creative control."*
+Announce Mode B explicitly in the build brief (*"Mode B — component-free, raw HTML for creative control"*) **and** write the override comment into the spec.
 
 ### 3b — Announce before writing
 

@@ -4,7 +4,7 @@
  */
 
 import http from 'http'
-import { createServer } from './index.js'
+import { createServer, TtlCache } from './index.js'
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -1241,6 +1241,111 @@ await test('health check fires before route matching — shadows a user spec at 
   await withServer([customSpec], { stream: false }, async (port) => {
     const { body } = await get(port, '/healthz')
     assert(body.includes('"status"'), `Expected health JSON, got: ${body}`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nMalformed request handling\n')
+
+await test('malformed percent-encoding in path returns 404, not 500', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const { status } = await get(port, '/%ZZ')
+    assert(status === 404, `Expected 404 for malformed encoding, got ${status}`)
+  })
+})
+
+await test('malformed percent-encoding in param route returns 404', async () => {
+  await withServer([productSpec], { stream: false }, async (port) => {
+    const { status } = await get(port, '/products/%E0%A4%A')
+    assert(status === 404, `Expected 404 for malformed param, got ${status}`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nPage cache — query-string DoS guard\n')
+
+await test('query string is NOT part of the cache key by default', async () => {
+  // A cacheable page should serve identical cached HTML regardless of arbitrary
+  // query params — they must not mint new cache entries.
+  let renders = 0
+  const spec = {
+    route: '/cached',
+    cache: { public: true, maxAge: 60 },
+    view:  () => `<h1>render-${++renders}</h1>`,
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const a = await get(port, '/cached?n=1')
+    const b = await get(port, '/cached?n=2')
+    const c = await get(port, '/cached?n=3')
+    assert(a.body === b.body && b.body === c.body, 'Cached body should be identical across query strings')
+    assert(a.body.includes('render-1'), `Expected first render cached, got: ${a.body}`)
+  })
+})
+
+await test('cacheVary keys DO produce distinct cache entries', async () => {
+  let renders = 0
+  const spec = {
+    route:     '/varied',
+    cache:     { public: true, maxAge: 60 },
+    cacheVary: ['q'],
+    server:    { n: async () => ++renders },
+    view:      (_s, server) => `<h1>v-${server.n}</h1>`,
+  }
+  // server fetcher makes this non-cacheable for HTML, so vary only affects
+  // the in-process key; assert distinct outputs per q value.
+  await withServer([spec], { stream: false }, async (port) => {
+    const a = await get(port, '/varied?q=apple')
+    const b = await get(port, '/varied?q=banana')
+    assert(a.body !== b.body, `Expected distinct outputs per cacheVary value, got identical: ${a.body}`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nTtlCache — bounded LRU\n')
+
+await test('evicts least-recently-used entry when over capacity', () => {
+  const c = new TtlCache(2)
+  c.set('a', 1, 60)
+  c.set('b', 2, 60)
+  c.set('c', 3, 60)  // exceeds cap → evicts 'a' (LRU)
+  assert(c.get('a') === undefined, 'Expected a to be evicted')
+  assert(c.get('b') === 2, 'Expected b to remain')
+  assert(c.get('c') === 3, 'Expected c to remain')
+})
+
+await test('get() refreshes recency so the touched entry survives eviction', () => {
+  const c = new TtlCache(2)
+  c.set('a', 1, 60)
+  c.set('b', 2, 60)
+  c.get('a')         // 'a' now most-recently-used
+  c.set('c', 3, 60)  // evicts 'b', not 'a'
+  assert(c.get('a') === 1, 'Expected a to survive (recently used)')
+  assert(c.get('b') === undefined, 'Expected b to be evicted')
+})
+
+await test('many distinct keys never exceed the cap', () => {
+  const c = new TtlCache(100)
+  for (let i = 0; i < 10_000; i++) c.set(`k${i}`, i, 60)
+  assert(c._store.size === 100, `Expected size capped at 100, got ${c._store.size}`)
+})
+
+await test('expired entries are not returned', () => {
+  const c = new TtlCache(10)
+  c.set('x', 1, -1)  // already expired
+  assert(c.get('x') === undefined, 'Expected expired entry to be absent')
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nCompression\n')
+
+await test('serves brotli-compressed HTML when br is accepted', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const { headers } = await request(port, 'GET', '/hello', { 'Accept-Encoding': 'br' })
+    assert(headers['content-encoding'] === 'br', `Expected br encoding, got ${headers['content-encoding']}`)
   })
 })
 

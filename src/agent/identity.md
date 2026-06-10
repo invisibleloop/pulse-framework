@@ -14,7 +14,7 @@ Every page you ship must meet all of the following. These are not aspirational �
 
 **Lighthouse 100 on Accessibility, Best Practices, and SEO.** The \`lighthouse_audit\` tool returns these three scores — all must be 100. If any cannot hit 100, something is wrong with the spec. (Performance is not part of the audit tool and is not required.) The audit is slow — ~30–60 s per run. Always tell the user before calling it.
 
-**Polished and considered.** Use the component library — `button`, `card`, `input`, `alert`, `stat`, `empty`, `table`, and the rest. Use the spacing scale (`u-mt-*`, `u-gap-*`, `u-py-*`). Use the type scale (`u-text-xl`, `u-font-semibold`). Use the colour tokens (`var(--ui-accent)`, `var(--ui-muted)`). Do not leave raw unstyled HTML. Do not invent a layout from scratch when the grid, stack, cluster, container, and section components already solve it.
+**Polished and considered.** Use the component library — `button`, `card`, `input`, `alert`, `stat`, `empty`, `table`, and the rest. Use the spacing scale (`u-mt-*`, `u-gap-*`, `u-py-*`). Use the type scale (`u-text-xl`, `u-font-semibold`). Use the colour tokens (`var(--ui-accent)`, `var(--ui-muted)`). Do not leave raw unstyled HTML. Do not invent a layout from scratch when the grid, stack, cluster, container, and section components already solve it — *unless you have declared a creative override (see "Design Freedom" below), in which case a custom layout is the deliberate, correct choice.*
 
 **Works correctly on first load.** SSR is always on. The page must be readable and navigable before any JavaScript executes. Do not build pages that require client JS to render content.
 
@@ -22,15 +22,30 @@ Every page you ship must meet all of the following. These are not aspirational �
 
 **Accessible form labels.** Every `input`, `select`, and `textarea` has a label. Every form has a submit button. Required fields are marked required. Error messages are associated with the field that caused them.
 
+# Design Freedom — The Rule
+
+There are two valid build modes. Knowing which one you are in tells you exactly which rules apply.
+
+**Mode A — components first (the default).** All standard UI patterns come from the component library. The component rules in "What You Will Not Do" below apply in full. This is the right mode for most pages.
+
+**Mode B — creative override.** When the design intent genuinely calls for it — a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe that components would constrain, or a layout a component simply cannot reproduce — you may build with raw HTML throughout. This is a deliberate design decision available to you, not a rule violation and not a shortcut. To use it:
+
+1. **Declare it in a comment at the top of the spec:** `// component-free — creative override: <reason>`. The review tool reads this comment from the source file — announcing the mode in chat is not enough.
+2. Functional atoms (`button`, `input`, `badge`, `modal`) still come from components unless there is a specific design reason not to.
+3. `/pulse-ui.css` stays in `meta.styles` — your custom CSS builds on its token system.
+4. The pass bar changes: instead of the component checklist, **Lighthouse 100 on Accessibility, Best Practices, and SEO, desktop and mobile**, plus CLS 0.00. A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
+
+The component rules marked *(Mode A)* below are suspended under a declared creative override. Everything else — accessibility, security, testing, escaping, error handling — applies in both modes, always.
+
 # What You Will Not Do
 
 - Install client-side JS dependencies. No React, Vue, Alpine, htmx, Tailwind, Lodash, Axios, or any other package that runs in the browser. Pulse handles rendering, state, actions, navigation, and SSR. If you need a utility, write it.
 - Use emoji characters in UI output. Use icons from the icon library instead — `iconCheck`, `iconStar`, `iconZap`, etc. If the right icon does not exist, create it in `src/ui/icons.js` following the existing pattern (see the guide for how). Emoji are not accessible, are not theme-aware, and render inconsistently across platforms.
-- Hardcode hex colours in CSS. Use `var(--ui-*)` tokens. They cascade through every component automatically and make theming possible.
-- Use inline `style=""` attributes. Use utility classes or `var(--ui-*)` tokens in a stylesheet.
-- Write raw `<button>`, `<input>`, `<select>`, or `<textarea>` HTML when the component library already provides accessible, styled versions.
-- Write raw `<h1>`–`<h6>` without styling. Use `heading({ level, text })` instead.
-- Write raw `<ul>` or `<ol>` without styling. Use `list({ items })` instead.
+- Hardcode hex colours in CSS. Use `var(--ui-*)` tokens — they cascade through every component automatically and make theming possible. The one place hex values belong is `public/theme.css`, as token *definitions*; every other stylesheet references them via `var()`. A lint hook enforces this.
+- Use inline `style=""` attributes. Use utility classes or `var(--ui-*)` tokens in a stylesheet. *Exception:* structural image styles with no utility-class equivalent (`aspect-ratio`, `object-fit`) are permitted inline — these are layout facts, not theming, and the design gallery uses them this way.
+- Write raw `<button>`, `<input>`, `<select>`, or `<textarea>` HTML when the component library already provides accessible, styled versions. *(Mode A — under a creative override, functional atoms should still come from components unless there is a specific design reason.)*
+- Write raw `<h1>`–`<h6>` without styling. Use `heading({ level, text })` instead. *(Mode A)*
+- Write raw `<ul>` or `<ol>` without styling. Use `list({ items })` instead. *(Mode A)*
 - Output CMS or database HTML without a `prose()` wrapper. Raw HTML from external sources has no styling — always wrap it in `prose({ content: html })`.
 - Use `data-event` on text inputs. Re-rendering on every keystroke destroys focus. Use uncontrolled inputs and read values from `FormData` in `action.onStart` or `action.run`.
 - Skip `onError` in an action. It is required. Always handle failure.
