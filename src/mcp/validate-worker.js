@@ -156,6 +156,24 @@ try {
     warnings.push('Inline <script> block detected in view — Pulse\'s CSP (script-src with nonces) will block these scripts at runtime. Move JavaScript to a file in public/ and reference it via meta.scripts: [\'/my-script.js\'] in the spec instead.')
   }
 
+  // External image URLs in src attributes — will be blocked by Pulse's default CSP (img-src 'self')
+  // unless the domain is explicitly listed in pulse.config.js under csp['img-src'].
+  // Flag any http/https src that isn't a data URI or relative path.
+  const externalImgSrcs = [...html.matchAll(/\bsrc=["'](https?:\/\/[^"']+)["']/gi)]
+    .map(m => m[1])
+  if (externalImgSrcs.length) {
+    const domains = [...new Set(externalImgSrcs.map(u => {
+      try { return new URL(u).origin } catch { return u }
+    }))].slice(0, 3)
+    warnings.push(
+      `External image URL${externalImgSrcs.length > 1 ? 's' : ''} in view (${domains.join(', ')}) — ` +
+      `Pulse's default CSP blocks cross-origin images. ` +
+      `Either download the images to public/ and use a relative path (/images/foo.jpg), ` +
+      `or allow the domain in pulse.config.js:\n` +
+      `  export default { csp: { 'img-src': ['${domains[0]}'] } }`
+    )
+  }
+
   // Hardcoded hex colours in view HTML — must use var(--ui-*) tokens instead.
   // Matches: style="...color:#hex..." or style="...background:#hex..."
   // Allows: href="#section-id" (anchor links are not colours)

@@ -1057,12 +1057,33 @@ ${(() => {
     checks.push('✓ No obvious hex colours in view')
   }
   
+  // XSS test coverage — check whether the test file includes a <script>alert assertion
+  // for each user-controlled string interpolated into the view.
+  // Heuristic: if the view interpolates any exported string variable (escape(), or direct
+  // string props), the test file should contain a '<script>' XSS assertion.
+  if (file) {
+    const testFile = file.replace(/\.js$/, '.test.js')
+    let xssNote = ''
+    if (fs.existsSync(testFile)) {
+      const testSrc = fs.readFileSync(testFile, 'utf8')
+      const hasXssAssertion = testSrc.includes('<script>') || testSrc.includes('xss') || testSrc.includes('script>alert')
+      if (!hasXssAssertion) {
+        xssNote = '⚠ **No XSS test found** — test file exists but has no `<script>alert` assertion. Add at least one test that passes a `\'<script>alert(1)</script>\'` string as a user-controlled input and asserts it does not appear unescaped in the output.'
+      } else {
+        xssNote = '✓ XSS test assertion present'
+      }
+    } else {
+      xssNote = '○ No test file found — create one at ' + path.basename(testFile)
+    }
+    checks.push(xssNote)
+  }
+
   // Creative override detection — check if spec declares component-free mode
   const creativeOverride = /component.free|creative\s+override|raw\s+HTML\s+throughout/i.test(source)
   checks.push(creativeOverride
     ? '⚡ **Creative override declared** — component pattern checks are advisory only. Lighthouse 100/100/100/100 is the pass bar.'
     : '○ No creative override declared — component checks apply')
-  
+
   return checks.join('\n')
 })()}
 

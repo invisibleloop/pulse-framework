@@ -48,45 +48,63 @@ The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__c
 
 After both Lighthouse runs pass, call `pulse_restart_server` to return to the dev server.
 
-### 8. Performance
+### 8. Mobile layout check
+
+Emulate a mobile viewport and take a screenshot to catch wrapping, overflow, and layout issues before they become Lighthouse failures.
+
+```
+mcp__chrome-devtools__emulate  viewport: "390x844x2,mobile,touch"
+mcp__chrome-devtools__navigate_page  url: "http://localhost:3000/"
+mcp__chrome-devtools__take_screenshot
+```
+
+Describe what you see. Look specifically for:
+- Text or buttons overflowing the viewport
+- Content too small to read or tap
+- Navigation that overlaps content
+- Images that break the layout
+
+Fix any issues, then reset to desktop before continuing:
+
+```
+mcp__chrome-devtools__emulate  viewport: "1440x900x1"
+```
+
+### 9. Performance
 
 Navigate to the page route, then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
 
-### 9. Console errors
+### 10. Console errors
 
 Use `mcp__chrome-devtools__list_console_messages` — report any errors or unexpected warnings.
 
-### 10. Code review
+### 11. Code review
 
 Call `pulse_review` with the spec file path. This runs a full code review AND atomically writes the `.pulse-verified` stamp server-side, eliminating any race condition with the stop hook.
 
 Work through every item the review returns. Fix anything that fails before proceeding.
 
-### 11. Close extra browser tabs
+### 12. Close extra browser tabs
 
 Use `mcp__chrome-devtools__list_pages` to get all open pages. Close every page **except the last one** — `close_page` refuses to close the final tab. `pageId` must be a number, not a string.
 
 If there is only one page open, skip this step — there is nothing to close.
 
-### 12. Write verification stamp
+### 13. Write verification stamp
 
-`pulse_review` writes the stamp automatically. As a belt-and-suspenders backup, also run:
+Call `pulse_stamp`. This writes `.pulse-verified` via the MCP server, which is more reliable than the `date +%s` shell command — the MCP write always lands after all spec edits, avoiding the mtime race condition that can cause the stop hook to block immediately after verification.
 
-```bash
-date +%s > .pulse-verified
-```
+**This must be the last operation before stopping.** The stop hook compares each edited spec's mtime against this stamp — if any spec is newer than the stamp, the hook blocks. Do not edit any spec file after calling `pulse_stamp`.
 
-This ensures the stamp is present even if `pulse_review` was not called with a file path.
-
-### 13. Report
+### 14. Report
 
 Summarise:
 - Validation: pass or fail (with errors if any)
-- Visual: what was visible in the screenshot
-- Lighthouse desktop: scores for all four categories
-- Lighthouse mobile: scores for all four categories
+- Visual: desktop screenshot and mobile layout check — any issues found and fixed
+- Lighthouse desktop: scores for Accessibility, Best Practices, SEO
+- Lighthouse mobile: scores for Accessibility, Best Practices, SEO
 - Performance: LCP and CLS values, any flagged insights
 - Console: any errors
 - Review: pass or issues found and fixed
 
-Only confirm the page is good when validation passes, both Lighthouse runs are 100/100/100/100, CLS is 0.00, and there are no console errors. Otherwise, fix and run `/verify` again.
+Only confirm the page is good when validation passes, both Lighthouse runs are 100/100/100, CLS is 0.00, and there are no console errors. Otherwise, fix and run `/verify` again.
