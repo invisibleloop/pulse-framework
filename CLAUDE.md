@@ -6,7 +6,7 @@ Pulse is a spec-first frontend framework. The spec is the source of truth. No co
 
 ```bash
 npm run dev    # start dev server at http://localhost:3000 (pulse_build serves production on 3001)
-npm test       # run all 92 unit tests
+npm test       # run the full unit test suite
 npm run build  # bundle for production → public/dist/
 ```
 
@@ -36,6 +36,8 @@ public/
 ## The Spec
 
 A spec is a plain JS object. Every property is optional except `route` and `view`. `state` defaults to `{}` — omit it on purely server-rendered pages.
+
+**One spec = one page = one file.** A site is multiple specs, one per route. A dynamic route (`route: '/blog/:slug'`) is still a single spec serving every matching URL — never one spec per item, and never several pages folded into one spec with `ctx` conditionals. Shared sections live in `src/components/` and are imported by each spec.
 
 ```js
 export const mySpec = {
@@ -359,6 +361,8 @@ There are two CSS files and they have distinct roles — do not mix them:
 | `app.css` (or per-page) | Layout and component overrides | `var()` tokens **only** — no hex values |
 
 **`app.css` must never contain hex values.** `rgba()` and `hsla()` are allowed for translucency — but if the same translucent colour is used more than once, extract it as a token in `theme.css` (e.g. `--brand-overlay-12: rgba(0,0,0,0.12)`). If you need to define or override a colour token, put it in `public/theme.css` and reference it via `var()` in `app.css`.
+
+**CSS for a section used by more than one spec lives in the shared `app.css`, once** — every spec that renders the section lists the same file in `meta.styles`. Never copy a CSS block into a second per-page stylesheet; two copies drift. Per-page stylesheets are only for styles a single page uses.
 
 ```css
 /* public/theme.css — hex values live here */

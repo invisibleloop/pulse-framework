@@ -13,6 +13,11 @@
 import { execSync } from 'child_process'
 import fs from 'fs'
 
+// Agent is ending its turn to wait for the user's answer (design-approval gate) —
+// let the turn end. The marker is consumed on the user's next prompt, so the
+// gates return in full force afterwards.
+if (fs.existsSync('.pulse-awaiting-approval')) process.exit(0)
+
 // No test files → nothing to check
 const hasTests = fs.existsSync('src/pages') && (function scan(d) {
   for (const f of fs.readdirSync(d)) {

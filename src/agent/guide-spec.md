@@ -1,5 +1,11 @@
 Pulse is a spec-first frontend framework. Pages are JS files that export a default spec object.
 
+## Mental model — one spec per page
+
+- **One spec = one route = one file** under `src/pages/`. Every page of a site is its own spec file — a site is a collection of specs, not one big spec.
+- **A dynamic route is still one spec.** `route: '/blog/:slug'` is a single file serving *every* blog post URL — the `:param` does the multiplying. Never create one spec per item (`post-1.js`, `post-2.js`, …), and never merge several distinct pages into one spec with conditionals on `ctx`.
+- **Specs share code, they don't repeat it.** Shared sections, layouts, nav, and footer live in `src/components/` and are imported by each spec that needs them (see `pulse://guide/routing` for the `layout()` pattern).
+
 ## Spec structure
 
 ```js

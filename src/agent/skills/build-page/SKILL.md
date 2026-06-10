@@ -40,11 +40,11 @@ Write the spec file. Follow these rules:
 
 Use `pulse_validate` on the spec. Fix any errors before continuing.
 
-### 5. Register with the server
+### 5. Restart and reload
 
-Check the project's server entry file (e.g. `src/server.js` or `pulse.config.js`) and add the new spec if needed.
+Pages under `src/pages/` are auto-discovered — no server entry file to edit. Call `pulse_restart_server`, then `navigate_page` so the browser is not on a stale tab.
 
-### 6. Screenshot
+### 6. Screenshot + design approval
 
 Use the chrome-devtools navigate_page tool to load the page, then take_screenshot.
 
@@ -53,13 +53,15 @@ Check for:
 - Layout looks correct
 - No console errors via list_console_messages
 
+Then ask the user: *"Happy with the design and layout, or would you like any changes before I run tests and Lighthouse?"* — use your host's question tool if it has one (e.g. AskUserQuestion); it waits for the answer without ending the turn. If you must ask in plain prose and end your turn, call `pulse_await_approval` first so the Stop hooks let the turn end. **Do not proceed until the user explicitly approves.** If a `VERIFY REQUIRED` stop-hook block fires while your question is unanswered, that is not permission to continue — call `pulse_await_approval`, re-ask, and end your turn.
+
 ### 7. Lighthouse
 
-Run lighthouse_audit (desktop, then mobile). All four scores — Accessibility, Best Practices, SEO, Performance — must be 100 before continuing.
+Run lighthouse_audit (desktop, then mobile) against the production server — call `pulse_build` first and navigate to the production URL. **Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Performance is reported but not gated (it varies with machine load).
 
 ### 8. Run the checklist
 
-Go through `.github/instructions/pulse-checklist.instructions.md` and confirm every applicable point passes. Fix anything that fails.
+Go through `.claude/pulse-checklist.md` and confirm every applicable point passes. Fix anything that fails.
 
 ### 9. Write tests
 

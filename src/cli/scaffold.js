@@ -188,12 +188,26 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
           ]
         }
       ],
+      UserPromptSubmit: [
+        {
+          hooks: [
+            {
+              type: 'command',
+              // Consume the awaiting-approval marker: it grants exactly one turn-end
+              // (the one that asks the user a blocking question). As soon as the user
+              // replies, the Stop gates are back in force for the next turn.
+              command: `node -e "try{require('fs').unlinkSync('.pulse-awaiting-approval')}catch{}"`,
+              statusMessage: 'Clearing approval pause...',
+            }
+          ]
+        }
+      ],
       Stop: [
         {
           hooks: [
             {
               type: 'command',
-              command: `node -e "const fs=require('fs');const{execSync}=require('child_process');let changed=new Set();let hasGit=false;try{execSync('git rev-parse --is-inside-work-tree',{stdio:'pipe'});hasGit=true;execSync('git status --porcelain',{encoding:'utf8'}).split('\\n').forEach(l=>{const f=l.slice(3).trim().split(' -> ').pop();if(f)changed.add(f);});}catch{}if(!hasGit&&fs.existsSync('src/pages')){for(const f of fs.readdirSync('src/pages')){if(f.endsWith('.js')&&!f.endsWith('.test.js'))changed.add('src/pages/'+f);}}const specs=[...changed].filter(f=>f.match(/^src\\/pages\\/.+\\.js$/)&&!f.endsWith('.test.js'));const missing=specs.filter(f=>{const t=f.replace(/\\.js$/,'.test.js');return!fs.existsSync(t)&&!changed.has(t);});if(missing.length){process.stdout.write(JSON.stringify({decision:'block',reason:'TESTS MISSING: '+missing.join(', ')+' — you must write tests before finishing. Use renderSync/render from @invisibleloop/pulse/testing to test view output, mutations, and any extracted logic functions. Run the tests with node to confirm they pass.'}));}"`,
+              command: `node -e "const fs=require('fs');if(fs.existsSync('.pulse-awaiting-approval'))process.exit(0);const{execSync}=require('child_process');let changed=new Set();let hasGit=false;try{execSync('git rev-parse --is-inside-work-tree',{stdio:'pipe'});hasGit=true;execSync('git status --porcelain',{encoding:'utf8'}).split('\\n').forEach(l=>{const f=l.slice(3).trim().split(' -> ').pop();if(f)changed.add(f);});}catch{}if(!hasGit&&fs.existsSync('src/pages')){for(const f of fs.readdirSync('src/pages')){if(f.endsWith('.js')&&!f.endsWith('.test.js'))changed.add('src/pages/'+f);}}const specs=[...changed].filter(f=>f.match(/^src\\/pages\\/.+\\.js$/)&&!f.endsWith('.test.js'));const missing=specs.filter(f=>{const t=f.replace(/\\.js$/,'.test.js');return!fs.existsSync(t)&&!changed.has(t);});if(missing.length){process.stdout.write(JSON.stringify({decision:'block',reason:'TESTS MISSING: '+missing.join(', ')+' — you must write tests before finishing. Use renderSync/render from @invisibleloop/pulse/testing to test view output, mutations, and any extracted logic functions. Run the tests with node to confirm they pass.\\n\\nEXCEPTION — waiting on the user: if you are ending this turn to wait for the user\\'s answer (e.g. the design-approval gate), call pulse_await_approval first, then ask and end your turn. Do not write tests or run /verify on an unapproved design.'}));}"`,
               statusMessage: 'Checking for missing tests...',
             },
             {
@@ -203,7 +217,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
             },
             {
               type: 'command',
-              command: `node -e "const fs=require('fs');const{execSync}=require('child_process');let specs=[];try{const out=execSync('git status --porcelain',{encoding:'utf8'});out.split('\\n').forEach(l=>{const f=l.slice(3).trim().split(' -> ').pop();if(f&&f.match(/^src\\/pages\\/.+\\.js$/)&&!f.endsWith('.test.js'))specs.push(f);});}catch{if(fs.existsSync('src/pages'))for(const f of fs.readdirSync('src/pages')){if(f.endsWith('.js')&&!f.endsWith('.test.js'))specs.push('src/pages/'+f);}}if(!specs.length)process.exit(0);const stamp='.pulse-verified';let stampMtime=0;try{stampMtime=fs.statSync(stamp).mtimeMs;}catch{}const stale=specs.filter(f=>{try{return fs.statSync(f).mtimeMs>stampMtime;}catch{return true;}});if(stale.length){process.stdout.write(JSON.stringify({decision:'block',reason:'VERIFY REQUIRED: These pages have not been verified since last edit:\\n'+stale.map(f=>'  '+f).join('\\n')+'\\n\\nRun /verify for each changed page. /verify runs Lighthouse (desktop + mobile), performance trace, console check, and code review — then writes the stamp that clears this check.'}));}"`,
+              command: `node -e "const fs=require('fs');if(fs.existsSync('.pulse-awaiting-approval'))process.exit(0);const{execSync}=require('child_process');let specs=[];try{const out=execSync('git status --porcelain',{encoding:'utf8'});out.split('\\n').forEach(l=>{const f=l.slice(3).trim().split(' -> ').pop();if(f&&f.match(/^src\\/pages\\/.+\\.js$/)&&!f.endsWith('.test.js'))specs.push(f);});}catch{if(fs.existsSync('src/pages'))for(const f of fs.readdirSync('src/pages')){if(f.endsWith('.js')&&!f.endsWith('.test.js'))specs.push('src/pages/'+f);}}if(!specs.length)process.exit(0);const stamp='.pulse-verified';let stampMtime=0;try{stampMtime=fs.statSync(stamp).mtimeMs;}catch{}const stale=specs.filter(f=>{try{return fs.statSync(f).mtimeMs>stampMtime;}catch{return true;}});if(stale.length){process.stdout.write(JSON.stringify({decision:'block',reason:'VERIFY REQUIRED: These pages have not been verified since last edit:\\n'+stale.map(f=>'  '+f).join('\\n')+'\\n\\nIMPORTANT — check first: are you ending this turn to wait for the user\\'s answer (e.g. the design-approval question)? If so, do NOT run /verify — the user has not approved the design yet. Call pulse_await_approval, re-ask your question, and end your turn; this gate will let you stop.\\n\\nOtherwise run /verify for each changed page. /verify runs Lighthouse (desktop + mobile), performance trace, console check, and code review — then writes the stamp that clears this check.'}));}"`,
               statusMessage: 'Checking verification stamp...',
             }
           ]
@@ -217,6 +231,8 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
     'node_modules',
     'public/dist',
     '.pulse-build',
+    '.pulse-verified',
+    '.pulse-awaiting-approval',
     '.DS_Store',
     '# Intake images — local design references, not committed',
     'public/intake/*.jpg',

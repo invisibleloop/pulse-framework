@@ -1204,6 +1204,33 @@ The stop hook compares each changed spec's mtime against this stamp. Any spec ne
 )
 
 // ---------------------------------------------------------------------------
+// pulse_await_approval
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_await_approval',
+  {
+    description: `Pause the workflow to wait for the user's answer — call this immediately BEFORE ending your turn with a blocking question (e.g. the design-approval gate: "Happy with the layout and direction…?").
+
+It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let this one turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn.
+
+**Prefer your host's question tool if it has one** (e.g. AskUserQuestion in Claude Code): a question tool waits for the answer *without ending the turn*, so the Stop hooks never fire and this marker is unnecessary. Use pulse_await_approval only when you must ask in plain prose and end the turn.
+
+Do NOT use this to skip verification — it buys exactly one turn-end, paired with a question the user must answer. Calling it without asking anything just delays the gates by one message.`,
+    inputSchema: {},
+  },
+  () => {
+    const markerPath = path.join(ROOT, '.pulse-awaiting-approval')
+    try {
+      fs.writeFileSync(markerPath, String(Math.floor(Date.now() / 1000)), 'utf8')
+      return text('✓ Awaiting-approval marker written. Ask the user your question and end your turn — the Stop hooks will allow it. The marker is cleared when the user replies.')
+    } catch (err) {
+      return text(`Error writing .pulse-awaiting-approval: ${err.message}\nFallback: run \`touch .pulse-awaiting-approval\` in Bash, then ask your question.`)
+    }
+  }
+)
+
+// ---------------------------------------------------------------------------
 // pulse_run_tests
 // ---------------------------------------------------------------------------
 

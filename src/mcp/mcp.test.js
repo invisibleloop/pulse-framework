@@ -152,14 +152,19 @@ const agentDocs = [
   '.claude/commands/verify.md',
   '.claude/commands/new-doc-page.md',
   'CLAUDE.md',
+  'README.md',
 ]
 
 test('no agent doc states a four-score Lighthouse bar (100/100/100/100)', () => {
+  const fourScore = (src) =>
+    src.includes('100/100/100/100') ||
+    /all four (scores|categories)/i.test(src) ||
+    /Accessibility, Best Practices, SEO,? and Performance[^.\n]*must (all )?be 100/i.test(src)
   const offenders = agentDocs.filter(f =>
     fs.existsSync(path.join(ROOT, f)) &&
-    fs.readFileSync(path.join(ROOT, f), 'utf8').includes('100/100/100/100')
+    fourScore(fs.readFileSync(path.join(ROOT, f), 'utf8'))
   )
-  if (serverSrc.includes('100/100/100/100')) offenders.push('src/mcp/server.js')
+  if (fourScore(serverSrc)) offenders.push('src/mcp/server.js')
   assert(
     offenders.length === 0,
     `Four-score Lighthouse bar found in: ${offenders.join(', ')}. ` +
@@ -202,6 +207,61 @@ test('workflow.md Mode B instructs writing the creative-override spec comment', 
     'workflow.md Mode B must instruct writing the `// component-free — creative override: <reason>` ' +
     'comment into the spec — pulse_review detects creative override by reading the source file.'
   )
+})
+
+test('checklist points cross-spec shared components at src/components/, not src/ui/', () => {
+  const checklist = fs.readFileSync(path.join(agentDir, 'checklist.md'), 'utf8')
+  assert(
+    !/shared component in `src\/ui\/`/.test(checklist),
+    'checklist.md tells the agent to create shared components in src/ui/ — that is the ' +
+    'framework\'s own library inside the package. Project-level shared code goes in src/components/.'
+  )
+  assert(
+    /shared component in `src\/components\/`/.test(checklist),
+    'checklist.md must direct cross-spec shared components to src/components/.'
+  )
+})
+
+test('guide-spec.md states the one-spec-per-page mental model', () => {
+  const guideSpec = fs.readFileSync(path.join(agentDir, 'guide-spec.md'), 'utf8')
+  assert(
+    /one spec per page/i.test(guideSpec) && /dynamic route is still one spec/i.test(guideSpec),
+    'guide-spec.md must state the mental model explicitly: one spec = one route = one file, ' +
+    'and a dynamic route is still one spec serving many URLs.'
+  )
+})
+
+test('approval pause mechanism is wired end to end', () => {
+  // The design-approval gate requires the agent to end its turn and wait for the
+  // user — but the scaffolded Stop hooks block any turn ending with unverified
+  // edits. Without an escape hatch the hooks steamroll the approval gate (the
+  // agent gets blocked, reads "Run /verify", and proceeds without an answer).
+  const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  const coverageSrc = fs.readFileSync(path.join(agentDir, 'coverage-check.js'), 'utf8')
+  const workflow    = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+
+  // 1. The MCP server must expose the tool that writes the marker
+  assert(/registerTool\(\s*'pulse_await_approval'/.test(serverSrc),
+    'server.js must register pulse_await_approval')
+
+  // 2. Every inline Stop hook in the scaffold must early-exit on the marker
+  const stopHookCount   = (scaffoldSrc.match(/decision:'block'/g) || []).length
+  const markerCheckCount = (scaffoldSrc.match(/\.pulse-awaiting-approval'\)\)process\.exit\(0\)/g) || []).length
+  assert(stopHookCount >= 2 && markerCheckCount >= stopHookCount,
+    `scaffold.js has ${stopHookCount} blocking Stop hooks but only ${markerCheckCount} check ` +
+    `.pulse-awaiting-approval — every blocking Stop hook must allow the approval pause.`)
+
+  // 3. coverage-check.js (the third Stop hook) must early-exit on the marker
+  assert(coverageSrc.includes('.pulse-awaiting-approval'),
+    'coverage-check.js must early-exit when .pulse-awaiting-approval exists')
+
+  // 4. The marker must be consumed when the user replies — one turn-end only
+  assert(/UserPromptSubmit/.test(scaffoldSrc) && /unlinkSync\('\.pulse-awaiting-approval'\)/.test(scaffoldSrc),
+    'scaffold.js must register a UserPromptSubmit hook that deletes .pulse-awaiting-approval')
+
+  // 5. The workflow must teach the mechanism at the design-approval gate
+  assert(workflow.includes('pulse_await_approval'),
+    'workflow.md Phase 5a must explain how to pause: host question tool preferred, pulse_await_approval otherwise')
 })
 
 test('identity.md declares the creative override (Design Freedom) carve-out', () => {
