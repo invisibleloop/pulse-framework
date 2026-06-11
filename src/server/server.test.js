@@ -1446,6 +1446,120 @@ await test('submit pages are excluded from the in-process page cache', async () 
 
 // ---------------------------------------------------------------------------
 
+console.log('\nSitemap + robots.txt\n')
+
+const aboutSpec   = { route: '/about', view: () => '<main id="main-content">About</main>' }
+const blogSpec    = {
+  route:   '/blog/:slug',
+  sitemap: async () => ['/blog/first-post', { path: '/blog/second-post', lastmod: '2026-01-15' }],
+  server:  { post: async (ctx) => ({ slug: ctx.params.slug }) },
+  view:    (_s, server) => `<main id="main-content">${server.post.slug}</main>`,
+}
+const secretSpec  = { route: '/admin', guard: async () => {}, view: () => '<main id="main-content">admin</main>' }
+const hiddenSpec  = { route: '/internal', sitemap: false, view: () => '<main id="main-content">internal</main>' }
+
+await test('sitemap: true serves /sitemap.xml with static routes', async () => {
+  await withServer([helloSpec, aboutSpec], { stream: false, sitemap: true }, async (port) => {
+    const { status, headers, body } = await get(port, '/sitemap.xml')
+    assert(status === 200, `Expected 200, got ${status}`)
+    assert(headers['content-type'].includes('application/xml'), `Expected XML, got ${headers['content-type']}`)
+    assert(body.includes(`<loc>http://localhost:${port}/hello</loc>`), `Missing /hello: ${body}`)
+    assert(body.includes(`<loc>http://localhost:${port}/about</loc>`), `Missing /about: ${body}`)
+  })
+})
+
+await test('dynamic routes contribute via spec.sitemap enumerator (with lastmod)', async () => {
+  await withServer([blogSpec], { stream: false, sitemap: true, quiet: true }, async (port) => {
+    const { body } = await get(port, '/sitemap.xml')
+    assert(body.includes('/blog/first-post</loc>'), `Missing enumerated path: ${body}`)
+    assert(body.includes('/blog/second-post</loc>'), 'Missing second enumerated path')
+    assert(body.includes('<lastmod>2026-01-15</lastmod>'), 'Missing lastmod')
+  })
+})
+
+await test('dynamic routes without an enumerator are skipped, not broken', async () => {
+  const bare = { route: '/items/:id', server: { i: async (ctx) => ctx.params.id }, view: (_s, s) => `<main id="main-content">${s.i}</main>` }
+  await withServer([helloSpec, bare], { stream: false, sitemap: true, quiet: true }, async (port) => {
+    const { status, body } = await get(port, '/sitemap.xml')
+    assert(status === 200)
+    assert(!body.includes(':id'), `Raw :param leaked into sitemap: ${body}`)
+    assert(body.includes('/hello</loc>'), 'Static route should still be present')
+  })
+})
+
+await test('guarded pages, route "*", and sitemap:false are excluded', async () => {
+  const nf = { route: '*', view: () => '<main id="main-content">404</main>' }
+  await withServer([helloSpec, secretSpec, hiddenSpec, nf], { stream: false, sitemap: true }, async (port) => {
+    const { body } = await get(port, '/sitemap.xml')
+    assert(!body.includes('/admin'), 'Guarded page must be excluded by default')
+    assert(!body.includes('/internal'), 'sitemap:false page must be excluded')
+    assert(!body.includes('<loc>http://localhost:' + port + '/*'), 'route * must be excluded')
+    assert(body.includes('/hello</loc>'))
+  })
+})
+
+await test('a guarded page opts in with sitemap: true', async () => {
+  const publicGuarded = { route: '/landing', guard: async () => {}, sitemap: true, view: () => '<main id="main-content">x</main>' }
+  await withServer([publicGuarded], { stream: false, sitemap: true }, async (port) => {
+    const { body } = await get(port, '/sitemap.xml')
+    assert(body.includes('/landing</loc>'), `Expected opted-in guarded page: ${body}`)
+  })
+})
+
+await test('robots.txt is generated and points at the sitemap', async () => {
+  await withServer([helloSpec], { stream: false, sitemap: true }, async (port) => {
+    const { status, body } = await get(port, '/robots.txt')
+    assert(status === 200)
+    assert(body.includes('User-agent: *'), `Missing user-agent: ${body}`)
+    assert(body.includes(`Sitemap: http://localhost:${port}/sitemap.xml`), `Missing sitemap line: ${body}`)
+  })
+})
+
+await test('robots: false disables robots.txt; custom string is served verbatim', async () => {
+  await withServer([helloSpec], { stream: false, sitemap: true, robots: false }, async (port) => {
+    const { status } = await get(port, '/robots.txt')
+    assert(status === 404, `Expected 404 with robots:false, got ${status}`)
+  })
+  await withServer([helloSpec], { stream: false, sitemap: true, robots: 'User-agent: *\nDisallow: /private\n' }, async (port) => {
+    const { body } = await get(port, '/robots.txt')
+    assert(body.includes('Disallow: /private'), 'Expected custom robots content')
+  })
+})
+
+await test('sitemap origin can be pinned via { origin }', async () => {
+  await withServer([helloSpec], { stream: false, sitemap: { origin: 'https://mysite.com' } }, async (port) => {
+    const { body } = await get(port, '/sitemap.xml')
+    assert(body.includes('<loc>https://mysite.com/hello</loc>'), `Expected pinned origin: ${body}`)
+    const robotsRes = await get(port, '/robots.txt')
+    assert(robotsRes.body.includes('Sitemap: https://mysite.com/sitemap.xml'), 'robots should use pinned origin')
+  })
+})
+
+await test('trailingSlash "add" is reflected in sitemap URLs', async () => {
+  await withServer([helloSpec, aboutSpec], { stream: false, sitemap: true, trailingSlash: 'add' }, async (port) => {
+    const { body } = await get(port, '/sitemap.xml')
+    assert(body.includes('/about/</loc>'), `Expected trailing slash on URLs: ${body}`)
+  })
+})
+
+await test('sitemap disabled by default — /sitemap.xml is 404', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const { status } = await get(port, '/sitemap.xml')
+    assert(status === 404, `Expected 404 when sitemap not enabled, got ${status}`)
+  })
+})
+
+await test('a failing enumerator does not take down the sitemap', async () => {
+  const broken = { route: '/x/:id', sitemap: async () => { throw new Error('db down') }, server: { i: async () => 1 }, view: (_s, s) => `<main id="main-content">${s.i}</main>` }
+  await withServer([helloSpec, broken], { stream: false, sitemap: true, quiet: true }, async (port) => {
+    const { status, body } = await get(port, '/sitemap.xml')
+    assert(status === 200, `Expected 200 despite enumerator failure, got ${status}`)
+    assert(body.includes('/hello</loc>'), 'Other routes should still be listed')
+  })
+})
+
+// ---------------------------------------------------------------------------
+
 console.log('\nMalformed request handling\n')
 
 await test('malformed percent-encoding in path returns 404, not 500', async () => {

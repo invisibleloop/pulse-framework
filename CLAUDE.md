@@ -68,6 +68,13 @@ export const mySpec = {
   // query param, list it here so distinct values get distinct cache entries.
   cacheVary: ['q', 'page'],
 
+  // Sitemap inclusion (when createServer has sitemap: true).
+  // Static routes are included automatically — only set this to:
+  //   false              → exclude this page
+  //   true               → include a guarded page (excluded by default)
+  //   async () => [...]  → enumerate a dynamic :param route's URLs
+  sitemap: async () => (await db.posts.list()).map(p => `/blog/${p.slug}`),
+
   // Global store keys this page subscribes to — appears in view's server arg
   // Store mutations update all subscribed pages without a server round-trip
   store: ['user', 'cart'],
@@ -282,6 +289,11 @@ await createServer(
     healthCheck:     '/healthz',  // built-in health endpoint path, or false to disable
     secret:       process.env.PULSE_SECRET,  // HMAC secret for CSRF tokens — set a stable value
                                   // when running multiple instances (default: random per boot)
+    sitemap:      true,           // auto-serve /sitemap.xml + robots.txt from registered routes
+                                  // also accepts { origin: 'https://mysite.com' } to pin the URL origin;
+                                  // dynamic :param routes contribute via spec.sitemap enumerators;
+                                  // a physical sitemap.xml/robots.txt in staticDir always wins
+    robots:       null,           // robots.txt when sitemap on: null = auto, false = off, string = verbatim
     csp: {                        // extra sources merged into the framework's default CSP
       'style-src': ['https://fonts.googleapis.com'],
       'font-src':  ['https://fonts.gstatic.com'],

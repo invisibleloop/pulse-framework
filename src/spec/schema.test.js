@@ -445,6 +445,22 @@ test('csrf: false with submit warns about unprotected POSTs', () => {
   assert(warnings.some(w => w.includes('CSRF')), 'Expected a warning about disabled CSRF protection')
 })
 
+// --- sitemap ------------------------------------------------------------------
+
+test('sitemap accepts boolean, array, and function', () => {
+  for (const v of [true, false, ['/a', { path: '/b', lastmod: '2026-01-01' }], async () => ['/a']]) {
+    const { valid, errors } = validateSpec({ route: '/x', view: () => '', sitemap: v })
+    assert(valid, `Expected sitemap ${typeof v} to be valid: ${errors.join('; ')}`)
+  }
+})
+
+test('sitemap rejects invalid types and malformed array entries', () => {
+  const { valid: v1 } = validateSpec({ route: '/x', view: () => '', sitemap: 'yes' })
+  assert(!v1, 'Expected string sitemap to be invalid')
+  const { valid: v2, errors } = validateSpec({ route: '/x', view: () => '', sitemap: ['no-slash'] })
+  assert(!v2 && errors.some(e => e.includes('sitemap')), 'Expected malformed array entry to be invalid')
+})
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)

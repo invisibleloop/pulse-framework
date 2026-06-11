@@ -153,6 +153,25 @@ export function validateSpec(spec) {
     }
   }
 
+  // sitemap — inclusion control for the auto-generated sitemap (createServer { sitemap: true })
+  //   false          → exclude this page
+  //   true           → include a guarded static page that would be excluded by default
+  //   array/function → enumerate paths (required for dynamic :param routes)
+  if (spec.sitemap !== undefined) {
+    const t = spec.sitemap
+    const ok = typeof t === 'boolean' || typeof t === 'function' || Array.isArray(t)
+    if (!ok) {
+      errors.push('spec.sitemap must be a boolean, an array of paths, or a function — e.g. sitemap: async () => [\'/blog/a\', { path: \'/blog/b\', lastmod: \'2026-01-01\' }]')
+    }
+    if (Array.isArray(t)) {
+      const bad = t.find(item => !(typeof item === 'string' && item.startsWith('/')) &&
+                                 !(item && typeof item === 'object' && typeof item.path === 'string' && item.path.startsWith('/')))
+      if (bad !== undefined) {
+        errors.push('spec.sitemap array entries must be "/path" strings or { path: \'/path\', lastmod? } objects')
+      }
+    }
+  }
+
   // csrf — opt out of CSRF protection on the submit handler (default: enforced)
   if (spec.csrf !== undefined) {
     if (typeof spec.csrf !== 'boolean') {
