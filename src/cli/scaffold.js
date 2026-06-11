@@ -99,13 +99,20 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
     }
   }
 
-  // Copilot skills — .copilot/skills/ so GitHub Copilot CLI picks them up as project skills
+  // Skills — copied to BOTH hosts so Claude and Copilot have the same capabilities:
+  //   .copilot/skills/  — GitHub Copilot CLI project skills
+  //   .claude/skills/   — Claude Code project skills (verify is skipped: Claude
+  //                       already gets /verify as a slash command with identical content)
   const skillsSrc = new URL('../agent/skills', import.meta.url).pathname
   if (fs.existsSync(skillsSrc)) {
     for (const skillDir of fs.readdirSync(skillsSrc)) {
       const skillMd = path.join(skillsSrc, skillDir, 'SKILL.md')
       if (fs.existsSync(skillMd)) {
-        write(targetDir, `.copilot/skills/${skillDir}/SKILL.md`, fs.readFileSync(skillMd, 'utf8'))
+        const content = fs.readFileSync(skillMd, 'utf8')
+        write(targetDir, `.copilot/skills/${skillDir}/SKILL.md`, content)
+        if (skillDir !== 'verify') {
+          write(targetDir, `.claude/skills/${skillDir}/SKILL.md`, content)
+        }
       }
     }
   }
@@ -113,11 +120,13 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
   // Copilot project instructions — .github/copilot-instructions.md is the canonical Copilot location
   write(targetDir, '.github/copilot-instructions.md', copilotInstructionsMd(name))
 
-  // Copilot checklist as a separate instructions file — auto-loaded from .github/instructions/
+  // Copilot checklist as a separate instructions file. The applyTo frontmatter is
+  // required for auto-attachment — without it the file is only used when manually
+  // referenced, and the checklist silently never reaches the agent.
   const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
   if (fs.existsSync(checklistSrc)) {
     write(targetDir, '.github/instructions/pulse-checklist.instructions.md',
-      fs.readFileSync(checklistSrc, 'utf8'))
+      `---\napplyTo: '**'\n---\n\n` + fs.readFileSync(checklistSrc, 'utf8'))
   }
 
   // settings.json — hooks that enforce correct agent behaviour
@@ -434,7 +443,18 @@ body {
 `
 }
 
-function claudeMd(appName) {
+// ---------------------------------------------------------------------------
+// Agent instructions — ONE shared body for every host.
+//
+// Claude (.claude/CLAUDE.md) and Copilot (.github/copilot-instructions.md) must
+// give their agents identical logic: same session-start steps, same CSS rules,
+// same plan-first behaviour, same definition of done, same testing guidance.
+// Host-specific differences are confined to the thin wrappers below (how each
+// host references the checklist). Never add content to one wrapper that the
+// other host also needs — put it in the shared body.
+// ---------------------------------------------------------------------------
+
+function agentInstructionsBody(appName) {
   return `\
 # ${appName} — Pulse App
 
@@ -452,15 +472,16 @@ public/intake/    ← drop design reference images here before starting (not com
 
 1. Run \`pulse_list_structure\` to see what already exists
 2. Read \`pulse://guide\` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns
-3. If images are present in \`public/intake/\`, call \`pulse_extract_inspiration\` on each before \`pulse_intake\` — the session hook will remind you if you forget
+3. If images are present in \`public/intake/\`, call \`pulse_extract_inspiration\` on each before \`pulse_intake\`
 
 The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
 
 ## CSS and theming
 
-- Hex values and colour token definitions go in \`public/theme.css\` — that is the only file where hex is allowed. The hex lint hook will fire on any other CSS file.
+- Hex values and colour token definitions go in \`public/theme.css\` — that is the only file where hex is allowed. The hex lint check fires on any other CSS file.
 - \`public/app.css\` must not contain hex colour values. Use \`var(--ui-space-N)\` spacing tokens (\`--ui-space-1\` = 4px through \`--ui-space-24\` = 96px) for padding, margin, and gap. Use \`var(--ui-text-*)\` tokens (\`--ui-text-xs\` through \`--ui-text-4xl\`) for font sizes. Plain values like \`1rem\` are also fine when no token fits.
 - Load order in \`meta.styles\`: \`/pulse-ui.css\` → \`/theme.css\` → \`/app.css\`.
+- **The default theme is DARK.** If the design calls for a light page, set \`meta.theme: 'light'\` when you first write the spec — do not discover a dark page at the screenshot.
 
 When the user asks for layout or spacing changes, apply them directly — do not ask for confirmation on small CSS tweaks. Only pause for confirmation before large structural changes (new pages, major layout reworks).
 
@@ -468,7 +489,7 @@ When the user asks for layout or spacing changes, apply them directly — do not
 
 **Always present a plan and wait for the user to confirm before writing a single line of code.**
 
-The plan must include: route, page sections, components used, state shape, and whether hydration is needed. End the plan with an explicit question — "Shall I go ahead?" — and stop. Do not proceed until the user says yes (or equivalent). This applies to every new page or significant change, no matter how clear the task seems.
+The plan must include: route, page sections, components used, state shape, theme (light or dark), and whether hydration is needed. End the plan with an explicit question — "Shall I go ahead?" — and stop. Do not proceed until the user says yes (or equivalent). This applies to every new page or significant change, no matter how clear the task seems.
 
 ## After completing any feature
 
@@ -523,100 +544,22 @@ assert(fallback.includes('main-content'))
 
 **Selector support:** \`tag\`, \`.class\`, \`#id\`, \`[attr]\`, \`[attr="value"]\`, combinations (\`button.primary[disabled]\`), and **descendant combinators** (\`r.count('tbody tr')\`, \`r.find('.card h2')\`).
 Descendant selectors match the rightmost token within the ancestor context — \`r.count('.foo span')\` counts spans that are descendants of \`.foo\` elements.
+`
+}
 
+function claudeMd(appName) {
+  return agentInstructionsBody(appName) + `
 @.claude/pulse-checklist.md
 `
 }
 
 function copilotInstructionsMd(appName) {
-  return `\
-# ${appName} — Pulse App
-
-## Project
-
-\`\`\`
-src/pages/        ← one .js file per page, auto-discovered
-src/components/   ← shared view fragments (JS functions returning HTML strings)
-public/theme.css  ← token definitions (hex values, colour overrides) — hex allowed here only
-public/app.css    ← layout and component overrides — var() references only, no hex
-\`\`\`
-
-## Start of every session
-
-1. Run \`pulse_list_structure\` to see what already exists
-2. Read \`pulse://guide\` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns
-
-The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
-
-## CSS and theming
-
-- Hex values and colour token definitions go in \`public/theme.css\` — that is the only file where hex is allowed.
-- \`public/app.css\` must not contain hex colour values. Use \`var(--ui-space-N)\` spacing tokens for padding, margin, and gap. Use \`var(--ui-text-*)\` tokens for font sizes.
-- Load order in \`meta.styles\`: \`/pulse-ui.css\` → \`/theme.css\` → \`/app.css\`.
-
-## Before writing any code
-
-**Always present a plan and wait for the user to confirm before writing a single line of code.**
-
-The plan must include: route, page sections, components used, state shape, and whether hydration is needed. End the plan with an explicit question — "Shall I go ahead?" — and stop. Do not proceed until the user says yes (or equivalent). This applies to every new page or significant change, no matter how clear the task seems.
-
-## After completing any feature
-
-Run these steps in order — do not declare work done without them:
-
-1. \`pulse_validate\` — fix all errors and warnings
-2. \`pulse_review\` — switch into reviewer mode, read the source and rendered HTML critically, fix every issue before continuing
-3. Write tests for every page you created or changed, run \`npm test\` (all pass), then \`npm run test:coverage\` — fix any untested branches
-4. Navigate to the page in the browser and take a screenshot
-5. Run Lighthouse (desktop then mobile) — Accessibility, Best Practices, and SEO must all be 100
-
-## Writing tests
-
-Test files live next to the page they test: \`src/pages/foo.test.js\` for \`src/pages/foo.js\`.
-
-\`\`\`
-npm test               # run all tests
-npm run test:coverage  # run tests + show branch/line coverage for src/pages/
-\`\`\`
-
-Coverage target: **100% branch coverage on every view function**. The coverage report shows uncovered lines — add tests until every branch is exercised. Server fetcher functions (which hit real APIs) are exempt.
-
-What to test for every page:
-- View with real/populated server data (success path)
-- View with \`null\` server data per fetcher (each fetcher can fail independently)
-- View with empty arrays/collections (empty state vs populated state)
-- \`onViewError\` fallback — call it directly: \`spec.onViewError(new Error('x'), {}, {})\`
-- Every mutation — pure functions, test directly
-- Every exported pure function (formatters, validators, etc.)
-- XSS: pass \`'<script>alert(1)</script>'\` as user-controlled strings, assert \`!r.has('script')\`
-
-\`\`\`js
-import assert from 'node:assert/strict'
-import { renderSync } from '@invisibleloop/pulse/testing'
-import spec from './my-page.js'
-
-// View — pass mock state and server data
-const r = renderSync(spec, { state: { count: 5 }, server: { items: [] } })
-assert(r.has('main#main-content'))          // element exists
-assert.equal(r.get('h1').text, 'Title')    // text content (throws if not found)
-assert(r.has('button[disabled]'))           // attribute present
-assert(!r.has('.ui-badge'))                 // element absent
-assert.equal(r.count('li'), 3)             // count elements
-
-// Mutations — pure functions, test directly
-assert.deepEqual(spec.mutations.increment({ count: 0 }), { count: 1 })
-
-// onViewError
-const fallback = spec.onViewError(new Error('boom'), {}, {})
-assert(fallback.includes('main-content'))
-\`\`\`
-
-**Selector support:** \`tag\`, \`.class\`, \`#id\`, \`[attr]\`, \`[attr="value"]\`, and combinations (\`button.primary[disabled]\`).
-Descendant selectors (\`tbody tr\`, \`ul li\`) are NOT supported — use \`r.count('tr')\` not \`r.count('tbody tr')\`.
-
+  return agentInstructionsBody(appName) + `
 ## Spec review checklist
 
-See \`.github/instructions/pulse-checklist.instructions.md\` — loaded automatically by Copilot.
+Follow every applicable point in \`.github/instructions/pulse-checklist.instructions.md\` (auto-attached via its \`applyTo\` frontmatter).
+
+Your host has no enforcement hooks — the gates above are prose, not automation. Apply them with discipline: do not declare work done until validation, tests, Lighthouse, and review have all actually run.
 `
 }
 

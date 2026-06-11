@@ -8,8 +8,10 @@
  */
 
 import fs   from 'node:fs'
+import os   from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { isPulseProject } from './project-check.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT      = path.resolve(__dirname, '../..')
@@ -326,6 +328,142 @@ test('identity.md declares the creative override (Design Freedom) carve-out', ()
     'unconditionally bans raw HTML that workflow.md Mode B explicitly permits.'
   )
 })
+
+// ── Claude / Copilot host parity ─────────────────────────────────────────────
+// Both hosts must receive the same logic: identical verify pipeline, identical
+// instruction content (one shared body), and the same skills.
+
+console.log('\nClaude / Copilot host parity\n')
+
+test('verify command and verify skill have identical bodies', () => {
+  // Claude runs /verify from src/agent/commands/verify.md; Copilot runs the
+  // .copilot/skills/verify/SKILL.md. If they drift, the two hosts execute
+  // different verification pipelines (this happened: the skill had design/layout
+  // review gates the command lacked, the command had the close-tabs fix the
+  // skill lacked).
+  const command = fs.readFileSync(path.join(agentDir, 'commands', 'verify.md'), 'utf8')
+  const skill   = fs.readFileSync(path.join(agentDir, 'skills', 'verify', 'SKILL.md'), 'utf8')
+  const skillBody = skill.replace(/^---\n[\s\S]*?\n---\n*/, '').replace(/^\n+/, '')
+  assert(command.trim() === skillBody.trim(),
+    'src/agent/commands/verify.md must equal the body of src/agent/skills/verify/SKILL.md ' +
+    '(frontmatter stripped). Edit the SKILL.md, then regenerate the command from its body.')
+})
+
+test('scaffold generates host instructions from one shared body', () => {
+  const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  assert(/function agentInstructionsBody\(/.test(scaffoldSrc),
+    'scaffold.js must define agentInstructionsBody — the single shared instruction body')
+  assert(/function claudeMd\(appName\) \{\s*return agentInstructionsBody\(/.test(scaffoldSrc),
+    'claudeMd must be a thin wrapper around agentInstructionsBody')
+  assert(/function copilotInstructionsMd\(appName\) \{\s*return agentInstructionsBody\(/.test(scaffoldSrc),
+    'copilotInstructionsMd must be a thin wrapper around agentInstructionsBody')
+  assert(!scaffoldSrc.includes('NOT supported'),
+    'scaffold.js claims descendant selectors are NOT supported — they are; this was the old Copilot-only stale text')
+})
+
+test('scaffold and CLI sync skills to both hosts', () => {
+  const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  const indexSrc    = fs.readFileSync(path.join(ROOT, 'src/cli/index.js'), 'utf8')
+  const devSrc      = fs.readFileSync(path.join(ROOT, 'src/cli/dev.js'), 'utf8')
+  for (const [name, src] of [['scaffold.js', scaffoldSrc], ['index.js', indexSrc], ['dev.js', devSrc]]) {
+    assert(src.includes('.copilot') && src.includes('skills'),
+      `${name} must sync skills to .copilot/skills/`)
+    assert(/\.claude.{1,30}skills|skills.{1,30}\.claude/s.test(src.replace(/\n/g, ' ')) || src.includes(`'.claude', 'skills'`) || src.includes('.claude/skills'),
+      `${name} must also sync skills to .claude/skills/ — Claude and Copilot must have the same capabilities`)
+  }
+})
+
+test('Copilot checklist instructions file is written with applyTo frontmatter', () => {
+  // Without applyTo frontmatter the .instructions.md file is never auto-attached
+  // and the checklist silently never reaches the Copilot agent.
+  const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  const indexSrc    = fs.readFileSync(path.join(ROOT, 'src/cli/index.js'), 'utf8')
+  for (const [name, src] of [['scaffold.js', scaffoldSrc], ['index.js', indexSrc], ['server.js (pulse_update)', serverSrc]]) {
+    if (!src.includes('pulse-checklist.instructions.md')) continue
+    assert(src.includes(`applyTo: '**'`),
+      `${name} writes pulse-checklist.instructions.md without applyTo frontmatter — it will not auto-attach in Copilot`)
+  }
+})
+
+// ── Foreign-project guard ────────────────────────────────────────────────────
+// The MCP server may be registered globally in an agent host and spawn in every
+// workspace. In a non-Pulse project, every tool must refuse so the agent backs
+// off instead of driving pulse_* tools against a React/Rails/whatever repo.
+
+console.log('\nForeign-project guard\n')
+
+const tmpBase = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-check-'))
+const mkProject = (name, setup) => {
+  const dir = path.join(tmpBase, name)
+  fs.mkdirSync(dir, { recursive: true })
+  setup(dir)
+  return dir
+}
+
+test('project with @invisibleloop/pulse dependency is a Pulse project', () => {
+  const dir = mkProject('dep', d =>
+    fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ name: 'x', dependencies: { '@invisibleloop/pulse': '^1.0.0' } })))
+  assert(isPulseProject(dir) === true)
+})
+
+test('project with pulse.config.js is a Pulse project', () => {
+  const dir = mkProject('config', d => {
+    fs.writeFileSync(path.join(d, 'pulse.config.js'), 'export default {}')
+    fs.writeFileSync(path.join(d, 'index.js'), '')
+  })
+  assert(isPulseProject(dir) === true)
+})
+
+test('package.json-less project with public/pulse-ui.css is a Pulse project (docs/examples)', () => {
+  const dir = mkProject('asset', d => {
+    fs.mkdirSync(path.join(d, 'public'))
+    fs.writeFileSync(path.join(d, 'public', 'pulse-ui.css'), ':root{}')
+  })
+  assert(isPulseProject(dir) === true)
+})
+
+test('the framework repo itself is a Pulse project', () => {
+  assert(isPulseProject(ROOT) === true)
+})
+
+test('empty directory is allowed (pulse CLI scaffold target)', () => {
+  const dir = mkProject('empty', () => {})
+  assert(isPulseProject(dir) === true)
+})
+
+test('a foreign project (react app) is NOT a Pulse project', () => {
+  const dir = mkProject('react', d => {
+    fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ name: 'my-app', dependencies: { react: '^18.0.0', next: '^14.0.0' } }))
+    fs.mkdirSync(path.join(d, 'src'))
+    fs.writeFileSync(path.join(d, 'src', 'App.jsx'), '')
+  })
+  assert(isPulseProject(dir) === false, 'A react/next project must not be detected as a Pulse project')
+})
+
+test('a non-empty directory without any Pulse marker is NOT a Pulse project', () => {
+  const dir = mkProject('plain', d => {
+    fs.writeFileSync(path.join(d, 'main.py'), 'print(1)')
+    fs.writeFileSync(path.join(d, 'requirements.txt'), '')
+  })
+  assert(isPulseProject(dir) === false)
+})
+
+test('server.js wraps every tool and resource with the foreign-project guard', () => {
+  // The guard only protects anything if the registration wrappers are installed
+  // before any registerTool/registerResource call.
+  assert(serverSrc.includes('inPulseProject()') && serverSrc.includes('notPulseProjectMessage(ROOT)'),
+    'server.js must gate handlers on inPulseProject()')
+  const wrapToolIdx     = serverSrc.indexOf('server.registerTool =')
+  const wrapResourceIdx = serverSrc.indexOf('server.registerResource =')
+  assert(wrapToolIdx !== -1, 'registerTool wrapper missing from server.js')
+  assert(wrapResourceIdx !== -1, 'registerResource wrapper missing from server.js')
+  const firstToolCall     = serverSrc.indexOf("server.registerTool(")
+  const firstResourceCall = serverSrc.indexOf("server.registerResource(")
+  assert(wrapToolIdx < firstToolCall, 'registerTool wrapper must be installed before the first tool registration')
+  assert(wrapResourceIdx < firstResourceCall, 'registerResource wrapper must be installed before the first resource registration')
+})
+
+fs.rmSync(tmpBase, { recursive: true, force: true })
 
 // ── Result ───────────────────────────────────────────────────────────────────
 

@@ -387,26 +387,35 @@ async function runUpdate(root) {
     }
   }
 
-  // Sync Copilot skills into .copilot/skills/
+  // Sync skills into BOTH hosts so Claude and Copilot stay in lock-step.
+  // verify is skipped for Claude — it ships as a /verify slash command there
+  // with identical content.
   const skillsSrc = new URL('../agent/skills', import.meta.url).pathname
   if (fs.existsSync(skillsSrc)) {
     for (const skillDir of fs.readdirSync(skillsSrc)) {
       const skillMd = path.join(skillsSrc, skillDir, 'SKILL.md')
       if (fs.existsSync(skillMd)) {
-        const dstDir = path.join(root, '.copilot', 'skills', skillDir)
-        fs.mkdirSync(dstDir, { recursive: true })
-        fs.copyFileSync(skillMd, path.join(dstDir, 'SKILL.md'))
+        const copilotDir = path.join(root, '.copilot', 'skills', skillDir)
+        fs.mkdirSync(copilotDir, { recursive: true })
+        fs.copyFileSync(skillMd, path.join(copilotDir, 'SKILL.md'))
         updated.push(`.copilot/skills/${skillDir}/SKILL.md`)
+        if (skillDir !== 'verify') {
+          const claudeDir = path.join(root, '.claude', 'skills', skillDir)
+          fs.mkdirSync(claudeDir, { recursive: true })
+          fs.copyFileSync(skillMd, path.join(claudeDir, 'SKILL.md'))
+          updated.push(`.claude/skills/${skillDir}/SKILL.md`)
+        }
       }
     }
   }
 
-  // Sync checklist to .github/instructions/ for Copilot
+  // Sync checklist to .github/instructions/ for Copilot — applyTo frontmatter is
+  // required for auto-attachment.
   const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
   if (fs.existsSync(checklistSrc)) {
     const checklistDst = path.join(root, '.github', 'instructions', 'pulse-checklist.instructions.md')
     fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
-    fs.copyFileSync(checklistSrc, checklistDst)
+    fs.writeFileSync(checklistDst, `---\napplyTo: '**'\n---\n\n` + fs.readFileSync(checklistSrc, 'utf8'))
     updated.push('.github/instructions/pulse-checklist.instructions.md')
   }
 

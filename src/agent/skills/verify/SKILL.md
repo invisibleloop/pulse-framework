@@ -63,11 +63,15 @@ Navigate to `http://localhost:3001/<route>` with `mcp__chrome-devtools__navigate
 
 Run `mcp__chrome-devtools__lighthouse_audit` with `device: "mobile"` against the same production URL. Same pass bar. Report scores as a single line. Fix failures and restart from step 2 if needed.
 
-**To inspect mobile layout** use `mcp__chrome-devtools__emulate` with `viewport: "390x844x2,mobile,touch"` — not `resize_page`. Reset with `"1440x900x1"` afterward.
+### 7a. Mobile layout check
+
+Emulate a mobile viewport with `mcp__chrome-devtools__emulate` (`viewport: "390x844x2,mobile,touch"` — not `resize_page`), navigate to the production URL, take a screenshot. Look for: text or buttons overflowing the viewport, content too small to read or tap, navigation overlapping content, images breaking the layout. Fix any issues, then reset with `viewport: "1440x900x1"`.
 
 ### 8. Performance
 
 **Stay on the production server (port 3001) for the trace** — navigate to `http://localhost:3001/<route>` first; tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.
+
+After the trace, call `pulse_restart_server` to return to the dev server.
 
 ### 9. Console errors
 
@@ -77,9 +81,9 @@ Run `mcp__chrome-devtools__list_console_messages` filtered to errors and warning
 
 Run `pulse_review` with the absolute path to the spec file. Work through every item in the checklist it returns. Fix every issue before proceeding. Report pass or list what was fixed — do not quote the full review output.
 
-### 11. Close the browser
+### 11. Close extra browser tabs
 
-Run `mcp__chrome-devtools__list_pages`, then `mcp__chrome-devtools__close_page` for every page ID returned. `pageId` must be a JSON number, not a string.
+Run `mcp__chrome-devtools__list_pages`, then `mcp__chrome-devtools__close_page` for every page **except the last one** — `close_page` refuses to close the final tab. `pageId` must be a JSON number, not a string. If only one page is open, skip this step.
 
 ### 12. Write verification stamp
 

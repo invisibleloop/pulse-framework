@@ -33,6 +33,7 @@ import http                      from 'http'
 import { execFileSync, spawn, spawnSync } from 'child_process'
 
 import { loadPages } from '../cli/discover.js'
+import { isPulseProject, notPulseProjectMessage } from './project-check.js'
 
 // ---------------------------------------------------------------------------
 // Project root
@@ -97,6 +98,48 @@ function normaliseVibe(v) {
 // ---------------------------------------------------------------------------
 
 const server = new McpServer({ name: 'pulse', version: '0.2.0' })
+
+// ---------------------------------------------------------------------------
+// Foreign-project guard
+//
+// When this server is registered globally in an agent host (Claude Code,
+// Copilot, Cursor…) it spawns in every workspace, including non-Pulse projects
+// where an agent should never drive pulse_* tools. Wrap every tool and resource
+// handler with a project check: in a non-Pulse workspace each call returns a
+// refusal that tells the agent to back off and use the project's own stack.
+//
+// The check is re-evaluated per call (with a short cache) so installing Pulse
+// mid-session activates the tools without a server restart.
+// ---------------------------------------------------------------------------
+
+let _projectCheckCache = null  // { result, at }
+
+function inPulseProject() {
+  if (_projectCheckCache && Date.now() - _projectCheckCache.at < 10_000) {
+    return _projectCheckCache.result
+  }
+  const result = isPulseProject(ROOT)
+  _projectCheckCache = { result, at: Date.now() }
+  return result
+}
+
+{
+  const _registerTool = server.registerTool.bind(server)
+  server.registerTool = (name, def, handler) =>
+    _registerTool(name, def, async (...args) => {
+      if (!inPulseProject()) return text(notPulseProjectMessage(ROOT))
+      return handler(...args)
+    })
+
+  const _registerResource = server.registerResource.bind(server)
+  server.registerResource = (name, uri, meta, handler) =>
+    _registerResource(name, uri, meta, async (...args) => {
+      if (!inPulseProject()) {
+        return { contents: [{ uri, mimeType: 'text/plain', text: notPulseProjectMessage(ROOT) }] }
+      }
+      return handler(...args)
+    })
+}
 
 // ---------------------------------------------------------------------------
 // pulse://guide/* resources — split by topic so each fits in one read
@@ -3337,6 +3380,15 @@ server.registerTool(
       fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
       fs.copyFileSync(checklistSrc, checklistDst)
       updated.push('.claude/pulse-checklist.md')
+
+      // Keep the Copilot copy in lock-step — same checklist, with the applyTo
+      // frontmatter Copilot requires for auto-attachment.
+      const copilotDst = path.join(ROOT, '.github', 'instructions', 'pulse-checklist.instructions.md')
+      if (fs.existsSync(path.dirname(copilotDst)) || fs.existsSync(path.join(ROOT, '.github'))) {
+        fs.mkdirSync(path.dirname(copilotDst), { recursive: true })
+        fs.writeFileSync(copilotDst, `---\napplyTo: '**'\n---\n\n` + fs.readFileSync(checklistSrc, 'utf8'))
+        updated.push('.github/instructions/pulse-checklist.instructions.md')
+      }
     }
 
     const versionFile = path.join(publicDir, '.pulse-ui-version')

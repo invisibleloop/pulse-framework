@@ -100,6 +100,25 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
     }
   }
 
+  // Sync skills into BOTH hosts so Claude and Copilot stay in lock-step.
+  // verify is skipped for Claude — it ships as the /verify slash command there
+  // with identical content.
+  const skillsSrc = new URL('../agent/skills', import.meta.url).pathname
+  if (fs.existsSync(skillsSrc)) {
+    for (const skillDir of fs.readdirSync(skillsSrc)) {
+      const skillMd = path.join(skillsSrc, skillDir, 'SKILL.md')
+      if (!fs.existsSync(skillMd)) continue
+      const copilotDir = path.join(ROOT, '.copilot', 'skills', skillDir)
+      fs.mkdirSync(copilotDir, { recursive: true })
+      fs.copyFileSync(skillMd, path.join(copilotDir, 'SKILL.md'))
+      if (skillDir !== 'verify') {
+        const claudeDir = path.join(ROOT, '.claude', 'skills', skillDir)
+        fs.mkdirSync(claudeDir, { recursive: true })
+        fs.copyFileSync(skillMd, path.join(claudeDir, 'SKILL.md'))
+      }
+    }
+  }
+
   console.log(`  ✓ pulse-ui assets synced (v${pkgVersion})\n`)
 })()
 
