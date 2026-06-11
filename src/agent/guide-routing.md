@@ -126,6 +126,27 @@ Convention: name dynamic-route files [param].js inside a subfolder:
 
 This is purely a human readability convention. Pulse does not process [ ] in filenames.
 
+## Custom 404 page
+
+Create a spec with `route: '*'` — it renders through the normal pipeline (layout, styles, hydration) with status 404 whenever no route matches:
+
+```js
+// src/pages/not-found.js
+import { layout } from '../components/layout.js'
+
+export default {
+  route: '*',
+  meta:  { title: 'Page not found', styles: ['/pulse-ui.css', '/theme.css', '/app.css'] },
+  view:  () => layout({
+    content: `<h1>Page not found</h1><p>That page doesn't exist. <a href="/">Back home</a></p>`,
+  }),
+}
+```
+
+- Use the shared `layout()` so the 404 carries the site's nav and footer.
+- **Every site should have one** — without it, visitors to a bad URL get the framework's unbranded default 404.
+- 500 errors are customised via `createServer`'s `onError` option, not a spec.
+
 ## Canonical URLs
 
 Pulse auto-derives a canonical URL from every request and emits `<link rel="canonical">` in the `<head>`. No config needed in most cases.

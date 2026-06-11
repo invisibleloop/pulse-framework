@@ -80,15 +80,13 @@ server: {
 }`, 'js'))}
 
       ${section('not-found', '404 handling')}
-      <p>If no spec matches the incoming request path, Pulse returns a 404 response. The response body is a minimal HTML page. To customise the 404 page, use the <code>onError</code> option in <code>createServer</code>:</p>
-      ${codeBlock(highlight(`createServer(specs, {
-  onError: (err, req, res) => {
-    if (err.status === 404) {
-      res.writeHead(404, { 'Content-Type': 'text/html' })
-      res.end('<h1>Not found</h1>')
-    }
-  }
-})`, 'js'))}
+      <p>If no spec matches the incoming request path, Pulse returns a 404. To customise it, create a spec with <code>route: '*'</code> — it renders through the normal pipeline (layout, styles, components) with status 404:</p>
+      ${codeBlock(highlight(`export default {
+  route: '*',
+  meta:  { title: 'Page not found', styles: ['/pulse-ui.css', '/theme.css', '/app.css'] },
+  view:  () => \`<main id="main-content"><h1>Page not found</h1><p><a href="/">Back home</a></p></main>\`,
+}`, 'js'), 'src/pages/not-found.js')}
+      <p>See <a href="/error-pages">Error Pages</a> for the full behaviour, including 500 handling.</p>
 
       ${section('conventions', 'File naming conventions')}
       <p>While Pulse does not auto-discover files, the recommended convention maps file names to routes:</p>

@@ -412,6 +412,39 @@ test('does not warn when meta.theme is a function', () => {
   assert(!warnings.some(w => w.includes('meta.theme')), 'Unexpected meta.theme warning when theme is a function')
 })
 
+// --- route '*', submit, csrf ------------------------------------------------
+
+test('route "*" (custom not-found page) is valid', () => {
+  const { valid, errors } = validateSpec({ route: '*', view: () => '<main id="main-content">404</main>' })
+  assert(valid, `Expected valid, got: ${errors.join('; ')}`)
+})
+
+test('non-"/" routes other than "*" are still rejected', () => {
+  const { valid } = validateSpec({ route: 'about', view: () => '' })
+  assert(!valid, 'Expected route without leading / to be invalid')
+})
+
+test('submit must be a function', () => {
+  const { valid, errors } = validateSpec({ route: '/x', view: () => '', submit: 'nope' })
+  assert(!valid && errors.some(e => e.includes('submit')), 'Expected submit type error')
+})
+
+test('a valid submit function passes', () => {
+  const { valid } = validateSpec({ route: '/x', view: () => '', submit: async () => ({ redirect: '/' }) })
+  assert(valid, 'Expected spec with submit function to be valid')
+})
+
+test('csrf must be a boolean', () => {
+  const { valid, errors } = validateSpec({ route: '/x', view: () => '', csrf: 'off' })
+  assert(!valid && errors.some(e => e.includes('csrf')), 'Expected csrf type error')
+})
+
+test('csrf: false with submit warns about unprotected POSTs', () => {
+  const { valid, warnings } = validateSpec({ route: '/x', view: () => '', submit: async () => {}, csrf: false })
+  assert(valid, 'csrf: false is valid')
+  assert(warnings.some(w => w.includes('CSRF')), 'Expected a warning about disabled CSRF protection')
+})
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)

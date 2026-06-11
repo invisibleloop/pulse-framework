@@ -105,6 +105,7 @@ export default {
   // return nothing to let a GET request proceed to the view
 }`, 'js'))}
       ${callout('note', 'To use <code>guard</code> as a POST handler, the spec must declare <code>methods: [\'GET\', \'POST\']</code>. Without it, POST requests are rejected with 405 before guard runs.')}
+      ${callout('tip', 'For HTML form submissions, prefer <a href="/forms"><code>spec.submit</code></a> — it accepts POST automatically, gets CSRF protection for free, and re-renders the page with validation errors. Guard-based POST handling is best for API-style endpoints.')}
 
       ${section('reference', 'Reference')}
       ${table(

@@ -1246,6 +1246,206 @@ await test('health check fires before route matching — shadows a user spec at 
 
 // ---------------------------------------------------------------------------
 
+console.log('\nCustom 404 page (route: "*")\n')
+
+const notFoundPageSpec = {
+  route: '*',
+  meta:  { title: 'Lost?' },
+  view:  () => '<main id="main-content"><h1>Custom not found</h1><a href="/">Home</a></main>',
+}
+
+await test('unknown route renders the "*" spec with status 404', async () => {
+  await withServer([helloSpec, notFoundPageSpec], { stream: false }, async (port) => {
+    const { status, body } = await get(port, '/nope')
+    assert(status === 404, `Expected 404, got ${status}`)
+    assert(body.includes('Custom not found'), `Expected custom 404 content, got: ${body.slice(0, 200)}`)
+    assert(body.includes('<title>Lost?</title>'), `Expected custom 404 title, got: ${body.slice(0, 300)}`)
+  })
+})
+
+await test('custom 404 renders in streaming mode too (forced string path)', async () => {
+  await withServer([helloSpec, notFoundPageSpec], { stream: true }, async (port) => {
+    const { status, body } = await get(port, '/still-nope')
+    assert(status === 404, `Expected 404, got ${status}`)
+    assert(body.includes('Custom not found'), `Expected custom 404 content`)
+  })
+})
+
+await test('known routes are unaffected by the "*" spec', async () => {
+  await withServer([helloSpec, notFoundPageSpec], { stream: false }, async (port) => {
+    const { status, body } = await get(port, '/hello')
+    assert(status === 200, `Expected 200, got ${status}`)
+    assert(body.includes('Hello world'), 'Expected normal page content')
+  })
+})
+
+await test('custom 404 responses are not cached as 200s', async () => {
+  await withServer([helloSpec, notFoundPageSpec], { stream: false, defaultCache: 3600, dev: false }, async (port) => {
+    const a = await get(port, '/missing')
+    const b = await get(port, '/missing')
+    assert(a.status === 404 && b.status === 404, `Expected both 404, got ${a.status}/${b.status}`)
+  })
+})
+
+await test('without a "*" spec the default 404 still works', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const { status, body } = await get(port, '/nope')
+    assert(status === 404 && body.includes('404'), 'Expected default 404 page')
+  })
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nServer-side forms (spec.submit) + CSRF\n')
+
+function requestFull(port, method, path, { headers = {}, body = null } = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ method, hostname: 'localhost', port, path, headers }, (res) => {
+      let data = ''
+      res.on('data', c => { data += c })
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }))
+    })
+    req.on('error', reject)
+    if (body) req.write(body)
+    req.end()
+  })
+}
+
+function postForm(port, path, fields, cookie = '') {
+  const body = new URLSearchParams(fields).toString()
+  return requestFull(port, 'POST', path, {
+    headers: {
+      'Content-Type':   'application/x-www-form-urlencoded',
+      'Content-Length': Buffer.byteLength(body),
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    body,
+  })
+}
+
+/** GET the form page and extract the CSRF cookie + token for a valid POST. */
+async function getCsrfPair(port, path) {
+  const res    = await get(port, path)
+  const setCookie = [].concat(res.headers['set-cookie'] || []).find(c => c.startsWith('pulse_csrf='))
+  const cookie = setCookie ? setCookie.split(';')[0] : ''
+  const token  = res.body.match(/name="_csrf" value="([^"]+)"/)?.[1] || ''
+  return { cookie, token, body: res.body }
+}
+
+const formSpec = {
+  route: '/signup',
+  meta:  { title: 'Sign up' },
+  submit: async (ctx) => {
+    const data = await ctx.formData()
+    if (!data?.email) return { errors: { email: 'Email is required' }, values: data ?? {} }
+    if (data.email === 'taken@example.com') return { status: 422, errors: { email: 'Already registered' }, values: data }
+    return { redirect: '/signup?done=1' }
+  },
+  view: (state, server) => `
+    <main id="main-content">
+      <h1>Sign up</h1>
+      ${server.form?.errors?.email ? `<p class="error">${server.form.errors.email}</p>` : ''}
+      <form method="POST">
+        ${server.csrf ?? ''}
+        <label for="email">Email</label>
+        <input id="email" name="email" value="${server.form?.values?.email ?? ''}">
+        <button type="submit">Go</button>
+      </form>
+    </main>`,
+}
+
+await test('GET on a submit page sets the CSRF cookie and embeds the hidden field', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const { cookie, token, body } = await getCsrfPair(port, '/signup')
+    assert(cookie.startsWith('pulse_csrf='), `Expected pulse_csrf cookie, got: ${cookie}`)
+    assert(token.length > 20, `Expected a CSRF token in the form, got: ${token}`)
+    assert(body.includes('name="_csrf"'), 'Expected hidden _csrf input in the form')
+  })
+})
+
+await test('CSRF field is present in streaming mode too', async () => {
+  await withServer([formSpec], { stream: true }, async (port) => {
+    const { token } = await getCsrfPair(port, '/signup')
+    assert(token.length > 20, 'Expected CSRF token in streamed HTML')
+  })
+})
+
+await test('POST without a CSRF token is rejected with 403', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const { status } = await postForm(port, '/signup', { email: 'a@b.com' })
+    assert(status === 403, `Expected 403, got ${status}`)
+  })
+})
+
+await test('POST with a forged token is rejected with 403', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const { cookie } = await getCsrfPair(port, '/signup')
+    const { status } = await postForm(port, '/signup', { email: 'a@b.com', _csrf: 'forged-token-value' }, cookie)
+    assert(status === 403, `Expected 403, got ${status}`)
+  })
+})
+
+await test('valid POST follows POST-redirect-GET with 303', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const { cookie, token } = await getCsrfPair(port, '/signup')
+    const { status, headers } = await postForm(port, '/signup', { email: 'a@b.com', _csrf: token }, cookie)
+    assert(status === 303, `Expected 303, got ${status}`)
+    assert(headers.location === '/signup?done=1', `Expected PRG redirect, got ${headers.location}`)
+  })
+})
+
+await test('validation failure re-renders the page with server.form (errors + values)', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const { cookie, token } = await getCsrfPair(port, '/signup')
+    const { status, body } = await postForm(port, '/signup', { email: '', _csrf: token }, cookie)
+    assert(status === 200, `Expected 200 re-render, got ${status}`)
+    assert(body.includes('Email is required'), `Expected error message in re-render, got: ${body.slice(0, 400)}`)
+  })
+})
+
+await test('submit can set a custom response status (422) and values are echoed back', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const { cookie, token } = await getCsrfPair(port, '/signup')
+    const { status, body } = await postForm(port, '/signup', { email: 'taken@example.com', _csrf: token }, cookie)
+    assert(status === 422, `Expected 422, got ${status}`)
+    assert(body.includes('Already registered'), 'Expected error in re-render')
+    assert(body.includes('value="taken@example.com"'), 'Expected submitted value echoed into the input')
+  })
+})
+
+await test('csrf: false opts a submit route out of CSRF protection', async () => {
+  const webhookish = {
+    route:  '/hook',
+    csrf:   false,
+    submit: async () => ({ redirect: '/hook?ok=1' }),
+    view:   () => '<main id="main-content">hook</main>',
+  }
+  await withServer([webhookish], { stream: false }, async (port) => {
+    const { status, headers } = await postForm(port, '/hook', { x: '1' })
+    assert(status === 303 && headers.location === '/hook?ok=1', `Expected 303 without CSRF, got ${status}`)
+  })
+})
+
+await test('POST to a page without submit is still 405', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const { status } = await postForm(port, '/hello', { x: '1' })
+    assert(status === 405, `Expected 405, got ${status}`)
+  })
+})
+
+await test('submit pages are excluded from the in-process page cache', async () => {
+  // Two different clients must get different CSRF tokens — a cached page would
+  // serve client A's token (and cookie pairing) to client B.
+  await withServer([formSpec], { stream: false, defaultCache: 3600 }, async (port) => {
+    const a = await getCsrfPair(port, '/signup')
+    const b = await getCsrfPair(port, '/signup')
+    assert(a.token && b.token && a.token !== b.token,
+      `Expected per-visitor CSRF tokens, got identical values (page was cached)`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+
 console.log('\nMalformed request handling\n')
 
 await test('malformed percent-encoding in path returns 404, not 500', async () => {
