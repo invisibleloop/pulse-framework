@@ -48,8 +48,9 @@ await createServer(entries, options)`, 'js'))}
           ['<code>shutdownTimeout</code>', '<code>number</code>', '<code>30000</code>', 'Milliseconds to wait for in-flight requests to finish during graceful shutdown before force-exiting. See <a href="#graceful-shutdown">Graceful shutdown</a>.'],
           ['<code>healthCheck</code>', '<code>string | false</code>', '<code>"/healthz"</code>', 'Path for the built-in health check endpoint. Returns <code>{ status: "ok", uptime }</code>. Set to <code>false</code> to disable. The endpoint bypasses <code>onRequest</code> so load balancers always get a response.'],
           ['<code>resolveBrand</code>', '<code>async (host) => any</code>', '<code>undefined</code>', 'Multi-brand support. Called once per host (cached 60s). Result is attached to <code>ctx.brand</code> and available in <code>guard</code>, <code>server</code>, and <code>meta</code> functions.'],
+          ['<code>secret</code>', '<code>string</code>', 'random per boot', 'HMAC secret for CSRF tokens (<a href="/forms">Forms</a>). Set a stable value when running multiple instances so tokens issued by one validate on another.'],
           ['<code>onRequest</code>', '<code>function</code>', '<code>undefined</code>', 'Called on every request before routing. Return <code>false</code> to short-circuit Pulse handling.'],
-          ['<code>onError</code>', '<code>function</code>', '<code>undefined</code>', 'Called on unhandled errors. Receives <code>(err, req, res)</code>.'],
+          ['<code>onError</code>', '<code>function</code>', '<code>undefined</code>', 'Called on unhandled errors. Receives <code>(err, req, res)</code>. See <a href="/error-pages">Error Pages</a>.'],
         ]
       )}
 

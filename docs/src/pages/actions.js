@@ -20,6 +20,8 @@ export default {
       ${h1('Actions')}
       ${lead('Actions handle async operations with an enforced lifecycle. The order of steps — capture inputs, validate, run, succeed or fail — is fixed. Skipping validation or running async work before showing a loading state is not possible within the action structure.')}
 
+      ${callout('tip', 'Actions run client-side and need hydration. For forms that must also work with JavaScript disabled, pair the action with a server-side <a href="/forms"><code>submit</code> handler</a> — the same form serves both paths.')}
+
       ${section('lifecycle', 'The action lifecycle')}
       <p>When a form with <code>data-action</code> is submitted, Pulse runs the action through a fixed sequence of steps:</p>
       ${codeBlock(highlight(`onStart(state, formData)
