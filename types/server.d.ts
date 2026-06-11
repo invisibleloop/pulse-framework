@@ -73,6 +73,13 @@ export interface ServerOptions {
   onRequest?: (req: IncomingMessage, res: ServerResponse) => false | void | unknown
 
   /**
+   * HMAC secret for CSRF tokens (spec.submit forms). Defaults to a random
+   * per-boot value — set a stable secret (e.g. from an env var) when running
+   * multiple instances so tokens issued by one instance validate on another.
+   */
+  secret?: string | null
+
+  /**
    * Extra CSP sources to merge into the framework's default Content-Security-Policy.
    * Use this to allow external stylesheets, fonts, or API origins.
    * Each key is a CSP directive name; each value is an array of sources to append.

@@ -36,7 +36,7 @@ export async function renderToString(spec, ctx = {}, pageState = {}) {
   const serverState = await resolveServerState(spec, ctx)
 
   // Merge declared store keys into server state — store keys lose to page-level keys
-  const mergedServerState = mergeStoreKeys(spec, serverState, ctx.store)
+  const mergedServerState = applyCtxExtras(mergeStoreKeys(spec, serverState, ctx.store), ctx)
 
   const tData = performance.now()
 
@@ -105,7 +105,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
 
       // Await only the fetchers the shell segments need
       const shellServerState = await awaitFetchersForSegments(spec, shell, fetcherCache)
-      const mergedShellState = mergeStoreKeys(spec, shellServerState, ctx.store)
+      const mergedShellState = applyCtxExtras(mergeStoreKeys(spec, shellServerState, ctx.store), ctx)
 
       // Write shell immediately — deferred fetchers may still be in-flight
       const shellHtml = renderNamedSegments(spec, shell, clientState, mergedShellState)
@@ -122,7 +122,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
         // Promise.all runs them concurrently — the fastest segment wins.
         await Promise.all(deferred.map(async (key) => {
           const segServerState = await awaitFetchersForSegments(spec, [key], fetcherCache)
-          const mergedSegState = mergeStoreKeys(spec, segServerState, ctx.store)
+          const mergedSegState = applyCtxExtras(mergeStoreKeys(spec, segServerState, ctx.store), ctx)
           const segHtml        = renderNamedSegments(spec, [key], clientState, mergedSegState)
 
           // Inline script replaces the placeholder with the rendered content
@@ -145,7 +145,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
       const allServerState = fetcherCache.size > 0
         ? Object.fromEntries(await Promise.all([...fetcherCache.entries()].map(async ([k, p]) => [k, await p])))
         : {}
-      const mergedAllState = mergeStoreKeys(spec, allServerState, ctx.store)
+      const mergedAllState = applyCtxExtras(mergeStoreKeys(spec, allServerState, ctx.store), ctx)
       if (spec.hydrate && Object.keys(mergedAllState).length > 0) {
         controller.enqueue(encode(
           `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(mergedAllState)};</script>`
@@ -218,7 +218,7 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
 
       // 2. Await shell fetchers then send shell HTML
       const shellServerState = await awaitFetchersForSegments(spec, shell, fetcherCache)
-      const mergedShellState = mergeStoreKeys(spec, shellServerState, ctx.store)
+      const mergedShellState = applyCtxExtras(mergeStoreKeys(spec, shellServerState, ctx.store), ctx)
       let shellHtml = renderNamedSegments(spec, shell, clientState, mergedShellState)
 
       // Append <pulse-deferred> placeholders so the client knows where to inject deferred content
@@ -231,7 +231,7 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
       // 3. Stream each deferred segment as soon as its own fetchers resolve
       await Promise.all(deferred.map(async (key) => {
         const segServerState = await awaitFetchersForSegments(spec, [key], fetcherCache)
-        const mergedSegState = mergeStoreKeys(spec, segServerState, ctx.store)
+        const mergedSegState = applyCtxExtras(mergeStoreKeys(spec, segServerState, ctx.store), ctx)
         const segHtml        = renderNamedSegments(spec, [key], clientState, mergedSegState)
         writeLine({ type: 'deferred', id: key, html: segHtml })
       }))
@@ -240,7 +240,7 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
       const allServerState = fetcherCache.size > 0
         ? Object.fromEntries(await Promise.all([...fetcherCache.entries()].map(async ([k, p]) => [k, await p])))
         : {}
-      const mergedAll = mergeStoreKeys(spec, allServerState, ctx.store)
+      const mergedAll = applyCtxExtras(mergeStoreKeys(spec, allServerState, ctx.store), ctx)
 
       writeLine({
         type:        'done',
@@ -424,6 +424,29 @@ function mergeStoreKeys(spec, serverState, storeState) {
     if (storeState[key] !== undefined) slice[key] = storeState[key]
   }
   return { ...slice, ...serverState }
+}
+
+/**
+ * Merge per-request extras set by the server into the view's server state:
+ *
+ *   ctx._form      → serverState.form  — the return value of spec.submit() on a
+ *                    POST re-render (validation errors, submitted values, etc.)
+ *   ctx._csrfField → serverState.csrf  — ready-to-embed hidden <input> for CSRF;
+ *                    views include it inside <form method="POST"> as ${server.csrf}
+ *
+ * Only set by the server for specs that declare `submit` — other pages see
+ * neither key. Explicit server fetcher keys with the same names win.
+ *
+ * @param {Object} serverState
+ * @param {Object} ctx
+ * @returns {Object}
+ */
+function applyCtxExtras(serverState, ctx) {
+  if (ctx?._form === undefined && ctx?._csrfField === undefined) return serverState
+  const extras = {}
+  if (ctx._form      !== undefined) extras.form = ctx._form
+  if (ctx._csrfField !== undefined) extras.csrf = ctx._csrfField
+  return { ...extras, ...serverState }
 }
 
 // ---------------------------------------------------------------------------

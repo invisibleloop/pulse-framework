@@ -367,12 +367,14 @@ function buildCacheKey(spec, ctx) {
  *   - spec.stream.deferred    — deferred segments inject content via inline <script nonce="...">
  *                               tags; caching bakes in one nonce while subsequent CSP headers
  *                               carry a different nonce, causing a violation
+ *   - spec.submit             — form pages embed a per-visitor CSRF token; caching
+ *                               would serve one visitor's token to everyone
  *
  * In all these cases the cached HTML would contain a nonce that doesn't match
  * the nonce-free CSP used for cached responses, causing a CSP violation.
  */
 function isCacheablePage(spec) {
-  return !spec.server && !spec.store?.length && !spec.hydrate && !spec.stream?.deferred?.length
+  return !spec.server && !spec.store?.length && !spec.hydrate && !spec.stream?.deferred?.length && !spec.submit
 }
 
 // ---------------------------------------------------------------------------
@@ -542,6 +544,8 @@ export async function createServer(entries, options = {}) {
     shutdownTimeout = 30000,        // ms to wait for in-flight requests before force-exit
     healthCheck    = '/healthz',    // path for health check endpoint, or false to disable
     csp            = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
+    secret         = null,          // HMAC secret for CSRF tokens — set a stable value when running
+                                    // multiple instances; defaults to a random per-boot secret
     onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
     onRequest,
     agentMode      = false,        // show agent-active indicator in banner
@@ -585,8 +589,8 @@ export async function createServer(entries, options = {}) {
     const routeErrors = []
     if (!spec.route || typeof spec.route !== 'string') {
       routeErrors.push('spec.route is required and must be a string (e.g. "/contact")')
-    } else if (!spec.route.startsWith('/')) {
-      routeErrors.push('spec.route must start with "/" (e.g. "/contact")')
+    } else if (!spec.route.startsWith('/') && spec.route !== '*') {
+      routeErrors.push('spec.route must start with "/" (e.g. "/contact"), or be "*" for the custom not-found page')
     }
     const allErrors = [...errors, ...routeErrors]
     if (!valid || routeErrors.length > 0) {
@@ -597,8 +601,18 @@ export async function createServer(entries, options = {}) {
     }
   }
 
-  // Build route table — let so it can be swapped on hot reload
-  let router = buildRouter(specs)
+  // Custom not-found page — a spec with route '*' renders (with status 404)
+  // whenever no route matches. It goes through the normal render pipeline, so
+  // it gets the site's layout, styles, hydration, and validation like any page.
+  let notFoundSpec = specs.find(s => s.route === '*') || null
+
+  // Build route table — let so it can be swapped on hot reload.
+  // The '*' spec is excluded: it is not a route, it is the fallback.
+  let router = buildRouter(specs.filter(s => s.route !== '*'))
+
+  // CSRF secret — per-boot random unless pinned via options.secret. Tokens are
+  // tied to a cookie, so a restart only means in-flight forms re-render once.
+  const csrfSecret = secret || crypto.randomBytes(32).toString('hex')
 
   // Resolve the logger module once at startup rather than dynamically importing
   // it on every request's `finish` event. `logRequest` stays null until loaded.
@@ -662,20 +676,32 @@ export async function createServer(entries, options = {}) {
       }
 
       // Match route
-      const match = matchRoute(router, pathname)
+      let match          = matchRoute(router, pathname)
+      let responseStatus = 200
 
       if (!match) {
-        res.writeHead(404, { 'Content-Type': 'text/html', ...SECURITY_HEADERS, ...httpsHeaders(req) })
-        res.end(notFoundHtml(pathname))
-        return
+        // Custom not-found page — a '*' spec renders through the normal pipeline
+        // with status 404, so the site's branded 404 gets layout, styles, and
+        // hydration like any other page. Client-side navigation requests still
+        // get the plain 404 (navigate.js falls back to a full page load, which
+        // then renders the custom page).
+        if (notFoundSpec && (req.method === 'GET' || req.method === 'HEAD') && req.headers['x-pulse-navigate'] !== 'true') {
+          match          = { spec: notFoundSpec, params: {} }
+          responseStatus = 404
+        } else {
+          res.writeHead(404, { 'Content-Type': 'text/html', ...SECURITY_HEADERS, ...httpsHeaders(req) })
+          res.end(notFoundHtml(pathname))
+          return
+        }
       }
 
       // Method gating — raw response specs accept any HTTP method.
-      // Page specs default to GET/HEAD only; opt in to other methods via spec.methods.
+      // Page specs default to GET/HEAD only; spec.submit adds POST automatically;
+      // opt in to other methods via spec.methods.
       if (!match.spec.contentType) {
         const allowed = match.spec.methods
           ? match.spec.methods.map(m => m.toUpperCase())
-          : ['GET', 'HEAD']
+          : (typeof match.spec.submit === 'function' ? ['GET', 'HEAD', 'POST'] : ['GET', 'HEAD'])
         if (!allowed.includes(req.method)) {
           res.writeHead(405, {
             'Content-Type': 'text/plain',
@@ -738,6 +764,57 @@ export async function createServer(entries, options = {}) {
         }
       }
 
+      // -----------------------------------------------------------------------
+      // CSRF — specs with a `submit` handler get token protection automatically
+      // (opt out per spec with csrf: false, e.g. for token-authenticated routes).
+      // Double-submit pattern: an HttpOnly cookie holds a random id; the form
+      // carries HMAC(secret, id) in a hidden _csrf field; POST verifies the pair.
+      // Views embed the field inside <form method="POST"> as ${server.csrf}.
+      // -----------------------------------------------------------------------
+      if (typeof spec.submit === 'function' && spec.csrf !== false) {
+        let csrfId = ctx.cookies.pulse_csrf
+        if (!csrfId) {
+          csrfId = crypto.randomBytes(16).toString('base64url')
+          ctx.setCookie('pulse_csrf', csrfId, { httpOnly: true, sameSite: 'Lax', path: '/' })
+        }
+        ctx._csrfField = `<input type="hidden" name="_csrf" value="${csrfToken(csrfSecret, csrfId)}">`
+
+        if (req.method === 'POST') {
+          const form      = await ctx.formData()
+          const submitted = typeof form?._csrf === 'string' ? form._csrf : ''
+          const cookieId  = ctx.cookies.pulse_csrf
+          if (!cookieId || !safeEqual(submitted, csrfToken(csrfSecret, cookieId))) {
+            res.writeHead(403, mergeCtxHeaders(ctx, {
+              'Content-Type': 'text/plain',
+              ...SECURITY_HEADERS, ...httpsHeaders(req),
+            }))
+            res.end('Invalid or missing CSRF token. Reload the page and resubmit the form.')
+            return
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Server-side form handling — spec.submit handles POST without client JS.
+      //   { redirect: '/path' }  → 303 See Other (POST-redirect-GET)
+      //   anything else          → re-render the page; the return value appears
+      //                            in the view as serverState.form (errors,
+      //                            submitted values, etc.). Optional status field
+      //                            sets the response status (e.g. 422).
+      // -----------------------------------------------------------------------
+      if (req.method === 'POST' && typeof spec.submit === 'function') {
+        const result = await spec.submit(ctx)
+        if (result?.redirect) {
+          res.writeHead(303, mergeCtxHeaders(ctx, { Location: result.redirect, ...SECURITY_HEADERS, ...httpsHeaders(req) }))
+          res.end()
+          return
+        }
+        ctx._form = result ?? {}
+        if (typeof result?.status === 'number') responseStatus = result.status
+        // POST re-renders always use the buffered path — the request body is
+        // consumed and streaming a form response has no benefit.
+      }
+
       // Derive the canonical base URL from the request.
       // Canonical path follows the trailingSlash mode so the <link> is consistent with redirects.
       // spec.meta.canonical (string or function) is resolved inside each handler, where serverState
@@ -776,7 +853,12 @@ export async function createServer(entries, options = {}) {
         return
       }
 
-      if (stream) {
+      // Non-200 renders (custom 404) and POST re-renders always use the buffered
+      // string path — they are small, must carry an explicit status, and POST
+      // bodies are already consumed.
+      if (responseStatus !== 200 || req.method === 'POST') {
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, responseStatus)
+      } else if (stream) {
         await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
       } else {
         await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
@@ -865,7 +947,8 @@ export async function createServer(entries, options = {}) {
     server,
     shutdown,
     updateSpecs(newSpecs) {
-      router = buildRouter(newSpecs)
+      notFoundSpec = newSpecs.find(s => s.route === '*') || null
+      router = buildRouter(newSpecs.filter(s => s.route !== '*'))
     }
   }
 }
@@ -943,9 +1026,12 @@ async function handleNavStreamResponse(spec, ctx, req, res) {
  * Render to a complete string then send — simpler, easier to cache.
  * Checks the in-process page cache before rendering; stores result after.
  */
-async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
+async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, status = 200) {
   const cacheKey = buildCacheKey(spec, ctx)
-  const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
+  // Never cache POST re-renders or non-200 responses (custom 404s) — POST output
+  // varies per submission and a cached 404 body would be served with a 200 later.
+  const cacheable = status === 200 && ctx.method !== 'POST' && isCacheablePage(spec)
+  const ttl       = cacheable ? pageCacheTtl(spec, dev, defaultCache) : 0
 
   let html, serverTimingValue, fromCache = false
 
@@ -984,7 +1070,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
   if (encoding)          headers['Content-Encoding'] = encoding
   if (serverTimingValue) headers['Server-Timing']    = serverTimingValue
 
-  res.writeHead(200, headers)
+  res.writeHead(status, headers)
   res.end(buf)
 }
 
@@ -1583,6 +1669,23 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+/**
+ * Derive the CSRF token for a cookie id: HMAC-SHA256(secret, id), base64url.
+ * The token goes in the form's hidden _csrf field; the id stays in an HttpOnly
+ * cookie. An attacker on another origin can trigger the cookie being sent but
+ * cannot read it or compute the HMAC, so they cannot forge the pair.
+ */
+function csrfToken(secret, id) {
+  return crypto.createHmac('sha256', secret).update(String(id)).digest('base64url')
+}
+
+/** Constant-time string comparison — length mismatch returns false without throwing. */
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a))
+  const bb = Buffer.from(String(b))
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb)
 }
 
 function notFoundHtml(pathname) {

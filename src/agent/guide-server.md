@@ -102,6 +102,40 @@ actions: {
 ```
 `_storeUpdate` is stripped from local page state — it is only forwarded to the store. The rest of `onSuccess` merges into the page's own state as normal.
 
+## Server-side forms — `spec.submit` (works without client JS)
+
+A spec with a `submit` handler accepts POST on its own route. The form works with JavaScript disabled — hydrated `actions` become an enhancement, not a requirement.
+
+```js
+export default {
+  route: '/contact',
+  submit: async (ctx) => {
+    const data = await ctx.formData()
+    if (!data?.email)        return { errors: { email: 'Email is required' }, values: data ?? {} }
+    if (!isValid(data.email)) return { status: 422, errors: { email: 'Invalid email' }, values: data }
+    await sendMessage(data)
+    return { redirect: '/contact?sent=1' }   // 303 POST-redirect-GET
+  },
+  view: (state, server) => `
+    <main id="main-content">
+      ${server.form?.errors?.email ? `<p class="error">${escHtml(server.form.errors.email)}</p>` : ''}
+      <form method="POST">
+        ${server.csrf}
+        ${input({ label: 'Email', name: 'email', type: 'email', required: true, value: server.form?.values?.email ?? '' })}
+        ${button({ label: 'Send', type: 'submit' })}
+      </form>
+    </main>`,
+}
+```
+
+**Rules:**
+- `${server.csrf}` **must be inside every POST form** — CSRF protection is automatic and POSTs without a valid token are rejected with 403. Opt out with `csrf: false` only for endpoints with their own authentication (e.g. signed webhooks).
+- `{ redirect }` → 303 See Other. Always redirect after a successful mutation — rendering success directly from the POST means refresh resubmits the form.
+- Any other return value re-renders the page with it exposed as `server.form` — put `errors` and the submitted `values` there, and echo values back into inputs so failed validation doesn't wipe what the user typed. An optional `status` field sets the response status (e.g. 422).
+- Escape user-submitted values before interpolating them into HTML (`escHtml`).
+- **Progressive enhancement:** add `data-action="send"` to the same form — hydrated visitors get the async action with no page reload; no-JS visitors fall back to the POST.
+- Multi-instance deployments: pass a stable `secret` to `createServer` (e.g. from an env var) so CSRF tokens issued by one instance validate on another.
+
 ## Server context — redirects, cookies, POST bodies
 
 The `ctx` object is available in `guard`, `server.*` fetchers, and `meta` functions.

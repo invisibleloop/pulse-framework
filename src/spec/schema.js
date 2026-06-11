@@ -137,13 +137,30 @@ export function validateSpec(spec) {
     return { valid: false, errors: ['Spec must be a plain object'] }
   }
 
-  // route
+  // route — '*' is the custom not-found page, rendered with status 404 when no route matches
   if (spec.route === undefined) {
     warnings.push('spec.route is not set — the server cannot register this page without a route')
   } else if (typeof spec.route !== 'string') {
     errors.push('spec.route must be a string (e.g. "/contact")')
-  } else if (!spec.route.startsWith('/')) {
-    errors.push('spec.route must start with "/" (e.g. "/contact")')
+  } else if (!spec.route.startsWith('/') && spec.route !== '*') {
+    errors.push('spec.route must start with "/" (e.g. "/contact"), or be "*" for the custom not-found page')
+  }
+
+  // submit — server-side form handler: POST to the route is handled without client JS
+  if (spec.submit !== undefined) {
+    if (typeof spec.submit !== 'function') {
+      errors.push('spec.submit must be a function — async (ctx) => ({ redirect } | { ...form state }). It handles POST requests to this route server-side.')
+    }
+  }
+
+  // csrf — opt out of CSRF protection on the submit handler (default: enforced)
+  if (spec.csrf !== undefined) {
+    if (typeof spec.csrf !== 'boolean') {
+      errors.push('spec.csrf must be a boolean — set csrf: false only to disable CSRF protection for spec.submit (e.g. for token-authenticated endpoints)')
+    }
+    if (spec.csrf === false && typeof spec.submit === 'function') {
+      warnings.push('spec.csrf is false — POST submissions to this route are NOT CSRF-protected. Only do this for endpoints with their own auth (e.g. signed webhooks).')
+    }
   }
 
   // contentType — marks a raw content spec (RSS, sitemap, JSON API, etc.)

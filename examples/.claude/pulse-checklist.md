@@ -113,6 +113,14 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 ### Security
 
 - Any value from user input (URL params, form fields, external APIs) interpolated into view HTML must be escaped.
+- **Every `<form method="POST">` on a `submit` page includes `${server.csrf}`.** CSRF is enforced — a form without the hidden token field gets 403 on submit. Never set `csrf: false` to "fix" a 403; that disables the protection. `csrf: false` is only for endpoints with their own authentication (e.g. signed webhooks).
+- **`submit` returns `{ redirect }` after a successful mutation** (POST-redirect-GET). Rendering success directly from the POST means browser refresh resubmits the form.
+
+### Server-side forms & error pages
+
+- **Forms that must work without JavaScript use `spec.submit`** + `<form method="POST">` with `${server.csrf}` inside. Hydrated `data-action` on the same form is the enhancement, not the requirement.
+- On a validation re-render, show `server.form?.errors` and echo `server.form?.values` back into the inputs via `value=` — failed validation must not wipe what the user typed.
+- **Every site has a custom 404 page** — a spec with `route: '*'`, using the shared `layout()` so it carries the site's nav and footer. Without it, bad URLs show the framework's unbranded default.
 
 ### Tests
 

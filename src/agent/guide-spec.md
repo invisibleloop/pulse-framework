@@ -46,9 +46,30 @@ export default {
     // Resolved server-side before render. Passed to view() as second arg.
     posts: async () => fetchPostsFromDb(),
   },
+  // Server-side form handling — POST works with JavaScript disabled.
+  // { redirect } → 303 PRG; anything else → re-render with the value as server.form.
+  // CSRF enforced automatically: the view MUST include ${server.csrf} inside the <form>.
+  submit: async (ctx) => {
+    const data = await ctx.formData()
+    if (!data?.email) return { errors: { email: 'Required' }, values: data ?? {} }
+    await save(data)
+    return { redirect: '/thanks' }
+  },
   view: (state, serverState) => `<h1>${state.title}</h1>`,
 }
 ```
+
+## Server-side forms (`submit`)
+
+- A spec with `submit` accepts POST on its own route — plain `<form method="POST">`, no client JS needed.
+- **Always put `${server.csrf}` inside the form** — it renders the hidden CSRF input. POSTs without a valid token are rejected with 403. (`csrf: false` opts out — only for endpoints with their own auth.)
+- `server.form` holds the return value of `submit()` on a re-render: show `server.form?.errors`, echo `server.form?.values` back into inputs via `value=` so failed validation doesn't wipe the form.
+- After a successful mutation always `return { redirect: '/path' }` (POST-redirect-GET) — never render success from the POST itself. An optional `status` field on a re-render return sets the response status (e.g. 422).
+- Progressive enhancement: the same form can also have `data-action="name"` — hydrated visitors get the async action, no-JS visitors use the POST.
+
+## Custom not-found page
+
+A spec with `route: '*'` renders with **status 404** whenever no route matches — same pipeline as any page (layout, styles, hydration, validation). Every site should have one; the default framework 404 is unbranded.
 
 ## Streaming SSR — shell + deferred segments
 

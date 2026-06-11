@@ -41,7 +41,8 @@ A spec is a plain JS object. Every property is optional except `route` and `view
 
 ```js
 export const mySpec = {
-  route:   '/path',           // URL pattern, supports :params
+  route:   '/path',           // URL pattern, supports :params. Use '*' for the custom
+                              // not-found page — rendered with status 404 when no route matches
 
   meta: {
     title:       'Page Title',
@@ -121,6 +122,19 @@ export const mySpec = {
     }
   },
 
+  // Server-side form handling — POST to this route, no client JS required.
+  // CSRF protection is automatic: include ${server.csrf} inside the <form>.
+  //   { redirect: '/path' }   → 303 POST-redirect-GET
+  //   anything else           → page re-renders; return value appears as server.form
+  //                             (optional status field sets the response status, e.g. 422)
+  submit: async (ctx) => {
+    const data = await ctx.formData()
+    if (!data?.email) return { errors: { email: 'Required' }, values: data ?? {} }
+    await saveSignup(data)
+    return { redirect: '/thanks' }
+  },
+  // csrf: false,             // opt out ONLY for endpoints with their own auth (e.g. signed webhooks)
+
   // Streaming SSR — split view into shell (instant) + deferred segments
   stream: {
     shell:    ['header', 'nav'],
@@ -140,6 +154,42 @@ export const mySpec = {
 
 export default mySpec  // required for hydration imports
 ```
+
+## Server-Side Forms (no client JS)
+
+A spec with `submit` accepts POST on its route — the form works with JavaScript disabled. **Always include `${server.csrf}` inside the form** (CSRF is enforced; POSTs without the token get 403):
+
+```js
+view: (state, server) => `
+  <main id="main-content">
+    ${server.form?.errors?.email ? alert({ variant: 'error', message: server.form.errors.email }) : ''}
+    <form method="POST">
+      ${server.csrf}
+      ${input({ label: 'Email', name: 'email', type: 'email', required: true, value: server.form?.values?.email ?? '' })}
+      ${button({ label: 'Sign up', type: 'submit' })}
+    </form>
+  </main>`,
+```
+
+- `server.form` is the return value of `submit()` on a re-render (validation errors, submitted values) — `undefined` on plain GET.
+- **Progressive enhancement:** the same form can also carry `data-action="signup"` — hydrated visitors get the async action (no page reload), no-JS visitors fall back to the POST. Echo submitted values back into inputs via `value=` so a failed validation doesn't wipe the form.
+- Always `return { redirect }` after a successful mutation (POST-redirect-GET) — never render success directly from the POST, or refresh resubmits the form.
+- Multi-instance deployments: set a stable `secret` in `createServer` so CSRF tokens validate across instances.
+
+## Custom 404 Page
+
+Create a spec with `route: '*'` — it renders through the normal pipeline (layout, styles, hydration, validation) with status 404 whenever no route matches:
+
+```js
+// src/pages/not-found.js
+export default {
+  route: '*',
+  meta:  { title: 'Page not found', styles: ['/pulse-ui.css', '/theme.css', '/app.css'] },
+  view:  () => `<main id="main-content"><h1>Page not found</h1><p><a href="/">Back home</a></p></main>`,
+}
+```
+
+Without a `'*'` spec, the framework's plain default 404 is served. 500s are customised via `createServer`'s `onError` option.
 
 ## HTML Event Binding
 
@@ -230,6 +280,8 @@ await createServer(
                                   // spec.serverTimeout overrides per-page
     shutdownTimeout: 30000,       // ms to wait for in-flight requests before force-exit on SIGTERM/SIGINT
     healthCheck:     '/healthz',  // built-in health endpoint path, or false to disable
+    secret:       process.env.PULSE_SECRET,  // HMAC secret for CSRF tokens — set a stable value
+                                  // when running multiple instances (default: random per boot)
     csp: {                        // extra sources merged into the framework's default CSP
       'style-src': ['https://fonts.googleapis.com'],
       'font-src':  ['https://fonts.gstatic.com'],

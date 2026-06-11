@@ -65,6 +65,16 @@ export interface RequestContext {
 // Guard return value
 // ---------------------------------------------------------------------------
 
+/**
+ * Return value of spec.submit().
+ * { redirect } → 303 POST-redirect-GET. Any other object re-renders the page
+ * with the value exposed as serverState.form; an optional status field sets
+ * the HTTP response status (e.g. 422 for validation failures).
+ */
+export type SubmitResult =
+  | { redirect: string }
+  | { status?: number; [key: string]: unknown }
+
 export type GuardResult =
   | { redirect: string }
   | { status: number; json?: unknown; body?: string; headers?: Record<string, string> }
@@ -131,7 +141,10 @@ export interface MetaConfig {
 // ---------------------------------------------------------------------------
 
 export interface PulseSpec<S extends object = Record<string, unknown>> {
-  /** URL pattern. Supports :param segments. */
+  /**
+   * URL pattern. Supports :param segments.
+   * Use '*' for the custom not-found page — rendered with status 404 when no route matches.
+   */
   route: string
 
   /**
@@ -194,8 +207,24 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
   /** Global store keys this page subscribes to. Appear in view's server arg. */
   store?: string[]
 
-  /** HTTP methods this page accepts. Default ['GET', 'HEAD']. */
+  /** HTTP methods this page accepts. Default ['GET', 'HEAD'] (plus POST when submit is set). */
   methods?: Array<'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'>
+
+  /**
+   * Server-side form handler — POST to this route works without client JS.
+   * Return { redirect } for a 303 POST-redirect-GET; any other value re-renders
+   * the page with the value exposed to the view as serverState.form (an optional
+   * status field sets the response status, e.g. 422).
+   * CSRF protection is enforced automatically: the view must include
+   * ${server.csrf} inside the <form> or POSTs are rejected with 403.
+   */
+  submit?: (ctx: RequestContext) => Promise<SubmitResult | void> | SubmitResult | void
+
+  /**
+   * Set false to disable CSRF protection on the submit handler.
+   * Only for endpoints with their own authentication (e.g. signed webhooks).
+   */
+  csrf?: boolean
 
   /**
    * Called before server data fetchers on every request.
