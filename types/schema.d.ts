@@ -75,6 +75,9 @@ export type SubmitResult =
   | { redirect: string }
   | { status?: number; [key: string]: unknown }
 
+/** A sitemap entry: a '/path' string, or { path, lastmod } for a per-URL lastmod date. */
+export type SitemapEntry = string | { path: string; lastmod?: string }
+
 export type GuardResult =
   | { redirect: string }
   | { status: number; json?: unknown; body?: string; headers?: Record<string, string> }
@@ -225,6 +228,14 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
    * Only for endpoints with their own authentication (e.g. signed webhooks).
    */
   csrf?: boolean
+
+  /**
+   * Inclusion control for the auto-generated sitemap (createServer { sitemap: true }).
+   * false → exclude this page. true → include a guarded static page that would be
+   * excluded by default. Array or function → enumerate paths — required for dynamic
+   * :param routes. Entries are '/path' strings or { path, lastmod } objects.
+   */
+  sitemap?: boolean | SitemapEntry[] | (() => Promise<SitemapEntry[]> | SitemapEntry[])
 
   /**
    * Called before server data fetchers on every request.

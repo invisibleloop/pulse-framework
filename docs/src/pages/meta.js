@@ -115,6 +115,33 @@ meta: {
 }`, 'js'))}
       ${callout('note', '<strong>Streaming caveat:</strong> when <code>stream: true</code> (the default), the <code>&lt;head&gt;</code> is written before server fetchers resolve, so <code>serverState</code> will be <code>null</code> for streaming responses. If your canonical depends on server data, set <code>stream: false</code> on that spec, or derive it from <code>ctx.params</code> instead.')}
 
+      ${section('sitemap', 'Sitemap & robots.txt')}
+      <p>Pulse generates <code>/sitemap.xml</code> and <code>/robots.txt</code> from the registered routes — enable it with one option:</p>
+      ${codeBlock(highlight(`await createServer(pages, {
+  sitemap: true,                          // or { origin: 'https://mysite.com' } to pin the origin
+})`, 'js'))}
+      <p>Static page routes are included automatically. Excluded by default: the <code>route: '*'</code> not-found page, raw content specs, guarded pages (set <code>sitemap: true</code> on the spec to opt one in), and any page with <code>sitemap: false</code>.</p>
+      <p>Dynamic <code>:param</code> routes can't be enumerated automatically — give them a <code>sitemap</code> enumerator or they are skipped (the server logs a startup hint listing them):</p>
+      ${codeBlock(highlight(`export default {
+  route: '/blog/:slug',
+  sitemap: async () => {
+    const posts = await db.posts.allPublished()
+    return posts.map(p => ({ path: \`/blog/\${p.slug}\`, lastmod: p.updatedAt }))
+  },
+  // entries are '/path' strings or { path, lastmod } objects
+}`, 'js'))}
+      ${table(
+        ['Where', 'Value', 'Effect'],
+        [
+          ['<code>createServer</code>', '<code>sitemap: true | { origin }</code>', 'Enables generation. Origin defaults to the request host; pin it for multi-domain setups.'],
+          ['<code>createServer</code>', '<code>robots: false | string</code>', 'Disable robots.txt, or serve a custom string verbatim. Default auto-generates allow-all + the Sitemap line.'],
+          ['spec', '<code>sitemap: false</code>', 'Exclude this page.'],
+          ['spec', '<code>sitemap: true</code>', 'Include a guarded page that would be excluded by default.'],
+          ['spec', '<code>sitemap: array | function</code>', 'Enumerate URLs — required for dynamic routes.'],
+        ]
+      )}
+      ${callout('note', 'A physical <code>sitemap.xml</code> or <code>robots.txt</code> in <code>staticDir</code> always wins over the generated one — drop a file in <code>public/</code> to take full manual control. For fully hand-built XML, see <a href="/raw-responses#sitemap">Raw Responses</a>.')}
+
       ${section('styles', 'Stylesheets')}
       <p>The <code>styles</code> array accepts any number of stylesheet URLs. They are emitted as <code>&lt;link rel="stylesheet"&gt;</code> tags in the <code>&lt;head&gt;</code> in the order declared:</p>
       ${codeBlock(highlight(`meta: {

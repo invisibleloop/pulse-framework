@@ -546,6 +546,11 @@ export async function createServer(entries, options = {}) {
     csp            = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
     secret         = null,          // HMAC secret for CSRF tokens — set a stable value when running
                                     // multiple instances; defaults to a random per-boot secret
+    sitemap        = false,         // true | { origin } — auto-serve /sitemap.xml + robots.txt from
+                                    // the registered routes. Dynamic :param routes contribute via
+                                    // spec.sitemap = async () => ['/blog/a', ...]
+    robots         = null,          // robots.txt content when sitemap is enabled:
+                                    // null = auto-generate, false = disable, string = serve verbatim
     onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
     onRequest,
     agentMode      = false,        // show agent-active indicator in banner
@@ -614,6 +619,20 @@ export async function createServer(entries, options = {}) {
   // tied to a cookie, so a restart only means in-flight forms re-render once.
   const csrfSecret = secret || crypto.randomBytes(32).toString('hex')
 
+  // Sitemap — track the live spec list (updated on hot reload) and surface a
+  // startup hint for dynamic routes that can't be enumerated automatically.
+  const sitemapEnabled = !!sitemap
+  const sitemapOrigin  = (typeof sitemap === 'object' && sitemap?.origin) ? String(sitemap.origin).replace(/\/$/, '') : null
+  let   allSpecs       = specs
+  if (sitemapEnabled && !quiet) {
+    const unenumerated = specs.filter(s =>
+      !s.contentType && s.route !== '*' && s.route.includes(':') && s.sitemap === undefined
+    )
+    if (unenumerated.length > 0) {
+      console.log(`  ℹ sitemap: ${unenumerated.length} dynamic route${unenumerated.length === 1 ? '' : 's'} not in the sitemap — add \`sitemap: async () => ['/path', …]\` to enumerate: ${unenumerated.map(s => s.route).join(', ')}`)
+    }
+  }
+
   // Resolve the logger module once at startup rather than dynamically importing
   // it on every request's `finish` event. `logRequest` stays null until loaded.
   let logRequest = null
@@ -656,6 +675,39 @@ export async function createServer(entries, options = {}) {
       if (staticDir && (req.method === 'GET' || req.method === 'HEAD')) {
         const served = serveStatic(req, res, staticDir, dev)
         if (served) return
+      }
+
+      // Auto-generated sitemap.xml + robots.txt — after static serving so a
+      // physical file in staticDir always wins over the generated one.
+      if (sitemapEnabled && (req.method === 'GET' || req.method === 'HEAD') &&
+          (pathname === '/sitemap.xml' || (pathname === '/robots.txt' && robots !== false))) {
+        const origin = sitemapOrigin ||
+          `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`}`
+
+        let body, contentType
+        if (pathname === '/robots.txt') {
+          contentType = 'text/plain; charset=utf-8'
+          body = typeof robots === 'string'
+            ? robots
+            : `User-agent: *\nAllow: /\n\nSitemap: ${origin}/sitemap.xml\n`
+        } else {
+          contentType = 'application/xml; charset=utf-8'
+          const entries = await collectSitemapEntries(allSpecs, trailingSlash)
+          body = buildSitemapXml(entries, origin)
+        }
+
+        const encoding = negotiateEncoding(req)
+        const buf      = await compressBuffer(Buffer.from(body, 'utf8'), encoding)
+        const headers  = {
+          'Content-Type':  contentType,
+          'Cache-Control': dev ? 'no-store' : 'public, max-age=3600',
+          'Vary':          'Accept-Encoding',
+          ...SECURITY_HEADERS, ...httpsHeaders(req),
+        }
+        if (encoding) headers['Content-Encoding'] = encoding
+        res.writeHead(200, headers)
+        res.end(req.method === 'HEAD' ? undefined : buf)
+        return
       }
 
       // Trailing slash normalisation — GET/HEAD only (redirects don't apply to POST etc.)
@@ -948,7 +1000,8 @@ export async function createServer(entries, options = {}) {
     shutdown,
     updateSpecs(newSpecs) {
       notFoundSpec = newSpecs.find(s => s.route === '*') || null
-      router = buildRouter(newSpecs.filter(s => s.route !== '*'))
+      router       = buildRouter(newSpecs.filter(s => s.route !== '*'))
+      allSpecs     = newSpecs
     }
   }
 }
@@ -1669,6 +1722,94 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+/**
+ * Collect sitemap entries from the registered specs.
+ *
+ * Inclusion rules:
+ *   - page specs with static routes are included automatically
+ *   - route '*' (not-found), raw content specs, and spec.sitemap === false are excluded
+ *   - guarded pages are excluded by default (likely auth-gated) — set spec.sitemap
+ *     to true/array/function to include them explicitly
+ *   - dynamic :param routes contribute only via spec.sitemap — an array of paths
+ *     or an async function returning one. Entries can be strings or
+ *     { path, lastmod } objects.
+ *
+ * @param {Array} specs
+ * @param {'remove'|'add'|'allow'} trailingSlash
+ * @returns {Promise<Array<{ path: string, lastmod?: string }>>}
+ */
+async function collectSitemapEntries(specs, trailingSlash) {
+  const entries = []
+
+  const normalise = (item) => {
+    const e = typeof item === 'string' ? { path: item } : { path: item?.path, lastmod: item?.lastmod }
+    if (!e.path || typeof e.path !== 'string' || !e.path.startsWith('/')) return null
+    // Apply the trailing-slash mode so sitemap URLs match the canonical form
+    if (e.path !== '/') {
+      if (trailingSlash === 'add'    && !e.path.endsWith('/')) e.path = e.path + '/'
+      if (trailingSlash !== 'add'    &&  e.path.endsWith('/')) e.path = e.path.slice(0, -1)
+    }
+    return e
+  }
+
+  for (const spec of specs) {
+    if (spec.contentType || spec.route === '*' || spec.sitemap === false) continue
+
+    const isDynamic = spec.route.includes(':')
+
+    if (typeof spec.sitemap === 'function') {
+      try {
+        const list = await spec.sitemap()
+        for (const item of (Array.isArray(list) ? list : [])) {
+          const e = normalise(item)
+          if (e) entries.push(e)
+        }
+      } catch (err) {
+        // An enumerator failure must not take down the whole sitemap
+        console.error(`[Pulse] sitemap enumerator for "${spec.route}" failed:`, err.message)
+      }
+      continue
+    }
+
+    if (Array.isArray(spec.sitemap)) {
+      for (const item of spec.sitemap) {
+        const e = normalise(item)
+        if (e) entries.push(e)
+      }
+      continue
+    }
+
+    if (isDynamic) continue                                          // no enumerator → skip
+    if (typeof spec.guard === 'function' && spec.sitemap !== true) continue  // auth-gated by default
+
+    const e = normalise(spec.route)
+    if (e) entries.push(e)
+  }
+
+  // Dedupe by path, preserving first occurrence (which may carry lastmod)
+  const seen = new Set()
+  return entries.filter(e => seen.has(e.path) ? false : (seen.add(e.path), true))
+}
+
+/** Escape a value for XML text content. */
+function escXml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+/** Build the sitemap XML document from collected entries. */
+function buildSitemapXml(entries, origin) {
+  const urls = entries.map(e => {
+    const lastmod = e.lastmod ? `\n    <lastmod>${escXml(e.lastmod)}</lastmod>` : ''
+    return `  <url>\n    <loc>${escXml(origin + e.path)}</loc>${lastmod}\n  </url>`
+  }).join('\n')
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
 }
 
 /**

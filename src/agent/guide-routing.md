@@ -147,6 +147,31 @@ export default {
 - **Every site should have one** — without it, visitors to a bad URL get the framework's unbranded default 404.
 - 500 errors are customised via `createServer`'s `onError` option, not a spec.
 
+## Sitemap & robots.txt
+
+Enable in `pulse.config.js` / `createServer` — the framework serves `/sitemap.xml` and `/robots.txt` generated from the registered routes:
+
+```js
+// pulse.config.js
+export default {
+  sitemap: true,                              // or { origin: 'https://mysite.com' } to pin the origin
+}
+```
+
+- **Static routes are included automatically.** Excluded by default: `route: '*'`, raw content specs, guarded pages (set `sitemap: true` on the spec to opt a guarded page in), and `sitemap: false` pages.
+- **Dynamic `:param` routes need an enumerator** or they are skipped (a startup hint lists them):
+
+```js
+export default {
+  route:   '/blog/:slug',
+  sitemap: async () => (await db.posts.list()).map(p => ({ path: `/blog/${p.slug}`, lastmod: p.updatedAt })),
+  // entries can be '/path' strings or { path, lastmod } objects
+}
+```
+
+- `robots: false` disables robots.txt; a string serves verbatim. A physical `sitemap.xml`/`robots.txt` in `staticDir` always wins over the generated one.
+- **Always enable this on production sites** — it is one config line and crawlers need it.
+
 ## Canonical URLs
 
 Pulse auto-derives a canonical URL from every request and emits `<link rel="canonical">` in the `<head>`. No config needed in most cases.

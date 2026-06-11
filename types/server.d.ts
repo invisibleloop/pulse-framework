@@ -80,6 +80,21 @@ export interface ServerOptions {
   secret?: string | null
 
   /**
+   * Auto-serve /sitemap.xml (and robots.txt) from the registered routes.
+   * true derives the origin from request headers; { origin } pins it.
+   * Static page routes are included automatically; dynamic :param routes
+   * contribute via spec.sitemap; guarded pages are excluded unless the spec
+   * opts in. A physical sitemap.xml in staticDir always wins.
+   */
+  sitemap?: boolean | { origin?: string }
+
+  /**
+   * robots.txt behaviour when sitemap is enabled. null/undefined auto-generates
+   * (allow all + Sitemap line); false disables; a string is served verbatim.
+   */
+  robots?: string | false | null
+
+  /**
    * Extra CSP sources to merge into the framework's default Content-Security-Policy.
    * Use this to allow external stylesheets, fonts, or API origins.
    * Each key is a CSP directive name; each value is an array of sources to append.

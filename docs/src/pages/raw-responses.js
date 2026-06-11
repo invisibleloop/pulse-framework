@@ -66,6 +66,7 @@ export default {
 }`, 'js'))}
 
       ${section('sitemap', 'XML sitemap')}
+      ${callout('tip', 'For most sites you don\'t need a raw spec for this — set <code>sitemap: true</code> in <code>createServer</code> and Pulse generates <code>/sitemap.xml</code> and <code>robots.txt</code> from the registered routes automatically. See <a href="/meta#sitemap">Metadata &amp; SEO</a>. Write a raw sitemap spec only when you need full control over the XML.')}
       ${codeBlock(highlight(`export default {
   route: '/sitemap.xml',
   contentType: 'application/xml',
