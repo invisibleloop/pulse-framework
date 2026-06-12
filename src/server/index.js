@@ -593,9 +593,13 @@ export async function createServer(entries, options = {}) {
 
   const healthPath = healthCheck === true ? '/healthz' : (healthCheck || null)
 
+  // Store definition — `let` so the dev server can hot-swap it via updateStore()
+  // when pulse.store.js changes, the same way updateSpecs() swaps page specs.
+  let storeDef = store
+
   // Validate store at startup — fail fast before the server accepts connections
-  if (store) {
-    const { valid, errors } = validateStore(store)
+  if (storeDef) {
+    const { valid, errors } = validateStore(storeDef)
     if (!valid) {
       throw new Error(`Invalid Pulse store:\n${errors.map(e => `  — ${e}`).join('\n')}`)
     }
@@ -897,8 +901,8 @@ export async function createServer(entries, options = {}) {
       // Global store — resolve once per request, attach to ctx before guard/server fetchers.
       // Use global fetcherTimeout for store fetchers; spec-level override applied below.
       ctx.fetcherTimeout = fetcherTimeout ?? null
-      if (store) {
-        ctx.store = await resolveStoreState(store, ctx)
+      if (storeDef) {
+        ctx.store = await resolveStoreState(storeDef, ctx)
       }
 
       const spec = resolveSpec(match.spec, hydrateMap)
@@ -1020,11 +1024,11 @@ export async function createServer(entries, options = {}) {
       // string path — they are small, must carry an explicit status, and POST
       // bodies are already consumed.
       if (responseStatus !== 200 || req.method === 'POST') {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, responseStatus, livePath)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, responseStatus, livePath)
       } else if (stream) {
-        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, livePath)
+        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, livePath)
       } else {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, 200, livePath)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, 200, livePath)
       }
 
     } catch (err) {
@@ -1119,6 +1123,14 @@ export async function createServer(entries, options = {}) {
       notFoundSpec = newSpecs.find(s => s.route === '*') || null
       router       = buildRouter(newSpecs.filter(s => s.route !== '*'))
       allSpecs     = newSpecs
+    },
+    /** Swap the store definition at runtime (dev hot reload of pulse.store.js). */
+    updateStore(newStoreDef) {
+      if (newStoreDef) {
+        const { valid, errors } = validateStore(newStoreDef)
+        if (!valid) throw new Error(`Invalid Pulse store:\n${errors.map(e => `  — ${e}`).join('\n')}`)
+      }
+      storeDef = newStoreDef || null
     }
   }
 }

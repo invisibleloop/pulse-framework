@@ -11,7 +11,7 @@
 import path    from 'path'
 import fs      from 'fs'
 import { createServer } from '../server/index.js'
-import { loadPages }    from './discover.js'
+import { loadPages, loadStore } from './discover.js'
 import * as log         from './logger.js'
 
 // ---------------------------------------------------------------------------
@@ -109,6 +109,10 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
 
 const specs = await loadPages(ROOT)
 
+// Auto-discover the global store — pulse.store.js in the project root.
+// Mirrors page discovery; no custom server entry needed.
+const store = await loadStore(ROOT)
+
 if (specs.length === 0) {
   log.error('No pages found in src/pages/. Create a page to get started.')
   process.exit(1)
@@ -192,6 +196,9 @@ async function triggerReload(label = 'File changed') {
     try {
       const fresh = await loadPages(ROOT, now)
       updateSpecs(fresh)
+      // Hot-swap the store too — pulse.store.js edits take effect like spec edits
+      const freshStore = await loadStore(ROOT, now)
+      updateStore(freshStore)
       log.info(`${label} — specs reloaded`)
       checkUndefinedClasses(fresh)
     } catch (err) {
@@ -203,6 +210,11 @@ async function triggerReload(label = 'File changed') {
 
 // Watch src/ for changes to existing files (spec edits, component edits)
 fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => triggerReload('File changed'))
+
+// Watch the store file — it lives in the project root, outside src/
+if (fs.existsSync(path.join(ROOT, 'pulse.store.js'))) {
+  fs.watch(path.join(ROOT, 'pulse.store.js'), () => triggerReload('Store changed'))
+}
 
 // Also watch the pages directory explicitly so macOS reliably fires on new file creation.
 // On macOS, fs.watch with recursive=true watches subdirectory contents but may not fire
@@ -227,7 +239,7 @@ const reloadScript = (nonce) => `<script nonce="${nonce}">
   })();
 </script>`
 
-const { updateSpecs } = await createServer(specs, {
+const { updateSpecs, updateStore } = await createServer(specs, {
   port:      PORT,
   stream:    true,
   staticDir: fs.existsSync(PUBLIC_DIR) ? PUBLIC_DIR : null,
@@ -235,6 +247,7 @@ const { updateSpecs } = await createServer(specs, {
   extraBody: reloadScript,
   dev:       true,
   agentMode: !!process.env.PULSE_AGENT_MODE,
+  ...(store ? { store } : {}),
   ...(_config.csp ? { csp: _config.csp } : {}),
   // Server options forwarded verbatim from pulse.config.js so dev behaves like
   // production — keep in sync with start.js PASSTHROUGH_OPTIONS
@@ -284,6 +297,11 @@ const { updateSpecs } = await createServer(specs, {
       if (!filePath.startsWith(path.resolve(dir))) return false  // traversal guard
       return serveFile(filePath)
     }
+
+    // Global store — pulse.store.js lives in the project root (not src/), and the
+    // dev hydrate bootstrap imports it so client store mutations register.
+    // serveFile strips node:/server-only imports, same treatment as page specs.
+    if (url === '/pulse.store.js' && serveFile(path.join(ROOT, 'pulse.store.js'))) return false
 
     // Project source — /src/pages/, /src/components/, /src/lib/, etc.
     // Falls back to framework source for imports like /src/ui/ that sub-projects

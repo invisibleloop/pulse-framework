@@ -75,8 +75,10 @@ export const mySpec = {
   //   async () => [...]  → enumerate a dynamic :param route's URLs
   sitemap: async () => (await db.posts.list()).map(p => `/blog/${p.slug}`),
 
-  // Global store keys this page subscribes to — appears in view's server arg
-  // Store mutations update all subscribed pages without a server round-trip
+  // Global store keys this page subscribes to — appears in view's server arg.
+  // The store is defined in pulse.store.js at the project root — AUTO-DISCOVERED
+  // by pulse dev/start (no registration step). Mutations update all subscribed
+  // pages without a server round-trip.
   store: ['user', 'cart'],
 
   // Initial client state — deep cloned on mount, never mutated directly

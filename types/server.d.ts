@@ -175,6 +175,9 @@ export interface ServerInstance {
   /** Swap the spec list at runtime (used by the dev server for hot reload). */
   updateSpecs(specs: PulseSpec[]): void
 
+  /** Swap the store definition at runtime (dev hot reload of pulse.store.js). Validates; throws on a bad definition. */
+  updateStore(storeDef: PulseStoreDefinition | null): void
+
   /**
    * Broadcast a store patch to every connected live client (requires the
    * `live` option). Pages subscribed via spec.store merge the patch and

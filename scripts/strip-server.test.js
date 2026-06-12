@@ -7,7 +7,7 @@
 // Inline the scanner functions (duplicated here to keep test self-contained)
 // ---------------------------------------------------------------------------
 
-const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render']
+const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render', 'sitemap']
 const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md']
 
 function stripServerOnlyKeys(source) {
@@ -394,6 +394,25 @@ devTest('does not strip non-node imports',
 devTest('leaves module-level constants intact',
   `import fs from 'node:fs'\nconst JOURNAL_DIR = '/Users/andy/journal'\nexport default { view: () => '' }`,
   `const JOURNAL_DIR = '/Users/andy/journal'\nexport default { view: () => '' }`
+)
+
+// ---------------------------------------------------------------------------
+
+console.log('\nStore + new spec fields\n')
+
+test('sitemap enumerator is stripped (server-only)',
+  `export default {\n  route: '/blog/:slug',\n  sitemap: async () => ['/blog/a'],\n  view: () => '',\n}`,
+  `export default {\n  route: '/blog/:slug',\n  view: () => '',\n}`
+)
+
+test('submit is NOT stripped — it collides with the common submit action name',
+  `export default {\n  route: '/x',\n  actions: {\n    submit: {\n      run: async () => 1,\n    },\n  },\n  view: () => '',\n}`,
+  `export default {\n  route: '/x',\n  actions: {\n    submit: {\n      run: async () => 1,\n    },\n  },\n  view: () => '',\n}`
+)
+
+test('store definition: server fetchers stripped, state and mutations survive',
+  `export default {\n  state: { basket: [] },\n  server: {\n    nav: async () => fetchNav(),\n  },\n  mutations: {\n    add: (store, item) => ({ basket: [...store.basket, item] }),\n  },\n}`,
+  `export default {\n  state: { basket: [] },\n  mutations: {\n    add: (store, item) => ({ basket: [...store.basket, item] }),\n  },\n}`
 )
 
 // ---------------------------------------------------------------------------

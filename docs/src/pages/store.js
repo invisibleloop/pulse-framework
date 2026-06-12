@@ -50,16 +50,15 @@ export default {
 }`, 'js'))}
 
       ${section('registering', 'Registering the store')}
-      <p>Pass your store to <code>createServer</code> via the <code>store</code> option. The store is validated at startup — bad fetchers throw before the server accepts connections:</p>
+      <p><strong>There is no registration step.</strong> <code>pulse dev</code> and <code>pulse start</code> auto-discover <code>pulse.store.js</code> from the project root — the same way pages are discovered from <code>src/pages/</code>. The store is loaded server-side, served to the browser for mutations, validated at startup (bad fetchers fail the boot), and hot-reloaded in dev when you edit it.</p>
+      <p>Only when you run your own server entry do you pass it manually:</p>
       ${codeBlock(highlight(`import { createServer } from '@invisibleloop/pulse'
 import store from './pulse.store.js'
-import { dashboardSpec } from './src/pages/dashboard.js'
-import { settingsSpec }  from './src/pages/settings.js'
 
-createServer([dashboardSpec, settingsSpec], {
+createServer(pages, {
   port:      3000,
   staticDir: 'public',
-  store,                 // ← register the global store
+  store,                 // ← manual server entry only
 })`, 'js'))}
 
       ${section('using', 'Using store data in a page')}

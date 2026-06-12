@@ -34,7 +34,10 @@ import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
  *     from being shipped to and evaluated in the browser
  *   - avoids bundling errors when server imports use Node-only modules
  */
-const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render']
+// NOTE: spec.submit is also server-only but must NOT be listed here — the key
+// scanner is line-anchored at any nesting depth, and `submit:` is the most
+// common ACTION name (actions: { submit: {…} }), which would get stripped too.
+const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render', 'sitemap']
 
 /**
  * Pulse subpath exports that are server-only (use Node built-ins).
@@ -351,17 +354,22 @@ function scanTemplateLiteral(src, pos) {
 
 /**
  * esbuild plugin — strips server-only spec properties before bundling.
- * Only transforms files under src/pages/ to avoid touching runtime/server code.
+ * Transforms files under src/pages/ plus the global store file (pulse.store.js
+ * carries server fetchers that must never reach the browser) — never touches
+ * runtime/server code.
  *
- * @param {string} pagesDir  Absolute path to src/pages/
+ * @param {string} pagesDir         Absolute path to src/pages/
+ * @param {string|null} storePath   Absolute path to pulse.store.js, if it exists
  */
-function createStripServerPlugin(pagesDir) {
+function createStripServerPlugin(pagesDir, storePath = null) {
   return {
     name: 'pulse-strip-server',
     setup(build) {
       build.onLoad({ filter: /\.js$/ }, (args) => {
-        if (!args.path.startsWith(pagesDir + path.sep) &&
-            args.path !== pagesDir.replace(/\/$/, '') + '.js') return undefined
+        const isPage  = args.path.startsWith(pagesDir + path.sep) ||
+                        args.path === pagesDir.replace(/\/$/, '') + '.js'
+        const isStore = storePath && args.path === storePath
+        if (!isPage && !isStore) return undefined
 
         const source   = fs.readFileSync(args.path, 'utf8')
         const stripped = stripServerOnlyImports(stripServerOnlyKeys(source))
@@ -435,6 +443,11 @@ const NAVIGATE_PATH = new URL('../src/runtime/navigate.js', import.meta.url).pat
 
 const PAGES_DIR = path.join(ROOT, 'src', 'pages')
 
+// Global store — bundled into boot files (server fetchers stripped) when present
+const STORE_PATH = fs.existsSync(path.join(ROOT, 'pulse.store.js'))
+  ? path.join(ROOT, 'pulse.store.js')
+  : null
+
 const bootstrapFiles = pages.flatMap(({ filePath }) => {
   // Strip server-only keys/imports to check what's left for the client.
   // Skip specs with no view — these are API routes or raw content specs
@@ -453,15 +466,22 @@ const bootstrapFiles = pages.flatMap(({ filePath }) => {
   const relRuntime    = path.relative(TMP_DIR, RUNTIME_PATH)
   const relNavigate   = path.relative(TMP_DIR, NAVIGATE_PATH)
 
+  // Global store — when pulse.store.js exists, every boot bundle imports it and
+  // passes it to mount() so client store mutations register in production.
+  // The strip plugin removes its server fetchers from the browser bundle;
+  // esbuild's shared-chunk splitting keeps it from being duplicated per page.
+  const storeImport = STORE_PATH ? `\nimport store from '${path.relative(TMP_DIR, STORE_PATH)}'` : ''
+  const mountOpts   = STORE_PATH ? `{ ssr: true, store }` : `{ ssr: true }`
+
   fs.writeFileSync(bootstrapPath, `\
 import spec from '${relSpec}'
 import { mount } from '${relRuntime}'
-import { initNavigation } from '${relNavigate}'
+import { initNavigation } from '${relNavigate}'${storeImport}
 
 const root = document.getElementById('pulse-root')
 if (root && !root.dataset.pulseMounted) {
   root.dataset.pulseMounted = '1'
-  mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
+  mount(spec, root, window.__PULSE_SERVER__ || {}, ${mountOpts})
   initNavigation(root, mount)
 }
 
@@ -488,7 +508,7 @@ const result = await esbuild.build({
   metafile:    true,
   sourcemap:   false,
   treeShaking: true,
-  plugins:     [createStripServerPlugin(PAGES_DIR)],
+  plugins:     [createStripServerPlugin(PAGES_DIR, STORE_PATH)],
   define: {
     'process.env.NODE_ENV': '"production"'
   }

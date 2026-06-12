@@ -18,12 +18,10 @@ Only declared keys are saved. Restored values that differ from the spec default 
 
 The global store is a shared data layer. Server fetchers run per request; mutations run on the client and broadcast to all subscribed pages without a server round-trip.
 
-**Define the store** in `pulse.store.js`:
+**Define the store** in `pulse.store.js` at the project root — that's the whole setup. The CLI auto-discovers it (like pages in `src/pages/`), loads it server-side, serves it to the browser, and hot-reloads it on edit:
 ```js
 // pulse.store.js
 export default {
-  hydrate: '/pulse.store.js',                   // browser-importable path — required for mutations
-
   state: {                                      // default/fallback values
     user:     null,
     settings: { theme: 'dark', lang: 'en' },
@@ -45,10 +43,10 @@ export default {
 }
 ```
 
-**Register the store** in your server file:
+**No registration step is needed** with `pulse dev` / `pulse start` — `pulse.store.js` is auto-discovered. Only when you call `createServer` yourself do you pass it manually:
 ```js
 import store from './pulse.store.js'
-createServer([...specs], { store })
+createServer([...specs], { store })   // manual server entry only
 ```
 
 **Use store data in a page** — declare `spec.store` with the keys needed. They appear in the view's `server` argument:
