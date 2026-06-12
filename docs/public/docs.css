@@ -1436,6 +1436,15 @@ a:hover {
   line-height: 1.4;
 }
 
+/* iOS Safari auto-zooms when a focused input's font-size is under 16px —
+   touch devices get 16px so tapping the search field never zooms the page. */
+@media (pointer: coarse) {
+  .sidebar-search,
+  .search-overlay-input {
+    font-size: max(1rem, 16px);
+  }
+}
+
 .sidebar-search::placeholder {
   color: var(--muted-2);
 }
