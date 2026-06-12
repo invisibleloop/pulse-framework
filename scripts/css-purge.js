@@ -35,6 +35,21 @@ export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
     }
   }
 
+  // classList method arguments are class names BY DEFINITION — collect them even
+  // without a hyphen. The generic string scan above requires a hyphen to avoid
+  // swallowing every English word, which silently missed runtime state classes
+  // (classList.add('open'), .toggle('active')) and purged their compound rules
+  // (`.docs-sidebar.open`) from production CSS while dev looked fine.
+  for (const js of jsContents) {
+    const re = /classList\s*\.\s*(?:add|remove|toggle|replace)\s*\(\s*((?:['"][^'"]+['"]\s*,?\s*)+)/g
+    let m
+    while ((m = re.exec(js)) !== null) {
+      for (const [, cls] of m[1].matchAll(/['"]([^'"]+)['"]/g)) {
+        if (/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cls)) used.add(cls)
+      }
+    }
+  }
+
   // Apply safelist from pulse.config.js — css.safelist accepts strings or RegExp.
   // String entries are added directly; RegExp entries are matched against all
   // class names defined in the CSS (resolved later in purgeCss via selectorUsed
