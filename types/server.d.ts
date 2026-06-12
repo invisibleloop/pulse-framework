@@ -95,6 +95,20 @@ export interface ServerOptions {
   robots?: string | false | null
 
   /**
+   * Declarative redirect map for legacy URLs (SEO-safe migrations).
+   * Sources are route patterns; targets are paths or absolute URLs and may
+   * reference the same :params. A string target redirects with 301; use
+   * { to, status } for 302/307/308. Checked before route matching (GET/HEAD
+   * only); the query string is preserved. Validated at startup.
+   * @example
+   * redirects: {
+   *   '/old-blog/:slug': '/blog/:slug',
+   *   '/promo':          { to: '/pricing', status: 302 },
+   * }
+   */
+  redirects?: Record<string, string | { to: string; status?: 301 | 302 | 307 | 308 }> | null
+
+  /**
    * Extra CSP sources to merge into the framework's default Content-Security-Policy.
    * Use this to allow external stylesheets, fonts, or API origins.
    * Each key is a CSP directive name; each value is an array of sources to append.

@@ -147,6 +147,25 @@ export default {
 - **Every site should have one** — without it, visitors to a bad URL get the framework's unbranded default 404.
 - 500 errors are customised via `createServer`'s `onError` option, not a spec.
 
+## Declarative redirects (legacy URLs)
+
+When migrating an existing site to Pulse, preserve the old URLs with the `redirects` map in `pulse.config.js` / `createServer` — never let legacy URLs 404:
+
+```js
+export default {
+  redirects: {
+    '/old-blog/:slug': '/blog/:slug',             // 301 — :params carry over
+    '/pricing-2024':   '/pricing',                // 301
+    '/promo':          { to: '/sale', status: 302 },  // temporary
+    '/moved/:slug':    'https://other.com/:slug', // absolute targets for domain moves
+  },
+}
+```
+
+- **301 by default** (permanent — search engines transfer ranking). Use `{ to, status }` for 302/307/308.
+- Query strings are preserved; checked before route matching (GET/HEAD only); validated at startup — bad entries fail the boot.
+- A redirect source that equals a registered route shadows the page (startup warning) — that is sometimes intentional (retiring a page), usually a mistake.
+
 ## Sitemap & robots.txt
 
 Enable in `pulse.config.js` / `createServer` — the framework serves `/sitemap.xml` and `/robots.txt` generated from the registered routes:

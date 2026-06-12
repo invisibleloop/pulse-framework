@@ -294,6 +294,10 @@ await createServer(
                                   // dynamic :param routes contribute via spec.sitemap enumerators;
                                   // a physical sitemap.xml/robots.txt in staticDir always wins
     robots:       null,           // robots.txt when sitemap on: null = auto, false = off, string = verbatim
+    redirects: {                  // declarative redirects for legacy URLs — 301 by default,
+      '/old-blog/:slug': '/blog/:slug',          // :params carry over, query string preserved
+      '/promo': { to: '/pricing', status: 302 }, // custom status: 301 | 302 | 307 | 308
+    },                            // checked before routing (GET/HEAD only); validated at startup
     csp: {                        // extra sources merged into the framework's default CSP
       'style-src': ['https://fonts.googleapis.com'],
       'font-src':  ['https://fonts.gstatic.com'],

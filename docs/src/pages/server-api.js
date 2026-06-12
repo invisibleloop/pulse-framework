@@ -51,6 +51,7 @@ await createServer(entries, options)`, 'js'))}
           ['<code>secret</code>', '<code>string</code>', 'random per boot', 'HMAC secret for CSRF tokens (<a href="/forms">Forms</a>). Set a stable value when running multiple instances so tokens issued by one validate on another.'],
           ['<code>sitemap</code>', '<code>boolean | { origin }</code>', '<code>false</code>', 'Auto-serve <code>/sitemap.xml</code> + <code>robots.txt</code> from the registered routes. Dynamic <code>:param</code> routes contribute via <code>spec.sitemap</code> enumerators. See <a href="/meta#sitemap">Metadata &amp; SEO</a>.'],
           ['<code>robots</code>', '<code>string | false</code>', 'auto', 'robots.txt behaviour when sitemap is enabled — <code>false</code> disables, a string is served verbatim.'],
+          ['<code>redirects</code>', '<code>object</code>', '<code>null</code>', 'Declarative redirect map for legacy URLs — <code>{ \'/old/:slug\': \'/new/:slug\' }</code>, 301 by default. See <a href="/routing#redirects">Routing</a>.'],
           ['<code>onRequest</code>', '<code>function</code>', '<code>undefined</code>', 'Called on every request before routing. Return <code>false</code> to short-circuit Pulse handling.'],
           ['<code>onError</code>', '<code>function</code>', '<code>undefined</code>', 'Called on unhandled errors. Receives <code>(err, req, res)</code>. See <a href="/error-pages">Error Pages</a>.'],
         ]
