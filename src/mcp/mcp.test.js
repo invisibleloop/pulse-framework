@@ -114,6 +114,8 @@ const SYNC_PAIRS = [
   ['src/agent/checklist.md',        'docs/.claude/pulse-checklist.md'],
   ['src/agent/checklist.md',        'examples/.claude/pulse-checklist.md'],
   ['src/agent/commands/verify.md',  '.claude/commands/verify.md'],
+  ['src/agent/coverage-check.js',   'docs/.claude/coverage-check.js'],
+  ['src/agent/coverage-check.js',   'examples/.claude/coverage-check.js'],
 ]
 
 for (const [a, b] of SYNC_PAIRS) {
@@ -275,6 +277,24 @@ test('approval pause mechanism is wired end to end', () => {
   assert(claimDocs.length === 0,
     `These docs claim a question tool avoids ending the turn (empirically false in Claude Code): ${claimDocs.join(', ')}. ` +
     `Instruct: always call pulse_await_approval before asking, whichever way the question is asked.`)
+})
+
+test('pulse_validate prop-alias check excludes attrs blocks (false-positive fix)', () => {
+  // Regression: input({ attrs: { autocomplete } }) — the RECOMMENDED pattern —
+  // was flagged as a wrong top-level prop because the match crossed into the
+  // attrs object. The exclusion regex must be present in the alias loop.
+  assert(serverSrc.includes('attrs\\s*:\\s*\\{[^}]*$'),
+    'The PROP_ALIASES loop must exclude matches that fall inside an open attrs: { … } block')
+})
+
+test('pulse_validate CSP check matches config by host, not full URL', () => {
+  // Regression: CSP sources are valid without a scheme (images.unsplash.com),
+  // but the config check required https?:// — flagging correctly configured
+  // projects on every validate.
+  assert(serverSrc.includes('configImgSrc.includes(host)'),
+    'External-image CSP check must test the config for the bare host')
+  assert(serverSrc.includes(`host:    'images.unsplash.com'`),
+    'External image host entries must carry a bare host field')
 })
 
 test('pulse_check_contrast extracts variables from [data-theme="light"] blocks', () => {

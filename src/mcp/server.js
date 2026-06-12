@@ -1210,13 +1210,16 @@ The stop hook compares each changed spec's mtime against this stamp. Any spec ne
 server.registerTool(
   'pulse_await_approval',
   {
-    description: `Pause the workflow to wait for the user's answer — call this immediately BEFORE asking a blocking question (e.g. the design-approval gate: "Happy with the layout and direction…?").
+    description: `Pause the workflow gates for one turn-end — call this immediately BEFORE ending a turn that legitimately waits on the user. That covers:
 
-It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let the turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn.
+- **Blocking questions** — the design-approval gate ("Happy with the layout and direction…?"), or any decision only the user can make.
+- **Mid-flow progress pauses** — reporting between long verification steps (e.g. between Lighthouse runs while verifying many pages) when the work is not yet stamped.
 
-**Always call this before the approval question, regardless of how you ask.** In some hosts (including Claude Code) even a dedicated question tool like AskUserQuestion ends the turn, which fires the Stop hooks. The marker is harmless if the turn does not end — it is simply consumed when the user replies. Calling it first works in every host; relying on the question tool to keep the turn open does not.
+It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let the turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn, so re-call it before each pause in a long multi-page flow.
 
-Do NOT use this to skip verification — it buys exactly one turn-end, paired with a question the user must answer. Calling it without asking anything just delays the gates by one message.`,
+**Always call this before an approval question, regardless of how you ask.** In some hosts (including Claude Code) even a dedicated question tool like AskUserQuestion ends the turn, which fires the Stop hooks. The marker is harmless if the turn does not end — it is simply consumed when the user replies.
+
+Do NOT use this to skip verification — it buys exactly one turn-end, paired with something the user genuinely needs to see or answer. Calling it to dodge the gates just delays them by one message.`,
     inputSchema: {},
   },
   () => {
@@ -3388,9 +3391,17 @@ async function validateContent(content) {
   for (const { component, wrong, correct, note } of PROP_ALIASES) {
     // Match: nav({ ...wrong: or footer({ ...wrong: (within the call args)
     const fnName = component.replace('()', '')
-    const re = new RegExp(`${fnName}\\s*\\(\\s*\\{[^}]*\\b${wrong}\\s*:`, 'g')
-    if (re.test(content)) {
+    const re = new RegExp(`${fnName}\\s*\\(\\s*\\{([^}]*)\\b${wrong}\\s*:`, 'g')
+    let m
+    while ((m = re.exec(content)) !== null) {
+      // Inside attrs: { … } is the CORRECT placement for these HTML attributes —
+      // when the text between the call's opening brace and the prop ends inside
+      // an open attrs object, this is the recommended pattern, not a mistake.
+      // (The naive match crossed into attrs blocks and flagged exactly what the
+      // fix-it note tells people to write.)
+      if (/attrs\s*:\s*\{[^}]*$/.test(m[1])) continue
       sourceWarnings.push(`"${wrong}" is not a recognised prop for ${component} — did you mean "${correct}"? ${note}`)
+      break
     }
   }
 
@@ -3399,24 +3410,28 @@ async function validateContent(content) {
   const externalImgHosts = [
     {
       pattern: /https?:\/\/images\.unsplash\.com/,
+      host:    'images.unsplash.com',
       entry:   'https://images.unsplash.com',
       cookieWarning: true,
       name: 'Unsplash',
     },
     {
       pattern: /https?:\/\/(?:fastly\.)?picsum\.photos/,
+      host:    'picsum.photos',
       entry:   'https://picsum.photos https://fastly.picsum.photos',
       cookieWarning: false,
       name: 'picsum',
     },
     {
       pattern: /https?:\/\/res\.cloudinary\.com/,
+      host:    'res.cloudinary.com',
       entry:   'https://res.cloudinary.com',
       cookieWarning: true,
       name: 'Cloudinary',
     },
     {
       pattern: /https?:\/\/cdn\.shopify\.com/,
+      host:    'cdn.shopify.com',
       entry:   'https://cdn.shopify.com',
       cookieWarning: false,
       name: 'Shopify CDN',
@@ -3427,8 +3442,11 @@ async function validateContent(content) {
   if (fs.existsSync(configPath)) {
     try { configImgSrc = fs.readFileSync(configPath, 'utf8') } catch { /* ignore */ }
   }
-  for (const { pattern, entry, cookieWarning, name } of externalImgHosts) {
-    if (pattern.test(content) && !pattern.test(configImgSrc)) {
+  for (const { pattern, host, entry, cookieWarning, name } of externalImgHosts) {
+    // Config match is by HOST, not full URL — CSP sources are valid without a
+    // scheme ('images.unsplash.com'), so requiring https?:// in the config
+    // produced false positives for correctly configured projects.
+    if (pattern.test(content) && !configImgSrc.includes(host)) {
       const cookieNote = cookieWarning
         ? `\n  ⚠ ${name} sets tracking cookies that fail Lighthouse Best Practices regardless of CSP. For production, download images to public/images/ instead of linking to ${name} directly.`
         : ''
