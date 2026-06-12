@@ -111,3 +111,29 @@ export async function loadPages(projectRoot, bust = 0) {
 
   return specs
 }
+
+/**
+ * Auto-discover the global store definition from pulse.store.js in the
+ * project root. Returns the store definition with `hydrate` set to its
+ * browser-importable path (used by the dev inline bootstrap), or null when
+ * the file doesn't exist.
+ *
+ * Mirrors page auto-discovery: pulse.store.js is the documented filename
+ * convention, so CLI-managed projects (pulse dev / pulse start) get the
+ * store without writing a custom server entry.
+ *
+ * @param {string} projectRoot
+ * @returns {Promise<object|null>}
+ */
+export async function loadStore(projectRoot, cacheBust = null) {
+  const storePath = path.join(projectRoot, 'pulse.store.js')
+  if (!fs.existsSync(storePath)) return null
+
+  const url = 'file://' + storePath + (cacheBust ? `?t=${cacheBust}` : '')
+  const mod = await import(url)
+  const def = mod.default
+  if (!def || typeof def !== 'object') {
+    throw new Error('pulse.store.js must export a default store object ({ state?, server?, mutations? })')
+  }
+  return { ...def, hydrate: def.hydrate || '/pulse.store.js' }
+}

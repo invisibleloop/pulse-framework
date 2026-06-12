@@ -11,7 +11,7 @@
 import path from 'path'
 import fs   from 'fs'
 import { createServer } from '../server/index.js'
-import { loadPages }    from './discover.js'
+import { loadPages, loadStore } from './discover.js'
 
 const args    = process.argv.slice(2)
 const rootArg = args.indexOf('--root')
@@ -71,6 +71,9 @@ port = parseInt(process.env.PORT, 10) || port || 3000
 
 const specs = await loadPages(ROOT)
 
+// Auto-discover the global store — pulse.store.js in the project root
+const store = await loadStore(ROOT)
+
 if (specs.length === 0) {
   console.error('No pages found in src/pages/.')
   process.exit(1)
@@ -81,6 +84,7 @@ createServer(specs, {
   stream:       true,
   staticDir:    PUBLIC_DIR,
   defaultCache,
+  ...(store ? { store } : {}),
   ...(csp ? { csp } : {}),
   ...passthrough,
 })

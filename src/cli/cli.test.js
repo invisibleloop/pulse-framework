@@ -106,6 +106,59 @@ for (const skill of requiredSkills) {
 }
 
 // ---------------------------------------------------------------------------
+// Store auto-discovery (loadStore)
+// ---------------------------------------------------------------------------
+// Regression: pulse.store.js was documented but never loaded by the CLI —
+// dev/start servers got no store, so spec.store keys were always empty.
+
+console.log('\nStore auto-discovery\n')
+
+{
+  const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs')
+  const { tmpdir } = await import('node:os')
+  const { loadStore } = await import('./discover.js')
+
+  const dir = mkdtempSync(path.join(tmpdir(), 'pulse-store-'))
+  try {
+    // No store file → null
+    const none = await loadStore(dir)
+    test('loadStore returns null when pulse.store.js is absent', () => {
+      if (none !== null) throw new Error(`Expected null, got ${JSON.stringify(none)}`)
+    })
+
+    // Valid store file → definition with browser hydrate path set
+    writeFileSync(path.join(dir, 'pulse.store.js'),
+      `export default { state: { basket: [] }, server: { nav: async () => ['Home'] }, mutations: { add: (s, i) => ({ basket: [...s.basket, i] }) } }`)
+    const def = await loadStore(dir)
+    test('loadStore loads pulse.store.js and sets the browser hydrate path', () => {
+      if (!def)                                     throw new Error('Expected a store definition')
+      if (def.hydrate !== '/pulse.store.js')        throw new Error(`Expected hydrate /pulse.store.js, got ${def.hydrate}`)
+      if (typeof def.server?.nav !== 'function')    throw new Error('server fetchers missing')
+      if (typeof def.mutations?.add !== 'function') throw new Error('mutations missing')
+      if (!Array.isArray(def.state?.basket))        throw new Error('state missing')
+    })
+
+    // Cache-busted re-import returns the edited module (dev hot reload)
+    writeFileSync(path.join(dir, 'pulse.store.js'),
+      `export default { state: { basket: [], promo: true }, mutations: {} }`)
+    const fresh = await loadStore(dir, Date.now())
+    test('loadStore cache-busts for hot reload', () => {
+      if (fresh?.state?.promo !== true) throw new Error('Expected fresh store definition after edit')
+    })
+
+    // Bad export → clear error
+    writeFileSync(path.join(dir, 'pulse.store.js'), `export default 42`)
+    let threw = false
+    try { await loadStore(dir, Date.now() + 1) } catch (e) { threw = /store object/.test(e.message) }
+    test('loadStore throws a clear error for a non-object export', () => {
+      if (!threw) throw new Error('Expected a descriptive throw for bad default export')
+    })
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)
