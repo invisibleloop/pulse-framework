@@ -551,6 +551,9 @@ export async function createServer(entries, options = {}) {
                                     // spec.sitemap = async () => ['/blog/a', ...]
     robots         = null,          // robots.txt content when sitemap is enabled:
                                     // null = auto-generate, false = disable, string = serve verbatim
+    redirects      = null,          // declarative redirect map for legacy URLs (SEO-safe migrations):
+                                    // { '/old-blog/:slug': '/blog/:slug',           — 301 (default)
+                                    //   '/promo': { to: '/pricing', status: 302 } } — custom status
     onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
     onRequest,
     agentMode      = false,        // show agent-active indicator in banner
@@ -618,6 +621,16 @@ export async function createServer(entries, options = {}) {
   // CSRF secret — per-boot random unless pinned via options.secret. Tokens are
   // tied to a cookie, so a restart only means in-flight forms re-render once.
   const csrfSecret = secret || crypto.randomBytes(32).toString('hex')
+
+  // Redirects — compile the declarative map once at startup (throws on bad
+  // entries) and warn when a redirect source shadows a registered page route.
+  const redirectTable = compileRedirects(redirects)
+  if (redirectTable.length > 0 && !quiet) {
+    const shadowed = redirectTable.filter(r => specs.some(s => s.route === r.source))
+    if (shadowed.length > 0) {
+      console.log(`  ⚠ redirects: ${shadowed.map(r => r.source).join(', ')} also match registered page routes — the redirect wins and the page is unreachable`)
+    }
+  }
 
   // Sitemap — track the live spec list (updated on hot reload) and surface a
   // startup hint for dynamic routes that can't be enumerated automatically.
@@ -725,6 +738,27 @@ export async function createServer(entries, options = {}) {
           return
         }
         // 'allow' — no redirect
+      }
+
+      // Declarative redirects — checked before route matching so legacy URLs
+      // redirect even when a spec also matches (a startup warning flags that).
+      // GET/HEAD only: redirecting a POST silently drops the body.
+      if (redirectTable.length > 0 && (req.method === 'GET' || req.method === 'HEAD')) {
+        for (const r of redirectTable) {
+          const m = pathname.match(r.pattern)
+          if (!m) continue
+          // Substitute captured :params into the target, keeping their original
+          // percent-encoding intact (no decode/re-encode round trip). Longest
+          // names first so :s never clobbers part of :slug.
+          let target = r.target
+          ;[...r.params.entries()]
+            .sort((a, b) => b[1].length - a[1].length)
+            .forEach(([i, name]) => { target = target.split(`:${name}`).join(m[i + 1]) })
+          if (target === pathname) break  // self-redirect — fall through to normal routing
+          res.writeHead(r.status, { Location: target + (url.search || ''), ...SECURITY_HEADERS, ...httpsHeaders(req) })
+          res.end()
+          return
+        }
       }
 
       // Match route
@@ -1722,6 +1756,47 @@ function escHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+}
+
+/**
+ * Compile the declarative redirects map into matchable entries.
+ * Validates at startup — a bad entry throws before the server accepts connections.
+ *
+ * Sources are route patterns ('/old/:slug'); targets are paths or absolute URLs
+ * and may reference the same :params. Values are a target string (301) or
+ * { to, status } for 302/307/308.
+ *
+ * @param {Record<string, string | { to: string, status?: number }> | null} redirects
+ * @returns {Array<{ source: string, pattern: RegExp, params: string[], target: string, status: number }>}
+ */
+function compileRedirects(redirects) {
+  if (!redirects) return []
+  const VALID_STATUS = new Set([301, 302, 307, 308])
+  const table = []
+
+  for (const [source, value] of Object.entries(redirects)) {
+    if (!source.startsWith('/')) {
+      throw new Error(`Invalid redirect source "${source}" — sources must start with "/" (e.g. '/old-blog/:slug')`)
+    }
+    const target = typeof value === 'string' ? value : value?.to
+    const status = typeof value === 'string' ? 301 : (value?.status ?? 301)
+    if (typeof target !== 'string' || !(target.startsWith('/') || /^https?:\/\//.test(target))) {
+      throw new Error(`Invalid redirect target for "${source}" — targets must start with "/" or be an absolute http(s) URL`)
+    }
+    if (!VALID_STATUS.has(status)) {
+      throw new Error(`Invalid redirect status ${status} for "${source}" — use 301, 302, 307, or 308`)
+    }
+    // Targets may only reference params that the source captures
+    const { pattern, params } = routeToRegex(source)
+    const targetParams = [...target.matchAll(/:([a-zA-Z][\w-]*)/g)].map(m => m[1])
+    const unknown = targetParams.filter(p => !params.includes(p))
+    if (unknown.length > 0) {
+      throw new Error(`Redirect target for "${source}" references :${unknown[0]} which the source does not capture`)
+    }
+    table.push({ source, pattern, params, target, status })
+  }
+
+  return table
 }
 
 /**

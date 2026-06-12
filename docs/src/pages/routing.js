@@ -79,6 +79,19 @@ server: {
   },
 }`, 'js'))}
 
+      ${section('redirects', 'Redirects')}
+      <p>Migrating an existing site? Preserve the old URLs with the <code>redirects</code> map — legacy links and search rankings survive the move:</p>
+      ${codeBlock(highlight(`await createServer(pages, {
+  redirects: {
+    '/old-blog/:slug': '/blog/:slug',                 // 301 — :params carry over
+    '/pricing-2024':   '/pricing',                    // 301 (default)
+    '/promo':          { to: '/sale', status: 302 },  // temporary redirect
+    '/moved/:slug':    'https://other.com/:slug',     // absolute targets for domain moves
+  },
+})`, 'js'))}
+      <p>Redirects respond <strong>301</strong> by default (permanent — search engines transfer ranking to the target). Use <code>{ to, status }</code> for <code>302</code>, <code>307</code>, or <code>308</code>. The query string is preserved, redirects apply to GET/HEAD only, and the map is validated at startup — a bad entry fails the boot rather than silently misrouting traffic.</p>
+      ${callout('note', 'Redirects are checked before route matching, so a redirect source that equals a registered route shadows the page — the server logs a startup warning when that happens. Occasionally intentional (retiring a page), usually a mistake.')}
+
       ${section('not-found', '404 handling')}
       <p>If no spec matches the incoming request path, Pulse returns a 404. To customise it, create a spec with <code>route: '*'</code> — it renders through the normal pipeline (layout, styles, components) with status 404:</p>
       ${codeBlock(highlight(`export default {

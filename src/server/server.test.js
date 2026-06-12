@@ -1446,6 +1446,92 @@ await test('submit pages are excluded from the in-process page cache', async () 
 
 // ---------------------------------------------------------------------------
 
+console.log('\nDeclarative redirects\n')
+
+await test('plain redirect responds 301 with Location', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/old-hello': '/hello' } }, async (port) => {
+    const { status, headers } = await get(port, '/old-hello')
+    assert(status === 301, `Expected 301, got ${status}`)
+    assert(headers.location === '/hello', `Expected /hello, got ${headers.location}`)
+  })
+})
+
+await test(':params are substituted into the target', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/old-blog/:slug': '/blog/:slug' } }, async (port) => {
+    const { status, headers } = await get(port, '/old-blog/my-post')
+    assert(status === 301)
+    assert(headers.location === '/blog/my-post', `Expected /blog/my-post, got ${headers.location}`)
+  })
+})
+
+await test('percent-encoded params keep their encoding through substitution', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/old/:slug': '/new/:slug' } }, async (port) => {
+    const { headers } = await get(port, '/old/caf%C3%A9')
+    assert(headers.location === '/new/caf%C3%A9', `Encoding mangled: ${headers.location}`)
+  })
+})
+
+await test('query string is preserved on redirect', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/old-hello': '/hello' } }, async (port) => {
+    const { headers } = await get(port, '/old-hello?utm=x&page=2')
+    assert(headers.location === '/hello?utm=x&page=2', `Query lost: ${headers.location}`)
+  })
+})
+
+await test('custom status via { to, status }', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/promo': { to: '/hello', status: 302 } } }, async (port) => {
+    const { status, headers } = await get(port, '/promo')
+    assert(status === 302, `Expected 302, got ${status}`)
+    assert(headers.location === '/hello')
+  })
+})
+
+await test('absolute URL targets work (domain moves)', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/moved/:slug': 'https://newsite.com/blog/:slug' } }, async (port) => {
+    const { headers } = await get(port, '/moved/post-1')
+    assert(headers.location === 'https://newsite.com/blog/post-1', `Got ${headers.location}`)
+  })
+})
+
+await test('redirect wins over a registered route at the same path', async () => {
+  await withServer([helloSpec], { stream: false, quiet: true, redirects: { '/hello': '/elsewhere' } }, async (port) => {
+    const { status, headers } = await get(port, '/hello')
+    assert(status === 301 && headers.location === '/elsewhere', `Expected redirect to win, got ${status}`)
+  })
+})
+
+await test('POST is not redirected', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/old-api': '/hello' } }, async (port) => {
+    const { status } = await requestFull(port, 'POST', '/old-api', {})
+    assert(status === 404, `Expected POST to skip redirects (404), got ${status}`)
+  })
+})
+
+await test('self-redirects fall through to normal routing instead of looping', async () => {
+  await withServer([helloSpec], { stream: false, redirects: { '/hello/:x': '/hello/:x' } }, async (port) => {
+    const { status } = await get(port, '/hello/abc')
+    assert(status === 404, `Expected fall-through to routing (404 here), got ${status}`)
+    const ok = await get(port, '/hello')
+    assert(ok.status === 200, 'Unrelated routes unaffected')
+  })
+})
+
+await test('invalid redirect config throws at startup', async () => {
+  const cases = [
+    { redirects: { 'no-slash': '/x' } },
+    { redirects: { '/x': 'no-slash-target' } },
+    { redirects: { '/x': { to: '/y', status: 418 } } },
+    { redirects: { '/x': '/y/:missing' } },
+  ]
+  for (const opts of cases) {
+    let threw = false
+    try { await createServer([helloSpec], { ...opts, port: nextPort++, quiet: true }) } catch { threw = true }
+    assert(threw, `Expected startup throw for ${JSON.stringify(opts.redirects)}`)
+  }
+})
+
+// ---------------------------------------------------------------------------
+
 console.log('\nSitemap + robots.txt\n')
 
 const aboutSpec   = { route: '/about', view: () => '<main id="main-content">About</main>' }
