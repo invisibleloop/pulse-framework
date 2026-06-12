@@ -367,6 +367,18 @@ html, body {
   -webkit-appearance: none;
 }
 
+/* iOS Safari auto-zooms the page when a focused input's font-size is under
+   16px, forcing the user to pinch back out afterwards. On touch devices form
+   controls must never go below 16px — desktop keeps the compact .9rem. */
+@media (pointer: coarse) {
+  .ui-input,
+  .ui-textarea,
+  .ui-select,
+  .ui-search-input {
+    font-size: max(1rem, 16px);
+  }
+}
+
 .ui-input::placeholder { color: var(--ui-muted); }
 
 .ui-input:hover:not(:disabled) { border-color: var(--ui-muted); }

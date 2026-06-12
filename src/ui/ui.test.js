@@ -7,6 +7,7 @@
 
 import { test }   from 'node:test'
 import assert     from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { button }      from './button.js'
 import { badge }       from './badge.js'
 import { card }        from './card.js'
@@ -1351,6 +1352,18 @@ test('gallery: lazy:false renders eager images', () => {
 test('dropCap: escapes letter and content', () => {
   const html = dropCap({ letter: '<', content: '<script>alert(1)</script>' })
   assert.doesNotMatch(html, /<script>/)
+})
+
+test('pulse-ui.css: form controls are at least 16px on touch devices (iOS focus-zoom)', () => {
+  // iOS Safari zooms the page when a focused input's font-size is under 16px,
+  // forcing the user to pinch back out. A (pointer: coarse) block must keep
+  // every text-entry control at >= 16px on touch devices.
+  const css  = readFileSync(new URL('../../public/pulse-ui.css', import.meta.url), 'utf8')
+  const block = css.match(/@media \(pointer: coarse\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  for (const sel of ['.ui-input', '.ui-textarea', '.ui-select', '.ui-search-input']) {
+    assert.ok(block.includes(sel), `${sel} missing from the (pointer: coarse) 16px block`)
+  }
+  assert.match(block, /font-size:\s*max\(1rem, 16px\)/)
 })
 
 console.log('✓ All UI component tests passed')
