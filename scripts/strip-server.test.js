@@ -8,7 +8,7 @@
 // ---------------------------------------------------------------------------
 
 const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render', 'sitemap']
-const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md']
+const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md', '@invisibleloop/pulse']
 
 function stripServerOnlyKeys(source) {
   for (const key of SERVER_ONLY_KEYS) source = removeObjectKey(source, key)
@@ -413,6 +413,16 @@ test('submit is NOT stripped — it collides with the common submit action name'
 test('store definition: server fetchers stripped, state and mutations survive',
   `export default {\n  state: { basket: [] },\n  server: {\n    nav: async () => fetchNav(),\n  },\n  mutations: {\n    add: (store, item) => ({ basket: [...store.basket, item] }),\n  },\n}`,
   `export default {\n  state: { basket: [] },\n  mutations: {\n    add: (store, item) => ({ basket: [...store.basket, item] }),\n  },\n}`
+)
+
+test('package-root import (pushStore) is stripped — the root export is the server itself',
+  `import { pushStore } from '@invisibleloop/pulse'\nexport default {\n  route: '/staff',\n  view: () => '',\n}`,
+  `export default {\n  route: '/staff',\n  view: () => '',\n}`
+)
+
+test('subpath imports (/ui) are NOT stripped by the root entry',
+  `import { button } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => button({ label: 'x' }),\n}`,
+  `import { button } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => button({ label: 'x' }),\n}`
 )
 
 // ---------------------------------------------------------------------------

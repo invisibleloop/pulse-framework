@@ -45,7 +45,7 @@ const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentTy
  * top-level variable declarations whose right-hand side calls the imported names.
  * All `node:*` built-ins are also stripped automatically via the import regex.
  */
-const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md']
+const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md', '@invisibleloop/pulse']
 
 /**
  * Strip all server-only property declarations from a spec source string.

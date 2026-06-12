@@ -586,8 +586,11 @@ server.registerTool(
         return text(`File not found: ${file}`)
       }
       content = fs.readFileSync(file, 'utf8')
+      // Validate from the file's own directory so relative imports resolve
+      // correctly for pages in subdirectories
+      return validateContent(content, path.dirname(file))
     }
-    
+
     return validateContent(content)
   }
 )
@@ -632,7 +635,9 @@ Rules for the spec you write:
     }
 
     const content = fs.readFileSync(fullPath, 'utf8')
-    const validation = await validateContent(content)
+    // Validate from the file's own directory so relative imports resolve
+    // correctly for pages in subdirectories (src/pages/news/index.js)
+    const validation = await validateContent(content, path.dirname(fullPath))
     if (validation.content[0].text.startsWith('Invalid')) return validation
 
     const route = derivedRouteFromName(name)
@@ -3383,7 +3388,7 @@ const PROP_ALIASES = [
   { component: 'input()',  wrong: 'pattern',     correct: 'attrs: { pattern }',       note: 'HTML attributes go inside `attrs`: input({ attrs: { pattern: "[0-9]+" } }).' },
 ]
 
-async function validateContent(content) {
+async function validateContent(content, tmpDir = PAGES_DIR) {
   // Source-level checks — run before the worker so errors are caught without importing
   const sourceWarnings = []
 
@@ -3458,9 +3463,12 @@ async function validateContent(content) {
     }
   }
 
-  // Write into PAGES_DIR so relative imports (e.g. '../components/nav.js') resolve correctly
-  fs.mkdirSync(PAGES_DIR, { recursive: true })
-  const tmpFile = path.join(PAGES_DIR, `.pulse-validate-${Date.now()}.mjs`)
+  // Write the temp file into the directory the spec actually lives in (passed by
+  // callers that know it) so relative imports resolve from the true location.
+  // A page at src/pages/news/index.js importing '../../components/layout.js'
+  // resolved wrongly when the temp file was always dropped in src/pages/ root.
+  fs.mkdirSync(tmpDir, { recursive: true })
+  const tmpFile = path.join(tmpDir, `.pulse-validate-${Date.now()}.mjs`)
   try {
     fs.writeFileSync(tmpFile, content, 'utf8')
 

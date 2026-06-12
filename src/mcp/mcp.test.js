@@ -297,6 +297,30 @@ test('pulse_validate CSP check matches config by host, not full URL', () => {
     'External image host entries must carry a bare host field')
 })
 
+test('validator resolves relative imports from the spec file\'s own directory', () => {
+  // Regression: the temp validation file was always written into src/pages/
+  // root, so subdirectory pages (src/pages/news/index.js) had their relative
+  // imports (../../components/layout.js) resolve from the wrong depth.
+  assert(/async function validateContent\(content, tmpDir = PAGES_DIR\)/.test(serverSrc),
+    'validateContent must accept a tmpDir parameter')
+  assert(serverSrc.includes('validateContent(content, path.dirname(fullPath))'),
+    'pulse_create_page must validate from the file\'s own directory')
+  assert(serverSrc.includes('validateContent(content, path.dirname(file))'),
+    'pulse_validate file mode must validate from the file\'s own directory')
+})
+
+test('package-root import is stripped from client bundles in build and dev', () => {
+  // Regression: import { pushStore } from '@invisibleloop/pulse' (the documented
+  // live-push pattern) pulled the entire server — http, fs, zlib — into the
+  // browser bundle and broke `pulse build`.
+  const buildSrc = fs.readFileSync(path.join(ROOT, 'scripts/build.js'), 'utf8')
+  const devSrc   = fs.readFileSync(path.join(ROOT, 'src/cli/dev.js'), 'utf8')
+  assert(buildSrc.includes(`'@invisibleloop/pulse/md', '@invisibleloop/pulse'`),
+    'build.js SERVER_ONLY_IMPORTS must include the package root')
+  assert(devSrc.includes(`@invisibleloop\\/pulse)['"]`),
+    'dev.js serveFile must strip package-root imports before serving specs to the browser')
+})
+
 test('pulse_check_contrast extracts variables from [data-theme="light"] blocks', () => {
   // Regression: the light-theme block pattern was an ungrouped alternation
   // (a|b) + '\\s*\\{([^}]+)\\}' — the body matcher bound only to the second
