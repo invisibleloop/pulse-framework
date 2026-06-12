@@ -52,6 +52,7 @@ await createServer(entries, options)`, 'js'))}
           ['<code>sitemap</code>', '<code>boolean | { origin }</code>', '<code>false</code>', 'Auto-serve <code>/sitemap.xml</code> + <code>robots.txt</code> from the registered routes. Dynamic <code>:param</code> routes contribute via <code>spec.sitemap</code> enumerators. See <a href="/meta#sitemap">Metadata &amp; SEO</a>.'],
           ['<code>robots</code>', '<code>string | false</code>', 'auto', 'robots.txt behaviour when sitemap is enabled — <code>false</code> disables, a string is served verbatim.'],
           ['<code>redirects</code>', '<code>object</code>', '<code>null</code>', 'Declarative redirect map for legacy URLs — <code>{ \'/old/:slug\': \'/new/:slug\' }</code>, 301 by default. See <a href="/routing#redirects">Routing</a>.'],
+          ['<code>live</code>', '<code>boolean | { path }</code>', '<code>false</code>', 'SSE store-push channel. The returned <code>pushStore(partial)</code> broadcasts store patches; subscribed pages re-render live. See <a href="/store#live">Global Store</a>.'],
           ['<code>onRequest</code>', '<code>function</code>', '<code>undefined</code>', 'Called on every request before routing. Return <code>false</code> to short-circuit Pulse handling.'],
           ['<code>onError</code>', '<code>function</code>', '<code>undefined</code>', 'Called on unhandled errors. Receives <code>(err, req, res)</code>. See <a href="/error-pages">Error Pages</a>.'],
         ]

@@ -109,6 +109,15 @@ export interface ServerOptions {
   redirects?: Record<string, string | { to: string; status?: 301 | 302 | 307 | 308 }> | null
 
   /**
+   * Enable the SSE store-push channel. createServer's return value gains a
+   * working pushStore(partial) that broadcasts store patches to all connected
+   * clients; pages subscribed via spec.store re-render immediately. Pass
+   * { path } to move the endpoint (default '/__pulse/live'). The channel is a
+   * broadcast — push SHARED data only (stock, announcements), never per-user data.
+   */
+  live?: boolean | { path?: string }
+
+  /**
    * Extra CSP sources to merge into the framework's default Content-Security-Policy.
    * Use this to allow external stylesheets, fonts, or API origins.
    * Each key is a CSP directive name; each value is an array of sources to append.
@@ -140,6 +149,16 @@ export interface PulseStoreDefinition {
 // createServer return value
 // ---------------------------------------------------------------------------
 
+/**
+ * Module-level broadcast to the running live server — for spec files that have
+ * no server handle (the CLI owns createServer in scaffolded apps).
+ * Throws unless a server with `live: true` is running.
+ * @example
+ * import { pushStore } from '@invisibleloop/pulse'
+ * pushStore({ stock: 5 })
+ */
+export declare function pushStore(partial: Record<string, unknown>): number
+
 export interface ServerInstance {
   /** The underlying Node.js http.Server */
   server: Server
@@ -155,6 +174,15 @@ export interface ServerInstance {
 
   /** Swap the spec list at runtime (used by the dev server for hot reload). */
   updateSpecs(specs: PulseSpec[]): void
+
+  /**
+   * Broadcast a store patch to every connected live client (requires the
+   * `live` option). Pages subscribed via spec.store merge the patch and
+   * re-render immediately. Returns the number of clients reached.
+   * Broadcast channel — push SHARED data only, never per-user data.
+   * @example pushStore({ stock: 5 })
+   */
+  pushStore(partial: Record<string, unknown>): number
 }
 
 // ---------------------------------------------------------------------------

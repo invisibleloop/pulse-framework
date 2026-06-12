@@ -298,6 +298,8 @@ await createServer(
       '/old-blog/:slug': '/blog/:slug',          // :params carry over, query string preserved
       '/promo': { to: '/pricing', status: 302 }, // custom status: 301 | 302 | 307 | 308
     },                            // checked before routing (GET/HEAD only); validated at startup
+    live:         true,           // SSE store-push channel (default path /__pulse/live) —
+                                  // createServer returns pushStore(partial) for broadcasting
     csp: {                        // extra sources merged into the framework's default CSP
       'style-src': ['https://fonts.googleapis.com'],
       'font-src':  ['https://fonts.gstatic.com'],
@@ -313,6 +315,37 @@ await createServer(
 `createServer` is async — always `await` it. Spec objects are still accepted alongside URL objects for backwards compatibility.
 
 All specs are validated at startup — bad specs throw before the server accepts connections.
+
+## Live Store Push (SSE)
+
+With `live: true`, `createServer` returns a **`pushStore(partial)`** function that broadcasts a store patch to every connected browser. Pages subscribed via `spec.store` re-render immediately — no polling, no client code:
+
+```js
+// Enable in pulse.config.js (CLI-managed apps) or createServer options:
+export default { live: true }
+```
+
+```js
+// Broadcast from any spec file — e.g. a webhook that updates stock:
+import { pushStore } from '@invisibleloop/pulse'
+
+export default {
+  route: '/hooks/stock',
+  contentType: 'text/plain',
+  state: {},
+  render: async (ctx) => {
+    const { sku, stock } = await ctx.json()
+    pushStore({ stock })          // every page with store: ['stock'] re-renders
+    return 'ok'
+  },
+}
+```
+
+When you own the server entry, `createServer` also returns the handle directly: `const { pushStore } = await createServer(pages, { live: true })`.
+
+- The client connects automatically — only on pages that declare `store: [...]` keys; one EventSource per tab, survives client navigations, reconnects natively.
+- **Broadcast channel: shared data only** (stock counts, announcements, live scores). Never push per-user data — every connected client receives every patch.
+- Views must handle keys that haven't arrived yet: `server.stock ?? '—'`.
 
 ## Multi-brand Sites
 

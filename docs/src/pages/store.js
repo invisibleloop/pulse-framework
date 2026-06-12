@@ -163,6 +163,28 @@ export default {
       <p>Any other page that has <code>store: ['settings']</code> will re-render with the new theme value the moment <code>_storeUpdate</code> is dispatched — without navigating away or refreshing.</p>
       ${callout('note', '<code>_storeUpdate</code> is stripped from the local page state — it is only forwarded to the store. The rest of the <code>onSuccess</code> return is merged into the page\'s own state as usual.')}
 
+      ${section('live', 'Live store push — server-initiated updates')}
+      <p>For data that changes on the <strong>server</strong> — stock levels, live scores, announcements — enable the live channel and broadcast with <code>pushStore</code>. Subscribed pages re-render the moment a patch arrives, with no polling and no client code:</p>
+      ${codeBlock(highlight(`// pulse.config.js — enable the channel
+export default { live: true }`, 'js'))}
+      ${codeBlock(highlight(`// Broadcast from any spec file — e.g. a webhook that updates stock:
+import { pushStore } from '@invisibleloop/pulse'
+
+export default {
+  route: '/hooks/stock',
+  contentType: 'text/plain',
+  state: {},
+  render: async (ctx) => {
+    const { stock } = await ctx.json()
+    pushStore({ stock })          // pages with store: ['stock'] re-render
+    return 'ok'
+  },
+}`, 'js'))}
+      <p>When you own the server entry, <code>createServer</code> also returns the handle directly: <code>const { pushStore } = await createServer(pages, { live: true })</code>.</p>
+      <p>The browser side is automatic: pages that declare <code>store: [...]</code> keys open a single <code>EventSource</code> connection per tab (default endpoint <code>/__pulse/live</code>). The connection survives client-side navigations and reconnects natively after network interruptions. Pages without store keys never connect.</p>
+      ${callout('warning', 'The live channel is a <strong>broadcast</strong> — every connected client receives every patch. Push <strong>shared</strong> data only (stock, announcements, scores). For per-user updates, use page actions with <code>_storeUpdate</code> instead.')}
+      ${callout('note', 'Views must handle keys that haven\'t arrived yet — the first patch may land seconds after page load. Write <code>server.stock ?? \'—\'</code>, not <code>server.stock</code>. The page must also be hydrated (have mutations or actions); purely server-rendered pages have no JavaScript to receive patches.')}
+
       ${section('caching', 'Caching and performance')}
       <p>Store fetchers run once per request, in parallel. They share the same request context as page server fetchers, so they can read cookies, params, and headers to scope data to the current user.</p>
       <p>If your store data changes infrequently (nav items from a CMS, feature flags), consider adding a <code>serverTtl</code> to the relevant page spec to cache the full rendered HTML — or caching inside the fetcher itself:</p>

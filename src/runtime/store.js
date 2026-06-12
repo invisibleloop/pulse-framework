@@ -73,6 +73,34 @@ export function registerStoreMutations(mutations) {
   _mutationsRegistered = true
 }
 
+// ---------------------------------------------------------------------------
+// Live store push — SSE channel from the server (createServer { live: true })
+// ---------------------------------------------------------------------------
+
+let _liveSource = null
+
+/**
+ * Connect to the server's live store-push channel (SSE). Singleton per tab —
+ * survives client-side navigations; repeat calls are no-ops. Patches arrive as
+ * `store` events and merge via updateStore(), so every page subscribed through
+ * spec.store re-renders immediately. EventSource reconnects automatically.
+ *
+ * Called by mount() only when the page subscribes to store keys and the server
+ * set window.__PULSE_LIVE__ — pages without store keys never open a connection.
+ *
+ * @param {string} url - the SSE endpoint path (e.g. '/__pulse/live')
+ */
+export function initLiveStore(url) {
+  if (_liveSource || typeof EventSource === 'undefined' || !url) return
+  _liveSource = new EventSource(url)
+  _liveSource.addEventListener('store', (e) => {
+    try {
+      const patch = JSON.parse(e.data)
+      if (patch && typeof patch === 'object') updateStore(patch)
+    } catch { /* malformed frame — ignore, never break the page */ }
+  })
+}
+
 /**
  * Dispatch a store mutation by name.
  * The mutation receives the current store state and an optional payload,
