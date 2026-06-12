@@ -92,3 +92,40 @@ test('minifyCss: calc() expressions keep their operator spacing', () => {
   const out = minifyCss(`.x { width: calc(100% - 2rem); }`)
   assert.ok(out.includes('calc(100% - 2rem)'), `calc broken: ${out}`)
 })
+
+// ---------------------------------------------------------------------------
+// Runtime state classes — classList arguments
+// ---------------------------------------------------------------------------
+// Regression: the JS string scan only keeps hyphenated names (to avoid keeping
+// every English word), so runtime state classes like classList.add('open') were
+// never collected — and selectorUsed checks the rightmost class token, so
+// `.docs-sidebar.open { … }` was purged from production CSS. The mobile docs
+// hamburger toggled the class, but the rule that slides the sidebar in was gone.
+
+test('classList method arguments are collected regardless of hyphens', () => {
+  const used = extractUsedClasses([], [
+    `sidebar.classList.add('open')`,
+    `overlay.classList.remove("visible")`,
+    `el.classList.toggle('active', isOn)`,
+    `el.classList.replace('open', 'closed')`,
+  ])
+  for (const cls of ['open', 'visible', 'active', 'closed']) {
+    assert.ok(used.has(cls), `Expected classList arg "${cls}" to be collected`)
+  }
+})
+
+test('multiple classList arguments in one call are all collected', () => {
+  const used = extractUsedClasses([], [`el.classList.add('one', 'two-x', 'three')`])
+  for (const cls of ['one', 'two-x', 'three']) assert.ok(used.has(cls), cls)
+})
+
+test('runtime-toggled compound rule survives the purge', () => {
+  const css = `.docs-sidebar { transform: translateX(-100%); }\n.docs-sidebar.open { transform: translateX(0); }\n.unused { color: red; }`
+  const used = extractUsedClasses(
+    [`<aside class="docs-sidebar">`],
+    [`document.querySelector('.docs-sidebar').classList.add('open')`]
+  )
+  const out = purgeCss(css, used)
+  assert.ok(out.includes('.docs-sidebar.open'), `Compound state rule was purged: ${out}`)
+  assert.ok(!out.includes('.unused'), 'Unused rule should still be purged')
+})
