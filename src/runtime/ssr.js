@@ -631,11 +631,14 @@ function encode(str) {
  * bundle (i.e. resolved via the manifest) rather than a raw source file.
  * Bundles live under /dist/ and carry a content hash in their filename.
  *
- * @param {string} hydratePath
+ * Null-safe: purely server-rendered pages (no mutations/actions/persist) have
+ * no hydrate path at all — they are never bundles.
+ *
+ * @param {string|undefined} hydratePath
  * @returns {boolean}
  */
 function isBundle(hydratePath) {
-  return hydratePath.startsWith('/dist/')
+  return typeof hydratePath === 'string' && hydratePath.startsWith('/dist/')
 }
 
 /**

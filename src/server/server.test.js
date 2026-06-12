@@ -1294,6 +1294,30 @@ await test('without a "*" spec the default 404 still works', async () => {
   })
 })
 
+await test('custom 404 works in production mode (manifest with runtime bundle present)', async () => {
+  // Regression: in production the manifest sets runtimeBundle, which made
+  // wrapDocument call isBundle(spec.hydrate) — undefined for non-hydrated pages
+  // like a typical 404 spec → TypeError → 500 instead of the custom 404.
+  // Dev never hit it because runtimeBundle is '' there.
+  const prodManifest = { _runtime: '/dist/runtime-abcd1234.js' }
+  await withServer([helloSpec, notFoundPageSpec], { stream: true, manifest: prodManifest }, async (port) => {
+    const { status, body } = await get(port, '/nope')
+    assert(status === 404, `Expected 404 in production mode, got ${status}`)
+    assert(body.includes('Custom not found'), `Expected custom 404 content: ${body.slice(0, 200)}`)
+  })
+})
+
+await test('non-hydrated pages render on the buffered path in production mode', async () => {
+  // Same root cause, different surface: stream: false + production manifest
+  // crashed EVERY zero-JS page, not just the 404.
+  const prodManifest = { _runtime: '/dist/runtime-abcd1234.js' }
+  await withServer([helloSpec], { stream: false, manifest: prodManifest }, async (port) => {
+    const { status, body } = await get(port, '/hello')
+    assert(status === 200, `Expected 200, got ${status}`)
+    assert(body.includes('Hello world'), 'Expected page content')
+  })
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nServer-side forms (spec.submit) + CSRF\n')
