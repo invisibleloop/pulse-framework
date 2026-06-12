@@ -279,6 +279,29 @@ export class TtlCache {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Module-level pushStore — lets spec files broadcast without a server handle
+// ---------------------------------------------------------------------------
+// Scaffolded apps never call createServer themselves (the CLI owns it), so the
+// broadcast function is also exported at module level. createServer wires it up
+// when `live` is enabled; a webhook spec can then simply:
+//
+//   import { pushStore } from '@invisibleloop/pulse'
+//   export default { route: '/hooks/stock', contentType: 'text/plain',
+//     state: {}, render: async (ctx) => { pushStore(await ctx.json()); return 'ok' } }
+//
+// With multiple servers in one process (tests), the most recent live server
+// wins; use the handle returned by createServer for instance precision.
+
+let _livePushStore = null
+
+export function pushStore(partial) {
+  if (!_livePushStore) {
+    throw new Error('pushStore requires a running server started with live: true (set `live: true` in pulse.config.js or createServer options)')
+  }
+  return _livePushStore(partial)
+}
+
 const serverDataCache = new TtlCache()
 const pageHtmlCache   = new TtlCache()
 
@@ -554,6 +577,11 @@ export async function createServer(entries, options = {}) {
     redirects      = null,          // declarative redirect map for legacy URLs (SEO-safe migrations):
                                     // { '/old-blog/:slug': '/blog/:slug',           — 301 (default)
                                     //   '/promo': { to: '/pricing', status: 302 } } — custom status
+    live           = false,         // true | { path } — SSE store-push channel. createServer returns
+                                    // pushStore(partial): broadcasts a store patch to all connected
+                                    // clients; pages subscribed via spec.store re-render immediately.
+                                    // Broadcast = SHARED data only (stock, announcements), never
+                                    // per-user data. Default path: /__pulse/live
     onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
     onRequest,
     agentMode      = false,        // show agent-active indicator in banner
@@ -622,6 +650,39 @@ export async function createServer(entries, options = {}) {
   // tied to a cookie, so a restart only means in-flight forms re-render once.
   const csrfSecret = secret || crypto.randomBytes(32).toString('hex')
 
+  // Live store push — SSE clients and the broadcast function. The heartbeat
+  // comment keeps proxies from reaping idle connections; unref'd so it never
+  // holds the process open.
+  const livePath    = live ? ((typeof live === 'object' && live.path) || '/__pulse/live') : null
+  const liveClients = new Set()
+  const liveHeartbeat = livePath
+    ? setInterval(() => {
+        for (const res of liveClients) { try { res.write(':hb\n\n') } catch {} }
+      }, 25_000).unref()
+    : null
+
+  /**
+   * Broadcast a store patch to every connected live client. Subscribed pages
+   * (spec.store) merge it via updateStore() and re-render immediately.
+   * Returns the number of clients the patch was sent to.
+   */
+  function pushStore(partial) {
+    if (!livePath) throw new Error('pushStore requires createServer option live: true')
+    if (!partial || typeof partial !== 'object' || Array.isArray(partial)) {
+      throw new Error('pushStore(partial) expects a plain object of store keys to merge')
+    }
+    const frame = `event: store\ndata: ${JSON.stringify(partial)}\n\n`
+    let sent = 0
+    for (const res of liveClients) {
+      try { res.write(frame); sent++ } catch { liveClients.delete(res) }
+    }
+    return sent
+  }
+
+  // Wire the module-level pushStore export to this instance — spec files can
+  // `import { pushStore } from '@invisibleloop/pulse'` without a server handle.
+  if (livePath) _livePushStore = pushStore
+
   // Redirects — compile the declarative map once at startup (throws on bad
   // entries) and warn when a redirect source shadows a registered page route.
   const redirectTable = compileRedirects(redirects)
@@ -675,6 +736,22 @@ export async function createServer(entries, options = {}) {
           ...SECURITY_HEADERS,
         })
         res.end(req.method === 'HEAD' ? undefined : body)
+        return
+      }
+
+      // Live store push — SSE channel. Clients (the runtime's initLiveStore)
+      // connect here; pushStore() broadcasts store patches down the stream.
+      if (livePath && pathname === livePath && req.method === 'GET') {
+        res.writeHead(200, {
+          'Content-Type':      'text/event-stream',
+          'Cache-Control':     'no-store',
+          'Connection':        'keep-alive',
+          'X-Accel-Buffering': 'no',
+          ...SECURITY_HEADERS,
+        })
+        res.write(':connected\n\n')
+        liveClients.add(res)
+        req.on('close', () => liveClients.delete(res))
         return
       }
 
@@ -943,11 +1020,11 @@ export async function createServer(entries, options = {}) {
       // string path — they are small, must carry an explicit status, and POST
       // bodies are already consumed.
       if (responseStatus !== 200 || req.method === 'POST') {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, responseStatus)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, responseStatus, livePath)
       } else if (stream) {
-        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
+        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, livePath)
       } else {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, store, csp, faviconPath, 200, livePath)
       }
 
     } catch (err) {
@@ -998,6 +1075,11 @@ export async function createServer(entries, options = {}) {
     pageHtmlCache.stopEviction()
     brandCache.stopEviction()
 
+    // Close live SSE connections so they can't hold the drain open
+    if (liveHeartbeat) clearInterval(liveHeartbeat)
+    for (const res of [...liveClients]) { try { res.end() } catch {} }
+    liveClients.clear()
+
     // Stop accepting new connections; exit once all connections are closed
     server.close(() => process.exit(0))
 
@@ -1032,6 +1114,7 @@ export async function createServer(entries, options = {}) {
   return {
     server,
     shutdown,
+    pushStore,
     updateSpecs(newSpecs) {
       notFoundSpec = newSpecs.find(s => s.route === '*') || null
       router       = buildRouter(newSpecs.filter(s => s.route !== '*'))
@@ -1113,7 +1196,7 @@ async function handleNavStreamResponse(spec, ctx, req, res) {
  * Render to a complete string then send — simpler, easier to cache.
  * Checks the in-process page cache before rendering; stores result after.
  */
-async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, status = 200) {
+async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, status = 200, livePath = '') {
   const cacheKey = buildCacheKey(spec, ctx)
   // Never cache POST re-renders or non-200 responses (custom 404s) — POST output
   // varies per submission and a cached 404 body would be served with a 200 later.
@@ -1137,7 +1220,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     const canonicalTag      = canonicalUrl ? `<link rel="canonical" href="${escHtml(canonicalUrl)}">` : ''
     const resolvedSpec      = { ...spec, meta: await resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
-    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag, nonce, runtimeBundle, faviconHref: faviconPath || '' })
+    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag, nonce, runtimeBundle, faviconHref: faviconPath || '', livePath })
     html              = wrapped.html
     serverTimingValue = wrapped.serverTimingValue
     if (ttl > 0) pageHtmlCache.set(cacheKey, { html }, ttl)
@@ -1165,7 +1248,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
  * Stream the response — shell first, deferred segments follow.
  * On a page-cache hit, serves the buffered HTML as a string (no streaming needed).
  */
-async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null) {
+async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, livePath = '') {
   // Serve from in-process page cache when available — skip streaming overhead.
   const cacheKey = buildCacheKey(spec, ctx)
   const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
@@ -1253,7 +1336,7 @@ ${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + 
   const scriptTags    = (meta.scripts || [])
     .map(src => `  <script src="${escHtml(src)}" defer></script>`)
     .join('\n')
-  const storeScript   = buildStoreScript(spec, ctx.store || null, nonce)
+  const storeScript   = buildStoreScript(spec, ctx.store || null, nonce, livePath)
   const hydrateScript = buildHydrateScript(spec, store, nonce)
 
   const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody

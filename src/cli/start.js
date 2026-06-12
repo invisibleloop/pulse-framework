@@ -44,6 +44,10 @@ if (!fs.existsSync(manifestPath)) {
 let port         = portArg !== -1 ? parseInt(args[portArg + 1], 10) : null
 let defaultCache = null
 let csp          = null
+let passthrough  = {}
+
+// Server options forwarded verbatim from pulse.config.js — keep in sync with dev.js
+const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody']
 
 const configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(configPath)) {
@@ -52,6 +56,9 @@ if (fs.existsSync(configPath)) {
     port         = port || mod.default?.port || null
     defaultCache = mod.default?.defaultCache ?? null
     csp          = mod.default?.csp ?? null
+    for (const key of PASSTHROUGH_OPTIONS) {
+      if (mod.default?.[key] !== undefined) passthrough[key] = mod.default[key]
+    }
   } catch { /* ignore */ }
 }
 
@@ -75,4 +82,5 @@ createServer(specs, {
   staticDir:    PUBLIC_DIR,
   defaultCache,
   ...(csp ? { csp } : {}),
+  ...passthrough,
 })

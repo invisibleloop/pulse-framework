@@ -570,7 +570,7 @@ test('spec without persist does not write to localStorage', () => {
 
 console.log('\nStore mutations\n')
 
-import { registerStoreMutations, dispatchStoreMutation, getStoreState, updateStore } from './store.js'
+import { registerStoreMutations, dispatchStoreMutation, getStoreState, updateStore, initLiveStore } from './store.js'
 
 // Register all mutations once — the singleton ignores subsequent calls (by design)
 registerStoreMutations({
@@ -619,6 +619,35 @@ test('registerStoreMutations is a no-op after first call', () => {
   registerStoreMutations({ bump: () => ({ count: 999 }) }) // different fn — should be ignored
   dispatchStoreMutation('bump')
   assert(getStoreState().count === before + 1, `Should still use original mutation, got ${getStoreState().count}`)
+})
+
+console.log('\nLive store push (client)\n')
+
+test('initLiveStore connects once, merges SSE store events, survives bad frames', () => {
+  const instances = []
+  globalThis.EventSource = class {
+    constructor(url) { this.url = url; this._listeners = {}; instances.push(this) }
+    addEventListener(type, fn) { this._listeners[type] = fn }
+  }
+
+  initLiveStore('/__pulse/live')
+  initLiveStore('/__pulse/live')   // singleton — second call is a no-op
+  assert(instances.length === 1, `Expected one EventSource, got ${instances.length}`)
+  assert(instances[0].url === '/__pulse/live', `Wrong URL: ${instances[0].url}`)
+
+  // A store event merges into the client store and notifies subscribers
+  const el = new FakeElement()
+  mount({ route: '/stock', store: ['stock'], state: {}, view: (s, server) => `<b>${server.stock ?? '—'}</b>` }, el, {})
+  instances[0]._listeners.store({ data: JSON.stringify({ stock: 7 }) })
+  assert(getStoreState().stock === 7, `Expected stock 7, got ${getStoreState().stock}`)
+  assert(el.innerHTML.includes('7'), `Subscribed page should re-render: ${el.innerHTML}`)
+
+  // Malformed frames must never throw or break the page
+  instances[0]._listeners.store({ data: 'not-json' })
+  instances[0]._listeners.store({ data: '"a-string"' })
+  assert(getStoreState().stock === 7, 'Bad frames must not corrupt the store')
+
+  delete globalThis.EventSource
 })
 
 // ---------------------------------------------------------------------------

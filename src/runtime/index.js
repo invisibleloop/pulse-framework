@@ -7,7 +7,7 @@
  * No framework. No virtual DOM. No dependencies.
  */
 
-import { initClientStore, getStoreState, subscribe, updateStore, registerStoreMutations, dispatchStoreMutation } from './store.js'
+import { initClientStore, getStoreState, subscribe, updateStore, registerStoreMutations, dispatchStoreMutation, initLiveStore } from './store.js'
 import { trustedHTML, trustedScriptURL } from './tt.js'
 
 // Toast is lazy-loaded on first use — pages that never use _toast pay zero bytes
@@ -43,6 +43,13 @@ export function mount(spec, el, serverState = {}, options = {}) {
   // Separate page-level server state from store keys so they can be tracked
   // independently — store values come from the live singleton, not the snapshot.
   const _storeKeys = new Set(spec.store || [])
+
+  // Live store push — connect to the server's SSE channel, but only when this
+  // page actually subscribes to store keys. Singleton: survives navigations,
+  // repeat mounts are no-ops. Pages without store keys never open a connection.
+  if (typeof window !== 'undefined' && window.__PULSE_LIVE__ && _storeKeys.size > 0) {
+    initLiveStore(window.__PULSE_LIVE__)
+  }
   const _pageServerState = {}
   for (const [k, v] of Object.entries(serverState)) {
     if (!_storeKeys.has(k)) _pageServerState[k] = v

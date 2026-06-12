@@ -102,6 +102,50 @@ actions: {
 ```
 `_storeUpdate` is stripped from local page state — it is only forwarded to the store. The rest of `onSuccess` merges into the page's own state as normal.
 
+### Live store push — server-initiated updates (SSE)
+
+For data that changes on the **server** (stock levels, live scores, announcements), enable the live channel and broadcast with `pushStore` — subscribed pages re-render without polling or any client code:
+
+```js
+// pulse.config.js — enable the channel (CLI-managed apps)
+export default { live: true }
+```
+
+```js
+// any spec file — broadcast via the module-level import (no server handle needed)
+import { pushStore } from '@invisibleloop/pulse'
+
+export default {
+  route: '/hooks/stock',
+  contentType: 'text/plain',
+  state: {},
+  render: async (ctx) => {
+    const { stock } = await ctx.json()
+    pushStore({ stock })   // every mounted page with store: ['stock'] re-renders
+    return 'ok'
+  },
+}
+```
+
+When you own the server entry, `createServer` also returns the handle: `const { pushStore } = await createServer(pages, { live: true })`.
+
+```js
+// page spec — subscribes like any store key
+export default {
+  route: '/product',
+  store: ['stock'],
+  state: {},
+  mutations: { noop: (s) => s },   // any mutation/action → page is hydrated
+  view: (state, server) => `<p>${server.stock ?? '—'} in stock</p>`,
+}
+```
+
+**Rules:**
+- **Shared data only.** The channel is a broadcast — every connected client receives every patch. Never push per-user data (use page actions + `_storeUpdate` for that).
+- Views must handle keys that haven't arrived yet (`server.stock ?? '—'`) — the first patch may land seconds after page load.
+- The page must be hydrated (have mutations/actions) — purely server-rendered pages have no JS to receive patches.
+- The connection is automatic and lazy: only pages with `store: [...]` keys open it, one EventSource per tab, native auto-reconnect.
+
 ## Server-side forms — `spec.submit` (works without client JS)
 
 A spec with a `submit` handler accepts POST on its own route. The form works with JavaScript disabled — hydrated `actions` become an enhancement, not a requirement.

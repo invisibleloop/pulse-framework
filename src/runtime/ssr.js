@@ -269,12 +269,15 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
  * read these globals, and omitting the inline script keeps cached HTML nonce-free
  * so it can be served with a nonce-free CSP without a CSP violation.
  */
-export function buildStoreScript(spec, storeState, nonce) {
+export function buildStoreScript(spec, storeState, nonce, livePath = '') {
   if (!spec.hydrate) return ''
+  // __PULSE_LIVE__ tells the runtime where the SSE store-push channel lives;
+  // mount() connects only when the page actually subscribes to store keys.
+  const liveFlag = livePath ? `window.__PULSE_LIVE__='${livePath}';` : ''
   if (storeState && Object.keys(storeState).length > 0) {
-    return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
+    return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
   }
-  return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';</script>`
+  return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}</script>`
 }
 
 /**
@@ -310,7 +313,7 @@ export function buildHydrateScript(spec, storeDef, nonce) {
  * @param {Object}  [options.timing]     - Server-Timing values
  * @returns {string}
  */
-export function wrapDocument({ content, spec = {}, serverState = {}, storeState = null, storeDef = null, timing = {}, extraBody = '', extraHead = '', nonce = '', runtimeBundle = '', faviconHref = '' }) {
+export function wrapDocument({ content, spec = {}, serverState = {}, storeState = null, storeDef = null, timing = {}, extraBody = '', extraHead = '', nonce = '', runtimeBundle = '', faviconHref = '', livePath = '' }) {
   const meta  = spec.meta  || {}
   const title = meta.title || 'Pulse'
 
@@ -362,7 +365,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     ? `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(serverState)};</script>`
     : ''
 
-  const storeStateScript = buildStoreScript(spec, storeState, nonce)
+  const storeStateScript = buildStoreScript(spec, storeState, nonce, livePath)
   const hydrateScript    = buildHydrateScript(spec, storeDef, nonce)
 
   // Server-Timing header value (caller is responsible for setting the header)

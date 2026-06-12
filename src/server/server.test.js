@@ -1646,6 +1646,138 @@ await test('a failing enumerator does not take down the sitemap', async () => {
 
 // ---------------------------------------------------------------------------
 
+console.log('\nLive store push (SSE)\n')
+
+/** Open an SSE connection and return a handle that accumulates received text. */
+function openSse(port, path) {
+  return new Promise((resolve, reject) => {
+    const req = http.get({ hostname: 'localhost', port, path, headers: { Accept: 'text/event-stream' } }, (res) => {
+      let buf = ''
+      res.on('data', c => { buf += c.toString() })
+      resolve({ status: res.statusCode, headers: res.headers, read: () => buf, destroy: () => req.destroy() })
+    })
+    req.on('error', reject)
+  })
+}
+
+const wait = (ms) => new Promise(r => setTimeout(r, ms))
+
+await test('live: true serves the SSE endpoint', async () => {
+  const port = nextPort++
+  const { server } = await createServer([helloSpec], { port, quiet: true, live: true })
+  try {
+    const sse = await openSse(port, '/__pulse/live')
+    assert(sse.status === 200, `Expected 200, got ${sse.status}`)
+    assert(sse.headers['content-type'].includes('text/event-stream'), `Got ${sse.headers['content-type']}`)
+    await wait(50)
+    assert(sse.read().includes(':connected'), 'Expected connection comment')
+    sse.destroy()
+  } finally {
+    server.closeAllConnections?.()
+    await new Promise(r => server.close(r))
+  }
+})
+
+await test('pushStore broadcasts a patch to all connected clients', async () => {
+  const port = nextPort++
+  const { server, pushStore } = await createServer([helloSpec], { port, quiet: true, live: true })
+  try {
+    const a = await openSse(port, '/__pulse/live')
+    const b = await openSse(port, '/__pulse/live')
+    await wait(50)
+    const sent = pushStore({ stock: 5, banner: 'Sale on now' })
+    assert(sent === 2, `Expected 2 clients, got ${sent}`)
+    await wait(50)
+    for (const sse of [a, b]) {
+      assert(sse.read().includes('event: store'), 'Missing event name')
+      assert(sse.read().includes('"stock":5'), `Missing payload: ${sse.read()}`)
+    }
+    a.destroy(); b.destroy()
+  } finally {
+    server.closeAllConnections?.()
+    await new Promise(r => server.close(r))
+  }
+})
+
+await test('pushStore requires live: true and a plain-object patch', async () => {
+  const port = nextPort++
+  const off = await createServer([helloSpec], { port, quiet: true })
+  try {
+    let threw = false
+    try { off.pushStore({ x: 1 }) } catch { threw = true }
+    assert(threw, 'Expected throw without live: true')
+  } finally {
+    off.server.closeAllConnections?.()
+    await new Promise(r => off.server.close(r))
+  }
+  const port2 = nextPort++
+  const on = await createServer([helloSpec], { port: port2, quiet: true, live: true })
+  try {
+    let threw = false
+    try { on.pushStore('not-an-object') } catch { threw = true }
+    assert(threw, 'Expected throw for non-object patch')
+  } finally {
+    on.server.closeAllConnections?.()
+    await new Promise(r => on.server.close(r))
+  }
+})
+
+await test('module-level pushStore export reaches the live server (spec-file usage)', async () => {
+  const { pushStore: globalPush } = await import('./index.js')
+  const port = nextPort++
+  const { server } = await createServer([helloSpec], { port, quiet: true, live: true })
+  try {
+    const sse = await openSse(port, '/__pulse/live')
+    await wait(50)
+    const sent = globalPush({ score: 99 })
+    assert(sent === 1, `Expected module-level pushStore to reach 1 client, got ${sent}`)
+    await wait(50)
+    assert(sse.read().includes('"score":99'), `Missing payload via module export: ${sse.read()}`)
+    sse.destroy()
+  } finally {
+    server.closeAllConnections?.()
+    await new Promise(r => server.close(r))
+  }
+})
+
+await test('endpoint is 404 when live is not enabled', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const { status } = await get(port, '/__pulse/live')
+    assert(status === 404, `Expected 404, got ${status}`)
+  })
+})
+
+await test('custom endpoint path via { path }', async () => {
+  const port = nextPort++
+  const { server } = await createServer([helloSpec], { port, quiet: true, live: { path: '/_realtime' } })
+  try {
+    const sse = await openSse(port, '/_realtime')
+    assert(sse.status === 200, `Expected 200 on custom path, got ${sse.status}`)
+    sse.destroy()
+  } finally {
+    server.closeAllConnections?.()
+    await new Promise(r => server.close(r))
+  }
+})
+
+await test('hydrated pages receive the __PULSE_LIVE__ flag; disabled servers do not', async () => {
+  const hydrated = {
+    route: '/live-page', hydrate: '/src/pages/live-page.js', store: ['stock'],
+    state: { n: 0 }, mutations: { inc: (s) => ({ n: s.n + 1 }) },
+    view: (state, server) => `<main id="main-content">${server.stock ?? '—'}</main>`,
+  }
+  await withServer([hydrated], { stream: false, live: true }, async (port) => {
+    const { body } = await get(port, '/live-page')
+    assert(body.includes(`window.__PULSE_LIVE__='/__pulse/live'`), `Flag missing: ${body.slice(0, 600)}`)
+  })
+  await withServer([hydrated], { stream: false }, async (port) => {
+    const { body } = await get(port, '/live-page')
+    assert(!body.includes('__PULSE_LIVE__'), 'Flag must be absent when live is disabled')
+  })
+})
+
+// ---------------------------------------------------------------------------
+
 console.log('\nMalformed request handling\n')
 
 await test('malformed percent-encoding in path returns 404, not 500', async () => {
