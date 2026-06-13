@@ -275,11 +275,14 @@ const { updateSpecs, updateStore } = await createServer(specs, {
       // Strip server-only imports that can't resolve in the browser:
       //   - node:* built-ins (fs, path, etc.)
       //   - JSON files imported with `with { type: 'json' }` (e.g. package.json for version)
-      // These are only used inside spec.server functions or module-level server init;
-      // the client runtime never calls those code paths.
+      //   - the package ROOT (@invisibleloop/pulse) — that export is the server
+      //     itself (createServer, pushStore); the closing quote anchors the match
+      //     so subpaths like @invisibleloop/pulse/ui are untouched
+      // These are only used inside spec.server/submit functions or module-level
+      // server init; the client runtime never calls those code paths.
       let content = fs.readFileSync(filePath, 'utf-8')
       content = content.replace(
-        /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"](?:node:[^'"]+|[^'"]*\.json)['"]\s*(?:with\s*\{[^}]*\})?\s*;?[ \t]*\n?/gm,
+        /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"](?:node:[^'"]+|[^'"]*\.json|@invisibleloop\/pulse)['"]\s*(?:with\s*\{[^}]*\})?\s*;?[ \t]*\n?/gm,
         ''
       )
       res.writeHead(200, {

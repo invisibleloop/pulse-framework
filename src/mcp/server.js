@@ -5,11 +5,12 @@
  * Provides tools and resources for an AI agent working inside a Pulse project.
  *
  * Resources:
+ *   pulse://start   — context-aware entry point (new project / edit / bug fix)
  *   pulse://guide   — complete guide: spec format, UI components, CSS rules, patterns
  *
  * Tools:
  *   pulse_intent         — intent engine: describe what to build, get archetype + scaffold
- *   pulse_suggest        — draft-mode contextual feedback on partial specs
+ *   pulse_suggest        — draft-mode contextual feedback on partial specs (use after first draft)
  *   pulse_intake         — product intake: capture app details before scaffolding
  *   pulse_sketch         — generate 3 structural layout directions before writing code
  *   pulse_list_icons     — list all available icon names, grouped by category
@@ -17,7 +18,9 @@
  *   pulse_list_structure — list all pages and components
  *   pulse_create_page    — create a new page spec with proper template
  *   pulse_create_component — create a reusable component
+ *   pulse_create_tests   — generate starter test file with XSS, null data, and landmark stubs
  *   pulse_validate       — validate a spec against the schema
+ *   pulse_review         — full code review (pass quick:true for lightweight mid-build check)
  *   pulse_stamp          — write the .pulse-verified stamp (call as last step of /verify)
  *   pulse_check_version  — installed vs static vs npm latest
  *   pulse_update         — re-copy pulse-ui assets from package → public/
@@ -187,6 +190,99 @@ for (const { name, uri, title, description, content } of GUIDE_RESOURCES) {
     async () => ({ contents: [{ uri, mimeType: 'text/plain', text: content() }] })
   )
 }
+
+// pulse://start — context-aware single entry point.
+// Detects whether this is a new project, new page, or targeted edit, and returns
+// exactly what the agent needs — no upfront decision tree, no wasted fetches.
+server.registerResource(
+  'start',
+  'pulse://start',
+  {
+    title:       'Pulse Start — Context-Aware Entry Point',
+    description: 'Single entry point that returns the right resources for your situation: new project, new page, targeted edit, or bug fix. Fetch this first instead of deciding between pulse://workflow and pulse://quickstart.',
+    mimeType:    'text/plain',
+  },
+  async () => {
+    // Detect project state to tailor the response
+    let pageCount = 0
+    try {
+      const specs = await loadPages(ROOT)
+      pageCount = specs.length
+    } catch { /* fresh project */ }
+
+    const isNewProject = pageCount === 0
+
+    return ({
+      contents: [{
+        uri:      'pulse://start',
+        mimeType: 'text/plain',
+        text: `# Pulse — Start Here
+
+${isNewProject
+  ? `> **New project detected** — no pages found in src/pages/ yet.`
+  : `> **Existing project** — ${pageCount} page${pageCount !== 1 ? 's' : ''} found.`}
+
+---
+
+## What are you doing?
+
+### A — New page or new site from scratch
+Fetch \`pulse://workflow\` for the full phase/gate sequence, then follow the intake → sketch → intent pipeline.
+
+Quick checklist before your first line of code:
+1. Ask the user for design inspiration first (a site, screenshot, or mood board)
+2. Ask: **light or dark?** Pulse renders dark when \`meta.theme\` is unset — decide before writing a single line
+3. Run \`pulse_intake\` → \`pulse_sketch\` → \`pulse_intent\`
+4. Fetch \`pulse://guide/templates\` + \`pulse://guide/design-references\` for aesthetic direction
+
+### B — Editing an existing page, adding a section, or fixing a bug
+Fetch \`pulse://quickstart\` — workflow phases, spec skeleton, components, and theming in one fetch.
+
+Quick checklist:
+1. Read the file you're changing
+2. Make the edit
+3. \`pulse_validate\` → \`/verify\`
+
+### C — Targeted one-liner (label change, prop swap, CSS tweak)
+No resource fetch needed. Read the file, make the change, run \`/verify\`.
+
+### D — Stuck mid-build
+- Wrong component props? → \`pulse://guide/components\`
+- Server data / store / auth? → \`pulse://guide/server\`
+- CSS / theming? → \`pulse://guide/styles\`
+- Routing or layout? → \`pulse://guide/routing\`
+- Lighthouse < 100? → Fix the failing audit, re-run \`/verify\`
+- Something looks wrong visually? → \`pulse_restart_server\` then navigate the browser
+
+---
+
+## Essential rules — memorise these
+
+- **\`meta.theme\` defaults to dark.** If the design is light, set \`theme: 'light'\` in the plan — not at screenshot time.
+- **Never set \`hydrate\`** — the framework sets it automatically from the URL entry.
+- **\`meta\` is always a plain object** — individual fields (\`title\`, \`description\`) can be async functions, but \`meta\` itself is \`{}\`.
+- **After every file edit:** \`pulse_restart_server\` → navigate browser → check result.
+- **\`/verify\` is always last** — it writes the \`.pulse-verified\` stamp. Without it, the stop hook blocks.
+
+---
+
+## Tools you'll use most
+
+| Tool | When |
+|---|---|
+| \`pulse_intake\` | New project — capture name, pitch, palette, theme, vibe |
+| \`pulse_sketch\` | New project — 3 layout directions before writing code |
+| \`pulse_intent\` | Map a description to archetype + scaffold |
+| \`pulse_suggest\` | **After first draft** — mid-build health check before hard validation |
+| \`pulse_validate\` | After every write |
+| \`pulse_review\` | Final gate after Lighthouse passes |
+| \`pulse_restart_server\` | After every file edit |
+| \`pulse_status\` | Session start — pages, server status, last build |
+`,
+      }]
+    })
+  }
+)
 
 // pulse://quickstart — combined essentials for simple/targeted tasks.
 // Reduces cold-start fetch round-trips from 4 (workflow + spec + components + styles)
@@ -586,8 +682,11 @@ server.registerTool(
         return text(`File not found: ${file}`)
       }
       content = fs.readFileSync(file, 'utf8')
+      // Validate from the file's own directory so relative imports resolve
+      // correctly for pages in subdirectories
+      return validateContent(content, path.dirname(file))
     }
-    
+
     return validateContent(content)
   }
 )
@@ -632,7 +731,9 @@ Rules for the spec you write:
     }
 
     const content = fs.readFileSync(fullPath, 'utf8')
-    const validation = await validateContent(content)
+    // Validate from the file's own directory so relative imports resolve
+    // correctly for pages in subdirectories (src/pages/news/index.js)
+    const validation = await validateContent(content, path.dirname(fullPath))
     if (validation.content[0].text.startsWith('Invalid')) return validation
 
     const route = derivedRouteFromName(name)
@@ -789,6 +890,178 @@ ${onStart}${validate ? '\n      validate: true,' : ''}
 )
 
 // ---------------------------------------------------------------------------
+// pulse_create_tests
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_create_tests',
+  {
+    description: `Generate a starter test file for a Pulse page spec. Stubs out the formulaic test cases — null data, empty arrays, XSS injection, view landmarks, mutation logic, and onViewError — so you start with coverage scaffolding rather than a blank file.
+
+Workflow:
+1. Call this with the spec file path after writing the spec
+2. Review the generated stub file — add real assertions where marked TODO
+3. Run the tests with pulse_run_tests
+4. Fill in any missing assertions until 100% branch coverage passes
+
+The generated file uses @invisibleloop/pulse/testing (renderSync / render). Do NOT use raw html.includes() in tests.`,
+    inputSchema: {
+      file: z.string().describe('Absolute path to the spec file, e.g. /Users/me/project/src/pages/about.js'),
+    },
+  },
+  async ({ file }) => {
+    if (!fs.existsSync(file)) {
+      return text(`File not found: ${file}`)
+    }
+
+    const source  = fs.readFileSync(file, 'utf8')
+    const relPath = path.relative(ROOT, file)
+    const testFile = file.replace(/\.js$/, '.test.js')
+
+    if (fs.existsSync(testFile)) {
+      return text(`Test file already exists: ${path.relative(ROOT, testFile)}\nDelete it first if you want to regenerate.`)
+    }
+
+    // Extract spec details to inform the scaffolding
+    const hasMutations  = source.includes('mutations:')
+    const hasActions    = source.includes('actions:')
+    const hasServer     = source.includes('server:')
+    const hasOnViewError = source.includes('onViewError')
+    const hasValidation = source.includes('validation:')
+
+    const mutationNames = [...source.matchAll(/^\s{4}(\w+)\s*:\s*\(state/gm)].map(m => m[1])
+    const actionNames   = hasActions
+      ? [...source.matchAll(/^\s{4}(\w+)\s*:\s*\{/gm)].map(m => m[1]).filter(n => n !== 'meta' && n !== 'server' && n !== 'mutations' && n !== 'actions' && n !== 'state' && n !== 'validation' && n !== 'constraints')
+      : []
+
+    const specName = path.basename(file, '.js')
+    const importPath = path.relative(path.dirname(testFile), file).replace(/\.js$/, '.js')
+
+    const lines = []
+    lines.push(`import { describe, it } from 'node:test'`)
+    lines.push(`import assert from 'node:assert/strict'`)
+    lines.push(`import { renderSync${hasServer ? ', render' : ''} } from '@invisibleloop/pulse/testing'`)
+    lines.push(`import spec from './${importPath.replace(/^\.\//, '')}'`)
+    lines.push(``)
+    lines.push(`// ${relPath}`)
+    lines.push(``)
+
+    lines.push(`describe('${specName} — view', () => {`)
+    lines.push(`  it('renders main landmark', () => {`)
+    lines.push(`    const r = renderSync(spec${hasServer ? `, { server: {} }` : ''})`)
+    lines.push(`    assert(r.has('main#main-content'), 'missing <main id="main-content">')`)
+    lines.push(`  })`)
+    lines.push(``)
+
+    if (hasServer) {
+      lines.push(`  it('handles null/empty server data without crashing', () => {`)
+      lines.push(`    // Replace null with realistic empty values for each server fetcher`)
+      lines.push(`    const r = renderSync(spec, { server: { /* TODO: add fetcher keys with null/[] values */ } })`)
+      lines.push(`    assert(r.has('main'))`)
+      lines.push(`  })`)
+      lines.push(``)
+
+      lines.push(`  it('handles empty array server data', () => {`)
+      lines.push(`    // Verify empty-state rendering (empty() component or fallback message)`)
+      lines.push(`    const r = renderSync(spec, { server: { /* TODO: fetchers with [] values */ } })`)
+      lines.push(`    assert(r.has('main'))`)
+      lines.push(`  })`)
+      lines.push(``)
+    }
+
+    lines.push(`  it('does not render user input unescaped (XSS)', () => {`)
+    lines.push(`    // Replace one user-controlled field with a script tag`)
+    lines.push(`    const xss = '<script>alert(1)</script>'`)
+    if (hasServer) {
+      lines.push(`    const r = renderSync(spec, { server: { /* TODO: pass xss as a string field */ } })`)
+    } else {
+      lines.push(`    const r = renderSync(spec, { state: { /* TODO: pass xss as a string state field */ } })`)
+    }
+    lines.push(`    assert(!r.text().includes('<script>'), 'XSS string rendered unescaped')`)
+    lines.push(`  })`)
+    lines.push(``)
+
+    if (hasOnViewError) {
+      lines.push(`  it('onViewError returns fallback HTML when view throws', () => {`)
+      lines.push(`    assert(typeof spec.onViewError, 'function')`)
+      lines.push(`    const fallback = spec.onViewError(new Error('test'), spec.state ?? {}, {})`)
+      lines.push(`    assert(typeof fallback === 'string' && fallback.length > 0, 'onViewError must return non-empty HTML string')`)
+      lines.push(`  })`)
+      lines.push(``)
+    }
+
+    lines.push(`})`)
+    lines.push(``)
+
+    if (hasMutations && mutationNames.length > 0) {
+      lines.push(`describe('${specName} — mutations', () => {`)
+      for (const name of mutationNames.slice(0, 6)) {
+        lines.push(`  it('${name} returns partial state', () => {`)
+        lines.push(`    assert(typeof spec.mutations.${name}, 'function')`)
+        lines.push(`    // TODO: call spec.mutations.${name}(spec.state, mockEvent) and assert the returned shape`)
+        lines.push(`    // e.g. const next = spec.mutations.${name}({ ...spec.state }, { target: { value: 'test' } })`)
+        lines.push(`    //      assert.equal(typeof next, 'object')`)
+        lines.push(`  })`)
+        lines.push(``)
+      }
+      lines.push(`})`)
+      lines.push(``)
+    }
+
+    if (hasActions && actionNames.length > 0) {
+      lines.push(`describe('${specName} — actions', () => {`)
+      for (const name of actionNames.slice(0, 4)) {
+        lines.push(`  it('${name}.onStart returns loading state', () => {`)
+        lines.push(`    if (!spec.actions?.${name}?.onStart) return`)
+        lines.push(`    const next = spec.actions.${name}.onStart(spec.state ?? {}, new FormData())`)
+        lines.push(`    assert(next.status === 'loading' || typeof next === 'object', 'onStart must return partial state')`)
+        lines.push(`  })`)
+        lines.push(``)
+        lines.push(`  it('${name}.onError returns error state', () => {`)
+        lines.push(`    if (!spec.actions?.${name}?.onError) return`)
+        lines.push(`    const next = spec.actions.${name}.onError(spec.state ?? {}, new Error('test'))`)
+        lines.push(`    assert(typeof next === 'object', 'onError must return partial state')`)
+        lines.push(`  })`)
+        lines.push(``)
+      }
+      lines.push(`})`)
+      lines.push(``)
+    }
+
+    if (hasValidation) {
+      lines.push(`describe('${specName} — validation', () => {`)
+      lines.push(`  it('spec has validation rules', () => {`)
+      lines.push(`    assert(typeof spec.validation === 'object' && spec.validation !== null)`)
+      lines.push(`    assert(Object.keys(spec.validation).length > 0, 'validation object is empty')`)
+      lines.push(`  })`)
+      lines.push(`})`)
+      lines.push(``)
+    }
+
+    const testContent = lines.join('\n')
+    fs.writeFileSync(testFile, testContent, 'utf8')
+
+    const summary = [
+      `Generated ${path.relative(ROOT, testFile)}`,
+      ``,
+      `Stubs created:`,
+      `  ✓ View landmark test`,
+      hasServer   ? `  ✓ Null/empty server data tests` : null,
+      `  ✓ XSS injection test`,
+      hasOnViewError ? `  ✓ onViewError fallback test` : null,
+      hasMutations && mutationNames.length > 0 ? `  ✓ Mutation tests (${mutationNames.slice(0, 6).join(', ')})` : null,
+      hasActions   && actionNames.length > 0   ? `  ✓ Action onStart/onError tests (${actionNames.slice(0, 4).join(', ')})` : null,
+      hasValidation ? `  ✓ Validation structure test` : null,
+      ``,
+      `Next: search for "TODO" in the file — each TODO needs a real assertion.`,
+      `Run: pulse_run_tests`,
+    ].filter(Boolean).join('\n')
+
+    return text(summary)
+  }
+)
+
+// ---------------------------------------------------------------------------
 // pulse_fetch_page
 // ---------------------------------------------------------------------------
 
@@ -908,13 +1181,18 @@ server.registerTool(
 Reads the spec source, renders the view with initial state, runs all validation checks,
 and returns a structured review brief. You must read everything carefully, find every
 issue, and fix them all before reporting back to the user. Use this after completing
-any feature build.`,
+any feature build.
+
+**Two modes:**
+- Default (full review): runs after Lighthouse passes — the canonical final gate. Returns full checklist + rendered HTML + validator output.
+- \`quick: true\`: lightweight mid-build check. Runs structural checks (main landmark, data-event on inputs, missing onError, hex in view, component patterns) without Lighthouse or the full checklist. Use after first draft, before the expensive verification pass. Not a substitute for the full review.`,
     inputSchema: {
-      file: z.string().optional().describe('Absolute path to the spec file to review'),
+      file:    z.string().optional().describe('Absolute path to the spec file to review'),
       content: z.string().optional().describe('JavaScript spec content to review (alternative to file)'),
+      quick:   z.boolean().optional().describe('Run a lightweight mid-build check instead of the full review gate. Catches obvious structural issues without running Lighthouse. Use after first draft, before /verify.'),
     },
   },
-  async ({ file, content }) => {
+  async ({ file, content, quick = false }) => {
     if (!file && !content) {
       return text('Error: must provide either file or content')
     }
@@ -926,6 +1204,77 @@ any feature build.`,
     if (file) {
       if (!fs.existsSync(file)) return text(`File not found: ${file}`)
       source = fs.readFileSync(file, 'utf8')
+    }
+
+    // Quick mode — lightweight structural checks only, no full checklist or Lighthouse gate
+    if (quick) {
+      const issues = []
+      const warnings = []
+
+      // Try to render the view
+      let renderedHtml = ''
+      if (file) {
+        try {
+          const mod  = await import(`${file}?quick=${Date.now()}`)
+          const spec = mod.default
+          if (spec && typeof spec.view === 'function') {
+            renderedHtml = spec.view(spec.state || {}, {})
+          }
+        } catch { /* ignore — server data dependency */ }
+      }
+
+      if (renderedHtml) {
+        if (!/<main[^>]*id=["']?main-content/.test(renderedHtml))
+          issues.push('✗ Missing `<main id="main-content">` landmark')
+        if (/<input[^>]*data-event/.test(renderedHtml))
+          issues.push('✗ `data-event` on `<input>` — destroys focus on every keystroke, use FormData in onStart instead')
+        if (/(className|htmlFor|onClick)=/.test(renderedHtml))
+          issues.push('✗ React patterns found (className / htmlFor / onClick) — use class, for, data-event')
+        if (/tabindex=["']?([1-9]\d*)/.test(renderedHtml))
+          issues.push('✗ Positive tabindex found — remove, reorder DOM instead')
+        const viewBlockStripped = renderedHtml
+          .replace(/href=["']#[^"']*["']/g, 'href="#"')
+          .replace(/id=["'][^"']*["']/g, 'id=""')
+        if (/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlockStripped))
+          warnings.push('⚠ Possible hex colour in rendered HTML — use var(--ui-*) tokens')
+
+        // Component pattern checks (unless creative override declared)
+        if (!/component.free|creative\s+override/i.test(source)) {
+          if (/<[^>]+class="[^"]*\bhero\b/.test(renderedHtml) && !source.includes('hero('))
+            warnings.push('⚠ `.hero` class in HTML but no `hero()` component — use the component or declare creative override')
+          if (/<[^>]+class="[^"]*\bcard\b/.test(renderedHtml) && !source.includes('card('))
+            warnings.push('⚠ `.card` class in HTML but no `card()` component — use the component or declare creative override')
+        }
+      }
+
+      // Source-level checks (don't need rendered HTML)
+      if (source.includes('actions:') && !source.includes('onError:'))
+        issues.push('✗ Action missing `onError` — required, will throw at runtime')
+      if (source.includes('actions:') && !source.includes('onSuccess:'))
+        issues.push('✗ Action missing `onSuccess` — required')
+      if (source.includes('hydrate:'))
+        issues.push('✗ `hydrate` is set manually — remove it, the framework sets it automatically')
+      if (/meta\s*:\s*async/.test(source))
+        issues.push('✗ `meta` is an async function — `meta` must be a plain object; make individual fields async instead')
+
+      const lines = ['## Quick review\n']
+      if (issues.length === 0 && warnings.length === 0) {
+        lines.push('✓ No obvious issues found. Run `pulse_validate` next, then `/verify`.')
+      } else {
+        if (issues.length) {
+          lines.push('### Fix before proceeding\n')
+          for (const i of issues) lines.push(i)
+          lines.push('')
+        }
+        if (warnings.length) {
+          lines.push('### Warnings (check these)\n')
+          for (const w of warnings) lines.push(w)
+          lines.push('')
+        }
+        lines.push('---\nFix issues, then run `pulse_validate` → `pulse_suggest` → `/verify`.')
+      }
+
+      return text(lines.join('\n'))
     }
 
     // Run the validator in a child process (same as pulse_validate)
@@ -1210,13 +1559,16 @@ The stop hook compares each changed spec's mtime against this stamp. Any spec ne
 server.registerTool(
   'pulse_await_approval',
   {
-    description: `Pause the workflow to wait for the user's answer — call this immediately BEFORE asking a blocking question (e.g. the design-approval gate: "Happy with the layout and direction…?").
+    description: `Pause the workflow gates for one turn-end — call this immediately BEFORE ending a turn that legitimately waits on the user. That covers:
 
-It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let the turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn.
+- **Blocking questions** — the design-approval gate ("Happy with the layout and direction…?"), or any decision only the user can make.
+- **Mid-flow progress pauses** — reporting between long verification steps (e.g. between Lighthouse runs while verifying many pages) when the work is not yet stamped.
 
-**Always call this before the approval question, regardless of how you ask.** In some hosts (including Claude Code) even a dedicated question tool like AskUserQuestion ends the turn, which fires the Stop hooks. The marker is harmless if the turn does not end — it is simply consumed when the user replies. Calling it first works in every host; relying on the question tool to keep the turn open does not.
+It writes a .pulse-awaiting-approval marker that tells the Stop hooks (missing tests, coverage, verify stamp) to let the turn end without demanding /verify first. The marker is deleted automatically when the user sends their next message — the gates return in full force for your following turn, so re-call it before each pause in a long multi-page flow.
 
-Do NOT use this to skip verification — it buys exactly one turn-end, paired with a question the user must answer. Calling it without asking anything just delays the gates by one message.`,
+**Always call this before an approval question, regardless of how you ask.** In some hosts (including Claude Code) even a dedicated question tool like AskUserQuestion ends the turn, which fires the Stop hooks. The marker is harmless if the turn does not end — it is simply consumed when the user replies.
+
+Do NOT use this to skip verification — it buys exactly one turn-end, paired with something the user genuinely needs to see or answer. Calling it to dodge the gates just delays them by one message.`,
     inputSchema: {},
   },
   () => {
@@ -1792,6 +2144,15 @@ If your page genuinely doesn't fit a pattern, start from pulse://guide/spec and 
     lines.push(``)
     lines.push(`State:  ${arch.stateHint}`)
     lines.push(`Server: ${arch.serverHint}`)
+
+    lines.push(``)
+    lines.push(`## ⚠ Before writing any code — ask these two questions`)
+    lines.push(``)
+    lines.push(`1. **Light or dark?** Pulse renders **dark** by default when \`meta.theme\` is unset. If the user hasn't stated a preference, ask now — discovering the wrong theme at the screenshot costs a full edit → restart → re-approval cycle.`)
+    lines.push(`   Add \`theme: 'light'\` to your plan or brief if confirmed light.`)
+    lines.push(``)
+    lines.push(`2. **Design inspiration?** Ask: "Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop it into \`public/intake/\` or paste a URL." If yes, call \`pulse_extract_inspiration\` before proceeding.`)
+    lines.push(`   (Skip if this came from pulse_intake — it already asked.)`)
 
     lines.push(``)
     lines.push(`## Guide sections to read`)
@@ -3380,7 +3741,7 @@ const PROP_ALIASES = [
   { component: 'input()',  wrong: 'pattern',     correct: 'attrs: { pattern }',       note: 'HTML attributes go inside `attrs`: input({ attrs: { pattern: "[0-9]+" } }).' },
 ]
 
-async function validateContent(content) {
+async function validateContent(content, tmpDir = PAGES_DIR) {
   // Source-level checks — run before the worker so errors are caught without importing
   const sourceWarnings = []
 
@@ -3388,9 +3749,17 @@ async function validateContent(content) {
   for (const { component, wrong, correct, note } of PROP_ALIASES) {
     // Match: nav({ ...wrong: or footer({ ...wrong: (within the call args)
     const fnName = component.replace('()', '')
-    const re = new RegExp(`${fnName}\\s*\\(\\s*\\{[^}]*\\b${wrong}\\s*:`, 'g')
-    if (re.test(content)) {
+    const re = new RegExp(`${fnName}\\s*\\(\\s*\\{([^}]*)\\b${wrong}\\s*:`, 'g')
+    let m
+    while ((m = re.exec(content)) !== null) {
+      // Inside attrs: { … } is the CORRECT placement for these HTML attributes —
+      // when the text between the call's opening brace and the prop ends inside
+      // an open attrs object, this is the recommended pattern, not a mistake.
+      // (The naive match crossed into attrs blocks and flagged exactly what the
+      // fix-it note tells people to write.)
+      if (/attrs\s*:\s*\{[^}]*$/.test(m[1])) continue
       sourceWarnings.push(`"${wrong}" is not a recognised prop for ${component} — did you mean "${correct}"? ${note}`)
+      break
     }
   }
 
@@ -3399,24 +3768,28 @@ async function validateContent(content) {
   const externalImgHosts = [
     {
       pattern: /https?:\/\/images\.unsplash\.com/,
+      host:    'images.unsplash.com',
       entry:   'https://images.unsplash.com',
       cookieWarning: true,
       name: 'Unsplash',
     },
     {
       pattern: /https?:\/\/(?:fastly\.)?picsum\.photos/,
+      host:    'picsum.photos',
       entry:   'https://picsum.photos https://fastly.picsum.photos',
       cookieWarning: false,
       name: 'picsum',
     },
     {
       pattern: /https?:\/\/res\.cloudinary\.com/,
+      host:    'res.cloudinary.com',
       entry:   'https://res.cloudinary.com',
       cookieWarning: true,
       name: 'Cloudinary',
     },
     {
       pattern: /https?:\/\/cdn\.shopify\.com/,
+      host:    'cdn.shopify.com',
       entry:   'https://cdn.shopify.com',
       cookieWarning: false,
       name: 'Shopify CDN',
@@ -3427,8 +3800,11 @@ async function validateContent(content) {
   if (fs.existsSync(configPath)) {
     try { configImgSrc = fs.readFileSync(configPath, 'utf8') } catch { /* ignore */ }
   }
-  for (const { pattern, entry, cookieWarning, name } of externalImgHosts) {
-    if (pattern.test(content) && !pattern.test(configImgSrc)) {
+  for (const { pattern, host, entry, cookieWarning, name } of externalImgHosts) {
+    // Config match is by HOST, not full URL — CSP sources are valid without a
+    // scheme ('images.unsplash.com'), so requiring https?:// in the config
+    // produced false positives for correctly configured projects.
+    if (pattern.test(content) && !configImgSrc.includes(host)) {
       const cookieNote = cookieWarning
         ? `\n  ⚠ ${name} sets tracking cookies that fail Lighthouse Best Practices regardless of CSP. For production, download images to public/images/ instead of linking to ${name} directly.`
         : ''
@@ -3440,9 +3816,12 @@ async function validateContent(content) {
     }
   }
 
-  // Write into PAGES_DIR so relative imports (e.g. '../components/nav.js') resolve correctly
-  fs.mkdirSync(PAGES_DIR, { recursive: true })
-  const tmpFile = path.join(PAGES_DIR, `.pulse-validate-${Date.now()}.mjs`)
+  // Write the temp file into the directory the spec actually lives in (passed by
+  // callers that know it) so relative imports resolve from the true location.
+  // A page at src/pages/news/index.js importing '../../components/layout.js'
+  // resolved wrongly when the temp file was always dropped in src/pages/ root.
+  fs.mkdirSync(tmpDir, { recursive: true })
+  const tmpFile = path.join(tmpDir, `.pulse-validate-${Date.now()}.mjs`)
   try {
     fs.writeFileSync(tmpFile, content, 'utf8')
 
@@ -3547,12 +3926,17 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 
 ## Start here
 
-**Fetch \`pulse://workflow\` before anything else.** It defines the exact sequence of phases and pass gates for every build task. Do not fetch guide sections or start writing code until you have read it. Skipping it means you will run steps in the wrong order.
+**Fetch \`pulse://start\` first.** It detects your context (new project, new page, edit, or bug fix) and returns exactly what you need — no upfront decision tree.
+
+If you know your context already:
+- New page / new site → \`pulse://workflow\`
+- Edit, fix, or one-shot build → \`pulse://quickstart\`
 
 ## Guide resources
 
 | Resource | When to fetch |
 |---|---|
+| \`pulse://start\` | **Always fetch first** — context-aware entry point that routes you to the right resources |
 | \`pulse://quickstart\` | **Editing, bug-fixing, or a simple one-shot build** — workflow + spec skeleton + components + theming in one fetch. Skip the 4-resource cold-start for targeted tasks. |
 | \`pulse://workflow\` | **New project or new page** — full phase/gate sequence before writing any code. |
 | \`pulse://guide/spec\` | Building a spec — state, mutations, actions, streaming SSR, key rules, form layout |
@@ -3573,14 +3957,15 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 - \`pulse_intake(name, pitch, features, targetUser?, palette?, font?, theme?, vibe?, styleNotes?, antiStyle?, inspiration?)\` — **Capture product details before scaffolding.** Run this first for any new project or branded template — before pulse_sketch or pulse_intent. **Gather answers by asking the user one free-form question at a time — never use multi-choice lists for open-ended intake questions.** The final intake question must always be: "Do you have any design inspiration — a site you love, a screenshot, or a mood board? Drop images into \`public/intake/\` or share a URL." If the user provides references, call \`pulse_extract_inspiration\` before proceeding. After intake, call pulse_sketch to explore structural directions before writing code.
 - \`pulse_sketch(brief, vibe?, antiStyle?, pageType?)\` — **Generate 3 structurally distinct layout directions before writing any code.** Call after pulse_intake. Returns three named directions (full-bleed, asymmetric split, typography-only, editorial flow, dense grid, story scroll, content-first) with wireframes, key decisions, and component strategies. Prevents defaulting to "centred hero + three columns" on every project. After choosing a direction, fetch \`pulse://guide/explore\` for raw HTML patterns.
 - \`pulse_intent(description)\` — Describe what you want to build in plain language and get back a matched archetype, component recommendations, a ready-to-adapt spec scaffold, and which guides to read. Use after pulse_intake and pulse_sketch, before fetching guides.
-- \`pulse_suggest(content)\` — **Draft-mode feedback.** Paste a partial or complete spec and get constructive, non-blocking suggestions: missing pieces, likely omissions, component upgrades, empty-state reminders. A collaborator, not a gate. Use mid-build before running the hard validator.
+- \`pulse_suggest(content)\` — **Draft-mode feedback.** Paste a partial or complete spec and get constructive, non-blocking suggestions: missing pieces, likely omissions, component upgrades, empty-state reminders. A collaborator, not a gate. **Use after first draft** (after writing, before hard validation) — not just when something feels wrong.
+- \`pulse_create_tests(file)\` — **Generate a starter test file** for a spec. Stubs out the formulaic cases: null data, empty arrays, XSS injection, view landmarks, mutations, action onStart/onError, and onViewError. Search for "TODO" in the output and fill in real assertions. Covers 100% branch coverage requirements without hand-writing the boilerplate.
 - \`pulse_list_icons(filter?)\` — **List all available icon names grouped by category.** Always call this before importing icons — never guess a name or grep source files. Optional filter keyword narrows results (e.g. filter: "arrow").
 - \`pulse_check_contrast(css?, file?, theme?)\` — **Static WCAG contrast check.** Provide theme CSS content or a file path; it checks all token color pairings against WCAG AA thresholds (4.5:1 normal text, 3:1 large text/UI). Run immediately after writing a theme file — before pulse_build and Lighthouse. Catches palette mistakes in milliseconds.
 - \`pulse_tokens\` — **List all --ui-* CSS tokens** from the installed pulse-ui.css, grouped by category (colour, spacing, type-size, typography, shape). Call before writing theme overrides to avoid guessing names. Reminder: set \`--accent\` (no prefix) in theme.css — pulse-ui maps it to \`--ui-accent\` automatically.
 - \`pulse_status\` — **Project health snapshot.** Returns page count, routes, dev server status, last build age, and pulse-ui version check. Call at the start of a session to orient quickly without reading files.
 - \`pulse_list_structure\` — list pages, components, and pulse-ui version. Call at the start of every session.
 - \`pulse_validate\` — validate spec content. Call after every write. Fix all errors AND warnings.
-- \`pulse_review\` — switch into reviewer mode and critically examine a spec you just built. Returns the source, rendered HTML, validator output, and a full review checklist. **Call this only after validate, Lighthouse (desktop + mobile), and tests all pass — it is the final phase before declaring done.**
+- \`pulse_review(file, { quick? })\` — **Two modes.** Default: full review gate (call after Lighthouse + tests pass). Pass \`quick: true\` for a lightweight mid-build structural check — no Lighthouse, just catches obvious issues (missing main landmark, data-event on inputs, missing onError, hex colours, component pattern violations). Use quick mid-build after \`pulse_suggest\`. **Full mode only after validate, Lighthouse (desktop + mobile), and tests all pass.**
 - \`pulse_create_page\` — validate a page spec you already wrote to disk. **Always write the file with the Write tool first, then call this.** Never pass content to this tool.
 - \`pulse_create_component\` — register a component you wrote with the Write tool. Write the file first, then call this.
 - \`pulse_create_store\` — register a pulse.store.js you wrote with the Write tool. Write the file first, then call this.

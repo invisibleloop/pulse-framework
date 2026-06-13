@@ -269,8 +269,11 @@ async function runStop(root) {
     } catch { /* use default */ }
   }
   try {
-    execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null; true`, { stdio: 'inherit' })
-    console.log(`\n⚡ Dev server on port ${port} stopped.\n`)
+    // Kill the dev server AND the local production server (dev port + 1) —
+    // pulse_build spawns the prod server detached, so without this it lingers
+    // after the session and blocks the next build's Lighthouse run.
+    execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null; lsof -ti:${port + 1} | xargs kill -9 2>/dev/null; true`, { stdio: 'inherit' })
+    console.log(`\n⚡ Servers on ports ${port} (dev) and ${port + 1} (prod) stopped.\n`)
   } catch { /* nothing was running */ }
 }
 

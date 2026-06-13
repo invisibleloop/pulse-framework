@@ -114,6 +114,8 @@ const SYNC_PAIRS = [
   ['src/agent/checklist.md',        'docs/.claude/pulse-checklist.md'],
   ['src/agent/checklist.md',        'examples/.claude/pulse-checklist.md'],
   ['src/agent/commands/verify.md',  '.claude/commands/verify.md'],
+  ['src/agent/coverage-check.js',   'docs/.claude/coverage-check.js'],
+  ['src/agent/coverage-check.js',   'examples/.claude/coverage-check.js'],
 ]
 
 for (const [a, b] of SYNC_PAIRS) {
@@ -275,6 +277,48 @@ test('approval pause mechanism is wired end to end', () => {
   assert(claimDocs.length === 0,
     `These docs claim a question tool avoids ending the turn (empirically false in Claude Code): ${claimDocs.join(', ')}. ` +
     `Instruct: always call pulse_await_approval before asking, whichever way the question is asked.`)
+})
+
+test('pulse_validate prop-alias check excludes attrs blocks (false-positive fix)', () => {
+  // Regression: input({ attrs: { autocomplete } }) — the RECOMMENDED pattern —
+  // was flagged as a wrong top-level prop because the match crossed into the
+  // attrs object. The exclusion regex must be present in the alias loop.
+  assert(serverSrc.includes('attrs\\s*:\\s*\\{[^}]*$'),
+    'The PROP_ALIASES loop must exclude matches that fall inside an open attrs: { … } block')
+})
+
+test('pulse_validate CSP check matches config by host, not full URL', () => {
+  // Regression: CSP sources are valid without a scheme (images.unsplash.com),
+  // but the config check required https?:// — flagging correctly configured
+  // projects on every validate.
+  assert(serverSrc.includes('configImgSrc.includes(host)'),
+    'External-image CSP check must test the config for the bare host')
+  assert(serverSrc.includes(`host:    'images.unsplash.com'`),
+    'External image host entries must carry a bare host field')
+})
+
+test('validator resolves relative imports from the spec file\'s own directory', () => {
+  // Regression: the temp validation file was always written into src/pages/
+  // root, so subdirectory pages (src/pages/news/index.js) had their relative
+  // imports (../../components/layout.js) resolve from the wrong depth.
+  assert(/async function validateContent\(content, tmpDir = PAGES_DIR\)/.test(serverSrc),
+    'validateContent must accept a tmpDir parameter')
+  assert(serverSrc.includes('validateContent(content, path.dirname(fullPath))'),
+    'pulse_create_page must validate from the file\'s own directory')
+  assert(serverSrc.includes('validateContent(content, path.dirname(file))'),
+    'pulse_validate file mode must validate from the file\'s own directory')
+})
+
+test('package-root import is stripped from client bundles in build and dev', () => {
+  // Regression: import { pushStore } from '@invisibleloop/pulse' (the documented
+  // live-push pattern) pulled the entire server — http, fs, zlib — into the
+  // browser bundle and broke `pulse build`.
+  const buildSrc = fs.readFileSync(path.join(ROOT, 'scripts/build.js'), 'utf8')
+  const devSrc   = fs.readFileSync(path.join(ROOT, 'src/cli/dev.js'), 'utf8')
+  assert(buildSrc.includes(`'@invisibleloop/pulse/md', '@invisibleloop/pulse'`),
+    'build.js SERVER_ONLY_IMPORTS must include the package root')
+  assert(devSrc.includes(`@invisibleloop\\/pulse)['"]`),
+    'dev.js serveFile must strip package-root imports before serving specs to the browser')
 })
 
 test('pulse_check_contrast extracts variables from [data-theme="light"] blocks', () => {

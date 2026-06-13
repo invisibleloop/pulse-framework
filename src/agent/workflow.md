@@ -165,6 +165,20 @@ If you're about to type `class="hero"` or `class="product-card"` in Mode A, stop
 **Mode B — Creative override (raw HTML throughout)**
 When the design intent calls for a more expressive, unconventional, or typographically-driven layout that components would constrain, you may build with raw HTML throughout. This is a deliberate design decision, not a shortcut.
 
+**When to choose Mode B — use the component, unless:**
+- The layout requires **full-viewport height or edge-to-edge bleed** that the component doesn't support (e.g. `hero()` doesn't fill the viewport)
+- The design uses **custom gradient glows, parallax, or large-scale image fills** that the component would wrap in unwanted structure
+- The vibe is **brutalist, retro, neon, paper, or typographic-editorial** and the structural feel would be actively fought by the component's default padding/spacing/radius
+- The typography is **clamp-scaled display type** (e.g. `clamp(4rem, 10vw, 12rem)`) that breaks inside a component's internal box model
+- The layout is **asymmetric or zone-based** (e.g. 70/30 split, overlapping elements, staggered grid) that no single component supports
+- A **Figma/reference design was provided** that clearly departs from the component's output
+
+**When to use the component (not a valid reason for override):**
+- "The component doesn't have a perfect prop for this" — add a utility class or wrapper div instead
+- "I want a slightly different colour or size" — override with CSS tokens
+- "I'm not sure what the component looks like" — check the guide first
+- "It's easier to write raw HTML" — this is never a valid reason
+
 Rules for Mode B:
 - **Declare it in a comment at the top of the spec file:** `// component-free — creative override: <reason>`. The review tool detects creative override by reading this comment from the source — without it, `pulse_review` will flag every component pattern as a violation even though you chose Mode B deliberately. Announcing the mode in chat is not enough; the comment must be in the file.
 - Load `/pulse-ui.css` in `meta.styles` — the token system is still required
@@ -206,9 +220,9 @@ After the Write tool completes, call `pulse_create_page(name)` to register the p
 ✓ src/pages/my-page.js written and registered.
 ```
 
-### 3d — Suggest (optional but recommended)
+### 3d — Suggest (recommended mid-build checkpoint)
 
-After writing the first draft, call `pulse_suggest(content)` before running the hard validator. It catches obvious omissions collaboratively — a second opinion, not a gate.
+After writing the first draft, call `pulse_suggest(content)` before running the hard validator. It catches obvious omissions collaboratively — a second opinion, not a gate. Then call `pulse_review(file, { quick: true })` for a lightweight structural pass (main landmark, data-event on inputs, missing onError, hex in view). Neither is a substitute for the full review, but catching issues here is faster than discovering them at Lighthouse.
 
 **Rule: never output `✓` before the tool call that confirms the result.**
 

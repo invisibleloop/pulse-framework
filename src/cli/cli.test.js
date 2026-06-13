@@ -159,6 +159,78 @@ console.log('\nStore auto-discovery\n')
 }
 
 // ---------------------------------------------------------------------------
+// Coverage-check exemptions
+// ---------------------------------------------------------------------------
+// Regression: the stop hook blocked every session on uncovered guard/submit/
+// sitemap/meta lines (server-only, untestable), and c8 ignore comments were
+// not honoured because Node's built-in coverage ignores them.
+
+console.log('\nCoverage-check exemptions\n')
+
+{
+  const { computeExemptLines } = await import('../agent/coverage-check.js')
+
+  const src = [
+    /*  1 */ `export default {`,
+    /*  2 */ `  route: '/x',`,
+    /*  3 */ `  guard: async (ctx) => {`,
+    /*  4 */ `    if (!ctx.cookies.session) return { redirect: '/login' }`,
+    /*  5 */ `  },`,
+    /*  6 */ `  submit: async (ctx) => {`,
+    /*  7 */ `    return { redirect: '/done' }`,
+    /*  8 */ `  },`,
+    /*  9 */ `  sitemap: async () => ['/a'],`,
+    /* 10 */ `  meta: {`,
+    /* 11 */ `    title: async (ctx) => fetchTitle(ctx),`,
+    /* 12 */ `  },`,
+    /* 13 */ `  view: (state) => state.n,`,
+    /* 14 */ `  helpers: () => {`,
+    /* 15 */ `    /* c8 ignore next 2 */`,
+    /* 16 */ `    impossibleBranch()`,
+    /* 17 */ `    alsoImpossible()`,
+    /* 18 */ `    normalCode()`,
+    /* 19 */ `  },`,
+    /* 20 */ `}`,
+  ].join('\n')
+
+  const exempt = computeExemptLines(src)
+
+  test('guard, submit, sitemap, and meta blocks are exempt', () => {
+    for (const n of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+      if (!exempt.has(n)) throw new Error(`Expected line ${n} to be exempt`)
+    }
+  })
+
+  test('view and ordinary helper code are NOT exempt', () => {
+    for (const n of [13, 18]) {
+      if (exempt.has(n)) throw new Error(`Line ${n} must not be exempt`)
+    }
+  })
+
+  test('c8 ignore next N exempts exactly the following N lines', () => {
+    for (const n of [15, 16, 17]) {
+      if (!exempt.has(n)) throw new Error(`Expected line ${n} to be exempt via c8 ignore`)
+    }
+    if (exempt.has(18)) throw new Error('Line 18 is beyond the ignore count and must not be exempt')
+  })
+
+  test('c8 ignore start/stop exempts the whole range', () => {
+    const ranged = computeExemptLines([
+      `const a = 1`,            // 1
+      `/* c8 ignore start */`,  // 2
+      `untestable1()`,          // 3
+      `untestable2()`,          // 4
+      `/* c8 ignore stop */`,   // 5
+      `const b = 2`,            // 6
+    ].join('\n'))
+    for (const n of [2, 3, 4, 5]) {
+      if (!ranged.has(n)) throw new Error(`Expected line ${n} exempt in range`)
+    }
+    if (ranged.has(6)) throw new Error('Line after stop must not be exempt')
+  })
+}
+
+// ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)
