@@ -118,6 +118,15 @@ if (specs.length === 0) {
   process.exit(1)
 }
 
+// Warn if a production build exists — public/dist/ is ignored by the dev server
+// (manifest: {} forces source-file hydration) but its presence can cause confusion
+// because static files in public/dist/ ARE served by the static file handler.
+// If the user ran pulse build and sees stale styles, deleting public/dist/ fixes it.
+const DIST_DIR = path.join(ROOT, 'public', 'dist')
+if (fs.existsSync(path.join(DIST_DIR, 'manifest.json'))) {
+  console.warn(`\n  ⚠  A production build exists in public/dist/\n     Dev mode ignores the manifest and always serves source files, but if\n     styles look wrong after a build, run: rm -rf public/dist/\n`)
+}
+
 // ---------------------------------------------------------------------------
 // Hot reload — SSE clients + file watcher
 // ---------------------------------------------------------------------------
@@ -256,6 +265,14 @@ const { updateSpecs, updateStore } = await createServer(specs, {
 
   onRequest(req, res) {
     const url = req.url.split('?')[0]
+
+    // MCP hot-reload trigger — POST to this instead of killing the process
+    if (url === '/_pulse/trigger-reload' && req.method === 'POST') {
+      triggerReload('MCP trigger')
+      res.writeHead(204)
+      res.end()
+      return false
+    }
 
     // SSE endpoint — browser connects here to receive reload events
     if (url === '/_pulse/reload') {

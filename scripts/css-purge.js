@@ -12,13 +12,48 @@
 export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
   const used = new Set()
 
-  // Extract from class="..." in both rendered HTML and JS template literals
-  for (const content of [...htmlContents, ...jsContents]) {
-    const re = /class(?:Name)?=["']([^"'\n]+)["']/g
+  // Extract from class="..." in rendered HTML (no template expressions to worry about)
+  for (const content of htmlContents) {
+    const re = /class=["']([^"'\n]+)["']/g
     let m
     while ((m = re.exec(content)) !== null) {
       for (const cls of m[1].trim().split(/\s+/)) {
         if (cls) used.add(cls)
+      }
+    }
+  }
+
+  // Extract from class= attributes in JS source. Template literal class attributes
+  // like class="foo${expr ? ' bar' : ''}" have their expressions interrupted by
+  // single quotes inside the ternary, so [^"'\n]+ stops mid-expression and misses
+  // the base class. Instead: scan for class= followed by a double-quoted string
+  // OR a backtick-delimited segment, extract everything up to the first ${ or the
+  // closing delimiter, and tokenise only the static prefix.
+  for (const js of jsContents) {
+    // Match class="...anything up to closing quote or ${..."
+    // Using a two-pass approach: find class= then manually scan to get the static part
+    let i = 0
+    while (i < js.length) {
+      const idx = js.indexOf('class=', i)
+      if (idx === -1) break
+      i = idx + 6 // past 'class='
+
+      // Skip optional whitespace (shouldn't be any but be safe)
+      while (i < js.length && (js[i] === ' ' || js[i] === '\t')) i++
+
+      const quote = js[i]
+      if (quote !== '"' && quote !== "'" && quote !== '`') continue
+      i++ // past opening quote
+
+      // Collect characters until we hit the closing quote, a ${, or end of string
+      let staticPart = ''
+      while (i < js.length && js[i] !== quote && !(js[i] === '$' && js[i + 1] === '{')) {
+        staticPart += js[i++]
+      }
+
+      // Tokenise the static prefix
+      for (const cls of staticPart.trim().split(/\s+/)) {
+        if (cls && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cls)) used.add(cls)
       }
     }
   }
@@ -46,6 +81,33 @@ export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
     while ((m = re.exec(js)) !== null) {
       for (const [, cls] of m[1].matchAll(/['"]([^'"]+)['"]/g)) {
         if (/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cls)) used.add(cls)
+      }
+    }
+  }
+
+  // Pulse re-renders via innerHTML — classes added after mutations appear as
+  // template literal expressions inside class= attributes, not classList calls.
+  // Pattern: class="${state.x ? 'foo' : 'bar'}" or class="base ${state.x ? 'active' : ''}"
+  // The hyphen-only scan above misses single-word classes like 'active', 'open',
+  // 'visible', 'selected', 'hidden' that are common state-driven class names.
+  // Extract every quoted string that appears inside a class= template expression.
+  for (const js of jsContents) {
+    // Match: class=`...` or class="${...}" template attribute values
+    const attrRe = /class(?:Name)?=`([^`]*)`/g
+    let m
+    while ((m = attrRe.exec(js)) !== null) {
+      const attrContent = m[1]
+      // Collect static class tokens (outside ${...} expressions)
+      for (const cls of attrContent.replace(/\$\{[^}]*\}/g, ' ').trim().split(/\s+/)) {
+        if (cls && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(cls)) used.add(cls)
+      }
+      // Collect quoted strings inside ${...} expressions — these are the
+      // conditional class names: ${state.open ? 'open' : ''} → 'open'
+      for (const [, inner] of attrContent.matchAll(/\$\{([^}]*)\}/g)) {
+        for (const [, cls] of inner.matchAll(/['"]([a-zA-Z][a-zA-Z0-9_-]*)['"]|`([a-zA-Z][a-zA-Z0-9_-]*)`/g)) {
+          const name = cls
+          if (name && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(name)) used.add(name)
+        }
       }
     }
   }

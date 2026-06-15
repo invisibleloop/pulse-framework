@@ -296,8 +296,15 @@ function bindEvents(el, dispatch, signal) {
     }
 
     // Dialog open — data-dialog-open="dialogId"
+    // If the element also carries data-event, fire the mutation first so the view
+    // re-renders with updated state before the dialog opens.
     const dialogOpenTarget = e.target?.closest?.('[data-dialog-open]')
     if (dialogOpenTarget) {
+      const eventAttr = dialogOpenTarget.dataset.event
+      if (eventAttr) {
+        const [type, name] = parseEventAttr(eventAttr)
+        if (type === 'click') { e.preventDefault(); dispatch(name, e) }
+      }
       const dialog = document.getElementById(dialogOpenTarget.dataset.dialogOpen)
       if (dialog?.showModal) { e.preventDefault(); dialog.showModal() }
       return
@@ -472,6 +479,8 @@ function morphAttrs(cur, nxt) {
     }
   }
   for (const { name } of Array.from(cur.attributes)) {
+    // `open` on <dialog> is managed by the native showModal/close API — never remove it
+    if (cur.tagName === 'DIALOG' && name === 'open') continue
     if (!nxt.hasAttribute(name)) cur.removeAttribute(name)
   }
 }
