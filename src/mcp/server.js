@@ -241,10 +241,10 @@ Fetch \`pulse://quickstart\` — workflow phases, spec skeleton, components, and
 Quick checklist:
 1. Read the file you're changing
 2. Make the edit
-3. \`pulse_validate\` → \`/verify\`
+3. \`pulse_validate\` → \`/verify --quick\` (mid-iteration) or \`/verify\` (final check)
 
 ### C — Targeted one-liner (label change, prop swap, CSS tweak)
-No resource fetch needed. Read the file, make the change, run \`/verify\`.
+No resource fetch needed. Read the file, make the change, run \`/verify --quick\` to check it looks right, then \`/verify\` when the user is happy.
 
 ### D — Stuck mid-build
 - Wrong component props? → \`pulse://guide/components\`
@@ -252,7 +252,7 @@ No resource fetch needed. Read the file, make the change, run \`/verify\`.
 - CSS / theming? → \`pulse://guide/styles\`
 - Routing or layout? → \`pulse://guide/routing\`
 - Lighthouse < 100? → Fix the failing audit, re-run \`/verify\`
-- Something looks wrong visually? → \`pulse_restart_server\` then navigate the browser
+- Something looks wrong visually? → \`pulse_restart_server\` (hot-reloads specs instantly) then navigate the browser
 
 ---
 
@@ -261,7 +261,7 @@ No resource fetch needed. Read the file, make the change, run \`/verify\`.
 - **\`meta.theme\` defaults to dark.** If the design is light, set \`theme: 'light'\` in the plan — not at screenshot time.
 - **Never set \`hydrate\`** — the framework sets it automatically from the URL entry.
 - **\`meta\` is always a plain object** — individual fields (\`title\`, \`description\`) can be async functions, but \`meta\` itself is \`{}\`.
-- **After every file edit:** \`pulse_restart_server\` → navigate browser → check result.
+- **After every file edit:** \`pulse_restart_server\` → navigate browser → check result. (Hot-reloads specs in ~200 ms — no process restart needed.)
 - **\`/verify\` is always last** — it writes the \`.pulse-verified\` stamp. Without it, the stop hook blocks.
 
 ---
@@ -318,8 +318,14 @@ server.registerResource(
 
 \`\`\`
 New page:   pulse_intake → pulse_sketch → pulse_intent → build → validate → screenshot → design approval → /verify
-Edit/fix:   read file → change → validate → /verify
+Edit/fix:   read file → change → validate → /verify --quick → (iterate) → /verify
 \`\`\`
+
+**\`/verify\` has two modes:**
+- \`/verify --quick\` — validate + screenshot + console + code review. No Lighthouse, no build. Use this during active iteration, between design rounds, or any time you're not yet at the "ready to ship" point. Fast (~10 s).
+- \`/verify\` — full loop: Lighthouse desktop + mobile + perf trace + all of the above. Use once the user has approved the design and you're done building. Slow (~90 s).
+
+**Rule: default to \`/verify --quick\` while building. Only run \`/verify\` (full) when the user signals they're done or happy with the result.**
 
 Tier 1 (static/read-only): phases 3 → 4 → 5a (design approval) → 5b (/verify)
 Tier 2 (interactive):       phases 3 → 4 → 5a → 5b → 6 (tests) → 7 (review)
@@ -369,6 +375,43 @@ export default {
 - Never use \`data-event\` on text inputs — use FormData in \`onStart\`/\`run\`
 - Every interactive element must be \`<button>\`, \`<a>\`, or have \`tabindex="0"\`
 - \`<main id="main-content">\` is required on every page
+
+---
+
+## Event binding — input patterns
+
+**The right pattern for each input type:**
+
+| Input type | Pattern | Why |
+|---|---|---|
+| Button click | \`<button data-event="increment">\` | click fires mutation |
+| Select / radio / checkbox | \`<select data-event="change:setFilter">\` | \`change\` fires on blur-with-changed-value — the correct commit semantic |
+| Color picker | \`<input type="color" data-event="change:setColor">\` | same as select |
+| Range slider | \`<input type="range" data-event="input:setVolume">\` | \`input\` fires on every drag step |
+| Text / email / password / search | **No \`data-event\`** — read via FormData | \`data-event\` on text inputs re-renders on every keystroke, destroying cursor position and focus |
+
+**Text input pattern (uncontrolled):**
+\`\`\`js
+// view — no data-event on the input
+view: (state) => \`
+  <form data-action="submit">
+    <input type="text" name="email" placeholder="Email">
+    <button type="submit">Save</button>
+  </form>
+\`,
+// action — read FormData in onStart (before validation)
+actions: {
+  submit: {
+    onStart:   (state, formData) => ({ status: 'loading', email: formData.get('email') }),
+    validate:  true,
+    run:       async (state) => { /* use state.email */ },
+    onSuccess: (state) => ({ status: 'success' }),
+    onError:   (state, err) => ({ status: 'error', error: err.message }),
+  }
+}
+\`\`\`
+
+**\`change:\` is the blur/commit event** — it fires when a non-text input loses focus with a changed value. This is correct for selects, color pickers, checkboxes, and radios. It does NOT fire on every keystroke (use \`input:\` for live-updating sliders or search fields where re-render on every character is intentional and the element is not a free-text input).
 
 ---
 
@@ -1093,7 +1136,7 @@ server.registerTool(
 server.registerTool(
   'pulse_restart_server',
   {
-    description: 'Stop and restart the Pulse dev server. Use after adding new pages or making changes that require a restart.',
+    description: 'Reload specs in the running dev server. Tries a fast hot-reload first (no process restart); falls back to full kill/restart only if the server is not running.',
     inputSchema: {},
   },
   async () => {
@@ -1106,15 +1149,32 @@ server.registerTool(
       } catch { /* use default */ }
     }
 
-    // Kill any process on the port
+    // Fast path — POST to the running dev server's hot-reload endpoint.
+    // This reloads specs in-process and sends an SSE reload event to the browser
+    // without killing the server process (~200 ms vs ~3 s for a full restart).
+    const hotReloaded = await new Promise(resolve => {
+      try {
+        const req = http.request(
+          { hostname: '127.0.0.1', port, path: '/_pulse/trigger-reload', method: 'POST', timeout: 2000 },
+          res => resolve(res.statusCode === 204)
+        )
+        req.on('error', () => resolve(false))
+        req.on('timeout', () => { req.destroy(); resolve(false) })
+        req.end()
+      } catch { resolve(false) }
+    })
+
+    if (hotReloaded) {
+      return text(`Dev server specs reloaded (hot) on port ${port}`)
+    }
+
+    // Slow path — server not running or unresponsive, do a full kill/restart
     try { execFileSync('sh', ['-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null; true`]) } catch { /* nothing running */ }
 
-    // Start fresh dev server detached so it outlives the MCP tool call
     const devScript = new URL('../cli/dev.js', import.meta.url).pathname
     const proc = spawn(process.execPath, [devScript, '--root', ROOT], { detached: true, stdio: 'ignore' })
     proc.unref()
 
-    // Wait until the server is actually accepting requests
     const ready = await waitForServer(port)
     return text(ready
       ? `Dev server restarted on port ${port}`
@@ -1202,6 +1262,7 @@ any feature build.
 
     let source = content
     if (file) {
+      if (!path.isAbsolute(file)) file = path.resolve(process.cwd(), file)
       if (!fs.existsSync(file)) return text(`File not found: ${file}`)
       source = fs.readFileSync(file, 'utf8')
     }
@@ -1232,9 +1293,16 @@ any feature build.
           issues.push('✗ React patterns found (className / htmlFor / onClick) — use class, for, data-event')
         if (/tabindex=["']?([1-9]\d*)/.test(renderedHtml))
           issues.push('✗ Positive tabindex found — remove, reorder DOM instead')
+        const rawNavInSource = (source.match(/<nav[\s>]/gi) || []).length
+        if (rawNavInSource > 0)
+          issues.push(`✗ Raw <nav> tag in spec source — nav() renders <nav> internally; wrapping it in another <nav> creates duplicate landmarks that fail Lighthouse accessibility. Remove the outer <nav>.`)
         const viewBlockStripped = renderedHtml
           .replace(/href=["']#[^"']*["']/g, 'href="#"')
           .replace(/id=["'][^"']*["']/g, 'id=""')
+          // Strip CSS custom property assignments from style attrs (--foo:#hex is a runtime
+          // data binding, not an authored colour — e.g. style="--swatch-bg:#E8524A").
+          // Standard property assignments like color:#000 are left intact and still flagged.
+          .replace(/style="([^"]*)"/g, (_, v) => `style="${v.replace(/--[a-zA-Z][^:]*:[^;"]*/g, '')}"`)
         if (/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlockStripped))
           warnings.push('⚠ Possible hex colour in rendered HTML — use var(--ui-*) tokens')
 
@@ -1247,19 +1315,49 @@ any feature build.
         }
       }
 
-      // Source-level checks (don't need rendered HTML)
-      if (source.includes('actions:') && !source.includes('onError:'))
+      // Source-level checks (don't need rendered HTML).
+      // Use line-anchored regex for actions: to avoid false positives from component
+      // prop strings like hero({ actions: '...' }) or card({ actions: '...' }).
+      const hasActionsBlock = /^\s{0,4}actions\s*:/m.test(source)
+      if (hasActionsBlock && !source.includes('onError:'))
         issues.push('✗ Action missing `onError` — required, will throw at runtime')
-      if (source.includes('actions:') && !source.includes('onSuccess:'))
+      if (hasActionsBlock && !source.includes('onSuccess:'))
         issues.push('✗ Action missing `onSuccess` — required')
       if (source.includes('hydrate:'))
         issues.push('✗ `hydrate` is set manually — remove it, the framework sets it automatically')
       if (/meta\s*:\s*async/.test(source))
         issues.push('✗ `meta` is an async function — `meta` must be a plain object; make individual fields async instead')
 
+      // Structural confirmations — always shown regardless of issues, so the agent
+      // gets positive signal on what's correct, not just a list of failures.
+      const confirms = []
+      if (renderedHtml) {
+        confirms.push(/<main[^>]*id=["']?main-content/.test(renderedHtml) ? '✓ `<main id="main-content">` landmark present' : null)
+        const rawNavInSource = (source.match(/<nav[\s>]/gi) || []).length
+        if (rawNavInSource === 0) confirms.push('✓ No raw <nav> in spec source — nav() component handles landmarks correctly')
+        const headings = [...renderedHtml.matchAll(/<h([1-6])[^>]*>/g)].map(m => parseInt(m[1]))
+        if (headings.length > 0) {
+          const orderOk = headings.every((h, i) => i === 0 || h <= headings[i - 1] + 1)
+          confirms.push(orderOk ? `✓ Heading order correct (${headings.map(h => `h${h}`).join(' → ')})` : `⚠ Heading order may be skipping levels (${headings.map(h => `h${h}`).join(' → ')})`)
+        }
+        const interactiveWithoutLabel = [...renderedHtml.matchAll(/<button(?![^>]*aria-label)[^>]*>\s*<\/button>/g)]
+        confirms.push(interactiveWithoutLabel.length === 0 ? '✓ No empty buttons without aria-label detected' : `⚠ ${interactiveWithoutLabel.length} button(s) appear empty — check aria-label`)
+        const dataEvents = [...renderedHtml.matchAll(/data-event=/g)].length
+        if (dataEvents > 0) confirms.push(`✓ ${dataEvents} data-event binding(s) found`)
+        const creativeOverride = /component.free|creative\s+override/i.test(source)
+        if (creativeOverride) confirms.push('✓ Creative override declared — component pattern checks are advisory')
+      }
+
       const lines = ['## Quick review\n']
+
+      if (confirms.filter(Boolean).length > 0) {
+        lines.push('### Structural checks\n')
+        for (const c of confirms.filter(Boolean)) lines.push(c)
+        lines.push('')
+      }
+
       if (issues.length === 0 && warnings.length === 0) {
-        lines.push('✓ No obvious issues found. Run `pulse_validate` next, then `/verify`.')
+        lines.push('✓ No issues found. Run `pulse_validate` next, then `/verify`.')
       } else {
         if (issues.length) {
           lines.push('### Fix before proceeding\n')
@@ -1271,7 +1369,7 @@ any feature build.
           for (const w of warnings) lines.push(w)
           lines.push('')
         }
-        lines.push('---\nFix issues, then run `pulse_validate` → `pulse_suggest` → `/verify`.')
+        lines.push('---\nFix issues, then run `pulse_validate` → `/verify --quick`.')
       }
 
       return text(lines.join('\n'))
@@ -1392,13 +1490,14 @@ ${(() => {
   }
   
   // Check spec source
-  // Hex colours in view — strip anchor hrefs and id attributes before checking so
-  // href="#fixtures" / id="main-content" / href="#join" are never flagged as hex colours.
-  // Only flag actual colour values: # followed by exactly 3 or 6 hex chars.
+  // Hex colours in view — strip anchor hrefs, id attributes, template literal expressions,
+  // and style attributes before checking so runtime-generated values (e.g. style="--swatch-bg:${hex}")
+  // are never flagged. Only flag literal hex values authored directly in the view string.
   const viewBlock = source.slice(source.indexOf('view:'))
   const viewBlockStripped = viewBlock
     .replace(/href=["']#[^"']*["']/g, 'href="#"')   // href="#anchor" → href="#"
     .replace(/id=["'][^"']*["']/g, 'id=""')          // id="foo" → id=""
+    .replace(/\$\{[^}]*\}/g, '${…}')                 // ${expr} — runtime values, not authored hex
   const hexInView = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlockStripped)
   if (hexInView) {
     checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only')
@@ -2674,7 +2773,9 @@ The extracted values map directly to pulse_intake fields (palette, vibe, styleNo
       lines.push(`Navigate to: **${source}**`)
       lines.push('Observe the rendered page at desktop width (~1440px) and again at mobile (~375px).')
       lines.push('Take note of the above-the-fold area, then scroll through the full page.')
-      lines.push('**Fill in the sections below based on what you observe. Return a completed extraction, not an empty template.**\n')
+      lines.push('**Fill in the sections below based on what you observe. Return a completed extraction, not an empty template.**')
+      lines.push('')
+      lines.push('> **If the URL is blocked or unreachable:** do not return a blank template. Instead, use your training knowledge of the site/brand to populate as many fields as you can, mark each cell with "(from knowledge, not live)" and note at the top that the URL was unreachable. A knowledge-based extraction is more useful than an empty template.\n')
     } else {
       lines.push('## Step 1 — Analyse the source (do this now)')
       lines.push(`Source: **${source}**`)
@@ -3973,7 +4074,7 @@ If you know your context already:
 - \`pulse_run_tests\` — run the project test suite (npm test). Use after writing or editing specs.
 - \`pulse_stamp\` — write the \`.pulse-verified\` stamp. Call as the **last step** of \`/verify\`, after Lighthouse and \`pulse_review\` both pass. Using this MCP tool avoids the mtime race that \`date +%s > .pulse-verified\` can cause when the stamp and the last spec write land in the same filesystem second.
 - \`pulse_fetch_page(url)\` — HTTP GET the dev server URL. Use to verify SSR output.
-- \`pulse_restart_server\` — stop and restart the dev server.
+- \`pulse_restart_server\` — hot-reload specs in the running dev server (~200 ms). Falls back to full kill/restart if the server is not running.
 - \`pulse_build\` — production build + starts prod server on devPort+1 for Lighthouse. Returns the URL. Call \`pulse_restart_server\` after to return to dev. **Slow — takes 30–60 s. Tell the user before calling.**
 - \`pulse_check_version\` — check installed package version, static asset version, and latest on npm. Use this instead of running npm commands when the user asks about updates.
 - \`pulse_update\` — install the latest \`@invisibleloop/pulse\` package and re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist into \`public/\`. One command does the full upgrade.
@@ -3989,9 +4090,13 @@ If you know your context already:
 
 ## MANDATORY: Verify every build
 
-**After writing or editing any page spec, you MUST run \`/verify\` before declaring done.**
+**After writing or editing any page spec, you MUST run \`/verify\` or \`/verify --quick\` before declaring done.**
 
-\`/verify\` is the single canonical verification workflow. It runs: validate → screenshot → console check → network check → SSR check → production build → Lighthouse desktop → Lighthouse mobile → performance trace → code review → writes the \`.pulse-verified\` stamp. The stop hook checks this stamp — if it is missing or older than the last spec edit, the hook will block and make you run verification again.
+**Choose the right mode:**
+- \`/verify --quick\` — use during active building and iteration. Runs: validate → screenshot → console check → code review → stamp. No Lighthouse, no production build. Fast (~10 s). Use this between every round of changes.
+- \`/verify\` (full) — use when the user signals they're done or happy with the result. Runs everything: validate → screenshot → production build → Lighthouse desktop → Lighthouse mobile → performance trace → console check → code review → stamp. Slow (~90 s). Run this once at the end.
+
+The stop hook checks the \`.pulse-verified\` stamp — \`/verify --quick\` writes the stamp too, so it satisfies the hook for mid-build turns. The full \`/verify\` is required before the final commit.
 
 **Do not replicate \`/verify\` steps manually.** Running the individual tools yourself does not write the stamp. The agent will be blocked at the end regardless.
 

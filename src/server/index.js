@@ -611,9 +611,25 @@ export async function createServer(entries, options = {}) {
   const brandCache = new TtlCache(500)
   brandCache.startEviction(30_000)  // brand TTL is 60s, scan every 30s
 
-  // Load manifest — maps source hydrate paths to production bundle paths
-  const hydrateMap     = loadManifest(manifest, staticDir)
-  const runtimeBundle  = hydrateMap['_runtime'] || ''
+  // Load manifest — maps source hydrate paths to production bundle paths.
+  // When staticDir is set and no manifest is explicitly provided, the manifest is
+  // re-read from disk on every request so that `pulse build` takes effect immediately
+  // without a server restart. The file is small (~1 kB) and the read is synchronous,
+  // so the overhead is negligible.
+  // When manifest is an explicit object (including {} from the dev server to disable
+  // manifest-based hydration), it is used as-is without disk reads. This ensures that
+  // passing manifest: {} always means "no manifest" — even when staticDir is set.
+  const _manifestStatic   = (manifest !== null && typeof manifest === 'object') ? manifest : null
+  const _manifestPath     = _manifestStatic ? null
+    : typeof manifest === 'string' ? manifest
+    : (manifest === null && staticDir) ? path.join(staticDir, 'dist', 'manifest.json') : null
+  const getHydrateMap = _manifestStatic
+    ? () => _manifestStatic
+    : () => {
+        if (!_manifestPath) return {}
+        try { return JSON.parse(fs.readFileSync(_manifestPath, 'utf8')) } catch { return {} }
+      }
+
 
   // Auto-detect favicon in staticDir
   const faviconPath = staticDir
@@ -905,6 +921,8 @@ export async function createServer(entries, options = {}) {
         ctx.store = await resolveStoreState(storeDef, ctx)
       }
 
+      const hydrateMap     = getHydrateMap()
+      const runtimeBundle  = hydrateMap['_runtime'] || ''
       const spec = resolveSpec(match.spec, hydrateMap)
 
       // Per-spec timeout overrides the global default
@@ -1690,33 +1708,6 @@ function mergeCtxHeaders(ctx, headers) {
 // ---------------------------------------------------------------------------
 // Manifest & spec resolution
 // ---------------------------------------------------------------------------
-
-/**
- * Load a hydrate manifest.
- * Accepts a manifest object, a path to a JSON file, or auto-detects from
- * staticDir/dist/manifest.json when staticDir is set.
- *
- * @param {Object|string|null} manifest
- * @param {string|null} staticDir
- * @returns {Object} map of source paths → bundle paths
- */
-function loadManifest(manifest, staticDir) {
-  if (!manifest && !staticDir) return {}
-
-  if (manifest && typeof manifest === 'object') return manifest
-
-  const manifestPath = typeof manifest === 'string'
-    ? manifest
-    : staticDir ? path.join(staticDir, 'dist', 'manifest.json') : null
-
-  if (!manifestPath) return {}
-
-  try {
-    return JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
-  } catch {
-    return {}
-  }
-}
 
 /**
  * Return a copy of the spec with the hydrate path and any meta.styles paths

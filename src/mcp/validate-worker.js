@@ -11,8 +11,11 @@
 
 import { validateSpec } from '../spec/schema.js'
 
+import { existsSync } from 'fs'
+
 const tmpFile = process.argv[2]
 if (!tmpFile) { process.stdout.write('Invalid: no file path provided'); process.exit(0) }
+if (!existsSync(tmpFile)) { process.stdout.write(`Invalid: file not found — ${tmpFile}`); process.exit(0) }
 
 let mod
 try {

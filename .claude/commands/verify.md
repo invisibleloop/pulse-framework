@@ -1,12 +1,18 @@
 # Verify
 
-Run the full verification loop on the current page or the page specified in $ARGUMENTS.
+Run the verification loop on the current page or the page specified in $ARGUMENTS.
+
+**Modes:**
+- `/verify` — full loop including Lighthouse (desktop + mobile), perf trace, and mobile layout check. Use when the user approves the design or signals they're ready to ship.
+- `/verify --quick` — skips Lighthouse and perf trace; just validate → screenshot → console → review → stamp. Use during iterative building: design rounds, debugging visual issues, mid-build checkpoints. Fast enough to run between every change.
+
+If `--quick` appears anywhere in $ARGUMENTS, run in quick mode (steps 6, 7, 8, and 9 are skipped). The route/file path is whatever remains in $ARGUMENTS after removing `--quick`.
 
 ## Steps
 
 ### 1. Identify the target
 
-If $ARGUMENTS is provided, use it as the file path or route. Otherwise, identify the most recently edited spec file from context.
+If $ARGUMENTS is provided, use it (minus `--quick` if present) as the file path or route. Otherwise, identify the most recently edited spec file from context.
 
 ### 2. Design approval (new builds only)
 
@@ -30,7 +36,7 @@ Use `pulse_fetch_page` to confirm the server is responding for the route. If it 
 
 Use `mcp__chrome-devtools__navigate_page` to load the page route, then `mcp__chrome-devtools__take_screenshot` to capture the result. Describe what you see — layout, content, any obvious rendering issues.
 
-### 6. Lighthouse — desktop
+### 6. Lighthouse — desktop *(skip in quick mode)*
 
 **Pre-flight (required before every Lighthouse run):**
 1. Call `pulse_build` to produce a production build and start the production server on port 3001.
@@ -40,7 +46,7 @@ Then run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop" }`
 
 **Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Performance is measured and reported but is not a hard requirement (it varies with machine load). Report the actual scores. If Accessibility, Best Practices, or SEO is below 100, identify the failing audit(s), fix the issue, and restart from step 3.
 
-### 7. Lighthouse — mobile
+### 7. Lighthouse — mobile *(skip in quick mode)*
 
 The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "mobile" }`.
 
@@ -48,7 +54,7 @@ The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__c
 
 **Stay on the production server (port 3001)** — steps 8 and 9 use it too. Do not call `pulse_restart_server` yet.
 
-### 8. Mobile layout check
+### 8. Mobile layout check *(skip in quick mode)*
 
 Emulate a mobile viewport and take a screenshot to catch wrapping, overflow, and layout issues before they become Lighthouse failures.
 
@@ -70,7 +76,7 @@ Fix any issues, then reset to desktop before continuing:
 mcp__chrome-devtools__emulate  viewport: "1440x900x1"
 ```
 
-### 9. Performance
+### 9. Performance *(skip in quick mode)*
 
 **Run the trace against the production server, not dev.** Navigate to `http://localhost:3001/<route>` first — if the production server is no longer running, run `pulse_build` again. Tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
 
@@ -102,11 +108,11 @@ Call `pulse_stamp`. This writes `.pulse-verified` via the MCP server, which is m
 
 Summarise:
 - Validation: pass or fail (with errors if any)
-- Visual: desktop screenshot and mobile layout check — any issues found and fixed
-- Lighthouse desktop: scores for Accessibility, Best Practices, SEO
-- Lighthouse mobile: scores for Accessibility, Best Practices, SEO
-- Performance: LCP and CLS values, any flagged insights
+- Visual: desktop screenshot — any issues found and fixed
 - Console: any errors
 - Review: pass or issues found and fixed
+- **Full mode only:** Lighthouse desktop/mobile scores, mobile layout check, LCP and CLS values
 
-Only confirm the page is good when validation passes, both Lighthouse runs are 100/100/100, CLS is 0.00, and there are no console errors. Otherwise, fix and run `/verify` again.
+In quick mode, end with: "Quick check passed — run `/verify` when you're ready for the full Lighthouse audit."
+
+In full mode, only confirm the page is good when validation passes, both Lighthouse runs are 100/100/100, CLS is 0.00, and there are no console errors. Otherwise, fix and run `/verify` again.

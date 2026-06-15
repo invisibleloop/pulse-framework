@@ -119,6 +119,22 @@ test('multiple classList arguments in one call are all collected', () => {
   for (const cls of ['one', 'two-x', 'three']) assert.ok(used.has(cls), cls)
 })
 
+// Regression: class name immediately followed by ${ (no space before the expression)
+// was not extracted — "saved-palette${...}" yielded "saved-palette${expanded" as a
+// single token, so the rule was silently purged in prod while dev (no purging) looked fine.
+test('class name immediately before ${ is extracted correctly', () => {
+  const js = [
+    // No space before ${ — the broken pattern
+    `const v = \`<div class="saved-palette\${expanded ? ' saved-palette--expanded' : ''}"></div>\``,
+    // Multiple static classes, last one butts into ${
+    `const v = \`<button class="btn btn--primary\${loading ? ' btn--loading' : ''}"></button>\``,
+  ]
+  const used = extractUsedClasses([], js)
+  for (const cls of ['saved-palette', 'btn', 'btn--primary']) {
+    assert.ok(used.has(cls), `Expected "${cls}" to be extracted but it was missing`)
+  }
+})
+
 test('runtime-toggled compound rule survives the purge', () => {
   const css = `.docs-sidebar { transform: translateX(-100%); }\n.docs-sidebar.open { transform: translateX(0); }\n.unused { color: red; }`
   const used = extractUsedClasses(

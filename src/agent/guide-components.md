@@ -194,7 +194,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | `list` | `items` (array of HTML strings), `ordered`, `gap` (xs/sm/md) |
 | `prose` | `content` (raw HTML — not escaped), `size` (sm/base/lg) — for CMS/markdown content you don't control |
 
-**Never write raw `<h1>`–`<h6>` or `<ul>`/`<ol>` without styling.** Use `heading()` and `list()` instead.
+**Never write raw `<h1>`–`<h6>` or `<ul>`/`<ol>` without styling.** Use `heading()` and `list()` instead. *(Mode A only — in a creative override, raw headings styled directly with utility classes or custom CSS are correct. The `heading()` component adds wrapper markup that can fight custom layouts.)*
 
 **Heading order across components.** `card`, `feature`, `section`, `pricing`, `cta`, and `modal` all accept a `level` prop. Use it to keep the document outline correct without changing visual style. For example, if a page has an h2 section title and each card inside it has a title, pass `level: 3` on the cards (the default) — but if the cards are the first heading on the page, pass `level: 2`. The CSS class stays the same (`ui-card-title` etc.) so appearance is unaffected.
 
@@ -284,7 +284,7 @@ This is by design: vibes are a paint job, not a structural transformation. Compo
 
 | Component | Key props |
 |-----------|-----------|
-| `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky`, `background` (any CSS value — overrides default surface colour), `color` (foreground colour — set when custom background doesn't contrast with default muted text) |
+| `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky`, `background` (any CSS value — overrides default surface colour), `color` (foreground colour — set when custom background doesn't contrast with default muted text) — ⚠ **renders a `<nav>` landmark internally. Never wrap it in another `<nav>` or `<header><nav>` — that creates a duplicate landmark Lighthouse flags as an accessibility failure. Wrapping in `<header>` alone is fine.** |
 | `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates image layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `layout` (split/asymmetric/overlap — when image provided: 'split'=50/50, 'asymmetric'=60/40 text-heavy, 'overlap'=image fills section with text overlay), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value), `eyebrowColor` |
 | `phoneFrame` | `content` (HTML slot — rendered inside the phone screen), `animate` (boolean, default `false` — enables a gentle 3-D tilt on hover). Pure CSS phone mockup with dynamic island, side buttons, home indicator. Use as the `image` slot in `hero()` for app landing pages. Add `animate: true` whenever the phone is a prominent hero element. |
 | `feature` | `image` (HTML slot — rendered above icon), `icon` (HTML slot), `title`, `level` (1–6, default 3), `description` (or `body` as alias), `center` |

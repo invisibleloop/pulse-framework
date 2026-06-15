@@ -9,9 +9,10 @@
 | New site, new branded page, or "build me X from scratch" | `pulse_intake` → `pulse_sketch` → `pulse_intent` → build |
 | Editing an existing page, adding a section, fixing a bug | Go straight to Step 1 — Understand |
 | "Add X to the existing Y" (one-liner) | Read the relevant file, make the change, run `/verify` |
+| Iterating on design before user approves | `/verify --quick` between rounds; full `/verify` once approved |
 | Stuck on which component to use | `pulse_intent("describe what I'm building")` |
 | Colours failing contrast / unsure about palette | `pulse_check_contrast` |
-| Something looks wrong in the browser | `pulse_restart_server`, then `/verify` |
+| Something looks wrong in the browser | `pulse_restart_server`, then `/verify --quick` |
 | Lighthouse < 100 | Fix the flagged audit, run `/verify` again — do not skip to commit |
 
 ---
@@ -224,6 +225,8 @@ After the Write tool completes, call `pulse_create_page(name)` to register the p
 
 After writing the first draft, call `pulse_suggest(content)` before running the hard validator. It catches obvious omissions collaboratively — a second opinion, not a gate. Then call `pulse_review(file, { quick: true })` for a lightweight structural pass (main landmark, data-event on inputs, missing onError, hex in view). Neither is a substitute for the full review, but catching issues here is faster than discovering them at Lighthouse.
 
+If the user is iterating on the design (multiple rounds of changes before giving a final go-ahead), use `/verify --quick` between rounds — it validates, screenshots, checks console, and runs a quick code review without the 90-second Lighthouse cost. Save the full `/verify` for after the user explicitly approves the design.
+
 **Rule: never output `✓` before the tool call that confirms the result.**
 
 ---
@@ -278,7 +281,7 @@ Do this before every screenshot, console check, or visual inspection. Never debu
 
 ### Phase 5b — Full verification (pass gate)
 
-**Run `/verify` now.** Do not execute these steps manually.
+**Run `/verify` now** (full mode — not `--quick`). Do not execute these steps manually.
 
 `/verify` validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and writes the `.pulse-verified` stamp. Running steps manually does not write the stamp.
 
