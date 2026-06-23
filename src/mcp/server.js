@@ -38,6 +38,20 @@ import { execFileSync, spawn, spawnSync } from 'child_process'
 import { loadPages } from '../cli/discover.js'
 
 // ---------------------------------------------------------------------------
+// Crash guards — an uncaught error in any tool handler must not kill the
+// stdio transport. Without these, Claude Code sees the process exit and
+// reports "pulse: disconnected" instead of a tool-level error. stderr only —
+// stdout is the JSON-RPC channel and any stray write corrupts the stream.
+// ---------------------------------------------------------------------------
+
+process.on('uncaughtException', (err) => {
+  console.error('[pulse-mcp] uncaught exception:', err?.stack || err)
+})
+process.on('unhandledRejection', (err) => {
+  console.error('[pulse-mcp] unhandled rejection:', err?.stack || err)
+})
+
+// ---------------------------------------------------------------------------
 // Project root
 // ---------------------------------------------------------------------------
 
@@ -48,6 +62,17 @@ const ROOT    = rootArg !== -1
 
 const PAGES_DIR      = path.join(ROOT, 'src', 'pages')
 const COMPONENTS_DIR = path.join(ROOT, 'src', 'components')
+
+// Detect whether ROOT is actually a Pulse project — used to warn the agent
+// early rather than silently misbehaving in unrelated repos.
+const IS_PULSE_PROJECT = (() => {
+  if (fs.existsSync(path.join(ROOT, 'pulse.config.js'))) return true
+  if (fs.existsSync(PAGES_DIR)) return true
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+    return !!(pkg?.dependencies?.['@invisibleloop/pulse'] || pkg?.devDependencies?.['@invisibleloop/pulse'])
+  } catch { return false }
+})()
 
 const PKG_VERSION = JSON.parse(
   fs.readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf8')
@@ -500,6 +525,9 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
+    if (!IS_PULSE_PROJECT) {
+      return { content: [{ type: 'text', text: `⚠ This does not appear to be a Pulse project (no pulse.config.js, no src/pages/, no @invisibleloop/pulse dependency found in ${ROOT}).\n\nThe pulse MCP server is project-specific — it is started by the \`pulse\` CLI from inside a Pulse project directory. If you are working on a Pulse project, check that you launched with \`pulse\` from the correct directory.` }] }
+    }
     const specs      = await loadPages(ROOT)
     const components = findComponents()
     const lines      = []
@@ -571,6 +599,9 @@ server.registerTool(
     inputSchema: {},
   },
   async () => {
+    if (!IS_PULSE_PROJECT) {
+      return { content: [{ type: 'text', text: `⚠ This does not appear to be a Pulse project (no pulse.config.js, no src/pages/, no @invisibleloop/pulse dependency found in ${ROOT}).\n\nThe pulse MCP server is project-specific — it is started by the \`pulse\` CLI from inside a Pulse project directory. If you are working on a Pulse project, check that you launched with \`pulse\` from the correct directory.` }] }
+    }
     const lines = []
 
     // ── Pages ──────────────────────────────────────────────────────────────
