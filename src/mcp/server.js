@@ -455,15 +455,12 @@ Import from \`@invisibleloop/pulse/ui\`. Always include \`/pulse-ui.css\` in \`m
 | \`card\` | \`title\`, \`content\`, \`footer\`, \`variant\` (default/elevated/bordered/flat/glass/tinted) |
 | \`feature\` | \`icon\`, \`title\`, \`description\`, \`level\`, \`center\` |
 | \`stat\` | \`label\`, \`value\`, \`change\`, \`trend\`, \`center\` |
-| \`testimonial\` | \`quote\`, \`name\`, \`role\`, \`rating\` |
 | \`cta\` | \`title\`, \`subtitle\`, \`actions\` (HTML slot), \`eyebrow\` |
 | \`footer\` | \`logo\`, \`logoHref\`, \`links\`, \`legal\`, \`columns\` |
 | \`input\` | \`name\`, \`label\`, \`type\`, \`required\`, \`error\` |
 | \`modal\` | \`id\`, \`title\`, \`content\`, \`footer\` — always in DOM, never conditional |
-| \`displayHeading\` | \`text\`, \`level\`, \`tracking\` — editorial large type |
-| \`sectionLabel\` | \`eyebrow\`, \`heading\`, \`level\`, \`rule\` — editorial section divider |
-| \`pullquote\` | \`quote\`, \`cite\`, \`size\` |
-| \`entryList\` | \`items\` ([{meta, title, description}]), \`metaLabel\` — tabular editorial list |
+| \`heading\` | \`text\`, \`level\`, \`size\` |
+| \`pullquote\` | \`quote\`, \`cite\`, \`size\`, \`variant\` (default/editorial) |
 
 ---
 
@@ -1593,9 +1590,7 @@ Work through every item. Fix anything that fails. Refer to the spec source at ${
   - \`.hero\`, \`.-hero\`, \`__hero\` → should use \`hero()\` component
   - \`.card\`, \`.product-card\`, \`.service-card\` → should use \`card()\` component
   - Any two-column image + text layout → should use \`media()\` component
-  - \`.banner\`, \`.strip\`, \`.bar\` → should use \`banner()\` component
   - \`.feature\`, \`.feature-card\` → should use \`feature()\` component
-  - \`.testimonial\` → should use \`testimonial()\` component
 
   **Before flagging a pattern match**, ask: *can the \`hero()\` (or relevant) component actually reproduce this layout?* If the design uses full-viewport height, custom gradient glows, clamp-scaled display type, asymmetric layout, or other features the component doesn't support — that is a **creative override**, not a violation. Check the auto-checked items above: if "creative override declared" is shown, these checks are advisory only and Lighthouse is the pass bar.
 
@@ -1804,7 +1799,8 @@ const ARCHETYPES = {
     description: 'Data-rich admin or analytics page with metrics, charts, and tabular data',
     stateHint:   "{ period: 'week', loading: false }",
     serverHint:  "{ stats: async (ctx) => fetchStats(), rows: async (ctx) => fetchRows() }",
-    scaffold: `import { nav, stat, card, grid, barChart, table, section, container, badge, empty, spinner } from '@invisibleloop/pulse/ui'
+    scaffold: `import { nav, stat, card, grid, table, section, container, badge, empty, spinner } from '@invisibleloop/pulse/ui'
+import { barChart } from '@invisibleloop/pulse/charts'
 
 export default {
   route: '/dashboard',
@@ -1841,7 +1837,7 @@ export default {
 
   landing: {
     keywords:    ['landing', 'marketing', 'homepage', 'product', 'saas', 'startup', 'website', 'launch', 'hero', 'promotional'],
-    components:  ['nav', 'hero', 'feature', 'stat', 'pricing', 'testimonial', 'cta', 'footer', 'grid', 'section', 'container', 'button', 'appBadge'],
+    components:  ['nav', 'hero', 'feature', 'stat', 'cta', 'footer', 'grid', 'section', 'container', 'button', 'appBadge'],
     description: 'Marketing or product landing page with hero, features, and calls to action',
     stateHint:   'null — purely server-rendered, no client state needed',
     serverHint:  'none — all content is static in the view',
@@ -2120,7 +2116,7 @@ export default {
 
   profile: {
     keywords:    ['profile', 'user page', 'bio', 'portfolio', 'about', 'member', 'author', 'personal page', 'public profile'],
-    components:  ['nav', 'avatar', 'card', 'stat', 'badge', 'grid', 'section', 'container', 'button', 'timeline', 'prose'],
+    components:  ['nav', 'avatar', 'card', 'stat', 'badge', 'grid', 'section', 'container', 'button', 'prose'],
     description: 'User or entity profile page with metadata and activity',
     stateHint:   'null — purely server-rendered',
     serverHint:  "{ user: async (ctx) => getUser(ctx.params.id), activity: async (ctx) => getActivity(ctx.params.id) }",
@@ -2164,11 +2160,24 @@ export default {
 
   pricing: {
     keywords:    ['pricing', 'plans', 'subscription', 'tiers', 'billing', 'upgrade', 'compare', 'packages'],
-    components:  ['nav', 'pricing', 'feature', 'cta', 'accordion', 'footer', 'section', 'grid', 'button', 'badge'],
+    components:  ['nav', 'card', 'grid', 'feature', 'cta', 'accordion', 'footer', 'section', 'button', 'badge'],
     description: 'Pricing page with plan comparison, feature lists, and upgrade CTA',
     stateHint:   "{ billing: 'monthly' } — for toggle between monthly/annual",
     serverHint:  'none — content is typically static',
-    scaffold: `import { nav, pricing, cta, accordion, footer, section, container, button } from '@invisibleloop/pulse/ui'
+    scaffold: `import { nav, card, grid, cta, accordion, footer, section, container, button, badge, iconCheck } from '@invisibleloop/pulse/ui'
+
+const plan = (p) => card({
+  variant: p.featured ? 'elevated' : 'bordered',
+  content: \`
+    \${p.featured ? badge({ label: 'Most popular' }) : ''}
+    <h3 class="u-text-xl u-font-bold u-mt-2">\${p.name}</h3>
+    <p class="u-text-3xl u-font-bold u-mt-2">\${p.price}<span class="u-text-sm u-text-muted">\${p.period}</span></p>
+    <ul class="u-mt-4 u-flex u-flex-col u-gap-2">
+      \${p.features.map(f => \`<li class="u-flex u-gap-2 u-items-center">\${iconCheck({ size: 16 })} \${f}</li>\`).join('')}
+    </ul>
+  \`,
+  footer: p.cta,
+})
 
 export default {
   route: '/pricing',
@@ -2186,13 +2195,11 @@ export default {
       \${section({ content: container({ content: \`
         <h1 class="u-text-4xl u-font-bold u-text-center u-mb-2">Simple pricing</h1>
         <p class="u-text-center u-text-muted u-mb-8">No hidden fees. Cancel any time.</p>
-        \${pricing({
-          plans: [
-            { name: 'Free',  price: '\$0',  period: 'forever', features: ['Feature A', 'Feature B'], cta: button({ label: 'Get started', variant: 'secondary' }) },
-            { name: 'Pro',   price: '\$12', period: '/month',  features: ['Everything in Free', 'Feature C', 'Feature D'], featured: true, cta: button({ label: 'Start free trial' }) },
-            { name: 'Team',  price: '\$49', period: '/month',  features: ['Everything in Pro', 'Feature E', 'Unlimited seats'], cta: button({ label: 'Contact sales', variant: 'secondary' }) },
-          ]
-        })}
+        \${grid({ cols: 3, content: [
+          { name: 'Free',  price: '\$0',  period: '/forever', features: ['Feature A', 'Feature B'], cta: button({ label: 'Get started', variant: 'secondary' }) },
+          { name: 'Pro',   price: '\$12', period: '/month',  features: ['Everything in Free', 'Feature C', 'Feature D'], featured: true, cta: button({ label: 'Start free trial' }) },
+          { name: 'Team',  price: '\$49', period: '/month',  features: ['Everything in Pro', 'Feature E', 'Unlimited seats'], cta: button({ label: 'Contact sales', variant: 'secondary' }) },
+        ].map(plan).join('') })}
         \${accordion({ items: [
           { title: 'Can I cancel any time?', content: 'Yes — no lock-in, cancel from your account settings.' },
           { title: 'What payment methods do you accept?', content: 'Visa, Mastercard, Amex, and PayPal.' },
@@ -3038,15 +3045,15 @@ Accepts antiStyle ("what should this NOT look like?") and inspiration (a site or
     if (vibe) {
       lines.push(`- [ ] Vibe: \`meta.vibe: '${vibe}'\` — sets data-vibe on body, activating geometry/type presets`)
       const vibeGuide = {
-        warm:       'Pair with rounded imagery (photoCard with tilt), warmer accent tones, section variant: paper or alt',
+        warm:       'Pair with rounded imagery (uiImage with rounded corners), warmer accent tones, section variant: paper or alt',
         editorial:  'Use layout: overlap on hero for dramatic imagery. Serif headings via --font-display. section variant: diagonal for transitions.',
-        playful:    'gallery with rounded images, photoCard with tilt, marquee for social proof, bright accent',
+        playful:    'grid of uiImage with rounded corners, bright accent, raw HTML marquee-style strip if needed (creative override)',
         minimal:    'hero align: left (no center), section variant: spotlight, clean whitespace, monochrome palette',
         bold:       'hero gradient with strong color, large stat components, section variant: dark for contrast sections',
         brutalist:  'raw section wrappers, oversized heading with zero padding, no shadows, high contrast accent (red/lime)',
-        retro:      'decorate(pattern: "dots") backgrounds, badge eyebrows, thick dividers, earthy amber/cream palette',
-        corporate:  'feature grid with checkmarks, testimonial with company name+logo, trust logo marquee, stat bar',
-        neon:       'section(variant: "spotlight") for glow sections, codeWindow for terminal/API examples, stat with glowing accent',
+        retro:      'badge eyebrows, thick dividers, earthy amber/cream palette, raw HTML dot-pattern background (creative override)',
+        corporate:  'feature grid with checkmarks, card() with logo+quote for testimonials, stat bar',
+        neon:       'section(variant: "spotlight") for glow sections, raw HTML terminal/API code block (creative override) for dev examples, stat with glowing accent',
         paper:      'pullquote prominently, prose with generous line-height, avatar for author, container(size: "sm")',
       }
       if (vibeGuide[vibe]) lines.push(`  **${vibe} component suggestions:** ${vibeGuide[vibe]}`)

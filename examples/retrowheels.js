@@ -3,7 +3,7 @@
  *
  * Demonstrates:
  *   - Retro/vintage light-theme branding (1970s enamel-sign aesthetic)
- *   - stat(), testimonial(), cta(), card(), badge() layout components
+ *   - stat(), cta(), card(), badge() layout components
  *   - Icon imports: iconMapPin, iconPhone, iconClock, iconSend, iconStar
  *   - Async action with onStart / run / onSuccess / onError lifecycle
  *   - State-driven form (idle → sending → sent) with disabled submit
@@ -11,14 +11,14 @@
  *   - System web fonts (Rockwell + Courier New) — zero extra HTTP requests
  *   - Full-bleed hero with background image + gradient overlay
  *   - Stat strip with inverted navy background
- *   - Drop cap typography for editorial prose section
+ *   - Reviews rendered with card() (quote + name/role + star rating)
  *   - Opening hours list with Courier monospace styling
  *
  * Run: node examples/dev.server.js  →  http://localhost:3001/retrowheels
  */
 
 import {
-  nav, footer, button, input, stat, testimonial, cta, card, badge,
+  nav, footer, button, input, stat, cta, card, badge,
 } from '../src/ui/index.js'
 import { iconMapPin, iconPhone, iconClock, iconSend, iconStar } from '../src/ui/icons.js'
 
@@ -118,6 +118,19 @@ const renderHourRow = (h) => `
     <span class="${h.closed ? 'rw-closed' : ''}">${h.time}</span>
   </li>
 `
+
+// Review card — replaces the removed testimonial() component with card()
+const renderReview = (r) => card({
+  content: `
+    <div class="rw-review-stars" aria-hidden="true">${iconStar({ size: 14 }).repeat(r.rating || 0)}</div>
+    <p class="rw-review-quote">&ldquo;${r.quote}&rdquo;</p>
+  `,
+  footer: `
+    <p class="rw-review-name">${r.name}</p>
+    <p class="rw-review-role">${r.role}</p>
+  `,
+  class: 'rw-review',
+})
 
 // ---------------------------------------------------------------------------
 // Spec
@@ -225,7 +238,7 @@ export default {
           <h2 class="rw-section-title">What folks have been saying.</h2>
           <p class="rw-section-deck">Reviews collected from customers, riders, and the occasional postcard pinned to the workshop wall.</p>
           <div class="rw-service-grid">
-            ${REVIEWS.map(r => testimonial(r)).join('')}
+            ${REVIEWS.map(renderReview).join('')}
           </div>
         </div>
       </section>

@@ -45,6 +45,10 @@
       "types": "./types/ui.d.ts",
       "default": "./src/ui/index.js"
     },
+    "./charts": {
+      "types": "./types/charts.d.ts",
+      "default": "./src/ui/charts.js"
+    },
     "./testing": {
       "types": "./types/testing.d.ts",
       "default": "./src/testing/index.js"

@@ -31,9 +31,8 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - Hero sections → `hero({ title, subtitle, actions, image, ... })`
   - Product/service cards → `card({ title, body, image, footer, ... })`
   - Image + text two-column layouts → `media({ image, content, reverse })`
-  - Horizontal strips/banners → `banner({ content, variant })`
   - Feature tiles → `feature({ icon, title, description })`
-  - Testimonials → `testimonial({ quote, name, role, src })`
+  - Testimonials → `card({ content, footer })` with quote + avatar/name in the content slot
   - CTAs → `cta({ title, subtitle, actions })`
   - Navigation → `nav({ logo, links, actions })`
   - Footers → `footer({ logo, links, columns, legal, ... })`

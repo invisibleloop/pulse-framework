@@ -154,9 +154,8 @@ Or use the guide-components table. Never write these patterns from scratch in Mo
 - Hero section → `hero()`
 - Product/service cards → `card()`
 - Image + text layouts → `media()`
-- Horizontal strips → `banner()`
 - Feature tiles → `feature()`
-- Testimonials → `testimonial()`
+- Testimonials → `card({ content, footer })` with quote + avatar/name in the footer slot
 - CTAs → `cta()`
 
 If you're about to type `class="hero"` or `class="product-card"` in Mode A, stop — use the component instead.

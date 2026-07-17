@@ -14,8 +14,8 @@ When you choose a design direction, tell the user which one you're using and why
 **Geometry:** tight radius (2–6px), mono grids, generous whitespace  
 **Typography:** geometric sans, tight tracking on headings, strong size contrast  
 **Palette pattern:** near-black bg + single accent (indigo / blue / violet)  
-**Signature moves:** bento grid, floating nav on scroll, stat bar, code window  
-**Components to lead with:** `hero(layout:'centered')`, `grid`, `stat`, `codeWindow`, `feature`
+**Signature moves:** bento grid, floating nav on scroll, stat bar, code window (raw `<pre><code>`, creative override)  
+**Components to lead with:** `hero(layout:'centered')`, `grid`, `stat`, `feature`
 
 ---
 
@@ -25,8 +25,8 @@ When you choose a design direction, tell the user which one you're using and why
 **Geometry:** large radius (14–20px), soft card shadows, rounded buttons  
 **Typography:** humanist sans (inter, nunito), comfortable line-height  
 **Palette pattern:** earthy warm — terracotta / sage / cream / warm off-white  
-**Signature moves:** real photo hero, services grid with icons, "meet the team", hours + map, handwritten accent (SVG underline via decorate)  
-**Components to lead with:** `hero(layout:'split')`, `photoCard`, `gallery`, `section(variant:'alt')`, `footer` with address
+**Signature moves:** real photo hero, services grid with icons, "meet the team", hours + map, handwritten accent (SVG underline, raw HTML)  
+**Components to lead with:** `hero(layout:'split')`, `uiImage`, `grid`, `section(variant:'alt')`, `footer` with address
 
 ---
 
@@ -53,8 +53,8 @@ When you choose a design direction, tell the user which one you're using and why
 **Geometry:** medium radius (6–10px), oversized type, dramatic section transitions  
 **Typography:** heavy condensed sans (Black weight), massive heading, strong contrast  
 **Palette pattern:** black bg + vivid single colour (yellow / red / lime) for accents  
-**Signature moves:** work case-study grid, client logo marquee, big number stats, diagonal section, full-bleed hero  
-**Components to lead with:** `hero(layout:'poster')`, `marquee`, `gallery(layout:'masonry')`, `section(variant:'diagonal')`, `stat`
+**Signature moves:** work case-study grid, client logo strip (raw HTML, CSS scroll animation), big number stats, diagonal section, full-bleed hero  
+**Components to lead with:** `hero(layout:'poster')`, `grid`, `uiImage`, `section(variant:'diagonal')`, `stat`
 
 ---
 
@@ -67,12 +67,12 @@ When you choose a design direction, tell the user which one you're using and why
 **Signature moves (use these, not 3-col feature grids):**
 - **Full-colour section blocks** — each section has its own bg colour (yellow stats strip, cyan testimonials, hot-pink CTA). Palette is structure, not accent.
 - **Oversized hero element** — the product's key visual (a game board, an illustration, an icon) fills most of the hero viewport. `phoneFrame` is one option, not the default.
-- **Marquee strip** — giant repeated icon-library glyphs, brand marks, or product icons scrolling across the page between sections (`marquee` component). Use icons from `src/ui/icons.js`, not emoji — emoji are banned in UI output (not accessible, not theme-aware).
-- **Tilted `photoCard`s** — testimonial or feature cards at ±2–4° with `photoCard` or CSS `transform: rotate()`
-- **Memphis-style geometric shapes** between sections — use `decorate(pattern:'circles')` or CSS background shapes
-- **Social proof as ticker** — a `marquee` of short quotes or star ratings, not a 3-col grid
+- **Scrolling strip** — giant repeated icon-library glyphs, brand marks, or product icons scrolling across the page between sections (raw HTML + CSS `@keyframes` animation, creative override — no dedicated component). Use icons from `src/ui/icons.js`, not emoji — emoji are banned in UI output (not accessible, not theme-aware).
+- **Tilted cards** — testimonial or feature cards at ±2–4° with `card` + CSS `transform: rotate()`
+- **Memphis-style geometric shapes** between sections — raw inline SVG or CSS background shapes (creative override)
+- **Social proof as ticker** — a CSS scrolling strip of short quotes or star ratings, not a 3-col grid
 
-**Components to lead with:** `hero`, `appBadge`, `marquee`, `photoCard`, `section` with flat-colour backgrounds, `stat`  
+**Components to lead with:** `hero`, `appBadge`, `card`, `section` with flat-colour backgrounds, `stat`  
 **What NOT to do:** 3-column `feature()` grids, centred hero + three columns, phone mockup when the product is a game/board/visual thing
 
 ---
@@ -84,7 +84,7 @@ When you choose a design direction, tell the user which one you're using and why
 **Typography:** light weight body, all-caps labels, large work titles  
 **Palette pattern:** white or near-black + single neutral accent  
 **Signature moves:** work grid (no card chrome), simple text navigation, contact via plain `<a href="mailto:...">`, no footer clutter  
-**Components to lead with:** `gallery(layout:'grid')`, `grid`, `container(size:'sm')`, `heading`, minimal `footer`
+**Components to lead with:** `grid`, `uiImage`, `container(size:'sm')`, `heading`, minimal `footer`
 
 ---
 
@@ -105,8 +105,8 @@ When you choose a design direction, tell the user which one you're using and why
 **Geometry:** medium radius (8px), textured backgrounds, thick borders  
 **Typography:** slab serif (Rockwell / Courier), mixed cases, stamp-style labels  
 **Palette pattern:** amber / cream / dark brown / forest green  
-**Signature moves:** `decorate(pattern:'dots')` background, thick divider lines, badge-style eyebrows, stacked text hierarchy  
-**Components to lead with:** `hero(layout:'stacked')`, `section(variant:'alt')`, `decorate`, `badge`, `card`
+**Signature moves:** dotted-pattern background (inline SVG or CSS `radial-gradient`, creative override), thick divider lines, badge-style eyebrows, stacked text hierarchy  
+**Components to lead with:** `hero(layout:'stacked')`, `section(variant:'alt')`, `badge`, `card`
 
 ---
 
@@ -117,7 +117,7 @@ When you choose a design direction, tell the user which one you're using and why
 **Typography:** system-ui or clean sans, no display serif, professional  
 **Palette pattern:** navy / corporate blue + white + grey  
 **Signature moves:** trust logos, security/compliance badges, case study cards, feature table, partner logos  
-**Components to lead with:** `hero(layout:'centered')`, `grid`, `feature`, `stat`, `testimonial` with company name
+**Components to lead with:** `hero(layout:'centered')`, `grid`, `feature`, `stat`, `card` (testimonial with company name in the footer slot)
 
 ---
 
@@ -128,7 +128,7 @@ When you choose a design direction, tell the user which one you're using and why
 **Typography:** impact / black weight / giant, sometimes rotated via CSS transform  
 **Palette pattern:** black + white + ONE violent accent (red / lime / hot pink)  
 **Signature moves:** asymmetric grid, oversized section numbers, text-only nav, full bleed images bleeding into sections, no visual fluff  
-**Components to lead with:** raw `section`, `container`, `heading`, `gallery` (no rounded), `decorate(pattern:'noise')`
+**Components to lead with:** raw `section`, `container`, `heading`, `uiImage` (no rounded), CSS noise texture (creative override)
 
 ---
 
@@ -138,8 +138,8 @@ When you choose a design direction, tell the user which one you're using and why
 **Geometry:** sharp (2–4px), glowing borders, glassmorphism  
 **Typography:** monospace or geometric sans, colour gradient on headings  
 **Palette pattern:** very dark bg (#0a0a0f) + neon accent (cyan / green / magenta)  
-**Signature moves:** blurred glow backgrounds, animated grid lines (CSS), terminal code window, token/protocol stats  
-**Components to lead with:** `hero` with gradient, `codeWindow`, `stat`, `section(variant:'spotlight')`, `grid`
+**Signature moves:** blurred glow backgrounds, animated grid lines (CSS), terminal code window (raw `<pre><code>`, creative override), token/protocol stats  
+**Components to lead with:** `hero` with gradient, `stat`, `section(variant:'spotlight')`, `grid`
 
 ---
 
@@ -166,7 +166,7 @@ When you choose a design direction, tell the user which one you're using and why
 ## Cross-cutting rules
 
 - Never default to centered hero + feature grid + pricing + FAQ without checking if a different layout suits the product better.
-- The `marquee` component is great for trust logos, client names, and tech stack badges — use it on agency/corporate/SaaS directions.
-- The `photoCard` and `gallery` components are underused — deploy them whenever the product has visual appeal (food, fitness, places, products).
-- `decorate` backgrounds (dots, grid, noise, lines) add texture without images — especially useful on retro, brutalist, and paper directions.
+- A CSS-only scrolling strip (raw HTML + `@keyframes`, creative override) is great for trust logos, client names, and tech stack badges — use it on agency/corporate/SaaS directions.
+- Photo-forward layouts (`uiImage` inside `grid`) are underused — deploy them whenever the product has visual appeal (food, fitness, places, products).
+- Subtle background textures (dot-grid, noise, lines via inline SVG or CSS gradients, creative override) add texture without images — especially useful on retro, brutalist, and paper directions.
 - `section(variant:'diagonal')` → bold / agency; `section(variant:'paper')` → warm / retro; `section(variant:'spotlight')` → dark tech / neon.

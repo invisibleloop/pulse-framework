@@ -3,7 +3,9 @@
  *
  * A complete landing page for a mobile app — nav, hero, features,
  * stats, testimonials, pricing, FAQ, CTA, footer.
- * Built entirely from Pulse UI components, zero custom HTML.
+ * Built entirely from Pulse UI components (testimonials and pricing tiers
+ * use card() — the former testimonial()/pricing() components were removed
+ * from the library as narrow single-purpose wrappers).
  */
 
 import { asset } from '../../lib/layout.js'
@@ -16,8 +18,8 @@ import {
   grid,
   feature,
   stat,
-  testimonial,
-  pricing,
+  card,
+  badge,
   accordion,
   cta,
   footer,
@@ -30,6 +32,7 @@ import {
   iconZap,
   iconRefresh,
   iconBarChart,
+  iconStar,
 } from '../../../../src/ui/index.js'
 
 // ── Navigation ────────────────────────────────────────────────────────────────
@@ -164,6 +167,15 @@ const featuresSection = section({
 
 // ── Testimonials ──────────────────────────────────────────────────────────────
 
+// Testimonial card — replaces the removed testimonial() component with card()
+const testimonialCard = ({ quote, name, role, rating }) => card({
+  content: `
+    <div class="u-flex u-gap-1" aria-hidden="true" style="color:var(--ui-accent)">${iconStar({ size: 14 }).repeat(rating)}</div>
+    <p class="u-mt-3" style="font-style:italic">&ldquo;${quote}&rdquo;</p>
+  `,
+  footer: `<p class="u-font-bold">${name}</p><p class="u-text-sm u-text-muted">${role}</p>`,
+})
+
 const testimonialsSection = section({
   id:       'testimonials',
   variant:  'alt',
@@ -175,15 +187,30 @@ const testimonialsSection = section({
       cols: 3,
       gap:  'md',
       content: [
-        testimonial({ quote: 'I\'ve tried every journaling app out there. Lumio is the first one that actually helped me understand why I was feeling burnt out. The AI insights are genuinely useful, not gimmicky.', name: 'Sarah K.',     role: 'Product Designer',     rating: 5 }),
-        testimonial({ quote: 'The streak feature sounds simple but it completely changed my relationship with writing. 112 days in and I haven\'t missed one. My therapist noticed a difference before I did.',            name: 'Marcus T.',    role: 'Software Engineer',    rating: 5 }),
-        testimonial({ quote: 'I was sceptical about the AI part but it\'s surprisingly good at spotting patterns. It told me I write less when I skip my morning run — completely true and now I use it as motivation.', name: 'Priya R.',     role: 'Clinical Psychologist', rating: 5 }),
+        testimonialCard({ quote: 'I\'ve tried every journaling app out there. Lumio is the first one that actually helped me understand why I was feeling burnt out. The AI insights are genuinely useful, not gimmicky.', name: 'Sarah K.',     role: 'Product Designer',     rating: 5 }),
+        testimonialCard({ quote: 'The streak feature sounds simple but it completely changed my relationship with writing. 112 days in and I haven\'t missed one. My therapist noticed a difference before I did.',            name: 'Marcus T.',    role: 'Software Engineer',    rating: 5 }),
+        testimonialCard({ quote: 'I was sceptical about the AI part but it\'s surprisingly good at spotting patterns. It told me I write less when I skip my morning run — completely true and now I use it as motivation.', name: 'Priya R.',     role: 'Clinical Psychologist', rating: 5 }),
       ].map(t => `<div>${t}</div>`).join(''),
     }),
   }),
 })
 
 // ── Pricing ───────────────────────────────────────────────────────────────────
+
+// Pricing tile — replaces the removed pricing() component with card()
+const pricingCard = ({ name, price, period, description, features, badge: badgeLabel, highlighted, action }) => card({
+  variant: highlighted ? 'elevated' : 'bordered',
+  content: `
+    ${badgeLabel ? badge({ label: badgeLabel }) : ''}
+    <h3 class="u-text-xl u-font-bold u-mt-2">${name}</h3>
+    <p class="u-text-3xl u-font-bold u-mt-2">${price}<span class="u-text-sm u-text-muted">${period}</span></p>
+    <p class="u-text-sm u-text-muted u-mt-2">${description}</p>
+    <ul class="u-mt-4 u-flex u-flex-col u-gap-2">
+      ${features.map(f => `<li>${f}</li>`).join('')}
+    </ul>
+  `,
+  footer: action,
+})
 
 const pricingSection = section({
   id:       'pricing',
@@ -197,7 +224,7 @@ const pricingSection = section({
       cols: 3,
       gap:  'md',
       content: [
-        pricing({
+        pricingCard({
           name:        'Free',
           price:       '£0',
           period:      'forever',
@@ -211,7 +238,7 @@ const pricingSection = section({
           ],
           action: button({ label: 'Get started free', href: '#download', variant: 'outline', full: true }),
         }),
-        pricing({
+        pricingCard({
           name:        'Pro',
           price:       '£4.99',
           period:      '/month',
@@ -228,7 +255,7 @@ const pricingSection = section({
           ],
           action: button({ label: 'Start free trial', href: '#download', full: true }),
         }),
-        pricing({
+        pricingCard({
           name:        'Family',
           price:       '£9.99',
           period:      '/month',

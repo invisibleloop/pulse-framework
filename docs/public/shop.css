@@ -41,12 +41,46 @@ body {
   padding: var(--ui-space-16) var(--ui-space-6) var(--ui-space-8);
 }
 
-.product-display .ui-display-heading {
+.product-display .product-display-title {
   font-size: clamp(3rem, 10vw, 8rem);
   line-height: 1;
   letter-spacing: -0.04em;
   font-weight: 700;
   color: var(--ui-text);
+}
+
+/* Section eyebrow + rule — replaces the removed sectionLabel() component */
+.shop-section-label {
+  margin-bottom: var(--ui-space-6);
+}
+.shop-section-label-eyebrow {
+  font-size: var(--ui-text-sm);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--ui-color-muted);
+  margin-bottom: var(--ui-space-2);
+}
+.shop-section-label-heading {
+  margin-bottom: var(--ui-space-3);
+}
+.shop-section-label-rule {
+  border: none;
+  border-top: 1px solid var(--ui-border);
+}
+
+/* End-of-page metadata — replaces the removed colophon() component */
+.shop-colophon {
+  padding: var(--ui-space-8) var(--ui-space-6);
+  text-align: center;
+  border-top: 1px solid var(--ui-border);
+}
+.shop-colophon-inner {
+  font-size: var(--ui-text-sm);
+  color: var(--ui-color-muted);
+}
+.shop-colophon-inner a {
+  color: inherit;
 }
 
 .product-display .product-tagline {

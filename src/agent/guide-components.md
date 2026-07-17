@@ -10,7 +10,7 @@ import { nav, hero, feature, button, card, stat, grid, section, container, iconZ
 meta: { styles: ['/pulse-ui.css', '/app.css'] }
 ```
 
-Interactive components (carousel, tooltip) also need `/pulse-ui.js` in `meta.scripts`. Modal is handled natively by the Pulse runtime — no extra script needed.
+Interactive components (tooltip) also need `/pulse-ui.js` in `meta.scripts`. Modal is handled natively by the Pulse runtime — no extra script needed.
 
 ### Component root CSS classes
 
@@ -37,8 +37,6 @@ Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The r
 | `stack` | `.ui-stack` | |
 | `cluster` | `.ui-cluster` | |
 | `feature` | `.ui-feature` | |
-| `testimonial` | `.ui-testimonial` | |
-| `pricing` | `.ui-pricing` | |
 | `accordion` | `.ui-accordion` | |
 | `cta` | `.ui-cta` | |
 | `footer` | `.ui-footer` | |
@@ -47,24 +45,11 @@ Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The r
 | `progress` | `.ui-progress` | |
 | `breadcrumbs` | `.ui-breadcrumbs` | |
 | `stepper` | `.ui-stepper` | |
-| `timeline` | `.ui-timeline` | |
-| `carousel` | `.ui-carousel` | |
 | `tooltip` | `.ui-tooltip` | |
 | `appBadge` | `.ui-app-badge` | |
-| `banner` | `.ui-banner` | |
 | `uiImage` | `.ui-image` | |
-| `gallery` | `.ui-gallery` | |
-| `photoCard` | `.ui-photo-card` | |
-| `marquee` | `.ui-marquee` | |
-| `decorate` | `.ui-decorate` | Inline SVG — parent needs `position: relative` |
-| `codeWindow` | `.ui-code-window` | |
 | `segmented` | `.ui-segmented` | |
 | `rating` | `.ui-rating` | |
-| `entryList` | `.ui-entry-list` | Editorial — tabular list with metadata |
-| `displayHeading` | `.ui-display-heading` | Editorial — large typographic heading |
-| `sectionLabel` | `.ui-section-label` | Editorial — eyebrow + h2 + rule |
-| `dropCap` | `.ui-drop-cap` | Editorial — first-letter treatment |
-| `colophon` | `.ui-colophon` | Editorial — minimal footer |
 
 
 
@@ -73,7 +58,7 @@ Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The r
 Server-rendered SVG charts — no JS, no dependencies. Drop into any card, section, or grid.
 
 ```js
-import { barChart, lineChart, donutChart, sparkline } from '@invisibleloop/pulse/ui'
+import { barChart, lineChart, donutChart, sparkline } from '@invisibleloop/pulse/charts'
 
 barChart({
   data: [{ label: 'Jan', value: 42 }, { label: 'Feb', value: 78 }],
@@ -178,85 +163,76 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | `breadcrumbs` | `items` ([{label,href}] — last item has no href), `separator` |
 | `stepper` | `steps` (array of label strings), `current` (0-based) |
 | `uiImage` | `src`, `alt`, `caption`, `ratio`, `rounded`, `pill`, `width`, `height`, `maxWidth` |
-| `gallery` | `images` ([{src,alt,caption?,href?}]), `layout` (grid/strip/masonry), `cols` (1–4), `gap` (sm/md/lg), `rounded`, `ratio` — responsive image grid |
-| `photoCard` | `src`, `alt`, `caption`, `tilt` (CSS rotate degrees, e.g. 2 or -1.5), `rounded`, `ratio` — polaroid-style card with optional tilt |
-| `marquee` | `items` (array of HTML strings), `speed` (seconds, default 30), `gap`, `direction` (left/right), `pause` (hover pause), `fade` — CSS-only infinite scroll strip. Ideal for logos, trust badges |
-| `decorate` | `pattern` (dots/grid/lines/zigzag/cross), `color`, `opacity`, `size` — inline SVG overlay. Parent needs `position: relative` (add class `u-relative`) |
 | `pullquote` | `quote`, `cite`, `size` (md/lg) |
-| `timeline` | `direction` (vertical/horizontal), `items` ([{dot,dotColor,label,content}]) |
-| `timelineItem` | `content`, `label`, `dot`, `dotColor` (accent/success/warning/error/muted) |
+
+Image galleries, photo grids, logo/trust marquees, and timelines have no dedicated component — build them with `grid()` / `stack()` + `uiImage()` and raw HTML (creative override), or a CSS-only scrolling strip for marquee-style content.
 
 ### Typography components
 
 | Component | Key props |
 |-----------|-----------|
 | `heading` | `level` (1–6), `text`, `size` (xs–4xl, overrides level default), `color` (default/muted/accent), `balance` (true — prevents orphaned words) |
-| `list` | `items` (array of HTML strings), `ordered`, `gap` (xs/sm/md) |
 | `prose` | `content` (raw HTML — not escaped), `size` (sm/base/lg) — for CMS/markdown content you don't control |
 
-**Never write raw `<h1>`–`<h6>` or `<ul>`/`<ol>` without styling.** Use `heading()` and `list()` instead. *(Mode A only — in a creative override, raw headings styled directly with utility classes or custom CSS are correct. The `heading()` component adds wrapper markup that can fight custom layouts.)*
+**Never write raw `<h1>`–`<h6>` without styling.** Use `heading()` instead. *(Mode A only — in a creative override, raw headings styled directly with utility classes or custom CSS are correct. The `heading()` component adds wrapper markup that can fight custom layouts.)* There is no dedicated list component — write `<ul>`/`<ol>` directly, styled with utility classes or `app.css`.
 
-**Heading order across components.** `card`, `feature`, `section`, `pricing`, `cta`, and `modal` all accept a `level` prop. Use it to keep the document outline correct without changing visual style. For example, if a page has an h2 section title and each card inside it has a title, pass `level: 3` on the cards (the default) — but if the cards are the first heading on the page, pass `level: 2`. The CSS class stays the same (`ui-card-title` etc.) so appearance is unaffected.
+**Heading order across components.** `card`, `feature`, `section`, `cta`, and `modal` all accept a `level` prop. Use it to keep the document outline correct without changing visual style. For example, if a page has an h2 section title and each card inside it has a title, pass `level: 3` on the cards (the default) — but if the cards are the first heading on the page, pass `level: 2`. The CSS class stays the same (`ui-card-title` etc.) so appearance is unaffected.
 
 **`balance: true`** on `heading()` prevents orphaned words. Apply to any heading the verification orphan check flags.
 
-Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()`/`list()` when writing content yourself.
+Use `prose()` for HTML from external sources (CMS, markdown). Use `heading()` when writing headings yourself.
 
-### Editorial components
+### Editorial / typographic layouts
 
-Editorial/typographic primitives for non-SaaS layouts: paperback books, vintage magazines, editorial sites, portfolio pages. These complement the landing-page-focused components (hero, feature, cta) when the design needs structure that's tabular, asymmetric, or typography-led.
+There is no dedicated editorial component family — for non-SaaS layouts (paperback books, vintage magazines, editorial sites, portfolio pages) needing structure that's tabular, asymmetric, or typography-led, compose from `heading()`, `prose()`, `pullquote()`, `divider()`, and raw HTML styled with utility classes or `app.css` (creative override).
 
-| Component | Key props | Use for |
-|-----------|-----------|---------|
-| `entryList` | `items` ([{meta, title, description}]), `metaLabel` (accessible name for meta column — e.g. "Year") | Backlists, release notes, changelogs, project archives, talk logs |
-| `displayHeading` | `text`, `level` (1–6), `maxWidth` (ch units, default 20), `balance` (true), `tracking` ('tight'\|'normal'\|'wide') | Hero titles, chapter openings, large typographic moments |
-| `sectionLabel` | `eyebrow`, `heading`, `level` (1–6, default 2), `rule` (true — show horizontal rule), `align` ('left'\|'center') | Section dividers, chapter labels, content blocks |
-| `dropCap` | `letter` (the drop cap letter or word), `content` (rest of paragraph), `lines` (height in lines, default 3) | First-paragraph treatment, editorial openings |
-| `colophon` | `content` (HTML slot), `align` ('center'\|'left') | Paperback-style footer — minimal, tight type, no columns |
-
-#### When to use editorial components
-
-Use these when the design direction is **editorial**, **retro**, **brutalist**, or **paper** vibe, or when the content structure is naturally tabular (list of books, releases, projects). They're shaped for asymmetry and typography-first layouts, not centred hero + three-column features.
-
-**Example: Book backlist**
+**Example: Book backlist** — a tabular list of items, built with raw HTML inside `stack()`:
 ```js
-entryList({
-  metaLabel: 'Year',
-  items: [
-    { meta: '2023', title: 'The Argent Ghost', description: 'A tale of time-travel and lost identity.' },
-    { meta: '2021', title: 'Signal Drift',      description: 'First contact from a dead civilization.' },
-    { meta: '2019', title: 'Cold Equations',    description: 'Survival at the edge of known space.' },
-  ],
+stack({
+  gap: 'md',
+  content: books.map(b => `
+    <div class="book-entry">
+      <span class="book-entry-year">${b.year}</span>
+      <div>
+        <h3>${b.title}</h3>
+        <p>${b.description}</p>
+      </div>
+    </div>
+  `).join(''),
 })
 ```
 
-**Example: Editorial hero**
+**Example: Editorial hero** — a large display title with a custom-styled heading, and a first-paragraph drop-cap treatment via CSS (`::first-letter`) rather than a component:
 ```js
-${displayHeading({ text: 'In Search of Lost Code', level: 1, tracking: 'tight' })}
-${dropCap({ letter: 'T', content: 'he first computers were humans, pencil-wielding calculators in windowless rooms, computing artillery trajectories by hand...' })}
+${heading({ level: 1, text: 'In Search of Lost Code', class: 'display-heading' })}
+<p class="drop-cap">The first computers were humans, pencil-wielding calculators in windowless rooms, computing artillery trajectories by hand...</p>
 ```
 
-**Example: Section divider**
+**Example: Section divider** — an eyebrow + heading + rule, built directly:
 ```js
-sectionLabel({ eyebrow: 'Chapter 3', heading: 'The Rise of Symbolic Logic', rule: true })
+`<div class="section-label">
+  <p class="section-label-eyebrow">Chapter 3</p>
+  ${heading({ level: 2, text: 'The Rise of Symbolic Logic' })}
+  ${divider()}
+</div>`
 ```
 
-**Example: Minimal footer for an editorial page**
+**Example: Minimal footer for an editorial page** — plain HTML rather than `footer()`, when the page wants a tight, columnless colophon:
 ```js
-colophon({
-  content: `<p>© 2025 Alden Press • Set in Lyon Text and Atlas Grotesk</p>
-  <p><a href="/about">About</a> • <a href="/contact">Contact</a></p>`,
-})
+`<footer class="colophon">
+  <p>© 2025 Alden Press • Set in Lyon Text and Atlas Grotesk</p>
+  <p><a href="/about">About</a> • <a href="/contact">Contact</a></p>
+</footer>`
 ```
 
-**Composition:** Editorial components work inside `section()` + `container()` like any other Pulse component. Use `prose()` for body text, `sectionLabel()` for section breaks, `entryList()` for tabular content, `displayHeading()` for large type moments, and `colophon()` instead of `footer()` for editorial pages.
+**Composition:** These layouts work inside `section()` + `container()` like any other Pulse component. Use `prose()` for body text, `heading()` for large type moments, and custom CSS classes (defined in `app.css` with tokens from `theme.css`) for editorial-specific presentation.
 
 #### When components feel restrictive
 
 **Symptom:** You're fighting a component's wrapper styles (padding, max-width, centering) in your CSS overrides.
 
 **Solutions:**
-1. **Use the right component for your design.** If the page is editorial/typographic, use the editorial components (`displayHeading`, `sectionLabel`, `entryList`, `colophon`) instead of trying to force `hero()`, `feature()`, `cta()` into an editorial shape.
+1. **Use the right approach for your design.** If the page is editorial/typographic, compose from `heading()`, `prose()`, and raw HTML (creative override) instead of trying to force `hero()`, `feature()`, `cta()` into an editorial shape.
 2. **Write custom markup for structural differences.** Components provide sensible defaults for common patterns. When your design structure diverges significantly (asymmetric grid, full-bleed sections, custom positioning), write the HTML directly — that's permitted for layouts. Use components for the UI primitives (`button`, `card`, `input`, `badge`), but write the outer structure yourself.
 3. **Override with higher specificity.** Component wrappers use single class names (`.ui-hero`, `.ui-cta`). Override with a more specific selector in your `app.css`:
    ```css
@@ -276,9 +252,9 @@ For example:
 - `hero()` with `vibe: 'editorial'` still renders eyebrow + title + subtitle + actions (SaaS structure)
 - The vibe adjusts the font sizes, tracking, and spacing, but the component HTML is unchanged
 
-**If you need different HTML structure for an editorial design** — e.g., a large display title + asymmetric layout + drop cap instead of eyebrow/subtitle/actions — use the editorial components (`displayHeading`, `dropCap`, `sectionLabel`) or write custom markup. Do not expect `hero()` to become structurally editorial when `vibe: 'editorial'` is set.
+**If you need different HTML structure for an editorial design** — e.g., a large display title + asymmetric layout + drop cap instead of eyebrow/subtitle/actions — write custom markup styled with `heading()`/`prose()` plus utility classes or `app.css`. Do not expect `hero()` to become structurally editorial when `vibe: 'editorial'` is set.
 
-This is by design: vibes are a paint job, not a structural transformation. Components stay predictable and testable. When the design structure itself differs from the SaaS patterns (centred hero, three-column features, pricing cards), reach for the editorial components or custom layout instead of trying to force `hero()` / `feature()` / `cta()` into shapes they weren't designed for.
+This is by design: vibes are a paint job, not a structural transformation. Components stay predictable and testable. When the design structure itself differs from the SaaS patterns (centred hero, three-column features, pricing cards), reach for custom layout instead of trying to force `hero()` / `feature()` / `cta()` into shapes they weren't designed for.
 
 ### Landing page components
 
@@ -288,11 +264,11 @@ This is by design: vibes are a paint job, not a structural transformation. Compo
 | `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates image layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `layout` (split/asymmetric/overlap — when image provided: 'split'=50/50, 'asymmetric'=60/40 text-heavy, 'overlap'=image fills section with text overlay), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value), `eyebrowColor` |
 | `phoneFrame` | `content` (HTML slot — rendered inside the phone screen), `animate` (boolean, default `false` — enables a gentle 3-D tilt on hover). Pure CSS phone mockup with dynamic island, side buttons, home indicator. Use as the `image` slot in `hero()` for app landing pages. Add `animate: true` whenever the phone is a prominent hero element. |
 | `feature` | `image` (HTML slot — rendered above icon), `icon` (HTML slot), `title`, `level` (1–6, default 3), `description` (or `body` as alias), `center` |
-| `testimonial` | `quote`, `name`, `role`, `src`, `rating` (1–5) |
-| `pricing` | `name`, `level` (1–6, default 3), `price`, `period`, `features` ([strings]), `action` (HTML slot), `highlighted` |
 | `accordion` | `items` ([{question,answer}]) — native `<details>`, no JS |
 | `appBadge` | `store` (apple/google), `href` — **always use this for App Store / Google Play download buttons. Never write a raw `<a>` with an SVG badge image.** Designed to sit in a `hero()` `actions` slot or anywhere a download CTA is needed. |
 | `cta` | `eyebrow`, `title`, `level` (1–6, default 2), `subtitle` (or `body` as alias), `actions` (HTML slot), `align` (center/left) |
+
+There is no dedicated `testimonial` or `pricing` component. Build a testimonial with `card({ content, footer })` — the quote in `content`, an `avatar()` + name/role in `footer`. Build a pricing table with `grid()` of `card({ title, content, footer })` tiles — one card per plan, `variant: 'elevated'` on the highlighted plan.
 
 ### Layout components
 
@@ -304,10 +280,10 @@ This is by design: vibes are a paint job, not a structural transformation. Compo
 | `stack` | `content`, `gap` (xs–xl), `align` — flex column |
 | `cluster` | `content`, `gap`, `justify`, `align` — flex row with wrap |
 | `divider` | `label` |
-| `banner` | `content`, `variant` |
 | `media` | `image` (HTML slot), `content` (HTML slot), `reverse` — two-column image + text |
-| `codeWindow` | `content` (highlighted code HTML), `filename`, `lang` |
 | `footer` | `logo`, `logoHref`, `links` (flat: `[{label,href}]`), `legal`, `background`, `color` — **Rich layout:** add `columns: [{title, links:[{label,href}]}]` to switch to multi-column mode; also accepts `subscribe` (HTML slot), `wordmark` (giant display text) |
+
+There is no dedicated `banner` (thin announcement strip) or `codeWindow` (syntax-highlighted code frame) component. Build a banner as a small raw `<div>` strip styled with utility classes. Build a code window with a raw `<pre><code>` block (creative override), styled via `app.css`.
 
 ### Modal / dialog
 
