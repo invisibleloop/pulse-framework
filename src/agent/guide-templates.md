@@ -36,9 +36,9 @@ When the vibe is **playful, bold, brutalist, retro, or neon**, run `pulse_sketch
 **What this means in practice for expressive vibes:**
 
 - The template tells you *what to include* (a hero, features, social proof, CTA). It does **not** tell you how to arrange them or what shape they take.
-- Full-colour section blocks, oversized typography heroes, marquee strips, dense grids, and palette-as-structure are all fair game.
+- Full-colour section blocks, oversized typography heroes, CSS-only scrolling strips, dense grids, and palette-as-structure are all fair game.
 - The `phoneFrame` in Mobile App Landing is **not mandatory** — a full-bleed game board, an oversized illustration, or a typography-only hero may serve the brief better.
-- `feature()` in a 3-column grid is the most predictable layout on the web. If the brief is "fun and bold", use a marquee strip of features, a zigzag alternating layout, or full-bleed feature sections instead.
+- `feature()` in a 3-column grid is the most predictable layout on the web. If the brief is "fun and bold", use a scrolling strip of features (raw HTML + CSS `@keyframes`, creative override), a zigzag alternating layout, or full-bleed feature sections instead.
 
 ---
 
@@ -115,8 +115,8 @@ Record the intake answers. If the user provides palette hex values, note which a
 | Hero | `hero` (split layout) with `phoneFrame` mockup |
 | Stats bar | `stat` × 4 in a `grid` |
 | Features | `feature` × 6 in a `grid` |
-| Testimonials | `testimonial` × 3 in a `grid` |
-| Pricing | `pricing` × 3 (Free / Pro / Family) in a `grid` |
+| Testimonials | `card({ content, footer })` × 3 in a `grid` |
+| Pricing | `card({ title, content, footer })` × 3 (Free / Pro / Family) in a `grid` |
 | FAQ | `accordion` |
 | Download CTA | `cta` with `appBadge` |
 | Footer | `footer` with logo, links, legal |
@@ -326,7 +326,7 @@ Do NOT set `meta.theme: 'light'` on dark templates — the default pulse-ui them
 | Stats strip | `stat` × 4 in `grid` — clients, rating, years, availability |
 | Services | `card` × 6 in `grid` with name, description, and price |
 | About | Two-column: photo + team bio with trust badges |
-| Reviews | `testimonial` × 3 in `grid` |
+| Reviews | `card({ content, footer })` × 3 in `grid` |
 | Contact / Hours | Two-column: address/phone/hours + booking form |
 | CTA banner | `cta` with offer (e.g. 10% off first visit) |
 | Footer | `footer` with address in `legal` |
@@ -394,7 +394,7 @@ Portfolio templates rarely need a separate theme CSS — the default dark palett
 | Nav | `nav` with event logo, links, Get Tickets CTA |
 | Hero | `hero(size:'xl', align:'center')` with gradient background |
 | Stats strip | `stat` × 4 — days, speakers, attendees, tracks |
-| Sponsor logos | `marquee` with sponsor names/logos |
+| Sponsor logos | `cluster()` row, or raw HTML + CSS `@keyframes` scrolling strip (creative override) with sponsor names/logos |
 | Speakers | `card` × 8 in `grid` with photo, name, role, topic |
 | Schedule | `accordion` — one item per day with time/session/location |
 | Venue | Two-column: venue info + photo |

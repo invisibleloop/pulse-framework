@@ -2319,3 +2319,70 @@ hr.doc-hr {
   word-break: break-all;
   line-height: 1.4;
 }
+
+/* ── How It Works — numbered vertical flow diagram ──────────────────────────
+   Raw HTML (creative override), replacing the removed timeline()/
+   timelineItem() components — see docs/src/pages/how-it-works.js. */
+.hiw-flow {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hiw-flow-item {
+  display: flex;
+  gap: 1rem;
+}
+
+.hiw-flow-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hiw-flow-dot {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  font-size: 1rem;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.hiw-flow-connector {
+  width: 2px;
+  background: var(--border);
+  flex: 1;
+  min-height: 0.75rem;
+}
+
+.hiw-flow-item:first-child .hiw-flow-connector--before,
+.hiw-flow-item:last-child  .hiw-flow-connector--after {
+  visibility: hidden;
+}
+
+.hiw-flow-main {
+  flex: 1;
+  padding-bottom: 1.75rem;
+}
+
+.hiw-flow-item:last-child .hiw-flow-main {
+  padding-bottom: 0;
+}
+
+.hiw-flow-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}

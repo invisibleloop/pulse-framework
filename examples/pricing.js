@@ -2,7 +2,9 @@
  * Pulse — Pricing page example
  *
  * Demonstrates:
- *   - Landing page components (nav, pricing, accordion, cta, footer)
+ *   - Landing page components (nav, accordion, cta, footer)
+ *   - Pricing tiers rendered with card() — the former pricing() component
+ *     was removed from the library as a narrow single-purpose wrapper
  *   - Billing-period toggle (monthly / annual) via mutation
  *   - Layout components (section, container, stack, cluster, grid)
  *   - No server data — fully static, still gets streaming SSR
@@ -11,10 +13,26 @@
  */
 
 import {
-  nav as uiNav, pricing, accordion, cta, footer as uiFooter,
+  nav as uiNav, card, badge, accordion, cta, footer as uiFooter,
   section as uiSection, container, stack, cluster,
   button, heading,
 } from '../src/ui/index.js'
+
+// Pricing tile — replaces the removed pricing() component with card()
+const pricingCard = ({ name, price, period, description, features, badge: badgeLabel, highlighted, action, level = 2 }) => card({
+  variant: highlighted ? 'elevated' : 'bordered',
+  class:   'pr-plan',
+  content: `
+    ${badgeLabel ? badge({ label: badgeLabel }) : ''}
+    <h${level} class="u-text-xl u-font-bold u-mt-2">${name}</h${level}>
+    <p class="u-text-3xl u-font-bold u-mt-2"><span class="pr-plan-amount">${price}</span><span class="u-text-sm u-text-muted">${period}</span></p>
+    <p class="u-text-sm u-text-muted u-mt-2">${description}</p>
+    <ul class="u-mt-4 u-flex u-flex-col u-gap-2">
+      ${features.map(f => `<li>${f}</li>`).join('')}
+    </ul>
+  `,
+  footer: action,
+})
 
 const PLANS = {
   monthly: [
@@ -181,7 +199,7 @@ export default {
       ${state.billing === 'annual' ? `<p class="pr-annual-note">Annual plans are billed yearly. Prices shown are monthly equivalents.</p>` : ''}
 
       <div class="pr-plans">
-        ${plans.map(p => pricing({ ...p, level: 2 })).join('')}
+        ${plans.map(p => pricingCard({ ...p, level: 2 })).join('')}
       </div>
 
     ` }) }) })}

@@ -3,7 +3,7 @@
 - meta.styles — array of CSS paths loaded as <link rel="stylesheet">. Always include '/app.css'.
 - meta.scripts — array of JS paths loaded as <script defer>. Required for interactive UI components.
 
-Interactive Pulse UI components (carousel, modal, accordion, tooltip) require BOTH:
+Interactive Pulse UI components (tooltip) require BOTH:
 ```js
 meta: {
   styles: ['/app.css', '/pulse-ui.css'],
@@ -125,7 +125,7 @@ meta: {
 |---|---|---|
 | `warm` | radius 14px, softer letter-spacing | rounded photo cards, `section: paper`, warm palette |
 | `editorial` | radius 0, serif display font, tight letter-spacing | `hero layout: overlap`, `section: diagonal`, `pullquote` |
-| `playful` | radius 22px, neutral letter-spacing | `gallery` with rounded images, `marquee`, bright accent |
+| `playful` | radius 22px, neutral letter-spacing | rounded image grid, scrolling strip (creative override), bright accent |
 | `minimal` | radius 2px, open letter-spacing, no shadows | left-aligned hero, `section: spotlight`, monochrome |
 | `bold` | radius 6px, very tight letter-spacing | `section: dark`, large `stat` components, gradient hero |
 

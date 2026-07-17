@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
-import { grid, card, stat, feature, testimonial } from '../../../../src/ui/index.js'
+import { grid, card, stat, feature } from '../../../../src/ui/index.js'
 
 const { prev, next } = prevNext('/components/grid')
 
@@ -96,18 +96,22 @@ export default {
       )}
 
       <h3 class="doc-h3">Testimonial grid</h3>
+      <p>There is no dedicated <code>testimonial</code> component — build one with <code>card()</code>: the quote in <code>content</code>, the name and role in <code>footer</code>.</p>
       ${demo(
         grid({
           cols: 3,
           content: [
-            testimonial({ quote: 'Shipped our redesign in a weekend. No boilerplate, no config hell.', name: 'Alex Morgan',   role: 'CTO at Launchpad', rating: 5 }),
-            testimonial({ quote: 'The streaming SSR makes our pages feel instant. Lighthouse is happy.', name: 'Sara Kim',    role: 'Lead Engineer, Orbit', rating: 5 }),
-            testimonial({ quote: 'Finally a UI kit that doesn\'t fight the platform. Just HTML.', name: 'Dan Okafor', role: 'Founder, Stackly', rating: 5 }),
+            card({ content: `<p style="color:var(--muted);margin:0">&ldquo;Shipped our redesign in a weekend. No boilerplate, no config hell.&rdquo;</p>`, footer: `<strong>Alex Morgan</strong><br><span style="color:var(--muted)">CTO at Launchpad</span>` }),
+            card({ content: `<p style="color:var(--muted);margin:0">&ldquo;The streaming SSR makes our pages feel instant. Lighthouse is happy.&rdquo;</p>`, footer: `<strong>Sara Kim</strong><br><span style="color:var(--muted)">Lead Engineer, Orbit</span>` }),
+            card({ content: `<p style="color:var(--muted);margin:0">&ldquo;Finally a UI kit that doesn\'t fight the platform. Just HTML.&rdquo;</p>`, footer: `<strong>Dan Okafor</strong><br><span style="color:var(--muted)">Founder, Stackly</span>` }),
           ].join(''),
         }),
         `grid({
   cols: 3,
-  content: testimonials.map(t => testimonial(t)).join(''),
+  content: testimonials.map(t => card({
+    content: \`<p>\${t.quote}</p>\`,
+    footer:  \`<strong>\${t.name}</strong><br>\${t.role}\`,
+  })).join(''),
 })`
       )}
 

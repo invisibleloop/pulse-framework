@@ -1,12 +1,20 @@
 // Recreation of coutumes.com for Pulse capability testing
-// This spec deliberately uses Pulse UI components to document:
-//   - which components cover the design requirements, and
-//   - which new components were needed (marked ★ NEW)
+//
+// component-free — creative override: this editorial fashion recreation relies
+// on several highly custom sections (dual-image blend-mode hero, hover-reveal
+// product cards, 50/50 image pair, large serif brand statement, dismissible
+// announcement bar) that have no generic component equivalent — the former
+// editorialHero/productCard/imagePair/brandStatement/banner components were
+// cut from the library as narrow single-purpose wrappers an agent can
+// hand-roll; this file now hand-rolls them directly with scoped CSS in
+// coutumes.css, using var() tokens throughout. nav(), pullquote() (variant:
+// 'editorial'), grid(), uiImage(), and footer() (rich layout) remain kept
+// components and are unchanged.
 //
 // Substituted fonts: Bebas Neue (→ Plaak 3), Cormorant Garamond (→ Exposure Regular)
 // All photography: placeholder images (originals are proprietary Coutumes photos)
 
-import { nav, banner, editorialHero, pullquote, grid, productCard, imagePair, brandStatement, uiImage, footer, input, button } from '@invisibleloop/pulse/ui'
+import { nav, pullquote, grid, uiImage, footer } from '@invisibleloop/pulse/ui'
 import { asset } from '../../lib/layout.js'
 
 export const spec = {
@@ -30,18 +38,17 @@ export const spec = {
   view: (state) => `
   <main id="main-content">
 
-    <!-- Announcement bar — fixed to bottom, dismissible -->
-    ${state.bannerVisible ? banner({
-      content:      `<span>SILVER LANDS&nbsp;•&nbsp;NEW CAPSULE COLLECTION</span>`,
-      variant:      'promo',
-      position:     'bottom',
-      dismissible:  true,
-      dismissEvent: 'dismissBanner',
-    }) : ''}
+    <!-- Announcement bar — fixed to bottom, dismissible. Raw HTML: the
+         removed banner() component previously rendered this; the dismiss
+         button still wires to the existing dismissBanner mutation. -->
+    ${state.bannerVisible ? `
+      <div class="coutumes-announce" role="banner">
+        <span>SILVER LANDS&nbsp;•&nbsp;NEW CAPSULE COLLECTION</span>
+        <button class="coutumes-announce-close" data-event="click:dismissBanner" aria-label="Close announcement">×</button>
+      </div>
+    ` : ''}
 
-    <!-- Navigation — nav() with utility links in action slot
-         GAP: nav has no second link group; utility links (Search, Magazine, FAQ, Cart)
-         are crammed into the action slot as raw HTML rather than a proper utilityLinks param -->
+    <!-- Navigation — nav() supports a second utilityLinks group natively. -->
     ${nav({
       logo: 'COUTUMES',
       logoHref: '/',
@@ -62,23 +69,26 @@ export const spec = {
       color: 'var(--coutumes-black)',
     })}
 
-    <!-- Hero — ★ NEW: editorialHero() — dual split-image with overlapping blend-mode type.
-         The hero() component could not do this: it only supports a single image side.
-         editorialHero accepts leftImage + rightImage + lines array + blend mode. -->
-    ${editorialHero({
-      leftImage:  `<img src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=700&q=80" alt="Hand holding a cream hat, wearing a dark ring" width="700" loading="eager" fetchpriority="high">`,
-      rightImage: `<img src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=700&q=80" alt="Man leaning against a Land Rover in the countryside" width="700" loading="eager">`,
-      lines:   ['INTRODUCING', 'SILVER LANDS', 'CAPSULE', 'COLLECTION'],
-      heading: 'Silver Lands Capsule Collection',
-      color:   'var(--coutumes-amber)',
-      blend:   'none',
-      ratio:   '3/4',
-      class:   'coutumes-hero',
-    })}
+    <!-- Hero — dual split-image with overlapping blend-mode type. Raw HTML:
+         the removed editorialHero() component previously rendered this
+         mix-blend-mode overlay technique; a real h1 heading element carries
+         the accessible heading while the overlay lines are decorative (aria-hidden). -->
+    <section class="coutumes-hero">
+      <h1 class="coutumes-sr-only">Silver Lands Capsule Collection</h1>
+      <div class="coutumes-hero-images">
+        <div class="coutumes-hero-img">
+          <img src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=700&q=80" alt="Hand holding a cream hat, wearing a dark ring" width="700" loading="eager" fetchpriority="high">
+        </div>
+        <div class="coutumes-hero-img">
+          <img src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=700&q=80" alt="Man leaning against a Land Rover in the countryside" width="700" loading="eager">
+        </div>
+      </div>
+      <div class="coutumes-hero-text" aria-hidden="true">
+        ${['INTRODUCING', 'SILVER LANDS', 'CAPSULE', 'COLLECTION'].map(l => `<span>${l}</span>`).join('')}
+      </div>
+    </section>
 
-    <!-- Editorial quote — ★ ENHANCED: pullquote() with new variant: 'editorial'
-         Previously pullquote only had a left accent border (wrong for this centred
-         large-serif pattern). New variant='editorial' removes the border and centres. -->
+    <!-- Editorial quote — pullquote() variant='editorial' (centred, no border). -->
     <section id="collection">
       ${pullquote({
         quote:   'Open roads with no precise destination, passing landscapes, a few days spent outside with friends. Pieces designed to travel for a long time.',
@@ -88,9 +98,9 @@ export const spec = {
       })}
     </section>
 
-    <!-- Product grid — grid() + ★ NEW: productCard()
-         photoCard() is polaroid-styled (wrong for fashion e-commerce).
-         productCard() is full-bleed with hover-reveal name overlay. -->
+    <!-- Product grid — raw anchor cards (full-bleed image + below-caption
+         name/price), replacing the removed productCard() component.
+         Laid out with the kept grid() component. -->
     ${grid({
       cols:    3,
       gap:     'sm',
@@ -116,43 +126,45 @@ export const spec = {
           price: '£62.00',
           badge: 'NEW',
         },
-      ].map(p => productCard({
-        src:    p.img,
-        alt:    p.alt,
-        name:   p.name,
-        price:  p.price,
-        badge:  p.badge,
-        ratio:  '4/5',
-        layout: 'below',
-      })).join(''),
+      ].map(p => `
+        <a href="#" class="coutumes-product-card">
+          <img src="${p.img}" alt="${p.alt}" loading="lazy" decoding="async">
+          ${p.badge ? `<span class="coutumes-product-badge">${p.badge}</span>` : ''}
+          <div class="coutumes-product-caption">
+            <p class="coutumes-product-name">${p.name}</p>
+            <p class="coutumes-product-price">${p.price}</p>
+          </div>
+        </a>
+      `).join(''),
       class: 'coutumes-product-grid',
     })}
 
-    <!-- 50/50 split editorial images — ★ NEW: imagePair()
-         media() is image + text. There was no component for two editorial photos
-         side by side with no text. imagePair() fills this gap. -->
-    ${imagePair({
-      leftSrc:    'https://picsum.photos/seed/craft/700/900',
-      leftAlt:    'Craftsman working with tools in a jewelry workshop',
-      rightSrc:   'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=700&q=80',
-      rightAlt:   'Elegant boutique storefront with warm lighting',
-      ratio:      '3/4',
-      label:      'Craftmanship and boutique',
-      leftLabel:  'Craftmanship',
-      leftHref:   '#craftmanship',
-      rightLabel: 'Store',
-      rightHref:  '#store',
-    })}
+    <!-- 50/50 split editorial images — raw HTML two-column grid, replacing
+         the removed imagePair() component. media() is image + text and
+         is not a fit for this text-free two-photo layout. -->
+    <div class="coutumes-split-images" aria-label="Craftmanship and boutique">
+      <div class="coutumes-split-col">
+        <div class="coutumes-split-img">
+          <img src="https://picsum.photos/seed/craft/700/900" alt="Craftsman working with tools in a jewelry workshop" loading="lazy" decoding="async">
+        </div>
+        <a href="#craftmanship" class="coutumes-split-link">Craftmanship →</a>
+      </div>
+      <div class="coutumes-split-col">
+        <div class="coutumes-split-img">
+          <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=700&q=80" alt="Elegant boutique storefront with warm lighting" loading="lazy" decoding="async">
+        </div>
+        <a href="#store" class="coutumes-split-link">Store →</a>
+      </div>
+    </div>
 
-    <!-- Large editorial statement — ★ NEW: brandStatement()
-         pullquote() is for shorter attributed quotes (with left border).
-         brandStatement() is for full-width brand-voice paragraphs: large,
-         centred, italic serif. -->
-    ${brandStatement({
-      text: 'pieces that are both eclectic and everyday. Subtly precious, expressive, and refined, our jewelry complements an outfit or disrupts it, introducing new rituals into the modern man&rsquo;s wardrobe.',
-      font: 'serif',
-      size: 'md',
-    })}
+    <!-- Large editorial statement — raw HTML, replacing the removed
+         brandStatement() component. pullquote() is for shorter attributed
+         quotes; this is an unattributed full-width brand-voice paragraph. -->
+    <div class="coutumes-statement">
+      <div class="coutumes-statement-inner">
+        <p>pieces that are both eclectic and everyday. Subtly precious, expressive, and refined, our jewelry complements an outfit or disrupts it, introducing new rituals into the modern man&rsquo;s wardrobe.</p>
+      </div>
+    </div>
 
     <!-- Portrait — uiImage() works well here with maxWidth constraint -->
     ${uiImage({
@@ -163,9 +175,8 @@ export const spec = {
       class:    'coutumes-portrait',
     })}
 
-    <!-- Footer — ★ ENHANCED: footer() with new columns + subscribe + wordmark + background params.
-         The simple footer() only had logo + flat links + legal.
-         New rich variant adds multi-column link grid, subscribe form, and giant wordmark. -->
+    <!-- Footer — footer() already supports the rich layout (columns,
+         subscribe, wordmark, background/color) used here; no changes needed. -->
     ${footer({
       background: 'var(--coutumes-amber)',
       color:      'var(--coutumes-black)',

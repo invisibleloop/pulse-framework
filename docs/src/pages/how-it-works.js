@@ -1,67 +1,73 @@
 import { renderLayout, h1, lead, section, callout } from '../lib/layout.js'
 import { prevNext } from '../lib/nav.js'
-import { timeline, card } from '../../../src/ui/index.js'
+import { card } from '../../../src/ui/index.js'
 
 const { prev, next } = prevNext('/how-it-works')
 
-const agentFlow = timeline({
-  items: [
+// Numbered vertical flow diagram — raw HTML (creative override), replacing
+// the removed timeline()/timelineItem() components. Styled via .hiw-flow*
+// classes in docs.css.
+const flowStep = ({ dot, label, content }) => `
+  <li class="hiw-flow-item">
+    <div class="hiw-flow-side">
+      <div class="hiw-flow-connector hiw-flow-connector--before"></div>
+      <div class="hiw-flow-dot" aria-hidden="true">${dot}</div>
+      <div class="hiw-flow-connector hiw-flow-connector--after"></div>
+    </div>
+    <div class="hiw-flow-main">
+      <span class="hiw-flow-label">${label}</span>
+      <div class="hiw-flow-body">${content}</div>
+    </div>
+  </li>
+`
+
+const agentFlow = `<ol class="hiw-flow">${[
     {
       dot: '1',
-      dotColor: 'accent',
       label: 'Understand',
       content: card({ content: `<strong style="color:var(--ui-text)">Read the guide and inspect the project</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">The agent fetches <code>pulse://workflow</code> and the relevant <code>pulse://guide/*</code> sections, then calls <code>pulse_list_structure</code> to see every existing page, component, and store. Ambiguities are surfaced before any files are touched.</p>` }),
     },
     {
       dot: '2',
-      dotColor: 'accent',
       label: 'Plan',
       content: card({ content: `<strong style="color:var(--ui-text)">Present a plan — wait for confirmation</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">Before writing anything the agent describes what it intends to build: the route, state shape, server data, interactions, and any components or integrations it will use. The task does not proceed until you confirm.</p>` }),
     },
     {
       dot: '3',
-      dotColor: 'accent',
       label: 'Build',
       content: card({ content: `<strong style="color:var(--ui-text)">Write the spec and any supporting files</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">The spec is written as a plain JS object: route, state, server data, mutations, actions, view. The guide constrains every decision — where state lives, how validation is wired, how the view is structured.</p>` }),
     },
     {
       dot: '4',
-      dotColor: 'accent',
       label: 'Validate',
       content: card({ content: `<strong style="color:var(--ui-text)">Call <code>pulse_validate</code> — fix all errors and warnings</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">The spec is checked against the Pulse schema. Every error and warning is resolved before moving on — missing hydrate, heading order violations, missing escaping, structural mistakes. A clean output is the gate to the next phase.</p>` }),
     },
     {
       dot: '5',
-      dotColor: 'accent',
       label: 'Browser',
       content: card({ content: `<strong style="color:var(--ui-text)">Screenshot + Lighthouse — desktop and mobile</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">The agent navigates to the route, takes a screenshot to confirm the rendered output, then runs Lighthouse on both desktop and mobile. Accessibility, Best Practices, and SEO must all be 100. Any failure is fixed and re-verified before continuing.</p>` }),
     },
     {
       dot: '6',
-      dotColor: 'accent',
       label: 'Tests',
       content: card({ content: `<strong style="color:var(--ui-text)">Write tests, run them, fix failures</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">Unit tests cover any pure logic extracted from the spec. View tests use <code>renderSync</code> / <code>render</code> to assert HTML output. All tests must pass. When fixing a bug, a failing test is written first to pin the behaviour.</p>` }),
     },
     {
       dot: '7',
-      dotColor: 'accent',
       label: 'Review',
       content: card({ content: `<strong style="color:var(--ui-text)">Call <code>pulse_review</code> — only after phases 4–6 all pass</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">The agent switches into reviewer mode — reading the source and rendered output against the full spec checklist. Accessibility, empty states, error handling, component usage, and security are all checked. The review agent is always last.</p>` }),
     },
     {
       dot: '8',
-      dotColor: 'accent',
       label: 'Fix and re-verify',
       content: card({ content: `<strong style="color:var(--ui-text)">Fix every review issue — re-run affected gates</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">Every issue raised in review is resolved. Validate, Lighthouse, and tests are re-run to confirm all gates still pass. The task is complete only when every phase clears cleanly.</p>` }),
     },
     {
       dot: '✓',
-      dotColor: 'success',
       label: 'Done',
       content: card({ content: `<strong style="color:var(--ui-text)">The spec is the source of truth</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">Validate clean. Lighthouse 100. Tests passing. Review clear. When all four gates pass, the page is done.</p>` }),
     },
-  ],
-})
+  ].map(flowStep).join('')}</ol>`
 
 export default {
   route: '/how-it-works',

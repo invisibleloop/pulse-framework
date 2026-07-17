@@ -94,8 +94,6 @@ export default {
           ['<a href="/components/hero">hero</a>',             'Full-width hero section with eyebrow, title, and actions.'],
           ['<a href="/components/app-badge">appBadge</a>',    'App Store / Google Play download badge.'],
           ['<a href="/components/feature">feature</a>',       'Icon + title + description block for feature grids.'],
-          ['<a href="/components/testimonial">testimonial</a>', 'Customer quote with avatar and star rating.'],
-          ['<a href="/components/pricing">pricing</a>',       'Plan card with feature list and CTA. Supports highlighted state.'],
           ['<a href="/components/accordion">accordion</a>',   'Collapsible FAQ items — no JS, native <code>&lt;details&gt;</code>.'],
           ['<a href="/components/cta">cta</a>',               'Call-to-action block with eyebrow, heading, body, and actions slot.'],
         ]
@@ -111,9 +109,7 @@ export default {
           ['<a href="/components/stack">stack</a>',         'Flex column with consistent vertical gap.'],
           ['<a href="/components/cluster">cluster</a>',     'Flex row with wrapping — for badges, buttons, etc.'],
           ['<a href="/components/divider">divider</a>',     'Horizontal rule, optionally with centred label.'],
-          ['<a href="/components/banner">banner</a>',       'Full-width announcement bar above the nav.'],
           ['<a href="/components/media">media</a>',             'Two-column image + text layout, stacks on mobile.'],
-          ['<a href="/components/code-window">codeWindow</a>', 'macOS window chrome around a code block. Accepts pre-highlighted HTML.'],
           ['<a href="/components/footer">footer</a>',          'Site footer with logo, nav links, and legal text. Stacks on mobile.'],
         ]
       )}

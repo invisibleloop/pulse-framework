@@ -353,23 +353,23 @@ test('FAQ has entries', () => {
 
 test('pricing: monthly view renders 3 plans', () => {
   const r = renderSync(pricing, { state: { billing: 'monthly' } })
-  assert.equal(r.count('.ui-pricing'), 3)
+  assert.equal(r.count('.pr-plan'), 3)
 })
 
 test('pricing: annual view renders 3 plans', () => {
   const r = renderSync(pricing, { state: { billing: 'annual' } })
-  assert.equal(r.count('.ui-pricing'), 3)
+  assert.equal(r.count('.pr-plan'), 3)
 })
 
 test('pricing: monthly Pro price is £12', () => {
   const r = renderSync(pricing, { state: { billing: 'monthly' } })
-  const prices = r.findAll('.ui-pricing-amount')
+  const prices = r.findAll('.pr-plan-amount')
   assert(prices.some(p => p.text === '£12'), 'monthly Pro should be £12')
 })
 
 test('pricing: annual Pro price is £9', () => {
   const r = renderSync(pricing, { state: { billing: 'annual' } })
-  const prices = r.findAll('.ui-pricing-amount')
+  const prices = r.findAll('.pr-plan-amount')
   assert(prices.some(p => p.text === '£9'), 'annual Pro should be £9')
 })
 

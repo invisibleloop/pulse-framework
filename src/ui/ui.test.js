@@ -20,21 +20,16 @@ import { avatar }      from './avatar.js'
 import { empty }       from './empty.js'
 import { table }       from './table.js'
 import { hero }        from './hero.js'
-import { testimonial } from './testimonial.js'
 import { feature }     from './feature.js'
-import { pricing }     from './pricing.js'
 import { accordion }   from './accordion.js'
 import { nav }         from './nav.js'
 import { appBadge }    from './app-badge.js'
-import { dropCap }     from './drop-cap.js'
-import { gallery }     from './gallery.js'
 import { container }   from './container.js'
 import { section }     from './section.js'
 import { grid }        from './grid.js'
 import { stack }       from './stack.js'
 import { cluster }     from './cluster.js'
 import { divider }     from './divider.js'
-import { banner }      from './banner.js'
 import { media }       from './media.js'
 import { fieldset }    from './fieldset.js'
 import { slider }     from './slider.js'
@@ -521,43 +516,6 @@ test('hero: escapes title and eyebrow', () => {
   assert.doesNotMatch(html, /<b>bad<\/b>/)
 })
 
-// ─── testimonial ─────────────────────────────────────────────────────────────
-
-test('testimonial: renders quote, name, role', () => {
-  const html = testimonial({ quote: 'Great app', name: 'Alice Smith', role: 'CEO' })
-  assert.match(html, /Great app/)
-  assert.match(html, /Alice Smith/)
-  assert.match(html, /CEO/)
-})
-
-test('testimonial: renders stars when rating provided', () => {
-  const html = testimonial({ quote: 'x', name: 'A', rating: 5 })
-  assert.match(html, /ui-testimonial-rating/)
-  assert.match(html, /★★★★★/)
-})
-
-test('testimonial: no stars when rating omitted', () => {
-  assert.doesNotMatch(testimonial({ quote: 'x', name: 'A' }), /ui-testimonial-rating/)
-})
-
-test('testimonial: renders initials when src omitted', () => {
-  const html = testimonial({ quote: 'x', name: 'Alice Smith' })
-  assert.match(html, /ui-testimonial-avatar--initials/)
-  assert.match(html, /AS/)
-})
-
-test('testimonial: renders img when src provided', () => {
-  const html = testimonial({ quote: 'x', name: 'Alice', src: '/photo.jpg' })
-  assert.match(html, /<img/)
-  assert.match(html, /photo\.jpg/)
-})
-
-test('testimonial: escapes quote and name', () => {
-  const html = testimonial({ quote: '<script>', name: '<b>X</b>' })
-  assert.doesNotMatch(html, /<script>/)
-  assert.doesNotMatch(html, /<b>X<\/b>/)
-})
-
 // ─── feature ─────────────────────────────────────────────────────────────────
 
 test('feature: renders title and description', () => {
@@ -576,43 +534,6 @@ test('feature: escapes title and description', () => {
   const html = feature({ title: '<script>', description: '<b>bad</b>' })
   assert.doesNotMatch(html, /<script>/)
   assert.doesNotMatch(html, /<b>bad<\/b>/)
-})
-
-// ─── pricing ─────────────────────────────────────────────────────────────────
-
-test('pricing: renders name, price, period', () => {
-  const html = pricing({ name: 'Pro', price: '$9', period: '/month' })
-  assert.match(html, /ui-pricing-name/)
-  assert.match(html, /\$9/)
-  assert.match(html, /\/month/)
-})
-
-test('pricing: renders feature list', () => {
-  const html = pricing({ name: 'x', price: 'Free', features: ['Unlimited pages', 'Support'] })
-  assert.match(html, /Unlimited pages/)
-  assert.match(html, /Support/)
-  assert.match(html, /ui-pricing-check/)
-})
-
-test('pricing: highlighted adds modifier class', () => {
-  assert.match(pricing({ name: 'x', price: 'x', highlighted: true }), /ui-pricing--highlighted/)
-})
-
-test('pricing: badge renders when provided', () => {
-  const html = pricing({ name: 'x', price: 'x', badge: 'Most popular' })
-  assert.match(html, /ui-pricing-badge/)
-  assert.match(html, /Most popular/)
-})
-
-test('pricing: action slot passes through raw HTML', () => {
-  const html = pricing({ name: 'x', price: 'x', action: '<button>Buy</button>' })
-  assert.match(html, /<button>Buy<\/button>/)
-})
-
-test('pricing: escapes name and description', () => {
-  const html = pricing({ name: '<script>', description: '<b>x</b>' })
-  assert.doesNotMatch(html, /<script>/)
-  assert.doesNotMatch(html, /<b>x<\/b>/)
 })
 
 // ─── accordion ───────────────────────────────────────────────────────────────
@@ -857,32 +778,6 @@ test('divider: has role=separator and aria-label when label provided', () => {
 
 test('divider: escapes label', () => {
   assert.doesNotMatch(divider({ label: '<script>' }), /<script>/)
-})
-
-// ─── banner ──────────────────────────────────────────────────────────────────
-
-test('banner: renders content', () => {
-  assert.match(banner({ content: 'Now available' }), /Now available/)
-})
-
-test('banner: info variant by default', () => {
-  assert.match(banner({ content: '' }), /ui-banner--info/)
-})
-
-test('banner: promo variant adds class', () => {
-  assert.match(banner({ content: '', variant: 'promo' }), /ui-banner--promo/)
-})
-
-test('banner: warning variant adds class', () => {
-  assert.match(banner({ content: '', variant: 'warning' }), /ui-banner--warning/)
-})
-
-test('banner: unknown variant falls back to info', () => {
-  assert.match(banner({ content: '', variant: 'fancy' }), /ui-banner--info/)
-})
-
-test('banner: has role=banner', () => {
-  assert.match(banner({ content: '' }), /role="banner"/)
 })
 
 // ─── media ───────────────────────────────────────────────────────────────────
@@ -1319,38 +1214,6 @@ test('uiImage: wraps in aspect-ratio crop when ratio given', () => {
 
 test('uiImage: escapes src to prevent XSS', () => {
   const html = uiImage({ src: '"><script>alert(1)</script>', alt: '' })
-  assert.doesNotMatch(html, /<script>/)
-})
-
-test('dropCap: inline style carries only the dynamic font-size — alignment lives in CSS', () => {
-  // Regression: a relative inline line-height (lines * 0.8 → 2.4 for 3 lines)
-  // made the float box ~3x the glyph height, so serif caps floated below the
-  // opening line instead of top-aligning. line-height/float/margin now live in
-  // .ui-drop-cap-letter (pulse-ui.css) with a fixed ~cap-height value.
-  const html = dropCap({ letter: 'O', content: 'nce upon a time.' })
-  assert.match(html, /class="ui-drop-cap-letter"/)
-  assert.match(html, /style="font-size:3\.6em"/)
-  assert.doesNotMatch(html, /line-height/)
-  assert.doesNotMatch(html, /float:left/)
-})
-
-test('dropCap: lines option scales the font-size', () => {
-  const html = dropCap({ letter: 'O', content: 'nce.', lines: 5 })
-  assert.match(html, /style="font-size:6em"/)
-})
-
-test('gallery: images are lazy by default', () => {
-  const html = gallery({ images: [{ src: '/a.jpg', alt: 'A' }] })
-  assert.match(html, /loading="lazy"/)
-})
-
-test('gallery: lazy:false renders eager images', () => {
-  const html = gallery({ images: [{ src: '/a.jpg', alt: 'A' }], lazy: false })
-  assert.doesNotMatch(html, /loading="lazy"/)
-})
-
-test('dropCap: escapes letter and content', () => {
-  const html = dropCap({ letter: '<', content: '<script>alert(1)</script>' })
   assert.doesNotMatch(html, /<script>/)
 })
 

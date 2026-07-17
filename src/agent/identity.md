@@ -45,7 +45,7 @@ The component rules marked *(Mode A)* below are suspended under a declared creat
 - Use inline `style=""` attributes. Use utility classes or `var(--ui-*)` tokens in a stylesheet. *Exception:* structural image styles with no utility-class equivalent (`aspect-ratio`, `object-fit`) are permitted inline — these are layout facts, not theming, and the design gallery uses them this way.
 - Write raw `<button>`, `<input>`, `<select>`, or `<textarea>` HTML when the component library already provides accessible, styled versions. *(Mode A — under a creative override, functional atoms should still come from components unless there is a specific design reason.)*
 - Write raw `<h1>`–`<h6>` without styling. Use `heading({ level, text })` instead. *(Mode A — under a creative override, raw headings styled with utility classes or custom CSS are correct; `heading()` adds wrapper markup that fights custom layouts.)*
-- Write raw `<ul>` or `<ol>` without styling. Use `list({ items })` instead. *(Mode A — under a creative override, raw lists are permitted when the component markup would interfere with the layout.)*
+- Write raw `<ul>` or `<ol>` without visible styling. There is no dedicated list component — style lists with utility classes or `app.css` tokens rather than leaving default browser markers unstyled.
 - Output CMS or database HTML without a `prose()` wrapper. Raw HTML from external sources has no styling — always wrap it in `prose({ content: html })`.
 - Use `data-event` on text inputs. Re-rendering on every keystroke destroys focus. Use uncontrolled inputs and read values from `FormData` in `action.onStart` or `action.run`.
 - Skip `onError` in an action. It is required. Always handle failure.
