@@ -6,11 +6,15 @@
  * trust signals, testimonial, and contact strip.
  *
  * Vibe: corporate  Theme: light  Palette: navy / amber
+ *
+ * component-free — creative override: the top utility strip, trust list, and
+ * contact strip are small raw-HTML sections (icon+label pairs / a two-column
+ * bar) that replaced the now-removed topStrip/trustList/contactRow components.
+ * Services use the kept card() component instead of the removed serviceCard().
  */
 
 import {
-  nav, button, footer,
-  topStrip, serviceCard, trustList, contactRow,
+  nav, button, footer, card, grid,
   iconZap, iconShield, iconCheck, iconPhone, iconMail, iconHome, iconClock, iconSettings, iconAlertTriangle, iconStar,
 } from '../../../../src/ui/index.js'
 import { asset } from '../../lib/layout.js'
@@ -67,10 +71,13 @@ const why = [
   },
 ]
 
-const service = (s) => serviceCard({
-  icon:        s.icon,
-  title:       s.title,
-  description: s.body,
+const service = (s) => card({
+  content: `
+    <div class="ui-service-card-icon" aria-hidden="true">${s.icon}</div>
+    <h3 class="ui-service-card-title">${s.title}</h3>
+    <p class="ui-service-card-desc">${s.body}</p>
+  `,
+  class: 'service-card',
 })
 
 const whyItem = (w) => `
@@ -106,12 +113,10 @@ export default {
   },
 
   view: () => `
-    ${topStrip({
-      left:       'Mon–Sat 7am–7pm · 24/7 emergency line',
-      right:      `<a href="${PHONE_HREF}">Call ${PHONE}</a>`,
-      background: 'var(--brand-navy-deep)',
-      color:      'var(--brand-white)',
-    })}
+    <div class="top-strip">
+      <div class="top-strip__left">Mon–Sat 7am–7pm · 24/7 emergency line</div>
+      <div class="top-strip__right"><a href="${PHONE_HREF}">Call ${PHONE}</a></div>
+    </div>
 
     ${nav({
       logo:     '<strong class="brand-mark">Sparkys</strong>',
@@ -153,7 +158,14 @@ export default {
             })}
           </div>
           <div class="hero-split__trust">
-            ${trustList({ items: ['Part P registered', 'NICEIC approved', '£10m insured'] })}
+            <ul class="trust-inline">
+              ${['Part P registered', 'NICEIC approved', '£10m insured'].map(t => `
+                <li class="trust-inline__item">
+                  <span class="trust-inline__icon" aria-hidden="true">${iconCheck({ size: 14 })}</span>
+                  <span>${t}</span>
+                </li>
+              `).join('')}
+            </ul>
           </div>
         </div>
         <aside class="hero-split__panel" aria-label="Sparkys at a glance">
@@ -186,9 +198,7 @@ export default {
             <h2 class="section__title">Domestic, commercial and everything in between.</h2>
             <p class="section__subtitle">One local team, certified for every job — so you don't end up juggling three different trades.</p>
           </header>
-          <div class="services">
-            ${services.map(service).join('')}
-          </div>
+          ${grid({ cols: 3, gap: 'md', content: services.map(service).join(''), class: 'services' })}
         </div>
       </section>
 
@@ -222,13 +232,18 @@ export default {
             <p class="contact-strip__lead">Free, no-obligation quotes for homes and businesses across Ashfield, Mansfield and the wider NG postcodes.</p>
           </div>
           <div class="contact-strip__details">
-            ${contactRow({
-              items: [
+            <ul class="contact-inline">
+              ${[
                 { icon: iconPhone({ size: 18 }), label: PHONE,    href: PHONE_HREF },
                 { icon: iconMail({ size: 18 }),  label: EMAIL,    href: `mailto:${EMAIL}` },
                 { icon: iconClock({ size: 18 }), label: 'Mon–Sat 7am–7pm · 24/7 emergencies' },
-              ],
-            })}
+              ].map(({ icon, label, href }) => `
+                <li class="contact-inline__item">
+                  <span class="contact-inline__icon" aria-hidden="true">${icon}</span>
+                  ${href ? `<a href="${href}">${label}</a>` : `<span>${label}</span>`}
+                </li>
+              `).join('')}
+            </ul>
           </div>
         </div>
       </section>

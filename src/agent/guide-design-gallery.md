@@ -10,9 +10,9 @@ A curated catalogue of ready-to-use design patterns. Each entry names the live t
 **Route:** `/templates/local-business`  
 **Vibe:** `warm`  **Theme:** `light`  **CSS:** `lumio.css`
 
-Warm cream background, hand-crafted feel. Photo-forward hero with a split layout (text left, dog/product image right). Earthy greens and amber for CTAs. Services grid of 6 cards with price footers. Two-column about section with credentials checklist. Three-column testimonials. Contact section with location/hours sidebar and inline booking form. Stat strip showing social proof numbers.
+Warm cream background, hand-crafted feel. Photo-forward hero with a split layout (text left, dog/product image right). Earthy greens and amber for CTAs. Services grid of 6 cards with price footers. Two-column about section with credentials checklist. Three-column testimonials (built with `card`). Contact section with location/hours sidebar and inline booking form. Stat strip showing social proof numbers.
 
-**Key components:** `hero({ layout:'split' })`, `section`, `container`, `grid`, `card` (with `footer`), `stat`, `testimonial`, `cta`, `badge`
+**Key components:** `hero({ layout:'split' })`, `section`, `container`, `grid`, `card` (with `footer`), `stat`, `cta`, `badge`
 
 **Distinguishing moves:**
 - Gradient hero `linear-gradient(135deg, #fdf6ee, #fdebd0)` with `color:#3d2b1e` — define these hex values as tokens in `public/theme.css` and reference them via `var()`; the lint hook blocks raw hex in any other stylesheet
@@ -47,14 +47,14 @@ Dark, editorial, high-contrast. Works grid with cover images (fluid fill via `fl
 **Route:** `/templates/event`  
 **Vibe:** `bold`  **Theme:** `dark`  **CSS:** *(none extra — dark theme built-in)*
 
-Dark navy with violet/purple gradient CTAs. Centred hero with countdown-style stats strip. Sponsor logo marquee. Speaker portrait grid (4 columns, `flush:true` square images). Schedule as an accordion (3 day items, each with time/stage timetable). Venue section with two-column layout (map + details). Ticket pricing highlight.
+Dark navy with violet/purple gradient CTAs. Centred hero with countdown-style stats strip. Sponsor logo strip (raw HTML, CSS-only scroll animation). Speaker portrait grid (4 columns, `flush:true` square images). Schedule as an accordion (3 day items, each with time/stage timetable). Venue section with two-column layout (map + details). Ticket pricing highlight.
 
-**Key components:** `hero`, `section`, `container`, `grid({ cols:4 })`, `card({ flush:true })`, `accordion`, `marquee`, `badge`, `stat`, `cta`
+**Key components:** `hero`, `section`, `container`, `grid({ cols:4 })`, `card({ flush:true })`, `accordion`, `badge`, `stat`, `cta`
 
 **Distinguishing moves:**
 - Speaker cards: `aspect-ratio:1/1` square portrait images + name/role/quote below
 - Accordion items: `{ question: 'Day 1 — ...', answer: '<div>...timetable rows...</div>' }`
-- Marquee for sponsor logos: `marquee({ items: [...], gap:'xl', speed:'slow' })`
+- Sponsor logo strip: raw HTML `cluster()` of logos, or a CSS `@keyframes` scroll animation for an infinite marquee effect (creative override — no dedicated component)
 - Stats strip: `section({ variant:'alt', padding:'sm' })` + `grid({ cols:4 })`
 
 **Best for:** Conference, hackathon, festival, product launch, awards ceremony, summit
@@ -83,9 +83,9 @@ Dark with serif headline typography. Featured article hero with byline, read-tim
 **Route:** `/templates/mobile-app`  
 **Vibe:** `bold` or `minimal`  **Theme:** `dark`  **CSS:** *(dark theme built-in)*
 
-Hero with phone-frame mockup, feature grid, pricing section, testimonials, and App Store badges. The centrepiece is a `phoneFrame` component wrapping a screenshot or animated mockup.
+Hero with phone-frame mockup, feature grid, pricing section, testimonials, and App Store badges. The centrepiece is a `phoneFrame` component wrapping a screenshot or animated mockup. Pricing tiers and testimonials are built from `grid()` of `card()` tiles (no dedicated `pricing`/`testimonial` component).
 
-**Key components:** `hero`, `phoneFrame`, `feature`, `pricing`, `testimonial`, `appBadge`, `cta`
+**Key components:** `hero`, `phoneFrame`, `feature`, `grid`, `card`, `appBadge`, `cta`
 
 **Best for:** iOS/Android app, SaaS with mobile client, consumer product launch
 
@@ -174,14 +174,15 @@ section({
 })
 ```
 
-### Sponsor Marquee
+### Sponsor Logo Strip
+No dedicated marquee component — use `cluster()` for a static wrapped row, or raw HTML with a CSS `@keyframes` scroll animation for an infinite marquee effect (creative override):
 ```js
-marquee({
-  items: ['Acme Corp', 'Globex', 'Initech', 'Umbrella', 'Hooli'].map(
+cluster({
+  gap:     'xl',
+  justify: 'center',
+  content: ['Acme Corp', 'Globex', 'Initech', 'Umbrella', 'Hooli'].map(
     name => `<span class="u-font-semibold u-text-lg u-opacity-60">${name}</span>`
-  ),
-  speed: 'slow',
-  gap:   'xl',
+  ).join(''),
 })
 ```
 
@@ -251,7 +252,6 @@ The most common mistakes when writing templates. These will silently produce emp
 | `card` | `body:` | `content:` |
 | `card` | `image:` *(unsupported)* | Put `<img>` inside `content:` |
 | `card` | `href:` *(unsupported)* | Wrap title in `<a>` inside `content:` |
-| `testimonial` | `author:` | `name:` |
 | `pullquote` | `author:` | `cite:` |
 | `accordion` items | `title:` | `question:` |
 | `accordion` items | `content:` | `answer:` |

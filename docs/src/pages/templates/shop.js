@@ -11,16 +11,17 @@
  *   - nav() with a custom cart icon trigger and dialog-open
  *   - modal() basket with a live cart table
  *   - Quantity stepper with min/max constraints
- *   - displayHeading(), badge(), sectionLabel(), stat(), grid()
+ *   - heading(), badge(), stat(), grid()
+ *   - Section eyebrow + rule rendered as raw HTML (replaces removed sectionLabel())
+ *   - Minimal end-of-page metadata footer rendered as raw HTML (replaces removed colophon())
  *   - _toast on mutation success
  *   - Light theme with custom accent override
  */
 
 import {
-  nav, displayHeading, badge, sectionLabel, stat, grid,
+  nav, heading, badge, stat, grid,
   button, modal, empty,
   iconPlus, iconMinus, iconShoppingCart, iconCheck, iconPackage,
-  colophon,
 } from '../../../../src/ui/index.js'
 import { asset } from '../../lib/layout.js'
 
@@ -47,6 +48,15 @@ const cartRows = (items) => items.map(({ name, qty, unitPrice }) => [
   formatPrice(unitPrice),
   formatPrice(qty * unitPrice),
 ])
+
+// Section eyebrow + heading + rule — replaces the removed sectionLabel() component
+const sectionLabel = ({ eyebrow, heading: headingText }) => `
+  <div class="shop-section-label">
+    <p class="shop-section-label-eyebrow">${eyebrow}</p>
+    ${heading({ text: headingText, level: 2, class: 'shop-section-label-heading' })}
+    <hr class="shop-section-label-rule" aria-hidden="true">
+  </div>
+`
 
 export default {
   route: '/templates/shop',
@@ -121,7 +131,7 @@ export default {
     <main id="main-content">
 
       <div class="page-body product-display">
-        ${displayHeading({ text: 'DevBook Pro 15', level: 1, tracking: 'tight' })}
+        ${heading({ text: 'DevBook Pro 15', level: 1, class: 'product-display-title' })}
         <p class="product-tagline">Premium developer laptop for people who build things.</p>
         <div class="product-meta-row">
           ${badge({ label: 'In Stock', variant: 'success' })}
@@ -216,7 +226,7 @@ export default {
       </div>
 
       <div class="page-body product-specs">
-        ${sectionLabel({ eyebrow: 'Under the hood', heading: 'Full specifications', rule: true })}
+        ${sectionLabel({ eyebrow: 'Under the hood', heading: 'Full specifications' })}
         <div class="spec-grid">
           ${SPECS.map(({ label, value }) => `
             <div class="spec-item">
@@ -228,7 +238,7 @@ export default {
       </div>
 
       <div class="page-body product-stats">
-        ${sectionLabel({ eyebrow: 'At a glance', heading: 'Key numbers', rule: true })}
+        ${sectionLabel({ eyebrow: 'At a glance', heading: 'Key numbers' })}
         <div class="product-stats-grid">
           ${grid({ cols: 3, content:
             stat({ label: 'Battery life', value: '18 hrs', trend: 'up' }) +
@@ -240,10 +250,11 @@ export default {
 
     </main>
 
-    ${colophon({
-      content: `<p>© 2026 Tech Stuff Inc. · <a href="#">Terms</a> · <a href="#">Privacy</a></p>`,
-      align: 'center',
-    })}
+    <footer class="shop-colophon">
+      <div class="shop-colophon-inner">
+        <p>© 2026 Tech Stuff Inc. · <a href="#">Terms</a> · <a href="#">Privacy</a></p>
+      </div>
+    </footer>
   `
   },
 

@@ -1,7 +1,8 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
-import { barChart, lineChart, donutChart, sparkline, stat, card, grid } from '../../../../src/ui/index.js'
+import { stat, card, grid } from '../../../../src/ui/index.js'
+import { barChart, lineChart, donutChart, sparkline } from '../../../../src/ui/charts.js'
 
 const { prev, next } = prevNext('/components/charts')
 

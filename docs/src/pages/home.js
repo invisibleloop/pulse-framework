@@ -2,8 +2,23 @@
 import { highlight }                                        from '../lib/highlight.js'
 import { iconZap, iconShield, iconSettings }               from '../../../src/ui/icons.js'
 import { metricsStore }  from '../lib/metrics-store.js'
-import { codeWindow }    from '../../../src/ui/code-window.js'
 import pkg from '../../../package.json' with { type: 'json' }
+
+// macOS-style code window chrome — raw HTML (creative override), replacing
+// the removed codeWindow() component. Reuses the same .ui-code-window*
+// CSS classes still defined in pulse-ui.css.
+const codeWindow = ({ content = '', filename = '', lang = '' }) => `
+  <div class="ui-code-window" role="region"${filename ? ` aria-label="${filename}"` : ''}>
+    <div class="ui-code-window-chrome" aria-hidden="true">
+      <span class="ui-code-window-dot"></span>
+      <span class="ui-code-window-dot"></span>
+      <span class="ui-code-window-dot"></span>
+      ${filename ? `<span class="ui-code-window-filename">${filename}</span>` : ''}
+      ${lang     ? `<span class="ui-code-window-lang">${lang}</span>` : ''}
+    </div>
+    <pre class="ui-code-window-pre"><code class="ui-code-window-code">${content}</code></pre>
+  </div>
+`
 
 const { version } = pkg
 

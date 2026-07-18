@@ -14,7 +14,6 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type Size          = 'sm' | 'md' | 'lg'
 type AlertVariant  = 'info' | 'success' | 'warning' | 'error'
 type BadgeVariant  = 'default' | 'success' | 'warning' | 'error' | 'info'
-type ChartColor    = 'accent' | 'success' | 'warning' | 'error' | 'blue' | 'muted'
 
 // ---------------------------------------------------------------------------
 // Form controls
@@ -223,17 +222,6 @@ export interface PullquoteProps {
 }
 export function pullquote(props?: PullquoteProps): string
 
-export interface ListItem {
-  text:   string
-  href?:  string
-}
-export interface ListProps {
-  items?:    Array<string | ListItem>
-  ordered?:  boolean
-  class?:    string
-}
-export function list(props?: ListProps): string
-
 // ---------------------------------------------------------------------------
 // Navigation
 // ---------------------------------------------------------------------------
@@ -360,29 +348,6 @@ export interface FeatureProps {
 }
 export function feature(props?: FeatureProps): string
 
-export interface TestimonialProps {
-  quote?:    string
-  name?:     string
-  role?:     string
-  avatar?:   string
-  class?:    string
-}
-export function testimonial(props?: TestimonialProps): string
-
-export interface PricingTier {
-  name?:     string
-  price?:    string
-  period?:   string
-  features?: string[]
-  action?:   string
-  featured?: boolean
-}
-export interface PricingProps {
-  tiers?: PricingTier[]
-  class?: string
-}
-export function pricing(props?: PricingProps): string
-
 export interface CtaProps {
   heading?: string
   content?: string
@@ -390,13 +355,6 @@ export interface CtaProps {
   class?:   string
 }
 export function cta(props?: CtaProps): string
-
-export interface BannerProps {
-  content?: string
-  variant?: AlertVariant
-  class?:   string
-}
-export function banner(props?: BannerProps): string
 
 // ---------------------------------------------------------------------------
 // Media
@@ -420,12 +378,6 @@ export interface UiImageProps {
   class?:    string
 }
 export function uiImage(props?: UiImageProps): string
-
-export interface CarouselProps {
-  items?:  string[]
-  class?:  string
-}
-export function carousel(props?: CarouselProps): string
 
 // ---------------------------------------------------------------------------
 // Interactive UI
@@ -514,24 +466,8 @@ export interface FileUploadProps {
 export function fileUpload(props?: FileUploadProps): string
 
 // ---------------------------------------------------------------------------
-// Timeline & stepper
+// Stepper
 // ---------------------------------------------------------------------------
-
-export interface TimelineItemProps {
-  title?:   string
-  content?: string
-  date?:    string
-  icon?:    string
-  active?:  boolean
-  class?:   string
-}
-export function timelineItem(props?: TimelineItemProps): string
-
-export interface TimelineProps {
-  items?: string[]
-  class?: string
-}
-export function timeline(props?: TimelineProps): string
 
 export interface StepperStep {
   label:    string
@@ -561,70 +497,6 @@ export interface FooterProps {
   class?:   string
 }
 export function footer(props?: FooterProps): string
-
-export interface CodeWindowProps {
-  code?:     string
-  language?: string
-  filename?: string
-  class?:    string
-}
-export function codeWindow(props?: CodeWindowProps): string
-
-// ---------------------------------------------------------------------------
-// Charts
-// ---------------------------------------------------------------------------
-
-export interface ChartDataPoint {
-  label: string
-  value: number
-}
-export interface DonutDataPoint {
-  label:  string
-  value:  number
-  color?: string
-}
-
-export interface BarChartProps {
-  data?:       ChartDataPoint[]
-  height?:     number
-  color?:      ChartColor
-  showValues?: boolean
-  showGrid?:   boolean
-  gap?:        number
-  class?:      string
-}
-export function barChart(props?: BarChartProps): string
-
-export interface LineChartProps {
-  data?:      ChartDataPoint[]
-  height?:    number
-  color?:     ChartColor
-  area?:      boolean
-  showDots?:  boolean
-  showGrid?:  boolean
-  class?:     string
-}
-export function lineChart(props?: LineChartProps): string
-
-export interface DonutChartProps {
-  data?:      DonutDataPoint[]
-  size?:      number
-  thickness?: number
-  label?:     string
-  sublabel?:  string
-  class?:     string
-}
-export function donutChart(props?: DonutChartProps): string
-
-export interface SparklineProps {
-  data?:   number[]
-  width?:  number
-  height?: number
-  color?:  ChartColor
-  area?:   boolean
-  class?:  string
-}
-export function sparkline(props?: SparklineProps): string
 
 // ---------------------------------------------------------------------------
 // Icons
