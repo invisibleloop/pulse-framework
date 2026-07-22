@@ -1,8 +1,13 @@
-/* Brut theme tokens */
-:root {
-  --brut-yellow: #f0e642;
-  --brut-ink: #0a0a0a;
-  --brut-surface: #ffffff;
-  --brut-dark: #111114;
-  --brut-darker: #111214;
+/* Brut theme tokens — home page only, scoped to [data-theme="light"] on <body> */
+[data-theme="light"] {
+  /* Confident saturated gold — solid block fill (dark ink text sits on top) */
+  --brut-gold: #e8b613;
+  --brut-gold-deep: #c99700;
+  --brut-ink: #171512;
+  --brut-surface: #faf8f2;
+  --brut-surface-2: #f1ede1;
+  --brut-muted: #5c574c;
+  --brut-dark: #171512;
+  --brut-darker: #100f0c;
+  --brut-surface-dot: #e6e0d2;
 }
