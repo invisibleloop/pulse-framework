@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/routing')
 export default {
   route: '/routing',
   meta: {
+    theme:       'light',
     title: 'Routing — Pulse Docs',
     description: 'How Pulse routes requests to page specs — static and dynamic routes, params, and conventions.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/routing',

@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/store')
 export default {
   route: '/store',
   meta: {
+    theme:       'light',
     title: 'Global Store — Pulse Docs',
     description: 'Share server-fetched data across pages with a global store in Pulse.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

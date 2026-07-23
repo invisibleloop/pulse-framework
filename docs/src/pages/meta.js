@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/meta')
 export default {
   route: '/meta',
   meta: {
+    theme:       'light',
     title: 'Metadata & SEO — Pulse Docs',
     description: 'How to configure page metadata, Open Graph tags, and structured data in Pulse.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/meta',

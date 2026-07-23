@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/image')
 export default {
   route: '/components/image',
   meta: {
+    theme:       'light',
     title: 'Image — Pulse Docs',
     description: 'Responsive image component with optional aspect-ratio crop and caption for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/image',

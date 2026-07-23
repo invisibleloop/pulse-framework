@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/error-pages')
 export default {
   route: '/error-pages',
   meta: {
+    theme:       'light',
     title: 'Error Pages — Pulse Docs',
     description: 'Custom 404 pages in Pulse. A spec with route "*" renders through the normal pipeline with status 404 whenever no route matches.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/error-pages',

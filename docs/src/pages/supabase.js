@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/supabase')
 export default {
   route: '/supabase',
   meta: {
+    theme:       'light',
     title: 'Supabase — Pulse Docs',
     description: 'Integrate Supabase database queries, authentication, and file storage with Pulse server fetchers, actions, and guard.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

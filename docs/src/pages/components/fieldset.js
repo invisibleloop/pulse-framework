@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/fieldset')
 export default {
   route: '/components/fieldset',
   meta: {
+    theme:       'light',
     title: 'Fieldset — Pulse Docs',
     description: 'Semantic grouping of related form fields with an accessible legend.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/fieldset',

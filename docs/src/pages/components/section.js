@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/section')
 export default {
   route: '/components/section',
   meta: {
+    theme:       'light',
     title: 'Section — Pulse Docs',
     description: 'Vertical padding wrapper with optional background. Compose with container() for full-width background with constrained content.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/section',

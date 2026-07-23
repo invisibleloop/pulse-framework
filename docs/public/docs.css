@@ -1237,7 +1237,7 @@ a:hover {
   text-align: center;
 }
 .demo-preview.is-light {
-  background: #f0f0f8;
+  background: var(--surface-2, #f0f0f8);
 }
 
 /* Theme toggle button */
@@ -1745,7 +1745,7 @@ a:hover {
   padding: 0 2rem;
   position: sticky;
   top: 0;
-  background: rgba(13, 13, 16, 0.9);
+  background: var(--header-bg, rgba(13, 13, 16, 0.9));
   backdrop-filter: blur(8px);
   z-index: 10;
 }
@@ -1884,7 +1884,7 @@ a:hover {
 
 .docs-content strong:not([class*="ui-"]) {
   font-weight: 600;
-  color: #fff;
+  color: var(--text);
 }
 
 .docs-content
@@ -2063,7 +2063,7 @@ tr:hover td {
 }
 
 .callout-note .callout-icon {
-  color: #82aaff;
+  color: var(--callout-note-icon, #82aaff);
 }
 .callout-warning .callout-icon {
   color: var(--red);
@@ -2147,8 +2147,8 @@ tr:hover td {
 }
 
 .tag-required {
-  background: rgba(255, 107, 107, 0.15);
-  color: #ff8080;
+  background: var(--tag-required-bg, rgba(255, 107, 107, 0.15));
+  color: var(--tag-required-text, #ff8080);
 }
 .tag-optional {
   background: var(--surface-2);

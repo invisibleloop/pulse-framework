@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/persist')
 export default {
   route: '/persist',
   meta: {
+    theme:       'light',
     title: 'Persist — Pulse Docs',
     description: 'Persist client state across page refreshes using localStorage.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

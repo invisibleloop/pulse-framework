@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/components/avatar')
 export default {
   route: '/components/avatar',
   meta: {
+    theme:       'light',
     title: 'Avatar — Pulse Docs',
     description: 'Avatar component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/avatar',

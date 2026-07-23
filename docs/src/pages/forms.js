@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/forms')
 export default {
   route: '/forms',
   meta: {
+    theme:       'light',
     title: 'Forms — Pulse Docs',
     description: 'Server-side form handling in Pulse. spec.submit processes POST requests without client JavaScript, with automatic CSRF protection and POST-redirect-GET.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/forms',

@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/markdown')
 export default {
   route: '/markdown',
   meta: {
+    theme:       'light',
     title: 'Markdown — Pulse Docs',
     description: 'Render markdown files as pages with syntax-highlighted code blocks, frontmatter, and the prose component.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/markdown',

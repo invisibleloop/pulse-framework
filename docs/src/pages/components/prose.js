@@ -21,9 +21,10 @@ const SAMPLE_HTML = `<h2>Why great coffee starts with water</h2>
 export default {
   route: '/components/prose',
   meta: {
+    theme:       'light',
     title: 'Prose — Pulse Docs',
     description: 'Typography wrapper for CMS output and rich text content in Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/prose',

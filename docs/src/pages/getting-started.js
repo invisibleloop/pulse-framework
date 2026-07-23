@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/getting-started')
 export default {
   route: '/getting-started',
   meta: {
+    theme:       'light',
     title: 'Getting Started — Pulse Docs',
     description: 'Install Pulse and build your first page with an AI agent in minutes.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/getting-started',

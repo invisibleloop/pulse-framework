@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/config')
 export default {
   route: '/config',
   meta: {
+    theme:       'light',
     title: 'Configuration — Pulse Docs',
     description: 'Full reference for pulse.config.js — port, Lighthouse thresholds, load test config, environments, and per-route overrides.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/config',
