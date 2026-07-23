@@ -1322,7 +1322,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     try { res.writeEarlyHints({ link: earlyLinks }) } catch {}
   }
 
-  const stylePreconnects = buildStylePreconnects(meta.styles || [])
+  const stylePreconnects = buildStylePreconnects([...(meta.styles || []), ...(meta.deferredStyles || [])])
 
   const stylePreloads = (meta.styles || [])
     .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}">`)
