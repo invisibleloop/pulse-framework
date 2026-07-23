@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/components/empty')
 export default {
   route: '/components/empty',
   meta: {
+    theme:       'light',
     title: 'Empty — Pulse Docs',
     description: 'Empty state component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/empty',

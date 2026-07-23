@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/auth')
 export default {
   route: '/auth',
   meta: {
+    theme:       'light',
     title: 'Auth (Auth0) — Pulse Docs',
     description: 'Integrating Auth0 OAuth authentication with Pulse using guard functions, ctx.setCookie, and raw response specs.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/auth',

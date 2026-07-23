@@ -382,9 +382,10 @@ feature({ icon: iconCode({   size: 22, bg: 'square', bgColor: 'muted'   }), titl
 export default {
   route: '/components/icons',
   meta: {
+    theme:       'light',
     title: 'Icons — Pulse Docs',
     description: 'Built-in icon set for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
 
   // Shell: all visible content (nav, examples, icon grid) — sends immediately.

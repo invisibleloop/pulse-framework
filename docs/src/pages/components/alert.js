@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/components/alert')
 export default {
   route: '/components/alert',
   meta: {
+    theme:       'light',
     title: 'Alert — Pulse Docs',
     description: 'Alert component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/alert',

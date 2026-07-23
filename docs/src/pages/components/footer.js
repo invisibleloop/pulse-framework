@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/footer')
 export default {
   route: '/components/footer',
   meta: {
+    theme:       'light',
     title: 'Footer — Pulse Docs',
     description: 'Accessible site footer with logo slot, navigation links, and legal text.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/footer',

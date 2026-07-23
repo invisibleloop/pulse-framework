@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/navigation')
 export default {
   route: '/navigation',
   meta: {
+    theme:       'light',
     title: 'Navigation — Pulse Docs',
     description: 'Client-side navigation in Pulse — how link interception, JSON responses, and spec re-mounting work.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/navigation',

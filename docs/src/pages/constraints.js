@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/constraints')
 export default {
   route: '/constraints',
   meta: {
+    theme:       'light',
     title: 'Constraints — Pulse Docs',
     description: 'Automatic min/max bounds on state values, enforced after every mutation.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

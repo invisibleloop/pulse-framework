@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/heading')
 export default {
   route: '/components/heading',
   meta: {
+    theme:       'light',
     title: 'Heading — Pulse Docs',
     description: 'Styled semantic heading component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/heading',

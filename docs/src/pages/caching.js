@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/caching')
 export default {
   route: '/caching',
   meta: {
+    theme:       'light',
     title: 'Caching — Pulse Docs',
     description: 'HTTP cache headers, in-process server data caching, and asset caching in Pulse.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/caching',

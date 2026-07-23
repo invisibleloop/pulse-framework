@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/media')
 export default {
   route: '/components/media',
   meta: {
+    theme:       'light',
     title: 'Media — Pulse Docs',
     description: 'Media component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/media',

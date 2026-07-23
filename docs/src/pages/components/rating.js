@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/rating')
 export default {
   route: '/components/rating',
   meta: {
+    theme:       'light',
     title: 'Rating — Pulse Docs',
     description: 'Star rating display and interactive input component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/rating',

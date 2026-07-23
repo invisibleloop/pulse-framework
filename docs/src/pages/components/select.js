@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/components/select')
 export default {
   route: '/components/select',
   meta: {
+    theme:       'light',
     title: 'Select — Pulse Docs',
     description: 'Select component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/select',

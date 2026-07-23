@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/cluster')
 export default {
   route: '/components/cluster',
   meta: {
+    theme:       'light',
     title: 'Cluster — Pulse Docs',
     description: 'Cluster component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/cluster',

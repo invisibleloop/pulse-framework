@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/state')
 export default {
   route: '/state',
   meta: {
+    theme:       'light',
     title: 'State — Pulse Docs',
     description: 'How client state is declared, initialised, and used in Pulse.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

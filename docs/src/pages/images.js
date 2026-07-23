@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/images')
 export default {
   route: '/images',
   meta: {
+    theme:       'light',
     title: 'Images — Pulse Docs',
     description: 'The img() and picture() helpers for optimised, CLS-free image markup.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/images',

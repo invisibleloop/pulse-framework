@@ -9,9 +9,10 @@ const { prev, next } = prevNext('/components/feature')
 export default {
   route: '/components/feature',
   meta: {
+    theme:       'light',
     title: 'Feature — Pulse Docs',
     description: 'Feature component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/feature',

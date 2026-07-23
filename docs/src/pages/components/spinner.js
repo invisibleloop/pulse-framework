@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/spinner')
 export default {
   route: '/components/spinner',
   meta: {
+    theme:       'light',
     title: 'Spinner — Pulse Docs',
     description: 'Loading spinner component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/spinner',

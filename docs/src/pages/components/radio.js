@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/radio')
 export default {
   route: '/components/radio',
   meta: {
+    theme:       'light',
     title: 'Radio — Pulse Docs',
     description: 'Radio button and radio group components for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/radio',

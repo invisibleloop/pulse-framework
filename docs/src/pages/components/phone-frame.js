@@ -28,9 +28,10 @@ const sampleScreen = `
 export default {
   route: '/components/phone-frame',
   meta: {
+    theme:       'light',
     title: 'Phone Frame — Pulse Docs',
     description: 'Phone Frame component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderComponentPage({

@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/progress')
 export default {
   route: '/components/progress',
   meta: {
+    theme:       'light',
     title: 'Progress — Pulse Docs',
     description: 'Progress bar component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/progress',

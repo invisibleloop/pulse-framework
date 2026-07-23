@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/guard')
 export default {
   route: '/guard',
   meta: {
+    theme:       'light',
     title: 'Guard — Pulse Docs',
     description: 'Per-route authorization in Pulse. Guard functions run before server data fetchers and redirect unauthorized requests.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/guard',

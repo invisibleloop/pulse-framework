@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/actions')
 export default {
   route: '/actions',
   meta: {
+    theme:       'light',
     title: 'Actions — Pulse Docs',
     description: 'Async operations in Pulse — lifecycle, FormData, error handling.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

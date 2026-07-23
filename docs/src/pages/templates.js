@@ -517,8 +517,8 @@ export default {
   meta: {
     title:       'Templates — Pulse',
     description: 'Production-ready Pulse templates. Every template uses only Pulse UI components and ships with 100/100/100 Lighthouse scores.',
-    theme:       'dark',
-    styles:      ['/pulse-ui.css', '/docs.css'],
+    theme:       'light',
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
 
   view: () => {

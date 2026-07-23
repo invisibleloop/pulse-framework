@@ -12,9 +12,10 @@ const item = (label) =>
 export default {
   route: '/components/grid',
   meta: {
+    theme:       'light',
     title: 'Grid — Pulse Docs',
     description: 'Grid component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/grid',

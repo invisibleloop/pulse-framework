@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/streaming')
 export default {
   route: '/streaming',
   meta: {
+    theme:       'light',
     title: 'Streaming SSR — Pulse Docs',
     description: 'How streaming server-side rendering works in Pulse — shell, deferred segments, and when to use it.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/streaming',

@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/file-upload')
 export default {
   route: '/components/file-upload',
   meta: {
+    theme:       'light',
     title: 'File Upload — Pulse Docs',
     description: 'Drag-and-drop file upload zone component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   state: { fileName: '', fileSize: '' },
   mutations: {

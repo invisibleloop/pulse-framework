@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/accordion')
 export default {
   route: '/components/accordion',
   meta: {
+    theme:       'light',
     title: 'Accordion — Pulse Docs',
     description: 'Accordion component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/accordion',

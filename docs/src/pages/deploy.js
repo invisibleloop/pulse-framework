@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/deploy')
 export default {
   route: '/deploy',
   meta: {
+    theme:       'light',
     title: 'Deployment — Pulse Docs',
     description: 'Deploy a Pulse app to a VPS, Docker, Fly.io, Railway, or Render.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/deploy',
