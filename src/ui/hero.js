@@ -17,8 +17,7 @@
  *   'split' (default): 50/50 columns.
  *   'asymmetric': 60/40 text-heavy columns.
  *   'overlap': image fills the section background, text overlaid with dark gradient.
- * @param {boolean|'purple'|'blue'|'green'|'rose'|'orange'} opts.gradient
- * @param {string}  opts.background    - Arbitrary CSS background value — overrides gradient preset
+ * @param {string}  opts.background    - Arbitrary CSS background value
  * @param {string}  opts.backgroundImage - CSS background-image value (url, gradient, etc) — enables full-bleed mode
  * @param {boolean|number} opts.overlay - Dark overlay opacity for backgroundImage mode (0–1, or true for 0.4 default)
  * @param {string}  opts.eyebrowColor  - Overrides eyebrow text colour
@@ -27,8 +26,7 @@
 
 import { escHtml as e } from '../html.js'
 
-const GRADIENT_PRESETS = new Set(['purple', 'blue', 'green', 'rose', 'orange'])
-const LAYOUTS          = new Set(['split', 'asymmetric', 'overlap'])
+const LAYOUTS = new Set(['split', 'asymmetric', 'overlap'])
 
 export function hero({
   eyebrow     = '',
@@ -40,7 +38,6 @@ export function hero({
   align       = 'center',
   size        = 'md',
   layout      = 'split',
-  gradient     = false,
   background   = '',
   backgroundImage = '',
   overlay      = false,
@@ -52,13 +49,6 @@ export function hero({
   const hasBackgroundImage = Boolean(backgroundImage)
   const safeLayout  = (hasImage && LAYOUTS.has(layout)) ? layout : 'split'
 
-  // Resolve gradient class
-  const gradientClass = gradient
-    ? (gradient === true || gradient === 'purple')
-      ? 'ui-hero--gradient'
-      : GRADIENT_PRESETS.has(gradient) ? `ui-hero--gradient--${gradient}` : ''
-    : ''
-
   const classes = [
     'ui-hero',
     !hasImage && !hasBackgroundImage && align === 'left' && 'ui-hero--left',
@@ -66,7 +56,6 @@ export function hero({
     hasImage && safeLayout !== 'overlap' && imageAlign === 'left' && 'ui-hero--media-left',
     hasBackgroundImage && 'ui-hero--bg-image',
     size === 'sm' && 'ui-hero--sm',
-    gradientClass,
     cls,
   ].filter(Boolean).join(' ')
 

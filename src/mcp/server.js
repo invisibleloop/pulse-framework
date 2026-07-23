@@ -1856,7 +1856,7 @@ export default {
         { label: 'Features', href: '#features' },
         { label: 'Pricing',  href: '#pricing'  },
       ], actions: button({ label: 'Get started', size: 'sm' }) })}
-      \${hero({ title: 'Your headline here', subtitle: 'Supporting copy that explains the value.', gradient: 'purple',
+      \${hero({ title: 'Your headline here', subtitle: 'Supporting copy that explains the value.',
         actions: button({ label: 'Get started', size: 'lg' }) })}
       \${section({ id: 'features', content: container({ content: \`
         \${grid({ cols: 3, content:

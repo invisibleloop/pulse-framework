@@ -15,23 +15,7 @@ export default {
   },
   state: {},
   view: () => {
-    const placeholderImg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" style="width:100%;height:auto;border-radius:var(--ui-radius,8px);display:block" role="img" aria-label="Placeholder image">
-  <rect width="600" height="400" fill="#111116" rx="8"/>
-  <rect x="24" y="24" width="552" height="32" rx="6" fill="#1a1a22"/>
-  <circle cx="44" cy="40" r="6" fill="#ff5f57"/><circle cx="64" cy="40" r="6" fill="#febc2e"/><circle cx="84" cy="40" r="6" fill="#28c840"/>
-  <rect x="24" y="72" width="552" height="200" rx="6" fill="#1a1a22"/>
-  <rect x="40" y="92" width="200" height="12" rx="3" fill="#2a2a35"/>
-  <rect x="40" y="116" width="300" height="8" rx="3" fill="#222228"/>
-  <rect x="40" y="132" width="260" height="8" rx="3" fill="#222228"/>
-  <rect x="40" y="148" width="280" height="8" rx="3" fill="#222228"/>
-  <rect x="40" y="176" width="120" height="32" rx="6" fill="#9b8dff" opacity=".9"/>
-  <rect x="24" y="288" width="264" height="88" rx="6" fill="#1a1a22"/>
-  <rect x="312" y="288" width="264" height="88" rx="6" fill="#1a1a22"/>
-  <rect x="40" y="304" width="100" height="8" rx="3" fill="#2a2a35"/>
-  <rect x="40" y="320" width="140" height="6" rx="3" fill="#222228"/>
-  <rect x="328" y="304" width="100" height="8" rx="3" fill="#2a2a35"/>
-  <rect x="328" y="320" width="120" height="6" rx="3" fill="#222228"/>
-</svg>`
+    const placeholderImg = `<img src="/img/heic1501a.jpg" alt="The Pillars of Creation in the Eagle Nebula, captured by the Hubble Space Telescope" style="width:100%;height:100%;object-fit:cover;border-radius:var(--ui-radius,8px);display:block">`
     return renderComponentPage({
     currentHref: '/components/hero',
     prev,
@@ -95,18 +79,6 @@ export default {
 
       ${demo(
         `<div style="display:flex;flex-direction:column;gap:0">` +
-          hero({ eyebrow: 'Purple (default)', title: 'gradient: true', gradient: 'purple', size: 'sm' }) +
-          hero({ eyebrow: 'Blue',             title: "gradient: 'blue'",   gradient: 'blue',   size: 'sm' }) +
-          hero({ eyebrow: 'Green',            title: "gradient: 'green'",  gradient: 'green',  size: 'sm' }) +
-          hero({ eyebrow: 'Rose',             title: "gradient: 'rose'",   gradient: 'rose',   size: 'sm' }) +
-          hero({ eyebrow: 'Orange',           title: "gradient: 'orange'", gradient: 'orange', size: 'sm' }) +
-        `</div>`,
-        `hero({ title: 'Headline', gradient: 'purple' })  // or 'blue' | 'green' | 'rose' | 'orange'`,
-        { bleed: true }
-      )}
-
-      ${demo(
-        `<div style="display:flex;flex-direction:column;gap:0">` +
           hero({ eyebrow: 'Solid colour', title: 'background: color', background: '#0f172a', size: 'sm' }) +
           hero({ eyebrow: 'Custom gradient', title: 'background: CSS gradient', background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)', size: 'sm' }) +
         `</div>`,
@@ -142,8 +114,7 @@ hero({ title: 'Headline', background: 'linear-gradient(135deg, #1e1b4b, #312e81)
           ['<code>imageAlign</code>',  'string',        "'right'",    "'right' (text left) or 'left' (text right) — only applies when image is set"],
           ['<code>align</code>',       'string',        "'center'",   "'center' or 'left' — text alignment when no image"],
           ['<code>size</code>',        'string',        "'md'",       "'md' (5rem padding) or 'sm' (2.5rem top, no bottom) — use sm for inner-page headers"],
-          ['<code>gradient</code>',    "boolean | 'purple' | 'blue' | 'green' | 'rose' | 'orange'", 'false', 'Named gradient preset. true and \'purple\' are identical.'],
-          ['<code>background</code>', 'string',        '—',          'Any CSS background value — solid colour or custom gradient. Overrides gradient preset.'],
+          ['<code>background</code>', 'string',        '—',          'Any CSS background value — solid colour or custom gradient.'],
         ]
       )}
     `,
