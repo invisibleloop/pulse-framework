@@ -354,7 +354,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     meta.ogImage     ? `<meta property="og:image" content="${esc(meta.ogImage)}">` : '',
   ].filter(Boolean).join('\n  ')
 
-  const stylePreconnects = buildStylePreconnects(meta.styles || [])
+  const stylePreconnects = buildStylePreconnects([...(meta.styles || []), ...(meta.deferredStyles || [])])
 
   const stylePreloads = (meta.styles || [])
     .map(href => `<link rel="preload" as="style" href="${esc(href)}">`)
