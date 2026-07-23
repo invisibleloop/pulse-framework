@@ -40,28 +40,28 @@ export default {
         card({
           flush:   true,
           content: `
-            <div class="u-rounded-md u-overflow-hidden" style="height:180px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:3rem">🌄</span>
+            <div class="u-overflow-hidden" style="height:180px;border-radius:var(--ui-radius) var(--ui-radius) 0 0">
+              <img src="/img/heic1501a.jpg" alt="The Pillars of Creation in the Eagle Nebula, captured by the Hubble Space Telescope" style="width:100%;height:100%;object-fit:cover;display:block">
             </div>
             <div class="u-p-5">
-              <p class="u-font-semibold u-mb-2" style="margin-top:0">Mountain retreat</p>
-              <p class="u-text-muted u-text-sm" style="margin:0">A peaceful escape in the highlands. Three nights, all-inclusive.</p>
+              <p class="u-font-semibold u-mb-2" style="margin-top:0">Deep field</p>
+              <p class="u-text-muted u-text-sm" style="margin:0">The Pillars of Creation, imaged by the Hubble Space Telescope.</p>
             </div>
           `,
-          footer: button({ label: 'Book now', href: '#', variant: 'primary', size: 'sm' }),
+          footer: button({ label: 'View gallery', href: '#', variant: 'primary', size: 'sm' }),
         }),
         `card({
   flush: true,
   content: \`
-    <div class="u-rounded-md u-overflow-hidden" style="height:180px;background:...">
-      <img src="/img/retreat.jpg" alt="Mountain retreat" style="width:100%;height:100%;object-fit:cover">
+    <div class="u-overflow-hidden" style="height:180px;border-radius:var(--ui-radius) var(--ui-radius) 0 0">
+      <img src="/img/nebula.jpg" alt="The Pillars of Creation in the Eagle Nebula" style="width:100%;height:100%;object-fit:cover">
     </div>
     <div class="u-p-5">
-      <p class="u-font-semibold u-mb-2">Mountain retreat</p>
-      <p class="u-text-muted u-text-sm">A peaceful escape in the highlands.</p>
+      <p class="u-font-semibold u-mb-2">Deep field</p>
+      <p class="u-text-muted u-text-sm">The Pillars of Creation, imaged by the Hubble Space Telescope.</p>
     </div>
   \`,
-  footer: button({ label: 'Book now', href: '/book', variant: 'primary', size: 'sm' }),
+  footer: button({ label: 'View gallery', href: '/gallery', variant: 'primary', size: 'sm' }),
 })`
       )}
 

@@ -22,7 +22,7 @@ export default {
     content: `
       ${demo(
         media({
-          image:   `<div style="background:var(--ui-surface-2);border:1px solid var(--ui-border);border-radius:8px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;color:var(--ui-muted);font-size:.875rem">Screenshot</div>`,
+          image:   `<img src="/img/heic1501a.jpg" alt="The Pillars of Creation in the Eagle Nebula, captured by the Hubble Space Telescope" style="width:100%;height:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block">`,
           content: stack({ gap: 'md', content: '<h3 style="font-size:1.25rem;font-weight:700;color:var(--ui-text);margin:0">One-tap controls</h3><p style="color:var(--ui-muted);margin:0">Tap to flap. Chippy Bird takes seconds to learn and a lifetime to conquer.</p>' + button({ label: 'Download', href: '#' }) }),
         }),
         `media({
