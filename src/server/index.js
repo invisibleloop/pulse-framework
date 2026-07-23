@@ -21,7 +21,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript, buildStylePreconnects } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 
@@ -1322,6 +1322,8 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     try { res.writeEarlyHints({ link: earlyLinks }) } catch {}
   }
 
+  const stylePreconnects = buildStylePreconnects(meta.styles || [])
+
   const stylePreloads = (meta.styles || [])
     .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}">`)
     .join('\n')
@@ -1358,7 +1360,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="${faviconPath || 'data:,'}">
   <title>${escHtml(title)}</title>
-${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}
+${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}
 </head>
 <body${bodyAttr}>
   <div id="pulse-root">`

@@ -313,6 +313,32 @@ export function buildHydrateScript(spec, storeDef, nonce) {
  * @param {Object}  [options.timing]     - Server-Timing values
  * @returns {string}
  */
+// Third-party stylesheets (e.g. Google Fonts) pay a DNS+TLS round trip before
+// the request can even start — preconnect warms that connection up in
+// parallel with the document request instead of after the browser parses the
+// stylesheet link. Relative URLs (same-origin) don't need this — the
+// connection to the page's own origin is already open. Shared by wrapDocument
+// (non-streaming render) and the streaming response head in server/index.js,
+// which builds its <head> independently rather than calling wrapDocument.
+export function buildStylePreconnects(styles = []) {
+  const styleOrigins = [...new Set(
+    styles
+      .map(href => { try { return new URL(href).origin } catch { return null } })
+      .filter(Boolean)
+  )]
+  return styleOrigins
+    .flatMap(origin => {
+      const links = [`<link rel="preconnect" href="${esc(origin)}">`]
+      // Google Fonts serves the CSS from fonts.googleapis.com but the actual
+      // font files from fonts.gstatic.com — preconnect to both up front.
+      if (origin === 'https://fonts.googleapis.com') {
+        links.push('<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>')
+      }
+      return links
+    })
+    .join('\n  ')
+}
+
 export function wrapDocument({ content, spec = {}, serverState = {}, storeState = null, storeDef = null, timing = {}, extraBody = '', extraHead = '', nonce = '', runtimeBundle = '', faviconHref = '', livePath = '' }) {
   const meta  = spec.meta  || {}
   const title = meta.title || 'Pulse'
@@ -327,6 +353,8 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     meta.ogTitle     ? `<meta property="og:title" content="${esc(meta.ogTitle)}">` : '',
     meta.ogImage     ? `<meta property="og:image" content="${esc(meta.ogImage)}">` : '',
   ].filter(Boolean).join('\n  ')
+
+  const stylePreconnects = buildStylePreconnects(meta.styles || [])
 
   const stylePreloads = (meta.styles || [])
     .map(href => `<link rel="preload" as="style" href="${esc(href)}">`)
@@ -381,6 +409,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="${faviconHref || 'data:,'}">
   <title>${esc(title)}</title>
+  ${stylePreconnects}
   ${stylePreloads}
   ${runtimePreload}
   ${extraHead}
