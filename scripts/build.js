@@ -502,7 +502,7 @@ const result = await esbuild.build({
   platform:    'browser',
   outdir:      OUT_DIR,
   entryNames:  '[name]-[hash]',
-  chunkNames:  'runtime-[hash]',
+  chunkNames:  'chunk-[hash]',
   splitting:   true,
   minify:      true,
   metafile:    true,
@@ -520,13 +520,25 @@ const result = await esbuild.build({
 
 const manifest = {}
 
+// Identify the real Pulse framework runtime chunk (the one containing mount())
+// by which auto-split chunks actually import RUNTIME_PATH — not by filename
+// prefix, since chunkNames now applies to every generic shared chunk esbuild
+// splits out (app-level shared code included), not just the framework runtime.
+const RUNTIME_ABS = path.resolve(RUNTIME_PATH)
+const realRuntimeChunk = Object.entries(result.metafile.outputs).find(([outFile, meta]) => {
+  if (meta.entryPoint) return false
+  // meta.inputs keys are relative to process.cwd() — resolve to compare reliably
+  return Object.keys(meta.inputs).some(input => path.resolve(input) === RUNTIME_ABS)
+})?.[0]
+
 for (const [outFile, meta] of Object.entries(result.metafile.outputs)) {
   // outFile is relative to process.cwd(), not ROOT — use path.resolve to get the
   // true absolute path before computing the URL-relative bundle path.
   const bundlePath = '/' + path.relative(path.join(ROOT, 'public'), path.resolve(outFile))
 
-  // Shared runtime chunk — esbuild generates this via splitting, no entryPoint
-  if (!meta.entryPoint && path.basename(outFile).startsWith('runtime-')) {
+  // Shared runtime chunk — esbuild generates this via splitting, no entryPoint.
+  // Identified by containing the actual runtime/index.js source, not by name.
+  if (!meta.entryPoint && outFile === realRuntimeChunk) {
     manifest['_runtime'] = bundlePath
     continue
   }

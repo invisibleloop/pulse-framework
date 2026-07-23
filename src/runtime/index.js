@@ -109,7 +109,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
     try {
       html = resolveView(spec, state, getEffectiveServerState())
     } catch (err) {
-      console.error('[Pulse] View error:', err)
+      console.error('[Pulse] view error:', err)
       const serverState = getEffectiveServerState()
       html = spec.onViewError
         ? spec.onViewError(err, state, serverState)
@@ -121,6 +121,22 @@ export function mount(spec, el, serverState = {}, options = {}) {
   }
 
   // ---------------------------------------------------------------------------
+  // Result application — shared by every mutation/action lifecycle step.
+  // Handles the side-channel keys (_toast, _storeUpdate), merges the rest of
+  // `raw` into state via constraints, and re-renders only if state actually
+  // changed. Used by dispatch() and every stage of runAction().
+  // ---------------------------------------------------------------------------
+
+  function applyResult(raw) {
+    const { _toast, _storeUpdate, ...partial } = raw ?? {}
+    if (_storeUpdate) updateStore(_storeUpdate)
+    if (_toast)       showToast(_toast)
+    const prev = state
+    state = applyConstraints({ ...state, ...partial }, spec.constraints)
+    if (shallowChanged(prev, state)) render()
+  }
+
+  // ---------------------------------------------------------------------------
   // Dispatch — the single entry point for all state changes
   // ---------------------------------------------------------------------------
 
@@ -128,12 +144,8 @@ export function mount(spec, el, serverState = {}, options = {}) {
     // Mutation
     if (spec.mutations?.[type]) {
       const raw = spec.mutations[type](state, payload)
-      if (raw?._toast) showToast(raw._toast)
-      const { _toast, ...partial } = raw ?? {}
-      const prev = state
-      state = applyConstraints({ ...state, ...partial }, spec.constraints)
+      applyResult(raw)
       persist()
-      if (shallowChanged(prev, state)) render()
       return
     }
 
@@ -143,7 +155,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
       return
     }
 
-    console.warn(`[Pulse] No mutation or action found for "${type}"`)
+    console.warn(`[Pulse] no mutation/action "${type}"`)
   }
 
   // ---------------------------------------------------------------------------
@@ -153,25 +165,15 @@ export function mount(spec, el, serverState = {}, options = {}) {
   async function runAction(name, action, currentState, payload) {
     // Optimistic update before async work
     if (action.onStart) {
-      const raw = action.onStart(currentState, payload)
-      if (raw?._toast) showToast(raw._toast)
-      const { _toast, ...partial } = raw ?? {}
-      const prev = state
-      state = applyConstraints({ ...state, ...partial }, spec.constraints)
-      if (shallowChanged(prev, state)) render()
+      applyResult(action.onStart(currentState, payload))
     }
 
     // Validate before running if requested
     if (action.validate) {
       const errors = validateFields(state, spec.validation)
       if (errors.length > 0) {
-        console.warn(`[Pulse] Validation failed for action "${name}":`, errors)
-        const raw = action.onError?.(state, { validation: errors }) ?? {}
-        if (raw._toast) showToast(raw._toast)
-        const { _toast, ...partial } = raw
-        const prev = state
-        state = applyConstraints({ ...state, ...partial }, spec.constraints)
-        if (shallowChanged(prev, state)) render()
+        console.warn(`[Pulse] Validation failed: "${name}"`, errors)
+        applyResult(action.onError?.(state, { validation: errors }))
         return
       }
     }
@@ -179,23 +181,10 @@ export function mount(spec, el, serverState = {}, options = {}) {
     try {
       // Pass fresh effective server state (includes live store values)
       const result = await action.run(state, getEffectiveServerState(), payload)
-      const raw    = action.onSuccess(state, result) ?? {}
-
-      // _storeUpdate — push changes to the global store and notify all subscribers
-      if (raw._storeUpdate) updateStore(raw._storeUpdate)
-      if (raw._toast)       showToast(raw._toast)
-      const { _storeUpdate: _su, _toast: _t, ...partial } = raw
-      const prev = state
-      state = applyConstraints({ ...state, ...partial }, spec.constraints)
-      if (shallowChanged(prev, state)) render()
+      applyResult(action.onSuccess(state, result))
     } catch (error) {
-      console.error(`[Pulse] Action "${name}" failed:`, error)
-      const raw = action.onError(state, error) ?? {}
-      if (raw._toast) showToast(raw._toast)
-      const { _toast, ...partial } = raw
-      const prev = state
-      state = applyConstraints({ ...state, ...partial }, spec.constraints)
-      if (shallowChanged(prev, state)) render()
+      console.error(`[Pulse] action "${name}" failed:`, error)
+      applyResult(action.onError(state, error))
     }
 
     persist()
