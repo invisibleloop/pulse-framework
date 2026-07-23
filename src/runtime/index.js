@@ -7,11 +7,27 @@
  * No framework. No virtual DOM. No dependencies.
  */
 
-import { initClientStore, getStoreState, subscribe, updateStore, registerStoreMutations, dispatchStoreMutation, initLiveStore } from './store.js'
 import { trustedHTML, trustedScriptURL } from './tt.js'
 
 // Toast is lazy-loaded on first use — pages that never use _toast pay zero bytes
 const showToast = (opts) => import('./toast.js').then(m => m.showToast(opts))
+
+// store.js is lazy-loaded only by pages that declare spec.store — pages that
+// never subscribe to the global store pay zero bytes for it (same pattern as
+// showToast above). updateStore is needed synchronously inside runAction()
+// for _storeUpdate (any page can push to the store from an action, even one
+// that doesn't itself subscribe), so it is loaded the same lazy way on first
+// use and cached in _storeModule for subsequent calls.
+let _storeModule = null
+const loadStore = () => _storeModule
+  ? Promise.resolve(_storeModule)
+  : import('./store.js').then(m => { _storeModule = m; return m })
+
+// data-store-event is wired via event delegation at bindEvents() time, before
+// spec.store is known to be involved (a page can carry a data-store-event
+// button without declaring spec.store itself) — load store.js on first fire.
+const dispatchStoreMutationLazy = (name, payload) =>
+  loadStore().then(({ dispatchStoreMutation }) => dispatchStoreMutation(name, payload))
 
 // ---------------------------------------------------------------------------
 // Mount
@@ -29,37 +45,85 @@ export function mount(spec, el, serverState = {}, options = {}) {
     throw new Error('[Pulse] mount: spec must have a view')
   }
   // Spec is validated server-side at startup — no need to re-validate in the browser
-  // Initialise the client store from SSR data (no-op after the first page mount).
-  // window.__PULSE_STORE__ is serialised by the server when a store is registered.
-  if (typeof window !== 'undefined') {
-    initClientStore(window.__PULSE_STORE__ || {})
-    // Register store mutations so data-store-event bindings can dispatch them.
-    // No-op on subsequent mounts — mutations persist across client navigations.
-    if (options.store?.mutations) {
-      registerStoreMutations(options.store.mutations)
-    }
-  }
-
   // Separate page-level server state from store keys so they can be tracked
   // independently — store values come from the live singleton, not the snapshot.
   const _storeKeys = new Set(spec.store || [])
 
-  // Live store push — connect to the server's SSE channel, but only when this
-  // page actually subscribes to store keys. Singleton: survives navigations,
-  // repeat mounts are no-ops. Pages without store keys never open a connection.
-  if (typeof window !== 'undefined' && window.__PULSE_LIVE__ && _storeKeys.size > 0) {
-    initLiveStore(window.__PULSE_LIVE__)
+  // store.js (initClientStore, registerStoreMutations, subscribe, initLiveStore,
+  // getStoreState, updateStore, dispatchStoreMutation) is lazy-loaded — only pages
+  // that actually touch the store pay for it. Two independent triggers load it:
+  //   1. spec.store is non-empty (this page reads store data / needs live reactivity)
+  //   2. a data-store-event fires, or an action returns _storeUpdate (this page
+  //      pushes to the store without necessarily subscribing to it)
+  // Both paths funnel through loadStore(), which caches the resolved module so a
+  // second trigger on the same page is a no-op re-await, not a second fetch.
+  //
+  // initClientStore is safe to defer: it is only ever read via getStoreState(),
+  // which is only called from getEffectiveServerState() below, itself gated on
+  // _storeKeys.size — so a page with no spec.store never needs the store singleton
+  // initialised at all. window.__PULSE_STORE__ is also re-serialised fresh by the
+  // server on every navigation (see ssr.js buildStoreScript / navigate.js's
+  // window.__updatePulseStore__), so there is no cross-navigation dependency on an
+  // eager initClientStore call from a page that didn't declare spec.store.
+  // Populated once store.js resolves and this page subscribes — destroy() reads
+  // it at call time, so a destroy() that races the import still unsubscribes
+  // correctly (it just runs the .then() below first, since both are microtasks
+  // queued off the same import; destroy() itself is only ever called later, from
+  // user code or client navigation, well after mount() has returned).
+  let _unsubStore = null
+  let _destroyed  = false
+
+  // NOTE: subscribe() below is intentionally not gated on `typeof window` — this
+  // matches the pre-lazy behaviour, where store subscription worked in any
+  // environment (including Node test environments with no `window` global) as
+  // long as spec.store was non-empty. Only the window-derived inputs
+  // (window.__PULSE_STORE__, window.__PULSE_LIVE__) are individually guarded.
+  if (_storeKeys.size > 0) {
+    loadStore().then(({ initClientStore, registerStoreMutations, initLiveStore, subscribe }) => {
+      if (_destroyed) return
+      if (typeof window !== 'undefined') {
+        // window.__PULSE_STORE__ is serialised by the server when a store is registered.
+        initClientStore(window.__PULSE_STORE__ || {})
+        // Register store mutations so data-store-event bindings can dispatch them.
+        // No-op on subsequent mounts — mutations persist across client navigations.
+        if (options.store?.mutations) {
+          registerStoreMutations(options.store.mutations)
+        }
+        // Live store push — connect to the server's SSE channel, but only when this
+        // page actually subscribes to store keys. Singleton: survives navigations,
+        // repeat mounts are no-ops. Pages without store keys never open a connection.
+        if (window.__PULSE_LIVE__) {
+          initLiveStore(window.__PULSE_LIVE__)
+        }
+      }
+      // Subscribe to global store — re-render whenever store keys this page uses
+      // change. Wired here (after the async import resolves) rather than
+      // synchronously in mount() — see the module-level comment on loadStore.
+      _unsubStore = subscribe(() => render())
+    })
   }
   const _pageServerState = {}
   for (const [k, v] of Object.entries(serverState)) {
     if (!_storeKeys.has(k)) _pageServerState[k] = v
   }
 
+  // Snapshot of the store keys as SSR handed them to mount() — used as a
+  // fallback for renders that happen before store.js's lazy import resolves
+  // (initial render, and any dispatch that fires in that window). This keeps
+  // first paint identical to the pre-lazy behaviour: the SSR-seeded values are
+  // available immediately. Once store.js loads, getEffectiveServerState()
+  // switches over to the live singleton (getStoreState()), which is required
+  // for correctness after any store mutation.
+  const _storeSnapshot = {}
+  for (const k of _storeKeys) {
+    if (serverState[k] !== undefined) _storeSnapshot[k] = serverState[k]
+  }
+
   // Build the server state the view sees: fresh store slice + page-level data.
   // Page-level keys always win over store keys with the same name.
   function getEffectiveServerState() {
     if (!_storeKeys.size) return _pageServerState
-    const storeState = getStoreState()
+    const storeState = _storeModule ? _storeModule.getStoreState() : _storeSnapshot
     const slice = {}
     for (const key of _storeKeys) {
       if (storeState[key] !== undefined) slice[key] = storeState[key]
@@ -129,7 +193,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
 
   function applyResult(raw) {
     const { _toast, _storeUpdate, ...partial } = raw ?? {}
-    if (_storeUpdate) updateStore(_storeUpdate)
+    // store.js may not be loaded yet on a page that doesn't itself declare
+    // spec.store but still pushes via _storeUpdate — load it on demand.
+    if (_storeUpdate) loadStore().then(({ updateStore }) => updateStore(_storeUpdate))
     if (_toast)       showToast(_toast)
     const prev = state
     state = applyConstraints({ ...state, ...partial }, spec.constraints)
@@ -199,9 +265,6 @@ export function mount(spec, el, serverState = {}, options = {}) {
   const _eventAbort = new AbortController()
   bindEvents(el, dispatch, _eventAbort.signal)
 
-  // Subscribe to global store — re-render whenever store keys this page uses change.
-  const _unsubStore = _storeKeys.size > 0 ? subscribe(() => render()) : null
-
   // If the element was server-rendered, skip the initial render to avoid
   // touching existing DOM — this preserves the early LCP paint from SSR.
   // Morph on first mutation will diff from whatever SSR left in the DOM.
@@ -224,7 +287,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
     refresh: render,
 
     /** Tear down — remove event listeners, unsubscribe from store, clear element */
-    destroy: () => { _unsubStore?.(); _eventAbort.abort(); el.innerHTML = trustedHTML('') }
+    destroy: () => { _destroyed = true; _unsubStore?.(); _eventAbort.abort(); el.innerHTML = trustedHTML('') }
   }
 }
 
@@ -280,7 +343,7 @@ function bindEvents(el, dispatch, signal) {
     const storeTarget = e.target?.closest?.('[data-store-event]')
     if (storeTarget) {
       const [sType, sName] = parseEventAttr(storeTarget.dataset.storeEvent)
-      if (sType === 'click') { e.preventDefault(); dispatchStoreMutation(sName, e) }
+      if (sType === 'click') { e.preventDefault(); dispatchStoreMutationLazy(sName, e) }
       return
     }
 
@@ -323,7 +386,7 @@ function bindEvents(el, dispatch, signal) {
     const storeTarget = e.target?.closest?.('[data-store-event]')
     if (storeTarget) {
       const [sType, sName] = parseEventAttr(storeTarget.dataset.storeEvent)
-      if (sType === 'change') dispatchStoreMutation(sName, e)
+      if (sType === 'change') dispatchStoreMutationLazy(sName, e)
       return
     }
     const target = e.target?.closest?.('[data-event]')
@@ -337,7 +400,7 @@ function bindEvents(el, dispatch, signal) {
     const storeTarget = e.target?.closest?.('[data-store-event]')
     if (storeTarget) {
       const [sType, sName] = parseEventAttr(storeTarget.dataset.storeEvent)
-      if (sType === 'input') dispatchStoreMutation(sName, e)
+      if (sType === 'input') dispatchStoreMutationLazy(sName, e)
       return
     }
     const target = e.target?.closest?.('[data-event]')

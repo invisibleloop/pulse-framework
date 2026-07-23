@@ -598,7 +598,7 @@ test('dispatchStoreMutation warns on unknown mutation', () => {
   assert(warnings.some(w => w.includes('doesNotExist')), 'Expected warning for unknown store mutation')
 })
 
-test('dispatchStoreMutation notifies subscribed pages', () => {
+await testAsync('dispatchStoreMutation notifies subscribed pages', async () => {
   updateStore({ counter: 0 })
   const el = new FakeElement()
   const spec = {
@@ -608,6 +608,12 @@ test('dispatchStoreMutation notifies subscribed pages', () => {
     view: (state, server) => `<span>${server.counter ?? 0}</span>`,
   }
   mount(spec, el, { counter: 0 })
+  // store.js is lazy-loaded by mount() when spec.store is non-empty — its
+  // subscription is wired up after the dynamic import() resolves. Resolving
+  // a dynamic import is scheduled as a macrotask even for an already-cached
+  // module (verified empirically — microtask-only yields are not enough),
+  // so a setTimeout(0) tick-yield is required here, not just Promise.resolve().
+  await new Promise(r => setTimeout(r, 0))
   const before = el.innerHTML
   dispatchStoreMutation('inc')
   assert(el.innerHTML !== before, `Page should re-render after store mutation`)
@@ -623,7 +629,7 @@ test('registerStoreMutations is a no-op after first call', () => {
 
 console.log('\nLive store push (client)\n')
 
-test('initLiveStore connects once, merges SSE store events, survives bad frames', () => {
+await testAsync('initLiveStore connects once, merges SSE store events, survives bad frames', async () => {
   const instances = []
   globalThis.EventSource = class {
     constructor(url) { this.url = url; this._listeners = {}; instances.push(this) }
@@ -638,6 +644,9 @@ test('initLiveStore connects once, merges SSE store events, survives bad frames'
   // A store event merges into the client store and notifies subscribers
   const el = new FakeElement()
   mount({ route: '/stock', store: ['stock'], state: {}, view: (s, server) => `<b>${server.stock ?? '—'}</b>` }, el, {})
+  // store.js is lazy-loaded when spec.store is non-empty — wait for the dynamic
+  // import to resolve before the subscription (wired inside it) is live.
+  await new Promise(r => setTimeout(r, 0))
   instances[0]._listeners.store({ data: JSON.stringify({ stock: 7 }) })
   assert(getStoreState().stock === 7, `Expected stock 7, got ${getStoreState().stock}`)
   assert(el.innerHTML.includes('7'), `Subscribed page should re-render: ${el.innerHTML}`)
@@ -648,6 +657,41 @@ test('initLiveStore connects once, merges SSE store events, survives bad frames'
   assert(getStoreState().stock === 7, 'Bad frames must not corrupt the store')
 
   delete globalThis.EventSource
+})
+
+console.log('\nLazy store loading (through mount())\n')
+
+await testAsync('mount() with spec.store lazy-loads store.js and wires reactivity end to end', async () => {
+  updateStore({ counter: 100 })
+  const el = new FakeElement()
+  const spec = {
+    route: '/lazy-store',
+    store: ['counter'],
+    state: {},
+    view: (state, server) => `<span>${server.counter ?? 0}</span>`,
+  }
+
+  const instance = mount(spec, el, { counter: 100 })
+
+  // mount() returns synchronously, before store.js's dynamic import has resolved —
+  // the view renders with the page-level serverState snapshot passed to mount()
+  // (not yet the live store slice), and store-driven reactivity is not wired yet.
+  assert(el.innerHTML.includes('100'), `Expected initial render to use the snapshot: ${el.innerHTML}`)
+
+  // Yield a macrotask so the lazy import('./store.js') resolves. This is the
+  // "one microtask/tick later" cost documented for the lazy-loading change —
+  // after this point store subscription, registerStoreMutations, and (when
+  // window.__PULSE_LIVE__ is set) initLiveStore have all been wired up.
+  await new Promise(r => setTimeout(r, 0))
+
+  // Store-driven re-render now works correctly end to end through mount():
+  // a mutation dispatched on the singleton reaches this page's subscription.
+  const before = el.innerHTML
+  dispatchStoreMutation('inc')
+  assert(el.innerHTML !== before, 'Page should re-render once store.js has loaded and subscribed')
+  assert(el.innerHTML.includes('101'), `Expected counter 101 in HTML, got: ${el.innerHTML}`)
+
+  instance.destroy()
 })
 
 // ---------------------------------------------------------------------------
