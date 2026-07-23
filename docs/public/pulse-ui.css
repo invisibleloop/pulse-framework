@@ -1719,14 +1719,14 @@ hr.ui-divider {
 .ui-code-window-filename {
   font-size:   .75rem;
   font-family: var(--ui-mono);
-  color:       #9898b2;
+  color:       var(--ui-muted);
   margin-left: .35rem;
 }
 
 .ui-code-window-lang {
   font-size:   .7rem;
   font-family: var(--ui-mono);
-  color:       #9898b2;
+  color:       var(--ui-muted);
   margin-left: auto;
 }
 

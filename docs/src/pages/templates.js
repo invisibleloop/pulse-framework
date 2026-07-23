@@ -13,20 +13,26 @@ function esc(s) {
 }
 
 function statPill(label, value) {
-  return `<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.72rem;font-weight:500;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.55)">
-    <span style="color:#7c3aed">●</span> ${esc(label)}: <strong style="color:rgba(255,255,255,0.85);font-weight:600">${esc(String(value))}</strong>
+  return `<span style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.72rem;font-weight:500;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.7)">
+    <span style="color:#a78bfa">●</span> ${esc(label)}: <strong style="color:#fff;font-weight:600">${esc(String(value))}</strong>
   </span>`
 }
 
 function templateCard({ name, route, description, tags = [], stats = {}, preview = '' }) {
   const tagHtml = tags.map(t =>
-    `<span style="display:inline-block;padding:0.2rem 0.6rem;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:4px;font-size:0.72rem;font-weight:500;color:rgba(255,255,255,0.55)">${esc(t)}</span>`
+    `<span style="display:inline-block;padding:0.2rem 0.6rem;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.16);border-radius:4px;font-size:0.72rem;font-weight:500;color:rgba(255,255,255,0.7)">${esc(t)}</span>`
   ).join('')
 
   const statHtml = Object.entries(stats).map(([k, v]) => statPill(k, v)).join('')
 
+  // This card is a deliberately dark, self-contained surface (macOS-style
+  // preview window + dark body) regardless of the page's own theme — it
+  // mirrors the code-window pattern elsewhere. Uses a real dark background
+  // (not a translucent white tint over the page background), so it reads
+  // correctly on both the light and dark docs themes and keeps the
+  // white-tinted text/borders it was designed with at proper contrast.
   return `
-    <div style="border:1px solid rgba(255,255,255,0.1);border-radius:0.875rem;overflow:hidden;display:flex;flex-direction:column;background:rgba(255,255,255,0.03)">
+    <div style="border:1px solid rgba(255,255,255,0.1);border-radius:0.875rem;overflow:hidden;display:flex;flex-direction:column;background:#171512">
 
       <a href="${esc(route)}" aria-label="Open ${esc(name)} template" style="display:block;background:#0d0d12;border-bottom:1px solid rgba(255,255,255,0.08);text-decoration:none;overflow:hidden">
         <div style="padding:0.5rem 0.75rem;background:#16161e;display:flex;align-items:center;gap:0.375rem;border-bottom:1px solid rgba(255,255,255,0.06)">
@@ -40,13 +46,13 @@ function templateCard({ name, route, description, tags = [], stats = {}, preview
         </div>
       </a>
 
-      <div style="padding:1.25rem 1.25rem 1rem;flex:1;display:flex;flex-direction:column;gap:0.875rem">
+      <div style="padding:1.25rem 1.25rem 1rem;flex:1;display:flex;flex-direction:column;gap:0.875rem;color:#fff">
         <div>
           <div style="display:flex;flex-wrap:wrap;align-items:center;gap:0.5rem;margin-bottom:0.5rem">
-            <h2 style="margin:0;font-size:1rem;font-weight:700;line-height:1.3">${esc(name)}</h2>
+            <h2 style="margin:0;font-size:1rem;font-weight:700;line-height:1.3;color:#fff">${esc(name)}</h2>
             ${tagHtml}
           </div>
-          <p style="margin:0;font-size:0.85rem;line-height:1.6;opacity:0.65">${esc(description)}</p>
+          <p style="margin:0;font-size:0.85rem;line-height:1.6;color:rgba(255,255,255,0.7)">${esc(description)}</p>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:0.3rem;padding-top:0.625rem;border-top:1px solid rgba(255,255,255,0.08)">${statHtml}</div>
       </div>
