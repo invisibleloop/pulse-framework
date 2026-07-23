@@ -72,9 +72,10 @@ const agentFlow = `<ol class="hiw-flow">${[
 export default {
   route: '/how-it-works',
   meta: {
+    theme:       'light',
     title: 'How It Works — Pulse Docs',
     description: 'How the Pulse MCP server gives an AI agent the knowledge and tools to build Pulse apps correctly.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/how-it-works',

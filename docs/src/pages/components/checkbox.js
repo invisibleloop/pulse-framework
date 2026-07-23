@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/checkbox')
 export default {
   route: '/components/checkbox',
   meta: {
+    theme:       'light',
     title:       'Checkbox — Pulse Docs',
     description: 'Custom-styled checkbox component for Pulse UI.',
-    styles:      ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/checkbox',

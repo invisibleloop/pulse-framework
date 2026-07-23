@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/segmented')
 export default {
   route: '/components/segmented',
   meta: {
+    theme:       'light',
     title: 'Segmented — Pulse Docs',
     description: 'iOS-style segmented control component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/segmented',

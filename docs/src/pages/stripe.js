@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/stripe')
 export default {
   route: '/stripe',
   meta: {
+    theme:       'light',
     title: 'Payments (Stripe) — Pulse Docs',
     description: 'Integrating Stripe Checkout and webhooks with Pulse using actions, raw response specs, and server data fetchers.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

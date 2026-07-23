@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/raw-responses')
 export default {
   route: '/raw-responses',
   meta: {
+    theme:       'light',
     title: 'Raw Responses — Pulse Docs',
     description: 'Return non-HTML responses from Pulse specs — RSS, XML, JSON, and other content types.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/raw-responses',

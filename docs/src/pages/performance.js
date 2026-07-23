@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/performance')
 export default {
   route: '/performance',
   meta: {
+    theme:       'light',
     title: 'Performance — Pulse Docs',
     description: 'Performance targets, techniques, and built-in optimisations in Pulse.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/performance',

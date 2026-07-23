@@ -17,9 +17,10 @@ function q(question, answer) {
 export default {
   route: '/faq',
   meta: {
+    theme:       'light',
     title:       'FAQ — Pulse Docs',
     description: 'Frequently asked questions about the Pulse framework.',
-    styles:      ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/faq',

@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/spec')
 export default {
   route: '/spec',
   meta: {
+    theme:       'light',
     title: 'Spec Reference — Pulse Docs',
     description: 'Complete reference for every field in a Pulse page spec.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

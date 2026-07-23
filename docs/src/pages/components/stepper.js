@@ -10,9 +10,10 @@ const STEPS = ['Account', 'Details', 'Payment', 'Review']
 export default {
   route: '/components/stepper',
   meta: {
+    theme:       'light',
     title: 'Stepper — Pulse Docs',
     description: 'Horizontal step progress indicator component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/stepper',

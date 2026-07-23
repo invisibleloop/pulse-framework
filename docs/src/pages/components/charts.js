@@ -29,9 +29,10 @@ const traffic = [
 export default {
   route: '/components/charts',
   meta: {
+    theme:       'light',
     title: 'Charts — Pulse Docs',
     description: 'Server-rendered SVG charts for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/charts',

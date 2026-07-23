@@ -1,8 +1,52 @@
-/* Brut theme tokens */
-:root {
-  --brut-yellow: #f0e642;
-  --brut-ink: #0a0a0a;
-  --brut-surface: #ffffff;
-  --brut-dark: #111114;
-  --brut-darker: #111214;
+/* Brut theme tokens — home page only, scoped to [data-theme="light"] on <body> */
+[data-theme="light"] {
+  /* Confident saturated gold — solid block fill (dark ink text sits on top) */
+  --brut-gold: #e8b613;
+  --brut-gold-deep: #c99700;
+  --brut-ink: #171512;
+  --brut-surface: #faf8f2;
+  --brut-surface-2: #f1ede1;
+  --brut-muted: #5c574c;
+  --brut-dark: #171512;
+  --brut-darker: #100f0c;
+  --brut-surface-dot: #e6e0d2;
+}
+
+/* Site-wide light theme tokens — feeds docs.css's :root token names (--bg,
+   --surface, --text, --accent, etc.) and pulse-ui.css's input tokens, so
+   every docs page (nav, sidebar, guides, component reference, templates
+   gallery) picks up the same warm/gold/paper palette as the home page. */
+[data-theme="light"] {
+  --bg:            var(--brut-surface);
+  --surface:       #ffffff;
+  --surface-2:     var(--brut-surface-2);
+  --border:        #ddd6c4;
+  --border-subtle: #ece7d9;
+  --text:          var(--brut-ink);
+  --muted:         var(--brut-muted);
+  --muted-2:       #8a8272;
+  --accent:        var(--brut-gold-deep);
+  --accent-text:   var(--brut-ink);
+  --accent-hover:  #a97f00;
+  --accent-dim:    rgba(201, 151, 0, 0.12);
+  --green:         #166534;
+  --red:           #b91c1c;
+
+  /* Syntax tokens — dark-on-light, tuned for contrast on --surface-2 */
+  --tok-kw:    #7c3aed;
+  --tok-str:   #15803d;
+  --tok-cmt:   #78716c;
+  --tok-num:   #c2410c;
+  --tok-fn:    #1d4ed8;
+  --tok-prop:  #a16207;
+  --tok-op:    #0891b2;
+  --tok-punct: #57534e;
+
+  /* Sticky header background — replaces the hardcoded rgba(13,13,16,.9) */
+  --header-bg: rgba(250, 248, 242, 0.9);
+
+  /* Callout / tag accents that were hardcoded dark-theme hex in docs.css */
+  --callout-note-icon: #1d4ed8;
+  --tag-required-bg:   rgba(185, 28, 28, 0.12);
+  --tag-required-text: #b91c1c;
 }

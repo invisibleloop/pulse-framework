@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/cta')
 export default {
   route: '/components/cta',
   meta: {
+    theme:       'light',
     title: 'CTA — Pulse Docs',
     description: 'Call-to-action block with eyebrow, heading, body text, and an actions slot.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderComponentPage({

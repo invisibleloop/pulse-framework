@@ -25,9 +25,10 @@ function promptGroup(title, cards) {
 export default {
   route: '/prompt-examples',
   meta: {
+    theme:       'light',
     title: 'Prompt Examples — Pulse Docs',
     description: 'Real prompts for building Pulse pages with your AI agent — from creating pages to authentication, performance audits, and integrations.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/prompt-examples',

@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/hero')
 export default {
   route: '/components/hero',
   meta: {
+    theme:       'light',
     title: 'Hero — Pulse Docs',
     description: 'Hero component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   state: {},
   view: () => {

@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/components/badge')
 export default {
   route: '/components/badge',
   meta: {
+    theme:       'light',
     title: 'Badge — Pulse Docs',
     description: 'Badge component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/badge',

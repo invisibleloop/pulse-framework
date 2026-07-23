@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/divider')
 export default {
   route: '/components/divider',
   meta: {
+    theme:       'light',
     title: 'Divider — Pulse Docs',
     description: 'Divider component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/divider',

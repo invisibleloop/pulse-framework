@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/toggle')
 export default {
   route: '/components/toggle',
   meta: {
+    theme:       'light',
     title: 'Toggle — Pulse Docs',
     description: 'iOS-style switch toggle component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/toggle',

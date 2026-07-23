@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/slider')
 export default {
   route: '/components/slider',
   meta: {
+    theme:       'light',
     title: 'Slider — Pulse Docs',
     description: 'Styled range input slider component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   state: { brightness: 100 },
   mutations: {

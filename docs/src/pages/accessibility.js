@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/accessibility')
 export default {
   route: '/accessibility',
   meta: {
+    theme:       'light',
     title: 'Accessibility — Pulse Docs',
     description: 'Keyboard navigation, focus management, semantic HTML, and ARIA patterns in Pulse.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/accessibility',

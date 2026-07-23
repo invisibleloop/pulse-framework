@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/stat')
 export default {
   route: '/components/stat',
   meta: {
+    theme:       'light',
     title: 'Stat — Pulse Docs',
     description: 'Stat component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/stat',

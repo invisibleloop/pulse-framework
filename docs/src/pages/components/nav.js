@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/nav')
 export default {
   route: '/components/nav',
   meta: {
+    theme:       'light',
     title: 'Nav — Pulse Docs',
     description: 'Nav component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/nav',

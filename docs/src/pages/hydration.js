@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/hydration')
 export default {
   route: '/hydration',
   meta: {
+    theme:       'light',
     title: 'Hydration — Pulse Docs',
     description: 'How Pulse hydrates server-rendered HTML on the client — automatic hydration, mount(), and production bundles.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

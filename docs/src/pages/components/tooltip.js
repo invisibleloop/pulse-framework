@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/tooltip')
 export default {
   route: '/components/tooltip',
   meta: {
+    theme:       'light',
     title: 'Tooltip — Pulse Docs',
     description: 'Tooltip component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/tooltip',

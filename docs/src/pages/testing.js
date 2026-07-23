@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/testing')
 export default {
   route: '/testing',
   meta: {
+    theme:       'light',
     title: 'Testing — Pulse Docs',
     description: 'Test Pulse view functions with renderSync and render — query the HTML output with CSS-like selectors, no DOM required.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/testing',

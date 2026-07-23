@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/extending')
 export default {
   route: '/extending',
   meta: {
+    theme:       'light',
     title: 'Extending Pulse — Pulse Docs',
     description: 'Escape hatches for features outside the Pulse spec — onRequest middleware, raw server access, WebSockets, SSE, and custom error handling.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/extending',

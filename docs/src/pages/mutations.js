@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/mutations')
 export default {
   route: '/mutations',
   meta: {
+    theme:       'light',
     title: 'Mutations — Pulse Docs',
     description: 'Synchronous state changes in Pulse — how to declare and trigger mutations.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   state: {},
   view: () => renderLayout({

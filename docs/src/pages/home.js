@@ -1,4 +1,4 @@
-// component-free — creative override: brutalist design intent; asymmetric typography-driven layout with exposed grid structure, raw borders, and oversized type that component patterns cannot express
+// component-free — creative override: asymmetric typography-driven layout (wide headline column + narrower supporting column), a solid gold mark treatment on "page.", and a light/dark section rhythm that component patterns cannot express
 import { highlight }                                        from '../lib/highlight.js'
 import { iconZap, iconShield, iconSettings }               from '../../../src/ui/icons.js'
 import { metricsStore }  from '../lib/metrics-store.js'
@@ -55,6 +55,7 @@ export default {
   meta: {
     title: 'Pulse — The spec-first web framework',
     description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page: server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
+    theme: 'light',
     styles: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap', '/pulse-ui.css', '/theme.css', '/docs.css', '/home-brut.css'],
     schema: {
       '@context': 'https://schema.org',
@@ -79,7 +80,7 @@ export default {
       <nav class="brut-nav" aria-label="Site navigation">
         <a href="/" class="brut-nav-logo" aria-label="Pulse home">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="#f0e642" stroke="#f0e642" stroke-width="1" stroke-linejoin="round"/>
+            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
           </svg>
           <span>PULSE</span>
         </a>
@@ -96,20 +97,13 @@ export default {
           <div class="brut-hero-tag">v${version} — EARLY ACCESS</div>
           <h1 class="brut-hero-h1">
             <span class="brut-hero-kicker">with Pulse</span>
-            <span class="brut-hero-line1">YOU CAN'T</span>
-            <span class="brut-hero-line2" role="img" aria-label="SHIP">
-              <svg class="brut-hero-svg" aria-hidden="true">
-                <text class="brut-hero-svg-text" y="0.82em" dominant-baseline="auto"
-                  font-family="Inter, system-ui, sans-serif" font-weight="900"
-                  fill="var(--brut-yellow)" stroke="var(--brut-ink)" stroke-width="0.055em" paint-order="stroke fill">SHIP</text>
-              </svg>
-            </span>
-            <span class="brut-hero-line3">A BAD PAGE.</span>
+            <span class="brut-hero-line1">The spec is</span>
+            <span class="brut-hero-line2">the <span class="brut-hero-mark">page.</span></span>
           </h1>
           <div class="brut-hero-aside">
             <p class="brut-hero-tag-inline">ONE SPEC. ONE WAY TO BUILD.</p>
-            <p class="brut-hero-desc">A server-first Node.js framework. Streaming SSR, security headers, and production caching are enforced by the architecture, not left to configuration.</p>
-            <p class="brut-hero-sub"><strong>So constrained that doing it wrong isn't an option. Whether you write it or an AI does.</strong></p>
+            <p class="brut-hero-desc">One plain JS object — server data, state, mutations, and view. No split files, no hidden conventions.</p>
+            <p class="brut-hero-sub"><strong>So constrained that doing it wrong isn't an option.<br>Whether you write it or an AI&nbsp;does.</strong></p>
             <div class="brut-hero-ctas">
               <a href="/getting-started" class="brut-btn-primary">Get Started</a>
               <a href="/spec" class="brut-btn-ghost">Read the Spec</a>
@@ -207,7 +201,7 @@ export default {
                   <th></th>
                   <th class="brut-th-pulse">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="vertical-align:middle;margin-right:.3rem">
-                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="#f0e642" stroke="#f0e642" stroke-width="1" stroke-linejoin="round"/>
+                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
                     </svg>PULSE
                   </th>
                   <th>Next.js / Remix</th>

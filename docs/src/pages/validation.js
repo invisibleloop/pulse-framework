@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/validation')
 export default {
   route: '/validation',
   meta: {
+    theme:       'light',
     title: 'Validation — Pulse Docs',
     description: 'Declarative validation rules in Pulse — syntax, formats, dot-path notation, and error handling.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/validation',

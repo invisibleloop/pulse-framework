@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/server-data')
 export default {
   route: '/server-data',
   meta: {
+    theme:       'light',
     title: 'Server Data — Pulse Docs',
     description: 'Fetch, transform, and combine data on the server before rendering — external APIs, multiple fetchers, parallel requests.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/server-data',

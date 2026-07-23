@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/pullquote')
 export default {
   route: '/components/pullquote',
   meta: {
+    theme:       'light',
     title: 'Pullquote — Pulse Docs',
     description: 'Styled blockquote component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/pullquote',

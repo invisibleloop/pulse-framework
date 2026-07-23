@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/server-api')
 export default {
   route: '/server-api',
   meta: {
+    theme:       'light',
     title: 'Server API — Pulse Docs',
     description: 'Complete reference for createServer — all options, hooks, and response behaviour.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/server-api',

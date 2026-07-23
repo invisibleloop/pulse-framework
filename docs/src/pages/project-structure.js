@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/project-structure')
 export default {
   route: '/project-structure',
   meta: {
+    theme:       'light',
     title: 'Project Structure — Pulse Docs',
     description: 'Recommended directory layout for a Pulse application.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/project-structure',

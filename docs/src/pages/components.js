@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/components')
 export default {
   route: '/components',
   meta: {
+    theme:       'light',
     title: 'Component Library — Pulse Docs',
     description: 'Server-rendered UI components for Pulse — button, card, input, alert, stat, avatar, table and more. Fully accessible, mobile-ready, zero client JS.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/components',

@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/modal')
 export default {
   route: '/components/modal',
   meta: {
+    theme:       'light',
     title: 'Modal — Pulse Docs',
     description: 'Modal dialog component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/modal',

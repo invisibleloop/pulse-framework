@@ -11,6 +11,7 @@ import { highlight } from './highlight.js'
 export function demo(previewHtml, codeStr, { col = false, scroll = false, bleed = false } = {}) {
   const previewClass = [
     'demo-preview',
+    'is-light',
     col    ? 'demo-preview--col'    : '',
     scroll ? 'demo-preview--scroll' : '',
     bleed  ? 'demo-preview--bleed'  : '',
@@ -20,7 +21,7 @@ export function demo(previewHtml, codeStr, { col = false, scroll = false, bleed 
     <svg class="demo-theme-toggle__light" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>`
   return `<div class="component-demo">
-  <div class="${previewClass}">${toggle}<div class="demo-preview-inner">${previewHtml}</div></div>
+  <div class="${previewClass}">${toggle}<div class="demo-preview-inner ui-theme-light">${previewHtml}</div></div>
   <div class="demo-code">${codeBlock(highlight(codeStr, 'js'))}</div>
 </div>`
 }

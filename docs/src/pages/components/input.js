@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/input')
 export default {
   route: '/components/input',
   meta: {
+    theme:       'light',
     title: 'Input — Pulse Docs',
     description: 'Input component for Pulse UI.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/input',

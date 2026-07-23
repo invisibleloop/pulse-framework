@@ -7,9 +7,10 @@ const { prev, next } = prevNext('/slash-commands')
 export default {
   route: '/slash-commands',
   meta: {
+    theme:       'light',
     title: 'Slash Commands — Pulse Docs',
     description: 'The built-in slash commands available in the Pulse AI agent session.',
-    styles: ['/docs.css'],
+    styles: ['/theme.css', '/docs.css'],
   },
   view: () => renderLayout({
     currentHref: '/slash-commands',

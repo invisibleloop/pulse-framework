@@ -8,9 +8,10 @@ const { prev, next } = prevNext('/components/search')
 export default {
   route: '/components/search',
   meta: {
+    theme:       'light',
     title: 'Search — Pulse Docs',
     description: 'Search input component with icon, debounce binding, and clear button.',
-    styles: ['/pulse-ui.css', '/docs.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css'],
   },
   view: () => renderComponentPage({
     currentHref: '/components/search',
