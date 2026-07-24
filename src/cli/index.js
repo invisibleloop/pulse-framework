@@ -51,9 +51,11 @@ function isPulseProject(dir) {
 async function runDev(root) {
   const devScript  = new URL('./dev.js', import.meta.url).pathname
   const { spawn }  = await import('child_process')
+  // Forward any extra flags (e.g. --port 3002) to the dev script
+  const extraArgs  = args.slice(1)
   const proc = spawn(
     process.execPath,
-    [devScript, '--root', root],
+    [devScript, '--root', root, ...extraArgs],
     { stdio: 'inherit' }
   )
   proc.on('exit', code => process.exit(code ?? 0))
