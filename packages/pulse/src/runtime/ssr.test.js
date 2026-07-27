@@ -139,6 +139,37 @@ await test('passes ctx to server data fetchers', async () => {
   assert(html.includes('Hello Andy'), `Got: ${html}`)
 })
 
+await test('exposes ctx.nonce to the view as server.nonce', async () => {
+  // Regression: ctx.nonce was already available to guard/server fetchers
+  // (buildContext sets it directly on ctx), but never reached the view
+  // itself — there was no documented way for a hand-written <script> tag
+  // (e.g. third-party scripts like AdSense that require an inline snippet
+  // the framework doesn't generate) to receive the per-request CSP nonce.
+  const spec = {
+    route: '/ads',
+    state: {},
+    view: (s, server) => `<script nonce="${server.nonce}">/* ad init */</script>`,
+  }
+  const { html } = await renderToString(spec, { nonce: 'abc123' })
+  assert(html.includes('nonce="abc123"'), `Got: ${html}`)
+})
+
+await test('server.nonce is absent (not empty string) when ctx.nonce is unset', async () => {
+  const { serverState } = await renderToString(helloSpec, {})
+  assert(serverState.nonce === undefined, `Expected no nonce key, got: ${serverState.nonce}`)
+})
+
+await test('an explicit server.nonce fetcher wins over ctx.nonce', async () => {
+  const spec = {
+    route: '/custom-nonce',
+    state: {},
+    server: { nonce: async () => 'explicit-value' },
+    view: (s, server) => `<p>${server.nonce}</p>`,
+  }
+  const { serverState } = await renderToString(spec, { nonce: 'from-ctx' })
+  assert(serverState.nonce === 'explicit-value', `Got: ${serverState.nonce}`)
+})
+
 await test('returns serverState from resolved fetchers', async () => {
   const { serverState } = await renderToString(serverDataSpec)
   assert(Array.isArray(serverState.products), 'Expected products array')

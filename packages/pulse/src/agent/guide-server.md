@@ -178,6 +178,26 @@ export default {
 - **Progressive enhancement:** add `data-action="send"` to the same form — hydrated visitors get the async action with no page reload; no-JS visitors fall back to the POST.
 - Multi-instance deployments: pass a stable `secret` to `createServer` (e.g. from an env var) so CSRF tokens issued by one instance validate on another.
 
+## Third-party inline scripts — `server.nonce`
+
+The framework auto-nonces its own inline `<script>` tags for CSP (`script-src` is nonce-restricted, not `'unsafe-inline'`). A hand-written `<script>` in a view — e.g. an ad network's or analytics tool's inline snippet that the framework doesn't generate itself — needs that same nonce or the browser blocks it as a CSP violation.
+
+`server.nonce` is the per-request CSP nonce, available in every view with no extra setup:
+
+```js
+view: (state, server) => `
+  <main id="main-content">
+    <script nonce="${server.nonce}">
+      (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </main>`,
+```
+
+**Rules:**
+- Only covers **inline** `<script>` content. An external `<script src="...">` doesn't need a nonce at all — CSP's `script-src` origin allowlist (`csp: { 'script-src': ['https://example.com'] }` in `createServer`) gates those instead; add the third party's origin there.
+- Never hardcode a nonce value — it's per-request and regenerated on every response. `server.nonce` always reflects the current request's real value.
+- If the third party's own SDK tries to register a [Trusted Types](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API) policy (some ad networks do), the framework's CSP restricts `trusted-types` to its own `pulse` policy — that's a separate, unrelated CSP dimension from nonces and isn't solved by `server.nonce`. There's currently no documented `createServer` option to extend the `trusted-types` allowlist; treat that as its own explicit trade-off (raising it site-wide weakens Trusted Types protection generally, not just for the third-party script) rather than assuming it's covered here.
+
 ## Server context — redirects, cookies, POST bodies
 
 The `ctx` object is available in `guard`, `server.*` fetchers, and `meta` functions.

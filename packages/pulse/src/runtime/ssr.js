@@ -461,23 +461,30 @@ function mergeStoreKeys(spec, serverState, storeState) {
 /**
  * Merge per-request extras set by the server into the view's server state:
  *
- *   ctx._form      → serverState.form  — the return value of spec.submit() on a
+ *   ctx._form      → serverState.form   — the return value of spec.submit() on a
  *                    POST re-render (validation errors, submitted values, etc.)
- *   ctx._csrfField → serverState.csrf  — ready-to-embed hidden <input> for CSRF;
+ *   ctx._csrfField → serverState.csrf   — ready-to-embed hidden <input> for CSRF;
  *                    views include it inside <form method="POST"> as ${server.csrf}
+ *   ctx.nonce      → serverState.nonce  — the per-request CSP nonce, for views that
+ *                    need to hand-write a <script nonce="${server.nonce}"> tag (e.g.
+ *                    third-party scripts like AdSense/GTM that require an inline
+ *                    snippet the framework itself doesn't generate). ctx.nonce is
+ *                    always set (buildContext defaults it to '' if none was passed),
+ *                    so this key is always present — unlike form/csrf, which are
+ *                    conditional on spec.submit.
  *
- * Only set by the server for specs that declare `submit` — other pages see
- * neither key. Explicit server fetcher keys with the same names win.
+ * Explicit server fetcher keys with the same names win over all of the above.
  *
  * @param {Object} serverState
  * @param {Object} ctx
  * @returns {Object}
  */
 function applyCtxExtras(serverState, ctx) {
-  if (ctx?._form === undefined && ctx?._csrfField === undefined) return serverState
+  if (ctx?._form === undefined && ctx?._csrfField === undefined && !ctx?.nonce) return serverState
   const extras = {}
   if (ctx._form      !== undefined) extras.form = ctx._form
   if (ctx._csrfField !== undefined) extras.csrf = ctx._csrfField
+  if (ctx.nonce)                    extras.nonce = ctx.nonce
   return { ...extras, ...serverState }
 }
 
