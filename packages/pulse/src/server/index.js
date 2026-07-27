@@ -331,14 +331,26 @@ function resolveCache(value) {
  *
  * spec.cache / defaultCache:
  *   true                               → public, max-age=3600, stale-while-revalidate=86400
- *   number                             → public, max-age={n}
+ *   number                               → public, max-age={n}
  *   { public, maxAge, staleWhileRevalidate }
+ *
+ * Pages with no cache config get 'no-cache', not 'no-store' — this is a
+ * deliberate choice, not a lesser default. 'no-store' unconditionally blocks
+ * the browser's back/forward cache (confirmed against a real Lighthouse
+ * audit: "Page prevented back/forward cache restoration ... cache-control:
+ * no-store header"), which without this fix meant every Pulse page failed
+ * bfcache eligibility unless it explicitly opted into caching. 'no-cache'
+ * still forces revalidation on every direct load/refresh — it does NOT
+ * serve a stale copy without checking first — it just permits the browser
+ * to keep an in-memory snapshot for back/forward navigation, which never
+ * touches the network at all. No risk of stale dynamic content on a normal
+ * page load; this only affects the back/forward navigation path.
  */
 function buildCacheControl(spec, dev, defaultCache = null) {
   if (dev) return 'no-store'
 
   const cfg = resolveCache(spec?.cache) ?? resolveCache(defaultCache)
-  if (!cfg) return 'no-store'
+  if (!cfg) return 'no-cache'
 
   return buildCacheControlFromConfig(cfg)
 }

@@ -1009,6 +1009,38 @@ await test('CSP header present on streaming page response', async () => {
   })
 })
 
+// Cache-Control
+await test('HTML with no spec.cache/defaultCache gets no-cache, not no-store', async () => {
+  // Regression: a real Lighthouse audit failed "Page prevented back/forward
+  // cache restoration" with reason "cache-control:no-store" on a page that
+  // had no cache config at all — the framework's old default was no-store,
+  // which unconditionally blocks the browser's bfcache. no-cache still
+  // forces revalidation on every direct load (no risk of serving stale
+  // content) but does not block bfcache, since bfcache restoration never
+  // touches the network.
+  await withServer([canonicalSpec], { stream: false }, async (port) => {
+    const { headers } = await request(port, 'GET', '/about')
+    assert(headers['cache-control'] === 'no-cache',
+      `Expected no-cache, got: ${headers['cache-control']}`)
+  })
+})
+
+await test('HTML respects spec.cache / defaultCache when configured', async () => {
+  await withServer([helloSpec], { stream: false, defaultCache: 60 }, async (port) => {
+    const { headers } = await request(port, 'GET', '/hello')
+    assert(headers['cache-control']?.includes('max-age=60'),
+      `Expected max-age=60, got: ${headers['cache-control']}`)
+  })
+})
+
+await test('dev mode always returns no-store regardless of cache config', async () => {
+  await withServer([canonicalSpec], { stream: false, dev: true, defaultCache: 3600 }, async (port) => {
+    const { headers } = await request(port, 'GET', '/about')
+    assert(headers['cache-control'] === 'no-store',
+      `Expected no-store in dev mode, got: ${headers['cache-control']}`)
+  })
+})
+
 // HSTS
 await test('HSTS header absent on plain HTTP', async () => {
   await withServer([canonicalSpec], { stream: false }, async (port) => {

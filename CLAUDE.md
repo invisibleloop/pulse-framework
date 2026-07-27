@@ -497,7 +497,7 @@ meta: {
 - **`X-Pulse-Navigate: true`** — returns JSON `{ html, title, hydrate, serverState }` for client-side navigation
 - **Security headers** — on every response: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`
 - **Compression** — brotli preferred, gzip fallback for all compressible types
-- **Cache** — `/dist/*` bundles: `immutable, max-age=31536000`; static assets: `max-age=3600`; HTML: `no-store`
+- **Cache** — `/dist/*` bundles: `immutable, max-age=31536000`; static assets: `max-age=3600`; HTML with no `spec.cache`/`defaultCache` configured: `no-cache` (always revalidates, but doesn't block the browser's back/forward cache the way `no-store` does — see `spec.cache`/`defaultCache` above for opting into a longer TTL)
 
 ## Client Navigation
 
