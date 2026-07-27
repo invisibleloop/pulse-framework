@@ -129,6 +129,24 @@ export class ClaudeSession extends EventEmitter {
     this.proc.stdin.write(line + '\n')
   }
 
+  /**
+   * Interrupt the current in-flight turn without ending the session or
+   * killing the subprocess — verified directly against the real CLI (not
+   * assumed/documented anywhere): sending a control_request with
+   * subtype 'interrupt' gets a control_response, the CLI injects a
+   * synthetic "[Request interrupted by user]" user message, and the
+   * current turn's `result` event fires immediately with is_error: true
+   * instead of running to completion. Safe to call with no turn in
+   * flight — the CLI just responds success with nothing to interrupt.
+   */
+  interrupt() {
+    const line = JSON.stringify({
+      type: 'control_request',
+      request: { subtype: 'interrupt' },
+    })
+    this.proc.stdin.write(line + '\n')
+  }
+
   /** Tear down the subprocess — call when the TUI exits or the session ends. */
   destroy() {
     try { this.proc.stdin.end() } catch { /* already closed */ }

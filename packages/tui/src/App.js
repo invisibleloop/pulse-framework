@@ -184,7 +184,9 @@ function ToolCallLine({ name, input, status }) {
   const icon = status === 'done' ? h(Text, { color: COLORS.green }, '✓')
     : status === 'error' ? h(Text, { color: COLORS.red }, '✗')
     : h(Text, { color: COLORS.yellow }, runningFrame)
-  return h(Box, { gap: 1 },
+  // marginBottom matches Message's spacing — without it, a tool line sat
+  // flush against the next message with no visual separation.
+  return h(Box, { gap: 1, marginBottom: 1 },
     icon,
     h(Text, { color: COLORS.muted }, summarizeToolInput(name, input)),
   )
@@ -195,6 +197,13 @@ function ThinkingLine() {
   return h(Box, { gap: 1 },
     h(Text, { color: COLORS.accent }, frame),
     h(Text, { color: COLORS.muted }, 'thinking…'),
+  )
+}
+
+function InterruptedLine() {
+  return h(Box, { gap: 1, marginBottom: 1 },
+    h(Text, { color: COLORS.red }, '✗'),
+    h(Text, { color: COLORS.muted }, 'Interrupted'),
   )
 }
 
@@ -218,14 +227,41 @@ function ConversationPane({ messages, isThinking }) {
     ...visible.map((m, i) => {
       if (m.kind === 'tool') return h(ToolCallLine, { key: i, name: m.name, input: m.input, status: m.status })
       if (m.kind === 'status') return h(StatusMessage, { key: i, info: m.info, devServer: m.devServer })
+      if (m.kind === 'interrupted') return h(InterruptedLine, { key: i })
       return h(Message, { key: i, role: m.role, text: m.text })
     }),
     isThinking ? h(ThinkingLine, { key: 'thinking' }) : null,
   )
 }
 
-function OutputPane({ lines }) {
-  const recent = lines.slice(-8)
+// A right-hand column was tried here (full-height flex sibling next to
+// ConversationPane) but reverted — a real, confirmed problem, not just
+// cosmetic: Ink pads every row of a flex-grown Box out to its full computed
+// width with invisible spaces, since terminal output is a character grid,
+// not a DOM where empty space costs nothing. Every short conversation line
+// was followed by a long run of blank cells before the output column's
+// border, and that padding is exactly what a terminal's click-drag selection
+// captures — copy/paste picked up huge invisible gaps on every line. Back to
+// a horizontal strip below the conversation, which doesn't force a tall
+// empty column to pad against.
+const OUTPUT_PANE_VISIBLE_LINES = 8
+
+// scrollOffset is "lines back from the newest line" (0 = following latest),
+// owned by App and adjusted via PageUp/PageDown — the pane buffers up to 200
+// lines but previously only ever showed the last 8 with no way to reach the
+// rest, a real gap since dev-server errors could scroll out of view unseen.
+function OutputPane({ lines, scrollOffset }) {
+  // Self-clamp rather than trust the caller's offset is always in range —
+  // an offset stale from a longer buffer (e.g. after a reconnect resets
+  // outputLines to a shorter array) previously produced an empty {0,0}
+  // window instead of falling back to the oldest available lines.
+  const clampedOffset = Math.max(0, Math.min(scrollOffset, Math.max(0, lines.length - OUTPUT_PANE_VISIBLE_LINES)))
+  const end = Math.max(0, lines.length - clampedOffset)
+  const start = Math.max(0, end - OUTPUT_PANE_VISIBLE_LINES)
+  const visible = lines.slice(start, end)
+  const hasMoreAbove = start > 0
+  const isScrolledBack = clampedOffset > 0
+
   return h(Box, {
     flexDirection: 'column',
     borderStyle: 'round',
@@ -233,9 +269,15 @@ function OutputPane({ lines }) {
     paddingX: 1,
     height: 10,
   },
-    h(Text, { bold: true, color: COLORS.muted }, 'dev server output'),
-    ...recent.map((l, i) =>
-      h(Text, { key: i, color: l.level === 'error' ? COLORS.red : undefined, wrap: 'truncate' }, l.text)
+    h(Box, { justifyContent: 'space-between' },
+      h(Text, { bold: true, color: COLORS.muted }, 'dev server output'),
+      (hasMoreAbove || isScrolledBack)
+        ? h(Text, { color: COLORS.muted, dimColor: true },
+            `[${start + 1}-${end}/${lines.length}]${isScrolledBack ? ' PgDn to follow' : ' PgUp for more'}`)
+        : null,
+    ),
+    ...visible.map((l, i) =>
+      h(Text, { key: start + i, color: l.level === 'error' ? COLORS.red : undefined, wrap: 'truncate' }, l.text)
     ),
   )
 }
@@ -456,6 +498,13 @@ export function App({ projectName, claude, devServer }) {
   const [sessionInfo, setSessionInfo] = useState(null)
   const [devServerState, setDevServerState] = useState(null)
   const [outputLines, setOutputLines] = useState([])
+  // Lines back from the newest line the visible window starts at — 0 means
+  // "following the latest output" (the normal/default state). PageUp moves
+  // this up into history; PageDown moves it back down toward 0. Needed
+  // because the pane only ever showed the last 8 of up to 200 buffered
+  // lines with no way to reach the rest — a real, confirmed gap, not just
+  // a nice-to-have.
+  const [outputScrollOffset, setOutputScrollOffset] = useState(0)
   // True from the moment a user message is sent until the first assistant
   // event for that turn arrives — there is no distinct "thinking" event on
   // the wire (verified: silence on stdout is the only signal), so this is
@@ -464,9 +513,28 @@ export function App({ projectName, claude, devServer }) {
 
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
-      claude?.destroy()
-      devServer?.destroy()
-      exit()
+      // While a turn is in flight, Ctrl+C interrupts it (verified against
+      // the real CLI: a control_request/interrupt message ends the current
+      // turn immediately without killing the subprocess or session) instead
+      // of quitting the whole TUI — quitting mid-turn was the previous
+      // behavior and is surprising when the user just wants to stop Claude
+      // from continuing, not lose the session. Ctrl+C with nothing running
+      // quits as before, matching the expectation that the app is idle.
+      if (isThinking) {
+        claude?.interrupt()
+      } else {
+        claude?.destroy()
+        devServer?.destroy()
+        exit()
+      }
+      return
+    }
+    if (key.pageUp) {
+      setOutputScrollOffset((offset) =>
+        Math.min(offset + OUTPUT_PANE_VISIBLE_LINES, Math.max(0, outputLines.length - OUTPUT_PANE_VISIBLE_LINES)))
+    }
+    if (key.pageDown) {
+      setOutputScrollOffset((offset) => Math.max(0, offset - OUTPUT_PANE_VISIBLE_LINES))
     }
   })
 
@@ -530,6 +598,14 @@ export function App({ projectName, claude, devServer }) {
                 : msg
             ))
           }
+          // Ctrl+C interrupt injects this exact synthetic text block —
+          // surface it so it's clear the interrupt actually took effect,
+          // rather than it silently vanishing (this block isn't a
+          // tool_result so the branch above never touches it).
+          if (block.type === 'text' && block.text === '[Request interrupted by user]') {
+            setIsThinking(false)
+            setMessages((m) => [...m, { kind: 'interrupted' }])
+          }
         }
       }
 
@@ -589,7 +665,7 @@ export function App({ projectName, claude, devServer }) {
   return h(Box, { flexDirection: 'column', width: '100%', height: '100%' },
     h(StatusBar, { projectName, devServer: devServerState, claudeReady }),
     h(ConversationPane, { messages, isThinking }),
-    h(OutputPane, { lines: outputLines }),
+    h(OutputPane, { lines: outputLines, scrollOffset: outputScrollOffset }),
     h(InputBar, { onSubmit: handleSubmit, commands: slashCommands }),
   )
 }
