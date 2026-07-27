@@ -2,29 +2,38 @@
 /**
  * Determine the next version from conventional commits.
  *
- * Reads all commits since the last "chore: release X.Y.Z [skip ci]" commit,
- * applies conventional commit rules to determine the bump level, then prints
- * the new version string to stdout.
+ * Reads all commits since the last "chore: release X.Y.Z [skip ci]" commit
+ * that touched packages/pulse, applies conventional commit rules to
+ * determine the bump level, then prints the new version string to stdout.
  *
  * Bump rules:
  *   BREAKING CHANGE footer or "type!:" prefix  →  major
  *   feat:                                       →  minor
  *   anything else (fix, perf, chore, docs…)    →  patch
  *
- * Usage: node scripts/release-version.js
+ * Scoped to `-- packages/pulse`: this repo is a monorepo with sibling
+ * packages (e.g. packages/tui) sharing the same git history — without the
+ * path filter, a commit that only touches packages/tui would incorrectly
+ * drive a version bump for the @invisibleloop/pulse framework package.
+ *
+ * Usage: node scripts/release-version.js (run from packages/pulse/)
  */
 
 import { execSync } from 'child_process'
 import { readFileSync } from 'fs'
+import path from 'path'
 
-const pkg     = JSON.parse(readFileSync('package.json', 'utf8'))
+const PKG_DIR = path.resolve(import.meta.dirname, '..')
+const pkg     = JSON.parse(readFileSync(path.join(PKG_DIR, 'package.json'), 'utf8'))
 const [major, minor, patch] = pkg.version.split('.').map(Number)
 
-// Collect commit subjects since the last release commit.
-// git log outputs newest-first; we stop at the first release commit we see.
+// Collect commit subjects since the last release commit that touched this
+// package. git log outputs newest-first; we stop at the first release
+// commit we see. Must be run with cwd inside the repo (any subdirectory) —
+// `-- packages/pulse` is resolved relative to the repo root by git itself.
 let commits = []
 try {
-  const log = execSync('git log --pretty=format:%s', { encoding: 'utf8' }).trim()
+  const log = execSync('git log --pretty=format:%s -- packages/pulse', { encoding: 'utf8' }).trim()
   for (const line of log.split('\n')) {
     if (/^chore: release \d+\.\d+\.\d+/.test(line)) break
     if (line) commits.push(line)

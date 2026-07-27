@@ -12,7 +12,13 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// Package root (packages/pulse/) — canonical source for src/agent/*.
 const ROOT      = path.resolve(__dirname, '../..')
+// Repo root (pulse2/) — where distributed copies live: .claude/, docs/,
+// examples/, CLAUDE.md. Package root moved into packages/pulse/ when the
+// framework became a workspace member; these distributed-copy targets did
+// not move, so they need one extra level up from the package root.
+const REPO_ROOT = path.resolve(ROOT, '..', '..')
 
 let passed = 0
 let failed = 0
@@ -120,8 +126,8 @@ const SYNC_PAIRS = [
 
 for (const [a, b] of SYNC_PAIRS) {
   test(`${a} is in sync with ${b}`, () => {
-    const fa = path.join(ROOT, a)
-    const fb = path.join(ROOT, b)
+    const fa = path.join(ROOT, a)       // canonical source — package-relative
+    const fb = path.join(REPO_ROOT, b)  // distributed copy — repo-root-relative
     assert(fs.existsSync(fa), `${a} does not exist`)
     assert(fs.existsSync(fb), `${b} does not exist`)
     assert(
@@ -143,18 +149,22 @@ for (const [a, b] of SYNC_PAIRS) {
 
 console.log('\nAgent doc consistency\n')
 
+// Each entry is resolved against ROOT (package root) or REPO_ROOT (repo
+// root) depending on where it actually lives — see the ROOT/REPO_ROOT
+// comment above. Package-relative entries carry their own root so callers
+// don't have to guess which base a given path needs.
 const agentDocs = [
-  ...fs.readdirSync(agentDir).filter(f => f.endsWith('.md')).map(f => path.join('src/agent', f)),
-  ...fs.readdirSync(path.join(agentDir, 'commands')).filter(f => f.endsWith('.md')).map(f => path.join('src/agent/commands', f)),
+  ...fs.readdirSync(agentDir).filter(f => f.endsWith('.md')).map(f => ({ root: ROOT, file: path.join('src/agent', f) })),
+  ...fs.readdirSync(path.join(agentDir, 'commands')).filter(f => f.endsWith('.md')).map(f => ({ root: ROOT, file: path.join('src/agent/commands', f) })),
   ...fs.readdirSync(path.join(agentDir, 'skills')).flatMap(d => {
     const p = path.join(agentDir, 'skills', d, 'SKILL.md')
-    return fs.existsSync(p) ? [path.join('src/agent/skills', d, 'SKILL.md')] : []
+    return fs.existsSync(p) ? [{ root: ROOT, file: path.join('src/agent/skills', d, 'SKILL.md') }] : []
   }),
-  '.claude/commands/build-page.md',
-  '.claude/commands/verify.md',
-  '.claude/commands/new-doc-page.md',
-  'CLAUDE.md',
-  'README.md',
+  { root: REPO_ROOT, file: '.claude/commands/build-page.md' },
+  { root: REPO_ROOT, file: '.claude/commands/verify.md' },
+  { root: REPO_ROOT, file: '.claude/commands/new-doc-page.md' },
+  { root: REPO_ROOT, file: 'CLAUDE.md' },
+  { root: REPO_ROOT, file: 'README.md' },
 ]
 
 test('no agent doc states a four-score Lighthouse bar (100/100/100/100)', () => {
@@ -162,10 +172,10 @@ test('no agent doc states a four-score Lighthouse bar (100/100/100/100)', () => 
     src.includes('100/100/100/100') ||
     /all four (scores|categories)/i.test(src) ||
     /Accessibility, Best Practices, SEO,? and Performance[^.\n]*must (all )?be 100/i.test(src)
-  const offenders = agentDocs.filter(f =>
-    fs.existsSync(path.join(ROOT, f)) &&
-    fourScore(fs.readFileSync(path.join(ROOT, f), 'utf8'))
-  )
+  const offenders = agentDocs.filter(({ root, file }) =>
+    fs.existsSync(path.join(root, file)) &&
+    fourScore(fs.readFileSync(path.join(root, file), 'utf8'))
+  ).map(({ file }) => file)
   if (fourScore(serverSrc)) offenders.push('src/mcp/server.js')
   assert(
     offenders.length === 0,
@@ -175,10 +185,10 @@ test('no agent doc states a four-score Lighthouse bar (100/100/100/100)', () => 
 })
 
 test('no agent doc references a literal ask_user tool', () => {
-  const offenders = agentDocs.filter(f =>
-    fs.existsSync(path.join(ROOT, f)) &&
-    /\bask_user\b/.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))
-  )
+  const offenders = agentDocs.filter(({ root, file }) =>
+    fs.existsSync(path.join(root, file)) &&
+    /\bask_user\b/.test(fs.readFileSync(path.join(root, file), 'utf8'))
+  ).map(({ file }) => file)
   assert(
     offenders.length === 0,
     `"ask_user" referenced in: ${offenders.join(', ')}. ` +
@@ -269,10 +279,10 @@ test('approval pause mechanism is wired end to end', () => {
   //    testing showed AskUserQuestion in Claude Code still ends the turn and
   //    fires the Stop hooks. The safe instruction is: always write the marker
   //    first, regardless of how the question is asked.
-  const claimDocs = agentDocs.filter(f =>
-    fs.existsSync(path.join(ROOT, f)) &&
-    /without ending the turn/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8'))
-  )
+  const claimDocs = agentDocs.filter(({ root, file }) =>
+    fs.existsSync(path.join(root, file)) &&
+    /without ending the turn/i.test(fs.readFileSync(path.join(root, file), 'utf8'))
+  ).map(({ file }) => file)
   if (/without ending the turn.*Stop hooks never fire/is.test(serverSrc)) claimDocs.push('src/mcp/server.js')
   assert(claimDocs.length === 0,
     `These docs claim a question tool avoids ending the turn (empirically false in Claude Code): ${claimDocs.join(', ')}. ` +
@@ -350,7 +360,7 @@ test('dark theme default is declared at every spec-writing entry point', () => {
   const guideSpec = fs.readFileSync(path.join(agentDir, 'guide-spec.md'), 'utf8')
   const workflow  = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
   const checklist = fs.readFileSync(path.join(agentDir, 'checklist.md'), 'utf8')
-  const claudeMd  = fs.readFileSync(path.join(ROOT, 'CLAUDE.md'), 'utf8')
+  const claudeMd  = fs.readFileSync(path.join(REPO_ROOT, 'CLAUDE.md'), 'utf8')
 
   assert(/theme:/.test(guideSpec) && /DEFAULT IS DARK/i.test(guideSpec),
     'guide-spec.md meta skeleton must include the theme field with the dark-default warning')

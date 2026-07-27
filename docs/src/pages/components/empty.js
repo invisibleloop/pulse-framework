@@ -1,6 +1,6 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
-import { empty } from '../../../../src/ui/index.js'
+import { empty } from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/empty')
 

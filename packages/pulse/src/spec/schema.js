@@ -428,7 +428,7 @@ export function validateSpec(spec) {
   // the framework reading spec.meta.vibe directly — this check catches unknown keys)
   if (spec.meta && typeof spec.meta === 'object' && !Array.isArray(spec.meta)) {
     const KNOWN_META_KEYS = new Set([
-      'title', 'description', 'styles', 'scripts', 'theme', 'vibe',
+      'title', 'description', 'styles', 'deferredStyles', 'scripts', 'theme', 'vibe',
       'ogTitle', 'ogDescription', 'ogImage', 'canonical', 'schema',
       'robots', 'viewport', 'charset', 'lang',
     ])

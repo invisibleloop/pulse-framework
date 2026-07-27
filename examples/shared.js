@@ -3,8 +3,8 @@
  * All examples import from here to stay DRY.
  */
 
-import { nav }                from '../src/ui/index.js'
-import { iconSun, iconMoon } from '../src/ui/icons.js'
+import { nav }                from '../packages/pulse/src/ui/index.js'
+import { iconSun, iconMoon } from '../packages/pulse/src/ui/icons.js'
 
 const ALL_LINKS = [
   { label: 'Counter',  href: '/counter'  },

@@ -43,6 +43,7 @@ if (!fs.existsSync(manifestPath)) {
 
 let port         = portArg !== -1 ? parseInt(args[portArg + 1], 10) : null
 let defaultCache = null
+let staticCache  = null
 let csp          = null
 let passthrough  = {}
 
@@ -55,6 +56,7 @@ if (fs.existsSync(configPath)) {
     const mod    = await import(configPath)
     port         = port || mod.default?.port || null
     defaultCache = mod.default?.defaultCache ?? null
+    staticCache  = mod.default?.staticCache ?? null
     csp          = mod.default?.csp ?? null
     for (const key of PASSTHROUGH_OPTIONS) {
       if (mod.default?.[key] !== undefined) passthrough[key] = mod.default[key]
@@ -84,6 +86,7 @@ createServer(specs, {
   stream:       true,
   staticDir:    PUBLIC_DIR,
   defaultCache,
+  staticCache,
   ...(store ? { store } : {}),
   ...(csp ? { csp } : {}),
   ...passthrough,

@@ -22,7 +22,7 @@ import {
   nav, heading, badge, stat, grid,
   button, modal, empty,
   iconPlus, iconMinus, iconShoppingCart, iconCheck, iconPackage,
-} from '../../../../src/ui/index.js'
+} from '../../../../packages/pulse/src/ui/index.js'
 import { asset } from '../../lib/layout.js'
 
 const SPECS = [

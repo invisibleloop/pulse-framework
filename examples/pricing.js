@@ -16,7 +16,7 @@ import {
   nav as uiNav, card, badge, accordion, cta, footer as uiFooter,
   section as uiSection, container, stack, cluster,
   button, heading,
-} from '../src/ui/index.js'
+} from '../packages/pulse/src/ui/index.js'
 
 // Pricing tile — replaces the removed pricing() component with card()
 const pricingCard = ({ name, price, period, description, features, badge: badgeLabel, highlighted, action, level = 2 }) => card({

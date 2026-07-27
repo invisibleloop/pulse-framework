@@ -6,7 +6,7 @@
 
 import { renderLayout, h1, lead, section } from '../lib/layout.js'
 import { prevNext }                        from '../lib/nav.js'
-import { badge }                           from '../../../src/ui/index.js'
+import { badge }                           from '../../../packages/pulse/src/ui/index.js'
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

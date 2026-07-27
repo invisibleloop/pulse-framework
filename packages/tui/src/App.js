@@ -1,0 +1,528 @@
+/**
+ * Pulse TUI — root Ink app
+ *
+ * No JSX — Node doesn't strip JSX natively and this package intentionally
+ * has no build step (`node --watch src/cli.js` runs it directly, matching
+ * the rest of this repo's no-bundler-in-dev philosophy). Ink is just React,
+ * so React.createElement works exactly the same as JSX would, just more
+ * verbose. `h` is a short alias to keep the component bodies readable.
+ */
+
+import React, { useState, useEffect } from 'react'
+import { Box, Text, useApp, useInput } from 'ink'
+import { renderMarkdown } from './markdown.js'
+
+const h = React.createElement
+
+// Real slash_commands only arrives on the system:init event, which — per
+// the verified stream-json protocol — only fires after the FIRST message is
+// sent. That leaves a real gap: typing "/" before sending anything shows no
+// suggestions at all. Seed a small, commonly-used fallback so "/" always
+// shows something from the very first keystroke; the moment the real list
+// arrives it fully replaces this (see setSlashCommands in App below).
+const FALLBACK_COMMANDS = ['model', 'clear', 'compact', 'context', 'effort', 'config', 'review']
+
+// Second-level argument suggestions for the handful of commands where it's
+// genuinely safe and useful — verified directly against real `/model` and
+// `/effort` usage text (Usage: /model <name>. Available: ...) rather than
+// assumed. Deliberately NOT exhaustive: most slash commands either act
+// immediately with no args (e.g. /clear — confirmed unsafe to "probe" for
+// usage, it just clears the session) or have far too many options to
+// usefully hardcode (/config alone has 30+ keys, each with its own enum) —
+// those stay plain text entry with no second-level autocomplete.
+const COMMAND_ARGS = {
+  model:  ['sonnet', 'opus', 'haiku', 'fable', 'best', 'sonnet[1m]', 'opus[1m]', 'fable[1m]', 'opusplan', 'default'],
+  effort: ['low', 'medium', 'high', 'xhigh', 'max', 'auto'],
+}
+
+// Mirrors Forge's own theme tokens (packages/tui's sibling desktop-app
+// project) for visual continuity across the two front ends to the same
+// underlying Pulse + Claude Code workflow.
+const COLORS = {
+  accent:    '#5b8def',
+  accentDim: '#3a4a6b',
+  muted:     '#6b7a99',
+  surface:   '#13161e',
+  green:     '#3ecf8e',
+  yellow:    '#f5a623',
+  red:       '#f75656',
+  code:      '#f5a623',
+}
+
+function StatusBar({ projectName, devServer, claudeReady }) {
+  const serverLabel = !devServer
+    ? h(Text, { color: COLORS.muted }, '○ server: stopped')
+    : devServer.ready
+      ? h(Text, { color: COLORS.green }, `● server: ${devServer.url}`)
+      : h(Text, { color: COLORS.yellow }, '◐ server: starting…')
+
+  return h(Box, {
+    borderStyle: 'round',
+    borderColor: COLORS.muted,
+    paddingX: 1,
+    justifyContent: 'space-between',
+  },
+    h(Text, { bold: true, color: COLORS.accent }, `⚡ ${projectName}`),
+    h(Box, { gap: 2 },
+      serverLabel,
+      h(Text, { color: claudeReady ? COLORS.green : COLORS.muted },
+        claudeReady ? '● claude: ready' : '◐ claude: starting…'),
+    ),
+  )
+}
+
+function Message({ role, text }) {
+  const isUser = role === 'user'
+  return h(Box, { marginBottom: 1, flexDirection: 'column' },
+    h(Box, { gap: 1 },
+      h(Text, { color: isUser ? COLORS.accent : COLORS.green }, isUser ? '❯' : '✦'),
+      h(Text, { bold: true, color: isUser ? COLORS.accent : COLORS.green },
+        isUser ? 'you' : 'claude'),
+    ),
+    // User turns are plain text/slash commands — no markdown to parse.
+    // Claude's replies routinely use bold/code/lists, so render those
+    // properly instead of showing raw ** and ` characters.
+    isUser
+      ? h(Box, { paddingLeft: 2 }, h(Text, null, text))
+      : h(Box, { flexDirection: 'column', paddingLeft: 2 },
+          ...renderMarkdown(text, { accentColor: COLORS.accent, mutedColor: COLORS.muted })),
+  )
+}
+
+// Per-tool-type human-readable summary. Bash carries its own `description`
+// field ("List files in current directory") which reads far better than the
+// raw command — verified against real tool_use events, not assumed; other
+// tools (Write, Edit, Read, Grep) have no such field and need their own
+// shape-specific formatting instead of one generic fallback.
+function summarizeToolInput(name, input) {
+  if (!input) return name
+  if (name === 'Bash') return input.description || input.command || name
+  if (name === 'Write' || name === 'Read') return `${name} ${shortenPath(input.file_path)}`
+  if (name === 'Edit') return `Edit ${shortenPath(input.file_path)}`
+  if (name === 'Grep') return `Grep "${input.pattern}"${input.path ? ` in ${shortenPath(input.path)}` : ''}`
+  if (input.file_path) return `${name} ${shortenPath(input.file_path)}`
+  if (input.command) return `${name} ${input.command}`
+  return name
+}
+
+function shortenPath(p) {
+  if (!p) return ''
+  const parts = p.split('/')
+  return parts.length > 3 ? `…/${parts.slice(-2).join('/')}` : p
+}
+
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+function useSpinnerFrame(active) {
+  const [frame, setFrame] = useState(0)
+  useEffect(() => {
+    if (!active) return
+    // 80ms (12.5fps) caused visible whole-screen flicker/jitter in real use
+    // — Ink redraws its full output buffer on every state change, it's not
+    // a localized DOM patch like a browser, so a fast ambient spinner tick
+    // has real cost here. 250ms (4fps) still reads as "alive" without it.
+    const id = setInterval(() => setFrame((f) => (f + 1) % SPINNER_FRAMES.length), 250)
+    return () => clearInterval(id)
+  }, [active])
+  return SPINNER_FRAMES[frame]
+}
+
+// `/status` is a real slash command in interactive `claude` but the CLI
+// itself refuses it under --print/stream-json — verified directly against
+// the subprocess: it returns a synthetic assistant reply ("/status isn't
+// available in this environment", model: "<synthetic>", zero tokens) rather
+// than the real status panel. Forwarding it is a dead end, so it's
+// intercepted client-side instead and rendered from state this UI already
+// tracks (system:init payload + dev server state) rather than sent to Claude.
+function StatusMessage({ info, devServer }) {
+  // sessionInfo only exists once system:init has fired, which only happens
+  // after the FIRST real turn is sent to the subprocess — if /status is the
+  // very first message ever sent, info is still null at render time (a real
+  // data-availability gap, not a stale snapshot). Show a clear "still
+  // starting" line instead of a wall of "—" placeholders that look broken.
+  if (!info) {
+    return h(Box, { flexDirection: 'column', marginBottom: 1 },
+      h(Box, { gap: 1 },
+        h(Text, { color: COLORS.green }, '✦'),
+        h(Text, { bold: true, color: COLORS.green }, 'status'),
+      ),
+      h(Box, { paddingLeft: 2 },
+        h(Text, { color: COLORS.muted }, 'Session details arrive after the first message — try /status again.'),
+      ),
+    )
+  }
+  const row = (label, value) => h(Box, { key: label, gap: 1 },
+    h(Text, { color: COLORS.muted }, `${label}:`),
+    h(Text, null, value ?? '—'),
+  )
+  return h(Box, { flexDirection: 'column', marginBottom: 1 },
+    h(Box, { gap: 1 },
+      h(Text, { color: COLORS.green }, '✦'),
+      h(Text, { bold: true, color: COLORS.green }, 'status'),
+    ),
+    h(Box, { flexDirection: 'column', paddingLeft: 2 },
+      row('model', info.model),
+      row('permission mode', info.permissionMode),
+      row('session id', info.sessionId),
+      row('cwd', info.cwd),
+      row('claude code', info.version),
+      row('mcp servers', info.mcpServers?.length
+        ? info.mcpServers.map((s) => `${s.name} (${s.status})`).join(', ')
+        : 'none'),
+      row('dev server', devServer?.ready ? devServer.url : 'starting…'),
+    ),
+  )
+}
+
+function ToolCallLine({ name, input, status }) {
+  // A running tool (e.g. Write/Edit on a large file) can take real time with
+  // no other events on the wire in between — a static "⚙" gave no sign
+  // anything was still happening, easy to mistake for a stalled/dead line.
+  // Animate the icon itself while running, same spinner as ThinkingLine, so
+  // the specific in-flight tool call is what visibly pulses.
+  const runningFrame = useSpinnerFrame(status === 'running')
+  const icon = status === 'done' ? h(Text, { color: COLORS.green }, '✓')
+    : status === 'error' ? h(Text, { color: COLORS.red }, '✗')
+    : h(Text, { color: COLORS.yellow }, runningFrame)
+  return h(Box, { gap: 1 },
+    icon,
+    h(Text, { color: COLORS.muted }, summarizeToolInput(name, input)),
+  )
+}
+
+function ThinkingLine() {
+  const frame = useSpinnerFrame(true)
+  return h(Box, { gap: 1 },
+    h(Text, { color: COLORS.accent }, frame),
+    h(Text, { color: COLORS.muted }, 'thinking…'),
+  )
+}
+
+// Rendering every message ever received with no bound was a real, confirmed
+// bug: as a conversation grows, Ink has to redraw an ever-taller full-screen
+// buffer on every state change (Ink reprints its whole output on each
+// render, it doesn't patch the terminal like a browser DOM), which is what
+// caused "the whole window shifts" and constant scrollbar flicker in real
+// use, and effectively pushed the input bar off-screen as history grew.
+// This is a stopgap (show only the most recent messages) rather than real
+// scrollback — a proper scrollable history view is a bigger feature.
+const MAX_VISIBLE_MESSAGES = 20
+
+function ConversationPane({ messages, isThinking }) {
+  const visible = messages.slice(-MAX_VISIBLE_MESSAGES)
+  return h(Box, { flexDirection: 'column', flexGrow: 1, paddingX: 1 },
+    messages.length > visible.length
+      ? h(Text, { key: 'truncated', color: COLORS.muted, dimColor: true },
+          `… ${messages.length - visible.length} earlier message${messages.length - visible.length === 1 ? '' : 's'} not shown`)
+      : null,
+    ...visible.map((m, i) => {
+      if (m.kind === 'tool') return h(ToolCallLine, { key: i, name: m.name, input: m.input, status: m.status })
+      if (m.kind === 'status') return h(StatusMessage, { key: i, info: m.info, devServer: m.devServer })
+      return h(Message, { key: i, role: m.role, text: m.text })
+    }),
+    isThinking ? h(ThinkingLine, { key: 'thinking' }) : null,
+  )
+}
+
+function OutputPane({ lines }) {
+  const recent = lines.slice(-8)
+  return h(Box, {
+    flexDirection: 'column',
+    borderStyle: 'round',
+    borderColor: COLORS.muted,
+    paddingX: 1,
+    height: 10,
+  },
+    h(Text, { bold: true, color: COLORS.muted }, 'dev server output'),
+    ...recent.map((l, i) =>
+      h(Text, { key: i, color: l.level === 'error' ? COLORS.red : undefined, wrap: 'truncate' }, l.text)
+    ),
+  )
+}
+
+const MAX_SUGGESTIONS = 8
+
+// Slash commands come from the system:init event's slash_commands array —
+// plain names with no leading slash (e.g. "model", "clear"), verified
+// against real output earlier. Filters to commands whose name starts with
+// whatever's typed after the "/".
+function matchCommands(commands, typed) {
+  const query = typed.slice(1).toLowerCase() // drop the leading '/'
+  return commands
+    .filter((c) => c.toLowerCase().startsWith(query))
+    .slice(0, MAX_SUGGESTIONS)
+}
+
+// Once a full command name is followed by a space (e.g. "/model " or
+// "/model son"), suggest that command's known argument values if we have
+// them in COMMAND_ARGS. Returns null (not an empty array) when the typed
+// command has no known args, so callers can tell "no matches for what you
+// typed" apart from "this command has no suggestion list at all".
+function matchCommandArgs(typed) {
+  const spaceIndex = typed.indexOf(' ')
+  if (spaceIndex === -1) return null
+  const commandName = typed.slice(1, spaceIndex).toLowerCase()
+  const args = COMMAND_ARGS[commandName]
+  if (!args) return null
+  const argQuery = typed.slice(spaceIndex + 1).toLowerCase()
+  return args.filter((a) => a.toLowerCase().startsWith(argQuery)).slice(0, MAX_SUGGESTIONS)
+}
+
+function CommandSuggestions({ matches, selectedIndex, prefix }) {
+  if (matches.length === 0) return null
+  return h(Box, { flexDirection: 'column', paddingX: 1 },
+    ...matches.map((item, i) =>
+      h(Text, {
+        key: item,
+        color: i === selectedIndex ? COLORS.accent : COLORS.muted,
+        bold: i === selectedIndex,
+      }, `${i === selectedIndex ? '❯ ' : '  '}${prefix}${item}`)
+    ),
+  )
+}
+
+function InputBar({ onSubmit, commands }) {
+  const [value, setValue] = useState('')
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  // Two distinct suggestion modes, mutually exclusive:
+  //   command mode  — "/mo"        -> suggest command names ("model", ...)
+  //   argument mode — "/model son" -> suggest that command's known values
+  // matchCommandArgs returns null when there's no known arg list for the
+  // typed command (most commands), which falls back to no suggestions at
+  // all for the argument portion — plain text entry, same as before.
+  const isCommandMode = value.startsWith('/') && !value.includes(' ')
+  const argMatches = value.startsWith('/') && value.includes(' ') ? matchCommandArgs(value) : null
+  const isArgMode = argMatches !== null
+
+  const matches = isCommandMode ? matchCommands(commands, value)
+    : isArgMode ? argMatches
+    : []
+  const suggestionPrefix = isCommandMode ? '/' : ''
+  const showingSuggestions = isCommandMode || isArgMode
+
+  useInput((input, key) => {
+    if (showingSuggestions && matches.length > 0) {
+      if (key.upArrow) {
+        setSelectedIndex((i) => (i - 1 + matches.length) % matches.length)
+        return
+      }
+      if (key.downArrow) {
+        setSelectedIndex((i) => (i + 1) % matches.length)
+        return
+      }
+      if (key.tab) {
+        if (isCommandMode) {
+          setValue(`/${matches[selectedIndex]} `)
+        } else {
+          // Replace only the argument portion, keep "/command " as-is
+          const spaceIndex = value.indexOf(' ')
+          setValue(`${value.slice(0, spaceIndex + 1)}${matches[selectedIndex]}`)
+        }
+        setSelectedIndex(0)
+        return
+      }
+    }
+
+    if (key.return) {
+      // Enter with an active suggestion accepts it rather than submitting
+      // the partial "/mo" text — matches the familiar autocomplete pattern
+      // (Slack, Discord, Claude Code's own CLI). In argument mode this
+      // submits the full command immediately rather than just filling it
+      // in, since picking a value is normally the last step.
+      if (isCommandMode && matches.length > 0) {
+        onSubmit(`/${matches[selectedIndex]}`)
+        setValue('')
+        setSelectedIndex(0)
+        return
+      }
+      if (isArgMode && matches.length > 0) {
+        const spaceIndex = value.indexOf(' ')
+        onSubmit(`${value.slice(0, spaceIndex + 1)}${matches[selectedIndex]}`)
+        setValue('')
+        setSelectedIndex(0)
+        return
+      }
+      const trimmed = value.trim()
+      if (trimmed) {
+        onSubmit(trimmed)
+        setValue('')
+      }
+      return
+    }
+    if (key.backspace || key.delete) {
+      setValue((v) => v.slice(0, -1))
+      setSelectedIndex(0)
+      return
+    }
+    // Ignore other control/meta keys — only accumulate printable input
+    if (!key.ctrl && !key.meta && input) {
+      setValue((v) => v + input)
+      setSelectedIndex(0)
+    }
+  })
+
+  return h(Box, { flexDirection: 'column' },
+    showingSuggestions ? h(CommandSuggestions, { matches, selectedIndex, prefix: suggestionPrefix }) : null,
+    h(Box, { borderStyle: 'round', borderColor: COLORS.accent, paddingX: 1 },
+      h(Text, { color: COLORS.accent }, '❯ '),
+      h(Text, null, value),
+      // Fake terminal cursor — Ink's real useCursor hook is coordinate-based
+      // (for IME support) and needs manual text-width measurement to place
+      // correctly inside a Box; an inverted trailing block is the standard
+      // pattern other Ink CLIs use for a plain single-line input instead.
+      h(Text, { inverse: true }, ' '),
+    ),
+  )
+}
+
+export function App({ projectName, claude, devServer }) {
+  const { exit } = useApp()
+  // Static, no API call — instant on startup rather than waiting on a real
+  // turn just to say hello. Seeded once from the initial useState value, not
+  // re-added on every render.
+  const [messages, setMessages] = useState(() => [
+    { role: 'assistant', text: `Ready to build ${projectName}. Tell me what you'd like to do.` },
+  ])
+  const [claudeReady, setClaudeReady] = useState(false)
+  const [slashCommands, setSlashCommands] = useState(FALLBACK_COMMANDS)
+  const [sessionInfo, setSessionInfo] = useState(null)
+  const [devServerState, setDevServerState] = useState(null)
+  const [outputLines, setOutputLines] = useState([])
+  // True from the moment a user message is sent until the first assistant
+  // event for that turn arrives — there is no distinct "thinking" event on
+  // the wire (verified: silence on stdout is the only signal), so this is
+  // inferred client-side rather than driven by a real protocol event.
+  const [isThinking, setIsThinking] = useState(false)
+
+  useInput((input, key) => {
+    if (key.ctrl && input === 'c') {
+      claude?.destroy()
+      devServer?.destroy()
+      exit()
+    }
+  })
+
+  useEffect(() => {
+    if (!claude) return
+
+    const onEvent = (event) => {
+      if (event.type === 'system' && event.subtype === 'init') {
+        setClaudeReady(true)
+        setSlashCommands(event.slash_commands ?? [])
+        const info = {
+          model: event.model,
+          permissionMode: event.permissionMode,
+          sessionId: event.session_id,
+          cwd: event.cwd,
+          version: event.claude_code_version,
+          mcpServers: event.mcp_servers,
+        }
+        setSessionInfo(info)
+        // Backfill any /status message rendered before this session's first
+        // system:init arrived (e.g. /status was the very first thing sent) —
+        // updates it in place rather than leaving a stale "try again" placeholder.
+        setMessages((m) => m.map((msg) =>
+          msg.kind === 'status' && !msg.info ? { ...msg, info } : msg
+        ))
+      }
+
+      // The CLI refuses "/status" itself under --print with a synthetic
+      // reply ("/status isn't available in this environment", model:
+      // "<synthetic>") — that's expected (we send it only to force
+      // system:init) and must not show up as a real assistant message.
+      const isSyntheticReply = event.type === 'assistant' && event.message?.model === '<synthetic>'
+
+      if (event.type === 'assistant' && !isSyntheticReply) {
+        setIsThinking(false)
+        const content = event.message?.content ?? []
+        for (const block of content) {
+          if (block.type === 'text' && block.text) {
+            setMessages((m) => [...m, { role: 'assistant', text: block.text }])
+          }
+          if (block.type === 'tool_use') {
+            // Claude may keep "thinking" between this tool call and its
+            // result / the next assistant message — flip back on so the
+            // spinner reappears rather than the UI looking idle again.
+            setIsThinking(true)
+            setMessages((m) => [...m, { kind: 'tool', id: block.id, name: block.name, input: block.input, status: 'running' }])
+          }
+        }
+      }
+
+      // Tool results arrive as a 'user' message with tool_result content
+      // blocks — match by tool_use_id to flip the corresponding tool line
+      // from "running" to done/error instead of leaving it stuck mid-flight.
+      if (event.type === 'user') {
+        const content = event.message?.content ?? []
+        for (const block of content) {
+          if (block.type === 'tool_result') {
+            setMessages((m) => m.map((msg) =>
+              msg.kind === 'tool' && msg.id === block.tool_use_id
+                ? { ...msg, status: block.is_error ? 'error' : 'done' }
+                : msg
+            ))
+          }
+        }
+      }
+
+      if (event.type === 'result') {
+        setIsThinking(false)
+      }
+    }
+
+    claude.on('event', onEvent)
+    return () => claude.off('event', onEvent)
+  }, [claude])
+
+  useEffect(() => {
+    if (!devServer) return
+
+    const onOutput = (line) => setOutputLines((l) => [...l, line].slice(-200))
+    const onReady = () => setDevServerState({ ready: true, url: devServer.url })
+    const onMismatch = ({ requested, actual }) =>
+      setOutputLines((l) => [...l, {
+        level: 'error',
+        text: `Requested port ${requested} but server started on ${actual} instead`,
+      }])
+
+    devServer.on('output', onOutput)
+    devServer.on('ready', onReady)
+    devServer.on('port-mismatch', onMismatch)
+    setDevServerState({ ready: devServer.ready, url: devServer.url })
+
+    return () => {
+      devServer.off('output', onOutput)
+      devServer.off('ready', onReady)
+      devServer.off('port-mismatch', onMismatch)
+    }
+  }, [devServer])
+
+  function handleSubmit(text) {
+    setMessages((m) => [...m, { role: 'user', text }])
+
+    // The CLI refuses "/status" itself under --print (verified directly
+    // against the subprocess: synthetic "not available in this environment"
+    // reply) — render the local equivalent instead. sessionInfo only exists
+    // once system:init has fired, which only happens after a real turn
+    // reaches the subprocess. If nothing has been sent yet, still forward
+    // "/status" (its synthetic reply is filtered out in the event handler
+    // above) purely to trigger that first system:init, and backfill the
+    // already-inserted placeholder message once it lands.
+    if (text.trim() === '/status') {
+      setMessages((m) => [...m, { kind: 'status', info: sessionInfo, devServer: devServerState }])
+      if (!sessionInfo) claude.send(text)
+      return
+    }
+
+    setIsThinking(true)
+    claude.send(text)
+  }
+
+  return h(Box, { flexDirection: 'column', width: '100%', height: '100%' },
+    h(StatusBar, { projectName, devServer: devServerState, claudeReady }),
+    h(ConversationPane, { messages, isThinking }),
+    h(OutputPane, { lines: outputLines }),
+    h(InputBar, { onSubmit: handleSubmit, commands: slashCommands }),
+  )
+}

@@ -1,8 +1,8 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
-import { button } from '../../../../src/ui/index.js'
-import { iconArrowRight, iconDownload, iconPlus, iconSend } from '../../../../src/ui/icons.js'
+import { button } from '../../../../packages/pulse/src/ui/index.js'
+import { iconArrowRight, iconDownload, iconPlus, iconSend } from '../../../../packages/pulse/src/ui/icons.js'
 
 const { prev, next } = prevNext('/components/button')
 

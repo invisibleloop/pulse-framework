@@ -1,6 +1,6 @@
 import { renderLayout, h1, lead, section, callout } from '../lib/layout.js'
 import { prevNext } from '../lib/nav.js'
-import { card } from '../../../src/ui/index.js'
+import { card } from '../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/how-it-works')
 

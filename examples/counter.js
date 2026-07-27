@@ -10,7 +10,7 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/counter
  */
 
-import { button, badge, card, container, section, stack, cluster, progress, segmented } from '../src/ui/index.js'
+import { button, badge, card, container, section, stack, cluster, progress, segmented } from '../packages/pulse/src/ui/index.js'
 import { examplesNav } from './shared.js'
 
 export default {

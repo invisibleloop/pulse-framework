@@ -1,87 +1,20 @@
 {
-  "name": "@invisibleloop/pulse",
-  "version": "0.20.11",
+  "name": "pulse-monorepo",
+  "private": true,
   "type": "module",
-  "description": "AI-first frontend framework. The spec is the source of truth.",
-  "license": "MIT",
-  "bin": {
-    "pulse": "./src/cli/index.js"
-  },
-  "types": "./types/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./types/index.d.ts",
-      "default": "./src/server/index.js"
-    },
-    "./server": {
-      "types": "./types/server.d.ts",
-      "default": "./src/server/index.js"
-    },
-    "./runtime": {
-      "types": "./types/runtime.d.ts",
-      "default": "./src/runtime/index.js"
-    },
-    "./ssr": {
-      "types": "./types/ssr.d.ts",
-      "default": "./src/runtime/ssr.js"
-    },
-    "./navigate": {
-      "types": "./types/navigate.d.ts",
-      "default": "./src/runtime/navigate.js"
-    },
-    "./schema": {
-      "types": "./types/schema.d.ts",
-      "default": "./src/spec/schema.js"
-    },
-    "./image": {
-      "types": "./types/image.d.ts",
-      "default": "./src/runtime/image.js"
-    },
-    "./html": {
-      "types": "./types/html.d.ts",
-      "default": "./src/html.js"
-    },
-    "./ui": {
-      "types": "./types/ui.d.ts",
-      "default": "./src/ui/index.js"
-    },
-    "./charts": {
-      "types": "./types/charts.d.ts",
-      "default": "./src/ui/charts.js"
-    },
-    "./testing": {
-      "types": "./types/testing.d.ts",
-      "default": "./src/testing/index.js"
-    },
-    "./md": {
-      "types": "./types/md.d.ts",
-      "default": "./src/md/index.js"
-    }
-  },
+  "description": "Pulse framework monorepo — see packages/pulse for the published @invisibleloop/pulse package.",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "node --watch src/cli/dev.js",
-    "build": "node scripts/build.js",
-    "test": "node src/spec/schema.test.js && node src/runtime/runtime.test.js && node src/runtime/navigate.test.js && node src/runtime/morph.test.js && node src/runtime/ssr.test.js && node src/runtime/image.test.js && node src/server/server.test.js && node src/cli/cli.test.js && node src/ui/ui.test.js && node src/testing/testing.test.js && node src/store/store.test.js && node src/md/md.test.js && node scripts/strip-server.test.js && node scripts/css-purge.test.js && node src/mcp/mcp.test.js",
-    "typecheck": "tsc --noEmit",
-    "docs": "node --watch src/cli/dev.js --root docs --port 4000",
-    "docs:start": "node docs/server.js"
+    "dev": "npm run dev --workspace packages/pulse",
+    "build": "npm run build --workspace packages/pulse",
+    "test": "npm run test --workspace packages/pulse",
+    "typecheck": "npm run typecheck --workspace packages/pulse",
+    "docs": "npm run docs --workspace packages/pulse",
+    "docs:start": "npm run docs:start --workspace packages/pulse"
   },
   "engines": {
     "node": ">=22"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "esbuild": "^0.27.4"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/invisibleloop/pulse-framework"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "devDependencies": {
-    "@types/node": "^25.5.0",
-    "typescript": "^5.9.3"
   }
 }

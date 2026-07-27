@@ -340,6 +340,15 @@ function buildCacheControl(spec, dev, defaultCache = null) {
   const cfg = resolveCache(spec?.cache) ?? resolveCache(defaultCache)
   if (!cfg) return 'no-store'
 
+  return buildCacheControlFromConfig(cfg)
+}
+
+/**
+ * Format an already-resolved cache config (see resolveCache) into a
+ * Cache-Control header value. Split out of buildCacheControl so static-file
+ * serving can reuse the same formatting without a spec object.
+ */
+function buildCacheControlFromConfig(cfg) {
   const { public: isPublic = false, maxAge = 0, staleWhileRevalidate } = cfg
   const parts = [isPublic ? 'public' : 'private']
   if (maxAge > 0) parts.push(`max-age=${maxAge}`)
@@ -562,6 +571,9 @@ export async function createServer(entries, options = {}) {
     root          = null,          // URL/string — project root for deriving browser paths from file: URLs
     resolveBrand   = null,          // async (host) => brandConfig — keyed by domain
     defaultCache   = null,          // default page cache: true | seconds | { public, maxAge, swr }
+    staticCache    = null,          // cache for static files served from staticDir (excludes /dist/,
+                                    // which is always immutable/1yr): true | seconds | { public, maxAge, swr }
+                                    // — default without this option is public, max-age=3600
     fetcherTimeout  = null,          // ms before any server fetcher times out (null = no limit)
     maxBody         = 1024 * 1024,  // max request body size in bytes (default 1 MB)
     shutdownTimeout = 30000,        // ms to wait for in-flight requests before force-exit
@@ -783,7 +795,7 @@ export async function createServer(entries, options = {}) {
 
       // Static file serving — GET/HEAD only
       if (staticDir && (req.method === 'GET' || req.method === 'HEAD')) {
-        const served = serveStatic(req, res, staticDir, dev)
+        const served = serveStatic(req, res, staticDir, dev, staticCache)
         if (served) return
       }
 
@@ -1754,9 +1766,12 @@ function resolveSpec(spec, hydrateMap) {
  * @param {http.IncomingMessage} req
  * @param {http.ServerResponse}  res
  * @param {string} staticDir - Absolute path to the static files directory
+ * @param {boolean} dev
+ * @param {*} staticCache - true | seconds | { public, maxAge, staleWhileRevalidate };
+ *   overrides the default public, max-age=3600 for non-/dist/ static files
  * @returns {boolean}
  */
-function serveStatic(req, res, staticDir, dev = false) {
+function serveStatic(req, res, staticDir, dev = false, staticCache = null) {
   const url      = new URL(req.url, 'http://localhost')
   let pathname
   try { pathname = decodeURIComponent(url.pathname) }
@@ -1775,10 +1790,15 @@ function serveStatic(req, res, staticDir, dev = false) {
 
   // Content-hashed bundles under /dist/ can be cached indefinitely.
   // In dev, all other files get no-store so CSS/JS changes are reflected immediately.
+  // staticCache lets a project raise the default 3600s for its own unhashed
+  // static assets (e.g. /images/*) without pretending they're immutable.
   const isImmutable = pathname.startsWith('/dist/')
+  const staticCacheCfg = resolveCache(staticCache)
   const cache = isImmutable
     ? 'public, max-age=31536000, immutable'
-    : dev ? 'no-store' : 'public, max-age=3600'
+    : dev ? 'no-store'
+    : staticCacheCfg ? buildCacheControlFromConfig(staticCacheCfg)
+    : 'public, max-age=3600'
 
   // Only compress compressible text types
   const compressible = ['.js', '.css', '.html', '.json', '.svg'].includes(ext)

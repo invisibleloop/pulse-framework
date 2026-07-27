@@ -29,6 +29,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          cd packages/pulse
           VERSION=$(node scripts/release-version.js)
           # Fallback: if this exact version is somehow already on npm, bump patch
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
@@ -36,10 +37,12 @@ jobs:
           done
           npm version $VERSION --no-git-tag-version --allow-same-version
           echo "$VERSION" > public/.pulse-ui-version
+          cd ../..
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json public/.pulse-ui-version
+          git add packages/pulse/package.json package-lock.json packages/pulse/public/.pulse-ui-version
           git commit -m "chore: release $VERSION [skip ci]" || true
           git pull --rebase
           git push
+          cd packages/pulse
           npm publish --provenance --access public

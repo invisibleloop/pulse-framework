@@ -10,7 +10,7 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/quiz
  */
 
-import { button, badge, card, container, section, stack, cluster, progress, iconCheck, iconX } from '../src/ui/index.js'
+import { button, badge, card, container, section, stack, cluster, progress, iconCheck, iconX } from '../packages/pulse/src/ui/index.js'
 import { examplesNav } from './shared.js'
 
 export const QUESTIONS = [

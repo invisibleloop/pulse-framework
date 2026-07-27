@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table, callout } from '../../lib/layout.js'
-import { modal, modalTrigger, button, cluster } from '../../../../src/ui/index.js'
+import { modal, modalTrigger, button, cluster } from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/modal')
 

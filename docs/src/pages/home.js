@@ -1,6 +1,6 @@
 // component-free — creative override: asymmetric typography-driven layout (wide headline column + narrower supporting column), a solid gold mark treatment on "page.", and a light/dark section rhythm that component patterns cannot express
 import { highlight }                                        from '../lib/highlight.js'
-import { iconZap, iconShield, iconSettings }               from '../../../src/ui/icons.js'
+import { iconZap, iconShield, iconSettings }               from '../../../packages/pulse/src/ui/icons.js'
 import { metricsStore }  from '../lib/metrics-store.js'
 import pkg from '../../../package.json' with { type: 'json' }
 

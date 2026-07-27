@@ -1,0 +1,32 @@
+{
+  "name": "@invisibleloop/pulse-tui",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Terminal UI for building Pulse apps with Claude Code — describe, preview, approve, ship, without leaving the terminal.",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "pulse-tui": "./src/cli.js"
+  },
+  "scripts": {
+    "dev": "node --watch src/cli.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@invisibleloop/pulse": "*",
+    "ink": "^7.1.1",
+    "react": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/invisibleloop/pulse-framework",
+    "directory": "packages/tui"
+  }
+}

@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table, callout, section } from '../../lib/layout.js'
-import { segmented, stack } from '../../../../src/ui/index.js'
+import { segmented, stack } from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/segmented')
 
