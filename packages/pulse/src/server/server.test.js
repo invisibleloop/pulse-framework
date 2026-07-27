@@ -986,6 +986,21 @@ await test('CSP nonce differs between requests', async () => {
   })
 })
 
+await test('csp option extends trusted-types, merging with the base pulse policy', async () => {
+  // Regression: an agent assumed trusted-types/require-trusted-types-for
+  // weren't extendable via createServer's csp option (unlike other
+  // directives like img-src/style-src) because no guide demonstrated it —
+  // buildCsp's merge loop is actually fully generic across all directive
+  // keys, this was a documentation gap, not a real framework limitation.
+  // Pin the real behavior so it can't silently regress.
+  await withServer([canonicalSpec], { stream: false, csp: { 'trusted-types': ['google'] } }, async (port) => {
+    const { headers } = await request(port, 'GET', '/about')
+    const csp = headers['content-security-policy']
+    assert(csp.includes('trusted-types pulse google'),
+      `Expected trusted-types to merge with the base 'pulse' policy, got: ${csp}`)
+  })
+})
+
 await test('CSP header present on streaming page response', async () => {
   await withServer([canonicalSpec], { stream: true }, async (port) => {
     const { headers } = await request(port, 'GET', '/about')

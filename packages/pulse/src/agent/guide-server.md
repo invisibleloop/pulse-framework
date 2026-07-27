@@ -196,7 +196,7 @@ view: (state, server) => `
 **Rules:**
 - Only covers **inline** `<script>` content. An external `<script src="...">` doesn't need a nonce at all — CSP's `script-src` origin allowlist (`csp: { 'script-src': ['https://example.com'] }` in `createServer`) gates those instead; add the third party's origin there.
 - Never hardcode a nonce value — it's per-request and regenerated on every response. `server.nonce` always reflects the current request's real value.
-- If the third party's own SDK tries to register a [Trusted Types](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API) policy (some ad networks do), the framework's CSP restricts `trusted-types` to its own `pulse` policy — that's a separate, unrelated CSP dimension from nonces and isn't solved by `server.nonce`. There's currently no documented `createServer` option to extend the `trusted-types` allowlist; treat that as its own explicit trade-off (raising it site-wide weakens Trusted Types protection generally, not just for the third-party script) rather than assuming it's covered here.
+- If the third party's own SDK tries to register a [Trusted Types](https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API) policy (some ad networks do), the framework's CSP restricts `trusted-types` to its own `pulse` policy — that's a separate, unrelated CSP dimension from nonces and isn't solved by `server.nonce`. It **is** extendable via `csp: { 'trusted-types': ['policy-name'] }` (merges with `pulse`, doesn't replace it) — see "Third-party scripts" in `pulse://guide/styles` for the full pattern and the explicit trade-off it represents.
 
 ## Server context — redirects, cookies, POST bodies
 

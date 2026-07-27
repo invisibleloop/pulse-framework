@@ -238,6 +238,29 @@ createServer(specs, {
 
 Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
 
+### Third-party scripts (ad networks, analytics SDKs)
+
+**Every `csp` key merges the same way — including `trusted-types` and `require-trusted-types-for`.** This is a real, tested behavior, not a guess: `csp` passed to `createServer` (or `pulse.config.js`) is spread onto the framework's base CSP directive-by-directive, so `csp: { 'trusted-types': ['google'] }` produces `trusted-types pulse google` in the response header — it does not replace or drop the framework's own `pulse` policy.
+
+A third-party script (Google AdSense, GTM, and similar SDKs) typically needs up to three separate CSP extensions — do not assume only one is needed:
+
+```js
+// pulse.config.js
+export default {
+  csp: {
+    // The loader <script src="..."> itself — origin allowlist, no nonce needed
+    'script-src':    ['https://pagead2.googlesyndication.com'],
+    // If the SDK creates its own Trusted Types policy (some ad SDKs do) —
+    // scoped to exactly the policy name it registers, not a broad relaxation
+    'trusted-types': ['google'],
+  },
+}
+```
+
+For the **inline** per-slot script the SDK's own docs tell you to paste in (e.g. `(adsbygoogle = window.adsbygoogle || []).push({})`), use `server.nonce` — see "Third-party inline scripts" in `pulse://guide/server`. `csp.script-src` origin allowlisting only covers `<script src="...">`, not inline `<script>` content.
+
+**Without the `trusted-types` extension, this is a hard failure, not a cosmetic one:** a script that calls `trustedTypes.createPolicy(...)` under a name other than `pulse` throws in the browser console, the SDK fails to initialize, AND `lighthouse_audit` fails Best Practices on the resulting console error/CSP violation — confirmed directly (an agent hit exactly this running a real audit against AdSense). This is not a "check the console if something seems off" edge case; if you're integrating a third-party SDK and Lighthouse Best Practices won't reach 100, check the browser console for a Trusted Types policy rejection before assuming the problem is elsewhere.
+
 For multiple weights or italic variants, separate them with a semicolon in the URL:
 ```
 ?family=Inter:ital,wght@0,400;0,700;1,400&display=swap
