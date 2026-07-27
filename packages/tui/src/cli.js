@@ -41,15 +41,39 @@ async function main() {
   const claude = startClaudeSession({ cwd: projectRoot, mcpConfigPath })
   const devServer = await startDevServer({ cwd: projectRoot, preferred: 3000 })
 
+  // Ctrl+C is handled by App itself (goes through Ink's useInput so it can
+  // interrupt an in-flight turn instead of always quitting — see App.js).
+  // This handler is the safety net for everything Ctrl+C doesn't cover:
+  // SIGTERM (closing the terminal tab, `kill <pid>` from elsewhere, a
+  // process supervisor stopping this one) has no default cleanup hook in
+  // Node — without this, the child `pulse dev` and `claude` subprocesses
+  // are orphaned exactly like the EADDRINUSE/EMFILE bugs traced back to
+  // leftover sessions earlier. Idempotent-safe to call alongside the normal
+  // waitUntilExit() path below since destroy() on an already-dead process
+  // just no-ops (both catch their own kill() failures).
+  let cleaningUp = false
+  function cleanupAndExit(signal) {
+    if (cleaningUp) return
+    cleaningUp = true
+    claude.destroy()
+    devServer.destroy()
+    process.exit(signal ? 130 : 0) // 130 = conventional exit code for SIGINT/SIGTERM
+  }
+  process.on('SIGTERM', () => cleanupAndExit('SIGTERM'))
+  process.on('SIGHUP',  () => cleanupAndExit('SIGHUP'))
+  // SIGINT safety net — App's useInput-based Ctrl+C handling only applies
+  // once Ink's raw mode is active; a SIGINT before that (or from a source
+  // other than a raw-mode keypress) would otherwise hit Node's default
+  // handler and terminate with no cleanup.
+  process.on('SIGINT', () => cleanupAndExit('SIGINT'))
+
   const { waitUntilExit } = render(
     h(App, { projectName, projectRoot, claude, devServer }),
     { exitOnCtrlC: false }, // App handles Ctrl+C itself so it can clean up child processes first
   )
 
   await waitUntilExit()
-  claude.destroy()
-  devServer.destroy()
-  process.exit(0)
+  cleanupAndExit(null)
 }
 
 main().catch((err) => {
