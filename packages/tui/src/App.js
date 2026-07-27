@@ -85,7 +85,13 @@ function Message({ role, text }) {
     isUser
       ? h(Box, { paddingLeft: 2 }, h(Text, null, text))
       : h(Box, { flexDirection: 'column', paddingLeft: 2 },
-          ...renderMarkdown(text, { accentColor: COLORS.accent, mutedColor: COLORS.muted })),
+          ...renderMarkdown(text, {
+            accentColor: COLORS.accent,
+            mutedColor: COLORS.muted,
+            greenColor: COLORS.green,
+            yellowColor: COLORS.yellow,
+            redColor: COLORS.red,
+          })),
   )
 }
 

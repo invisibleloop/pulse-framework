@@ -68,14 +68,79 @@ function renderInline(text, keyPrefix) {
   return parts.length > 0 ? parts : [text]
 }
 
+// Matches the fixed-format Lighthouse report line the agent guide
+// (src/agent/identity.md) requires Claude to always use instead of
+// paraphrasing scores into prose — e.g.
+//   "Lighthouse desktop: Accessibility 100, Best Practices 100, SEO 100"
+// Score is a number or the em-dash placeholder for "not available".
+const LIGHTHOUSE_LINE = /^Lighthouse (\w+): (.+)$/
+const LIGHTHOUSE_PAIR = /^(.+?) (\d+|—)$/
+
+function parseLighthouseLine(line) {
+  const lineMatch = line.match(LIGHTHOUSE_LINE)
+  if (!lineMatch) return null
+  const [, device, rest] = lineMatch
+  const pairs = rest.split(',').map((s) => s.trim()).map((s) => s.match(LIGHTHOUSE_PAIR))
+  if (pairs.some((p) => !p)) return null // doesn't fully match the fixed format — fall through to plain text
+  return { device, scores: pairs.map((p) => ({ category: p[1], score: p[2] })) }
+}
+
+function lighthouseScoreColor(score, greenColor, yellowColor, redColor, mutedColor) {
+  if (score === '—') return mutedColor
+  const n = Number(score)
+  if (n >= 90) return greenColor
+  if (n >= 50) return yellowColor
+  return redColor
+}
+
+/**
+ * One bordered box per category, laid out in a row — "4 boxes across" per
+ * the design request, each showing the category name and its score colored
+ * by pass/warn/fail threshold (same 90/50 cutoffs Lighthouse itself uses).
+ */
+function renderLighthouseRow({ device, scores }, key, colors) {
+  return h(Box, { key, flexDirection: 'column', marginBottom: 1 },
+    h(Text, { bold: true, color: colors.accent }, `Lighthouse — ${device}`),
+    h(Box, { gap: 1 },
+      ...scores.map(({ category, score }, i) =>
+        h(Box, {
+          key: i,
+          flexDirection: 'column',
+          alignItems: 'center',
+          borderStyle: 'round',
+          borderColor: lighthouseScoreColor(score, colors.green, colors.yellow, colors.red, colors.muted),
+          paddingX: 1,
+          width: 20,
+        },
+          h(Text, {
+            bold: true,
+            color: lighthouseScoreColor(score, colors.green, colors.yellow, colors.red, colors.muted),
+          }, score),
+          h(Text, { color: colors.muted, wrap: 'truncate' }, category),
+        )
+      ),
+    ),
+  )
+}
+
 /**
  * @param {string} markdown
  * @param {object} [opts]
  * @param {string} [opts.accentColor] - Color for headers/list bullets
  * @param {string} [opts.mutedColor]
+ * @param {string} [opts.greenColor] - Lighthouse score >= 90
+ * @param {string} [opts.yellowColor] - Lighthouse score 50-89
+ * @param {string} [opts.redColor] - Lighthouse score < 50
  * @returns {React.ReactElement[]}
  */
-export function renderMarkdown(markdown, { accentColor = '#5b8def', mutedColor = 'gray' } = {}) {
+export function renderMarkdown(markdown, {
+  accentColor = '#5b8def',
+  mutedColor = 'gray',
+  greenColor = '#3ecf8e',
+  yellowColor = '#f5a623',
+  redColor = '#f75656',
+} = {}) {
+  const lighthouseColors = { accent: accentColor, muted: mutedColor, green: greenColor, yellow: yellowColor, red: redColor }
   const lines = markdown.split('\n')
   const blocks = []
   let inCodeBlock = false
@@ -146,6 +211,12 @@ export function renderMarkdown(markdown, { accentColor = '#5b8def', mutedColor =
 
     if (line.trim() === '') {
       blocks.push(h(Text, { key: `blank-${idx}` }, ' '))
+      continue
+    }
+
+    const lighthouseMatch = parseLighthouseLine(line)
+    if (lighthouseMatch) {
+      blocks.push(renderLighthouseRow(lighthouseMatch, `lh-${idx}`, lighthouseColors))
       continue
     }
 
