@@ -224,13 +224,32 @@ async function triggerReload(label = 'File changed') {
 // process with a raw stack trace instead of a readable message). Wrap every
 // fs.watch call so exhaustion degrades to a warning — hot reload stops
 // working, but the dev server and the rest of the session stay up.
-function watchSafely(target, options, onChange) {
+//
+// EMFILE here isn't always this process's own fd usage — confirmed on a real
+// machine where this fired with the dev server holding only ~20 fds total,
+// while macOS's shared FSEvents/kqueue watcher infrastructure was under
+// system-wide pressure from unrelated apps (VS Code/Electron windows, etc.).
+// That kind of pressure is often transient, so retry once after a short
+// delay before giving up for the rest of the session — recovers
+// automatically if the spike clears, same "disabled until restart" fallback
+// as before if it doesn't.
+const WATCH_RETRY_DELAY_MS = 3000
+
+function watchSafely(target, options, onChange, isRetry = false) {
   try {
     const watcher = fs.watch(target, options, onChange)
     watcher.on('error', (err) => {
+      if ((err.code === 'EMFILE' || err.code === 'ENOSPC') && !isRetry) {
+        log.error(
+          `File watching hit ${err.code} for ${target} — retrying in ${WATCH_RETRY_DELAY_MS / 1000}s ` +
+          `in case it was a transient spike (another app's file watchers, etc.)...`
+        )
+        setTimeout(() => watchSafely(target, options, onChange, true), WATCH_RETRY_DELAY_MS)
+        return
+      }
       if (err.code === 'EMFILE' || err.code === 'ENOSPC') {
         log.error(
-          `File watching disabled for ${target} (${err.code}: too many open file watchers). ` +
+          `File watching disabled for ${target} (${err.code}: too many open file watchers, retry also failed). ` +
           `Hot reload won't work until you restart — check for other running dev servers/processes ` +
           `holding file watchers open and close them, or raise your OS file descriptor limit.`
         )
