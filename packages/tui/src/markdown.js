@@ -76,13 +76,54 @@ function renderInline(text, keyPrefix) {
 const LIGHTHOUSE_LINE = /^Lighthouse (\w+): (.+)$/
 const LIGHTHOUSE_PAIR = /^(.+?) (\d+|—)$/
 
+// Fallback for when Claude paraphrases anyway despite the guide rule (a real,
+// observed case: "100/100/100 desktop" with no "Lighthouse" mention on that
+// line at all) — a bare slash-joined run of 3-4 numbers next to "desktop" or
+// "mobile". Deliberately narrow to avoid false-positiving on unrelated
+// slash-joined numbers (dates, ratios, etc.): every number must be a valid
+// Lighthouse score (0-100) AND the adjacent word must be exactly "desktop"
+// or "mobile" — the only two real Lighthouse form factors — rather than any
+// word, since there's no literal "Lighthouse" nearby to anchor on here.
+// Unlike the fixed format, this carries NO category labels; which number is
+// which category is only a convention (Accessibility, Best Practices, SEO,
+// [Performance]), not guaranteed. Render it, but flag it as assumed-order so
+// a wrong guess isn't presented with the same confidence as a properly
+// labeled report — see the `assumed` flag threaded through below.
+const LIGHTHOUSE_LOOSE =
+  /\b(\d{1,3}(?:\/\d{1,3}){2,3})\s+(desktop|mobile)\b|\b(desktop|mobile)\s*:?\s+(\d{1,3}(?:\/\d{1,3}){2,3})\b/i
+const STANDARD_CATEGORIES = ['Accessibility', 'Best Practices', 'SEO', 'Performance']
+
 function parseLighthouseLine(line) {
   const lineMatch = line.match(LIGHTHOUSE_LINE)
-  if (!lineMatch) return null
-  const [, device, rest] = lineMatch
-  const pairs = rest.split(',').map((s) => s.trim()).map((s) => s.match(LIGHTHOUSE_PAIR))
-  if (pairs.some((p) => !p)) return null // doesn't fully match the fixed format — fall through to plain text
-  return { device, scores: pairs.map((p) => ({ category: p[1], score: p[2] })) }
+  if (lineMatch) {
+    const [, device, rest] = lineMatch
+    const pairs = rest.split(',').map((s) => s.trim()).map((s) => s.match(LIGHTHOUSE_PAIR))
+    if (pairs.some((p) => !p)) return null // doesn't fully match the fixed format — fall through to plain text
+    return { device, scores: pairs.map((p) => ({ category: p[1], score: p[2] })), assumed: false }
+  }
+
+  const looseMatch = line.match(LIGHTHOUSE_LOOSE)
+  if (looseMatch) {
+    const numbers = (looseMatch[1] || looseMatch[4]).split('/')
+    // Every value must be a plausible Lighthouse score (0-100) — otherwise
+    // this isn't really a score list, bail out to plain text. And at least
+    // two scores must be >=90 — confirmed false positive without this:
+    // "Started at 3/4/5 mobile phones connected" matched the bare pattern
+    // (all <=100, "mobile" adjacent) and rendered as a fake Lighthouse
+    // report. Real Lighthouse results worth reporting prose-style cluster
+    // high; this rules out unrelated small numbers without losing the real
+    // "100/100/100 desktop" case.
+    if (numbers.some((n) => Number(n) > 100)) return null
+    if (numbers.filter((n) => Number(n) >= 90).length < 2) return null
+    const device = looseMatch[2] || looseMatch[3]
+    return {
+      device,
+      scores: numbers.map((score, i) => ({ category: STANDARD_CATEGORIES[i] ?? `Category ${i + 1}`, score })),
+      assumed: true,
+    }
+  }
+
+  return null
 }
 
 function lighthouseScoreColor(score, greenColor, yellowColor, redColor, mutedColor) {
@@ -97,10 +138,17 @@ function lighthouseScoreColor(score, greenColor, yellowColor, redColor, mutedCol
  * One bordered box per category, laid out in a row — "4 boxes across" per
  * the design request, each showing the category name and its score colored
  * by pass/warn/fail threshold (same 90/50 cutoffs Lighthouse itself uses).
+ * When `assumed` is true (loose-format fallback, no real category labels in
+ * the source line), an explicit note flags the category order as guessed
+ * rather than presenting it with the same confidence as a properly labeled
+ * report from the fixed format.
  */
-function renderLighthouseRow({ device, scores }, key, colors) {
+function renderLighthouseRow({ device, scores, assumed }, key, colors) {
   return h(Box, { key, flexDirection: 'column', marginBottom: 1 },
-    h(Text, { bold: true, color: colors.accent }, `Lighthouse — ${device}`),
+    h(Box, { gap: 1 },
+      h(Text, { bold: true, color: colors.accent }, `Lighthouse — ${device}`),
+      assumed ? h(Text, { color: colors.muted, dimColor: true }, '(category order assumed)') : null,
+    ),
     h(Box, { gap: 1 },
       ...scores.map(({ category, score }, i) =>
         h(Box, {
