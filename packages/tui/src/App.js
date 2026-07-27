@@ -668,10 +668,18 @@ export function App({ projectName, claude, devServer }) {
     claude.send(text)
   }
 
+  // StatusBar renders just above the input bar, not at the very top — Ink
+  // draws the whole app top-to-bottom with no pinned-header primitive, so
+  // once total content exceeds the terminal's visible rows, the terminal's
+  // own scrollback pushes whatever's at the top off-screen first (a real,
+  // confirmed bug: the status bar disappeared a few messages into a
+  // conversation). Anchoring it next to the input bar keeps it in the same
+  // glance as wherever you're actually looking/typing, since that's always
+  // the last thing rendered and stays on-screen longest as content grows.
   return h(Box, { flexDirection: 'column', width: '100%', height: '100%' },
-    h(StatusBar, { projectName, devServer: devServerState, claudeReady }),
     h(ConversationPane, { messages, isThinking }),
     h(OutputPane, { lines: outputLines, scrollOffset: outputScrollOffset }),
+    h(StatusBar, { projectName, devServer: devServerState, claudeReady }),
     h(InputBar, { onSubmit: handleSubmit, commands: slashCommands }),
   )
 }
