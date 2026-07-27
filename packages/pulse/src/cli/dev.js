@@ -217,12 +217,38 @@ async function triggerReload(label = 'File changed') {
   }, 200)
 }
 
+// fs.watch's returned FSWatcher emits 'error' rather than throwing — with no
+// listener, that error is unhandled and crashes the whole dev server (a real,
+// confirmed failure: EMFILE from accumulated file descriptors, e.g. orphaned
+// dev-server processes left running from earlier sessions, took down the
+// process with a raw stack trace instead of a readable message). Wrap every
+// fs.watch call so exhaustion degrades to a warning — hot reload stops
+// working, but the dev server and the rest of the session stay up.
+function watchSafely(target, options, onChange) {
+  try {
+    const watcher = fs.watch(target, options, onChange)
+    watcher.on('error', (err) => {
+      if (err.code === 'EMFILE' || err.code === 'ENOSPC') {
+        log.error(
+          `File watching disabled for ${target} (${err.code}: too many open file watchers). ` +
+          `Hot reload won't work until you restart — check for other running dev servers/processes ` +
+          `holding file watchers open and close them, or raise your OS file descriptor limit.`
+        )
+      } else {
+        log.error(`File watcher error on ${target}: ${err.message}`)
+      }
+    })
+  } catch (err) {
+    log.error(`Could not start file watching for ${target}: ${err.message}`)
+  }
+}
+
 // Watch src/ for changes to existing files (spec edits, component edits)
-fs.watch(path.join(ROOT, 'src'), { recursive: true }, () => triggerReload('File changed'))
+watchSafely(path.join(ROOT, 'src'), { recursive: true }, () => triggerReload('File changed'))
 
 // Watch the store file — it lives in the project root, outside src/
 if (fs.existsSync(path.join(ROOT, 'pulse.store.js'))) {
-  fs.watch(path.join(ROOT, 'pulse.store.js'), () => triggerReload('Store changed'))
+  watchSafely(path.join(ROOT, 'pulse.store.js'), {}, () => triggerReload('Store changed'))
 }
 
 // Also watch the pages directory explicitly so macOS reliably fires on new file creation.
@@ -231,7 +257,7 @@ if (fs.existsSync(path.join(ROOT, 'pulse.store.js'))) {
 // catches the "new entry added to this directory" event.
 const pagesDir = path.join(ROOT, 'src', 'pages')
 if (fs.existsSync(pagesDir)) {
-  fs.watch(pagesDir, { recursive: false }, () => triggerReload('New page detected'))
+  watchSafely(pagesDir, { recursive: false }, () => triggerReload('New page detected'))
 }
 
 // Tiny script injected into every page — connects to SSE and reloads on change

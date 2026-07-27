@@ -281,9 +281,34 @@ function CommandSuggestions({ matches, selectedIndex, prefix }) {
   )
 }
 
+// Word-boundary helpers for Option/Ctrl+Arrow-style jumps — treats runs of
+// non-whitespace as a "word", mirroring standard terminal/editor behavior.
+function prevWordBoundary(value, cursor) {
+  let i = cursor
+  while (i > 0 && /\s/.test(value[i - 1])) i--
+  while (i > 0 && !/\s/.test(value[i - 1])) i--
+  return i
+}
+function nextWordBoundary(value, cursor) {
+  let i = cursor
+  while (i < value.length && /\s/.test(value[i])) i++
+  while (i < value.length && !/\s/.test(value[i])) i++
+  return i
+}
+
 function InputBar({ onSubmit, commands }) {
   const [value, setValue] = useState('')
+  // Index into value where the next typed character is inserted — without
+  // this, edits could only ever append/backspace at the end of the string,
+  // making arrow-key navigation and mid-string edits structurally
+  // impossible (a real, confirmed bug, not just a missing key handler).
+  const [cursor, setCursorRaw] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(0)
+
+  // Every write goes through this so the cursor can never point outside the
+  // current string, regardless of what changed value (typing, backspace,
+  // or autocomplete replacing the whole string via setValue).
+  const setCursor = (next) => setCursorRaw(Math.max(0, Math.min(next, value.length)))
 
   // Two distinct suggestion modes, mutually exclusive:
   //   command mode  — "/mo"        -> suggest command names ("model", ...)
@@ -313,11 +338,15 @@ function InputBar({ onSubmit, commands }) {
       }
       if (key.tab) {
         if (isCommandMode) {
-          setValue(`/${matches[selectedIndex]} `)
+          const next = `/${matches[selectedIndex]} `
+          setValue(next)
+          setCursorRaw(next.length)
         } else {
           // Replace only the argument portion, keep "/command " as-is
           const spaceIndex = value.indexOf(' ')
-          setValue(`${value.slice(0, spaceIndex + 1)}${matches[selectedIndex]}`)
+          const next = `${value.slice(0, spaceIndex + 1)}${matches[selectedIndex]}`
+          setValue(next)
+          setCursorRaw(next.length)
         }
         setSelectedIndex(0)
         return
@@ -333,6 +362,7 @@ function InputBar({ onSubmit, commands }) {
       if (isCommandMode && matches.length > 0) {
         onSubmit(`/${matches[selectedIndex]}`)
         setValue('')
+        setCursorRaw(0)
         setSelectedIndex(0)
         return
       }
@@ -340,6 +370,7 @@ function InputBar({ onSubmit, commands }) {
         const spaceIndex = value.indexOf(' ')
         onSubmit(`${value.slice(0, spaceIndex + 1)}${matches[selectedIndex]}`)
         setValue('')
+        setCursorRaw(0)
         setSelectedIndex(0)
         return
       }
@@ -347,31 +378,67 @@ function InputBar({ onSubmit, commands }) {
       if (trimmed) {
         onSubmit(trimmed)
         setValue('')
+        setCursorRaw(0)
       }
       return
     }
+
+    // Cursor movement — plain arrow keys move one character; meta/ctrl+arrow
+    // (Option+Arrow on macOS terminals, Ctrl+Arrow elsewhere) jumps by word,
+    // matching standard terminal/editor conventions. Without this the input
+    // could only ever be edited at its end (the original bug report).
+    if (key.leftArrow) {
+      setCursor(key.meta || key.ctrl ? prevWordBoundary(value, cursor) : cursor - 1)
+      return
+    }
+    if (key.rightArrow) {
+      setCursor(key.meta || key.ctrl ? nextWordBoundary(value, cursor) : cursor + 1)
+      return
+    }
+    if (key.home || (key.ctrl && input === 'a')) {
+      setCursor(0)
+      return
+    }
+    if (key.end || (key.ctrl && input === 'e')) {
+      setCursor(value.length)
+      return
+    }
+
     if (key.backspace || key.delete) {
-      setValue((v) => v.slice(0, -1))
+      if (cursor === 0) return
+      setValue((v) => v.slice(0, cursor - 1) + v.slice(cursor))
+      setCursorRaw((c) => c - 1)
       setSelectedIndex(0)
       return
     }
     // Ignore other control/meta keys — only accumulate printable input
     if (!key.ctrl && !key.meta && input) {
-      setValue((v) => v + input)
+      setValue((v) => v.slice(0, cursor) + input + v.slice(cursor))
+      setCursorRaw((c) => c + input.length)
       setSelectedIndex(0)
     }
   })
+
+  // Fake terminal cursor — Ink's real useCursor hook is coordinate-based (for
+  // IME support) and needs manual text-width measurement to place correctly
+  // inside a Box; an inverted single-character block is the standard pattern
+  // other Ink CLIs use for a plain single-line input instead. Split the value
+  // at the cursor index so the block renders at the actual edit position,
+  // not always trailing — otherwise there is no visual feedback for where
+  // edits will land after moving the cursor mid-string.
+  const before = value.slice(0, cursor)
+  const atCursor = value[cursor] ?? ' '
+  const after = value.slice(cursor + 1)
 
   return h(Box, { flexDirection: 'column' },
     showingSuggestions ? h(CommandSuggestions, { matches, selectedIndex, prefix: suggestionPrefix }) : null,
     h(Box, { borderStyle: 'round', borderColor: COLORS.accent, paddingX: 1 },
       h(Text, { color: COLORS.accent }, '❯ '),
-      h(Text, null, value),
-      // Fake terminal cursor — Ink's real useCursor hook is coordinate-based
-      // (for IME support) and needs manual text-width measurement to place
-      // correctly inside a Box; an inverted trailing block is the standard
-      // pattern other Ink CLIs use for a plain single-line input instead.
-      h(Text, { inverse: true }, ' '),
+      h(Text, null,
+        h(Text, null, before),
+        h(Text, { inverse: true }, atCursor),
+        h(Text, null, after),
+      ),
     ),
   )
 }
