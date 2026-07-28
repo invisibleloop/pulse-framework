@@ -69,7 +69,20 @@ async function main() {
 
   const { waitUntilExit } = render(
     h(App, { projectName, projectRoot, claude, devServer }),
-    { exitOnCtrlC: false }, // App handles Ctrl+C itself so it can clean up child processes first
+    {
+      exitOnCtrlC: false, // App handles Ctrl+C itself so it can clean up child processes first
+      // Ink's default redraw strategy erases and rewrites the ENTIRE output
+      // on every state change (its createStandard log-update mode) — with
+      // the thinking spinner ticking every 250ms, that's 4 full-screen
+      // erase+rewrites per second for as long as Claude is working, which is
+      // what caused visible scrollback/scrollbar flicker in real use. Ink
+      // ships a second mode (createIncremental) that diffs line-by-line and
+      // only rewrites the lines that actually changed — a real, documented
+      // render() option, not a workaround. Confirmed via Ink's own source
+      // (log-update.js): incremental mode explicitly skips unchanged lines
+      // "to prevent flickering during renders."
+      incrementalRendering: true,
+    },
   )
 
   await waitUntilExit()
