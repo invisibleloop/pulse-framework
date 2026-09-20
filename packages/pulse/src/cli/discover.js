@@ -91,9 +91,16 @@ export async function loadPages(projectRoot, bust = 0) {
       }
 
       // Auto-set hydrate only for pages that need client-side JS.
-      // Purely SSR pages (no mutations, actions, persist) ship zero JS.
+      // Purely SSR pages (no mutations, actions, persist, store) ship zero JS.
       // spec.hydrate wins if explicitly provided.
-      const needsHydration = spec.hydrate || spec.mutations || spec.actions || spec.persist
+      //
+      // spec.store alone must count as a hydration need even with no local
+      // mutations/actions: mount() is what wires up data-store-event dispatch
+      // AND the live SSE store-push subscription (initLiveStore) — a
+      // store-only page with no client bundle would silently never receive
+      // pushStore() broadcasts and have a dead data-store-event button, with
+      // no error surfaced anywhere (server-rendered HTML looks correct).
+      const needsHydration = spec.hydrate || spec.mutations || spec.actions || spec.persist || spec.store?.length
       const hydrateUrl = needsHydration
         ? spec.hydrate || ('/src/pages/' + path.relative(
             path.join(projectRoot, 'src', 'pages'),

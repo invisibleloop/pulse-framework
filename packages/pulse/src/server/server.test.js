@@ -4,6 +4,9 @@
  */
 
 import http from 'http'
+import fs   from 'fs'
+import os   from 'os'
+import path from 'path'
 import { createServer, TtlCache } from './index.js'
 
 // ---------------------------------------------------------------------------
@@ -543,13 +546,17 @@ const throwingSpec = {
 }
 
 await test('dev mode returns HTML error page on render error (string mode)', async () => {
-  await withServer([throwingSpec], { stream: false, dev: true }, async (port) => {
+  // dev: true writes to the error journal at <root>/.pulse/errors.json — pass an
+  // isolated tmp root so this doesn't leave a file behind in the package directory.
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-boom-'))
+  await withServer([throwingSpec], { stream: false, dev: true, root: tmpRoot }, async (port) => {
     const { status, headers, body } = await get(port, '/boom')
     assert(status === 500,                            `Expected 500, got ${status}`)
     assert(headers['content-type']?.includes('text/html'), `Expected HTML, got ${headers['content-type']}`)
     assert(body.includes('view exploded'),             `Expected error message in page: ${body.slice(0, 200)}`)
     assert(body.includes('Stack trace'),              `Expected stack trace section in page`)
   })
+  fs.rmSync(tmpRoot, { recursive: true, force: true })
 })
 
 await test('production mode returns generic error page (no stack trace)', async () => {
@@ -562,12 +569,14 @@ await test('production mode returns generic error page (no stack trace)', async 
 })
 
 await test('dev mode injects error into stream when render throws (stream mode)', async () => {
-  await withServer([throwingSpec], { stream: true, dev: true }, async (port) => {
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-boom-'))
+  await withServer([throwingSpec], { stream: true, dev: true, root: tmpRoot }, async (port) => {
     const { status, body } = await get(port, '/boom')
     assert(status === 200,                       `Stream mode commits 200 before error, got ${status}`)
     assert(body.includes('view exploded'),        `Expected error message injected into stream: ${body.slice(0, 400)}`)
     assert(body.includes('pulse-root'),           `Expected pulse-root in partial document`)
   })
+  fs.rmSync(tmpRoot, { recursive: true, force: true })
 })
 
 await test('production stream mode hides error details', async () => {
@@ -1847,6 +1856,32 @@ await test('hydrated pages receive the __PULSE_LIVE__ flag; disabled servers do 
   })
 })
 
+await test('a store-only URL-entry spec (no local mutations/actions/persist, no explicit hydrate) still auto-derives a hydrate URL — regression: mount() is what wires up data-store-event dispatch AND the live SSE store-push subscription; without this a store-only page silently ships zero JS and never receives pushStore() broadcasts', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-needshydration-store-test-'))
+  const specPath = path.join(dir, 'storey.js')
+  fs.writeFileSync(
+    specPath,
+    `export default {\n  route: '/storey',\n  store: ['count'],\n  state: {},\n  view: (state, server) => \`\${server.count ?? 0}\`,\n}\n`
+  )
+  try {
+    const port = nextPort++
+    const { server } = await createServer([new URL('file://' + specPath)], { stream: false, live: true, port, root: new URL('file://' + dir + '/') })
+    await new Promise(resolve => server.once('listening', resolve))
+    try {
+      const { body } = await get(port, '/storey')
+      // A store-only page with no auto-derived hydrate would render with no
+      // module script and no __PULSE_LIVE__ flag at all — both must be present.
+      assert(body.includes('<script type="module"'), `Expected a hydration script tag, got: ${body.slice(0, 800)}`)
+      assert(body.includes('__PULSE_LIVE__'), `Expected the live-store flag (only emitted for hydrated pages), got: ${body.slice(0, 800)}`)
+    } finally {
+      server.closeAllConnections?.()
+      await new Promise(resolve => server.close(resolve))
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nMalformed request handling\n')
@@ -1953,6 +1988,147 @@ await test('serves brotli-compressed HTML when br is accepted', async () => {
 })
 
 // ---------------------------------------------------------------------------
+// Route shadowing warning
+// ---------------------------------------------------------------------------
+// Regression: found via dogfooding. Route matching is first-match-wins in
+// registration order with no specificity ranking (see matchRoute) — a dynamic
+// route registered before a same-depth static route silently swallows every
+// request to that static route, with no error and no warning. discoverPages'
+// file-order is not guaranteed alphabetical across platforms, so this is a
+// real, easy-to-hit trap for any project mixing a catch-all-ish :param route
+// with static pages at the same path depth.
+
+console.log('\nRoute shadowing\n')
+
+const dynamicFirstSpec   = { route: '/:code', state: {}, view: () => '' }
+const staticShadowedSpec = { route: '/settings', state: {}, view: () => '' }
+const unrelatedSpec      = { route: '/about', state: {}, view: () => '' }
+
+// The warning fires synchronously inside createServer, before it starts
+// listening — capture around the whole createServer call, then tear the
+// server down immediately (nothing needs to actually run against it).
+async function warningsFromCreateServer(specs) {
+  const original = console.warn
+  const messages = []
+  console.warn = (msg) => messages.push(msg)
+  const port = nextPort++
+  let server
+  try {
+    ;({ server } = await createServer(specs, { port, stream: false, quiet: true }))
+    await new Promise(resolve => server.once('listening', resolve))
+  } finally {
+    console.warn = original
+    if (server) {
+      server.closeAllConnections?.()
+      await new Promise(resolve => server.close(resolve))
+    }
+  }
+  return messages
+}
+
+await test('warns when a dynamic route is registered before a static route it shadows', async () => {
+  const warnings = await warningsFromCreateServer([dynamicFirstSpec, staticShadowedSpec])
+  assert(warnings.some(w => w.includes('/:code') && w.includes('/settings') && w.includes('never be reached')),
+    `Expected a shadowing warning naming both routes, got: ${JSON.stringify(warnings)}`)
+})
+
+await test('no warning when the static route is registered first (correct order)', async () => {
+  const warnings = await warningsFromCreateServer([staticShadowedSpec, dynamicFirstSpec])
+  assert(warnings.length === 0, `Expected no warnings, got: ${JSON.stringify(warnings)}`)
+})
+
+await test('no warning between two unrelated static routes', async () => {
+  const warnings = await warningsFromCreateServer([staticShadowedSpec, unrelatedSpec])
+  assert(warnings.length === 0, `Expected no warnings, got: ${JSON.stringify(warnings)}`)
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nError journal\n')
+
+function makeTmpRoot() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-error-journal-'))
+}
+
+function readJournal(root) {
+  const p = path.join(root, '.pulse', 'errors.json')
+  return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null
+}
+
+const journalThrowingSpec = {
+  route: '/boom-journal',
+  state: {},
+  view: () => { throw new Error('deliberate view failure') },
+}
+
+await test('server error in dev mode writes an entry to the journal', async () => {
+  const root = makeTmpRoot()
+  await withServer([journalThrowingSpec], { stream: false, dev: true, root }, async (port) => {
+    await get(port, '/boom-journal')
+    const entries = readJournal(root)
+    assert(entries && entries.length === 1, `Expected 1 journal entry, got ${JSON.stringify(entries)}`)
+    assert(entries[0].phase === 'server', `Expected phase "server", got ${entries[0].phase}`)
+    assert(entries[0].message.includes('deliberate view failure'), `Message missing detail: ${entries[0].message}`)
+    assert(entries[0].resolved === false, 'New entry should be unresolved')
+  })
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+await test('server error NOT in dev mode does not write a journal entry', async () => {
+  const root = makeTmpRoot()
+  await withServer([journalThrowingSpec], { stream: false, dev: false, root }, async (port) => {
+    await get(port, '/boom-journal')
+    const entries = readJournal(root)
+    assert(entries === null, `Expected no journal file in prod mode, got ${JSON.stringify(entries)}`)
+  })
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+await test('POST /__pulse/error in dev mode writes a client-reported entry', async () => {
+  const root = makeTmpRoot()
+  await withServer([helloSpec], { stream: false, dev: true, root }, async (port) => {
+    const { status } = await requestWithBody(
+      port, 'POST', '/__pulse/error',
+      JSON.stringify({ route: '/dashboard', phase: 'action', message: 'action "save" failed: boom', stack: 'Error: boom\n  at save' }),
+      'application/json'
+    )
+    assert(status === 204, `Expected 204, got ${status}`)
+    const entries = readJournal(root)
+    assert(entries && entries.length === 1, `Expected 1 journal entry, got ${JSON.stringify(entries)}`)
+    assert(entries[0].route === '/dashboard', `Expected route /dashboard, got ${entries[0].route}`)
+    assert(entries[0].phase === 'action', `Expected phase action, got ${entries[0].phase}`)
+  })
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+await test('POST /__pulse/error in production returns 404 — no dev-only endpoint exposed', async () => {
+  const root = makeTmpRoot()
+  await withServer([helloSpec], { stream: false, dev: false, root }, async (port) => {
+    const { status } = await requestWithBody(port, 'POST', '/__pulse/error', JSON.stringify({}), 'application/json')
+    assert(status === 404, `Expected 404 in production, got ${status}`)
+    assert(readJournal(root) === null, 'No journal file should exist in production')
+  })
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+await test('error journal is capped at 50 entries (ring buffer)', async () => {
+  const root = makeTmpRoot()
+  await withServer([helloSpec], { stream: false, dev: true, root }, async (port) => {
+    for (let i = 0; i < 55; i++) {
+      await requestWithBody(
+        port, 'POST', '/__pulse/error',
+        JSON.stringify({ route: '/x', phase: 'view', message: `error ${i}`, stack: '' }),
+        'application/json'
+      )
+    }
+    const entries = readJournal(root)
+    assert(entries.length === 50, `Expected 50 entries (capped), got ${entries.length}`)
+    // Oldest entries should have been dropped — the most recent should remain
+    assert(entries[entries.length - 1].message === 'error 54', `Expected newest entry to survive, got ${entries[entries.length - 1].message}`)
+    assert(entries[0].message === 'error 5', `Expected oldest surviving entry to be "error 5", got ${entries[0].message}`)
+  })
+  fs.rmSync(root, { recursive: true, force: true })
+})
 
 console.log('\nGraceful shutdown\n')
 

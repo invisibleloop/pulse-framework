@@ -513,12 +513,24 @@ const MIME_TYPES = {
 
 /**
  * Returns true if the spec needs a client-side hydration script.
- * Specs with no mutations, actions, or persist are purely server-rendered.
+ * Specs with no mutations, actions, persist, or store are purely
+ * server-rendered.
+ *
+ * spec.store alone counts even with no local mutations/actions: mount() is
+ * what wires up data-store-event dispatch AND the live SSE store-push
+ * subscription (initLiveStore) — a store-only page with no hydration script
+ * would silently never receive pushStore() broadcasts and have a dead
+ * data-store-event button, with no error surfaced anywhere (server-rendered
+ * HTML looks correct). Mirrors the same fix in discover.js's needsHydration
+ * and build.js's needsClientBundle — this is the third, independent copy of
+ * this check (the one createServer itself uses when auto-deriving
+ * spec.hydrate for URL entries) and previously had the same gap.
  */
 function needsHydration(spec) {
   return !!(spec.mutations && Object.keys(spec.mutations).length) ||
          !!(spec.actions   && Object.keys(spec.actions).length)   ||
-         !!spec.persist
+         !!spec.persist ||
+         !!(spec.store && spec.store.length)
 }
 
 /**
@@ -606,7 +618,7 @@ export async function createServer(entries, options = {}) {
                                     // clients; pages subscribed via spec.store re-render immediately.
                                     // Broadcast = SHARED data only (stock, announcements), never
                                     // per-user data. Default path: /__pulse/live
-    onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev),
+    onError        = (err, req, res) => defaultErrorHandler(err, req, res, dev, errorJournalPath),
     onRequest,
     agentMode      = false,        // show agent-active indicator in banner
     quiet          = false,        // suppress request logging
@@ -616,6 +628,10 @@ export async function createServer(entries, options = {}) {
   const specs = await resolveSpecEntries(entries, root)
 
   const healthPath = healthCheck === true ? '/healthz' : (healthCheck || null)
+
+  // Error journal path — resolved once per createServer call from this
+  // instance's real root, not cached at module load. See writeErrorEntry.
+  const errorJournalPath = resolveErrorJournalPath(root)
 
   // Store definition — `let` so the dev server can hot-swap it via updateStore()
   // when pulse.store.js changes, the same way updateSpecs() swaps page specs.
@@ -689,6 +705,7 @@ export async function createServer(entries, options = {}) {
   // Build route table — let so it can be swapped on hot reload.
   // The '*' spec is excluded: it is not a route, it is the fallback.
   let router = buildRouter(specs.filter(s => s.route !== '*'))
+  warnOnRouteShadowing(router)
 
   // CSRF secret — per-boot random unless pinned via options.secret. Tokens are
   // tied to a cookie, so a restart only means in-flight forms re-render once.
@@ -796,6 +813,25 @@ export async function createServer(entries, options = {}) {
         res.write(':connected\n\n')
         liveClients.add(res)
         req.on('close', () => liveClients.delete(res))
+        return
+      }
+
+      // Client-side error reporting — dev only. The runtime POSTs view/action
+      // failures here so they land in the same journal as server-side errors;
+      // pulse_diagnose reads one file regardless of where the error occurred.
+      // Not registered in production — a stray POST there just 404s harmlessly,
+      // so the client runtime can call it unconditionally with no dev check.
+      if (dev && pathname === '/__pulse/error' && req.method === 'POST') {
+        let body = ''
+        req.on('data', chunk => { body += chunk })
+        req.on('end', () => {
+          try {
+            const { route, phase, message, stack } = JSON.parse(body || '{}')
+            writeErrorEntry(errorJournalPath, { route, phase: phase === 'action' ? 'action' : 'view', message, stack })
+          } catch { /* malformed payload — drop it, this is best-effort */ }
+          res.writeHead(204, SECURITY_HEADERS)
+          res.end()
+        })
         return
       }
 
@@ -1538,6 +1574,37 @@ function buildRouter(specs) {
 }
 
 /**
+ * Route matching is first-match-wins in registration order (see matchRoute) —
+ * there is no path-specificity ranking. Registration order comes from file
+ * discovery order, which is not guaranteed alphabetical across platforms. A
+ * dynamic route registered before a same-depth static route will silently
+ * swallow every request to that static route — no error, no warning, just a
+ * 404 or the wrong page rendering, discovered only by noticing a route never
+ * gets hit. This is a static, best-effort check: it tests each dynamic
+ * route's pattern against a synthetic literal built from each later static
+ * route's own path segments, so it only catches routes actually registered
+ * (nothing exhaustive about every possible URL).
+ */
+function warnOnRouteShadowing(router) {
+  for (let i = 0; i < router.length; i++) {
+    const earlier = router[i]
+    if (earlier.params.length === 0) continue // static routes can't shadow anything
+    for (let j = i + 1; j < router.length; j++) {
+      const later = router[j]
+      if (later.params.length > 0) continue // only static routes can be shadowed this way
+      if (earlier.pattern.test(later.spec.route)) {
+        console.warn(
+          `⚠ Pulse: route "${earlier.spec.route}" is registered before "${later.spec.route}" and matches it — ` +
+          `"${later.spec.route}" will never be reached. Route matching is first-match-wins with no ` +
+          `specificity ranking; rename the file backing "${earlier.spec.route}" so it sorts after ` +
+          `"${later.spec.route}", or give one of them an explicit route that no longer overlaps.`
+        )
+      }
+    }
+  }
+}
+
+/**
  * Match a pathname against the router.
  * Returns the first match with extracted params, or null.
  *
@@ -2035,8 +2102,62 @@ function notFoundHtml(pathname) {
 </html>`
 }
 
-function defaultErrorHandler(err, _req, res, dev = false) {
+// ---------------------------------------------------------------------------
+// Error journal — dev-only diagnostic log an agent can read via pulse_diagnose.
+// Captures the failure modes that previously dead-ended at console.error:
+// server errors, SSR view throws, sitemap enumerator failures, and (via the
+// /__pulse/error endpoint) post-hydration client view/action failures.
+// Ring-buffered at 50 entries — this is a build/iterate-time tool, not a
+// production error tracker, so it is only written when dev === true.
+// ---------------------------------------------------------------------------
+
+const ERROR_JOURNAL_LIMIT = 50
+
+// journalPath is computed per-createServer-call from the real project root
+// (see resolveErrorJournalPath below) rather than cached at module load —
+// each createServer instance (e.g. concurrent test servers) gets its own
+// correct path instead of a stale process.cwd() snapshot from import time.
+function resolveErrorJournalPath(root) {
+  const dir = root
+    ? (typeof root === 'string' ? root : root.pathname || process.cwd())
+    : process.cwd()
+  return path.join(dir, '.pulse', 'errors.json')
+}
+
+function readErrorJournal(journalPath) {
+  try {
+    return JSON.parse(fs.readFileSync(journalPath, 'utf8'))
+  } catch {
+    return []
+  }
+}
+
+function writeErrorEntry(journalPath, { route, phase, message, stack, spec = null }) {
+  try {
+    const entries = readErrorJournal(journalPath)
+    entries.push({
+      id:       crypto.randomUUID(),
+      ts:       new Date().toISOString(),
+      route:    route || null,
+      phase,    // 'view' | 'action' | 'server' | 'guard' | 'sitemap'
+      message:  String(message || '').slice(0, 2000),
+      stack:    String(stack || '').slice(0, 4000),
+      spec,
+      resolved: false,
+    })
+    // Ring buffer — keep only the most recent entries
+    const trimmed = entries.slice(-ERROR_JOURNAL_LIMIT)
+    fs.mkdirSync(path.dirname(journalPath), { recursive: true })
+    fs.writeFileSync(journalPath, JSON.stringify(trimmed, null, 2), 'utf8')
+  } catch (journalErr) {
+    // Never let journal-write failures affect the actual error response
+    console.error('[Pulse] failed to write error journal:', journalErr.message)
+  }
+}
+
+function defaultErrorHandler(err, _req, res, dev = false, journalPath = null) {
   console.error('[Pulse] Server error:', err)
+  if (dev && journalPath) writeErrorEntry(journalPath, { route: _req?.url || null, phase: 'server', message: err.message, stack: err.stack })
   if (res.headersSent) return
 
   const html = dev ? errorPage(err) : errorPage500()

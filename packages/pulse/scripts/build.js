@@ -60,6 +60,24 @@ function stripServerOnlyKeys(source) {
 }
 
 /**
+ * A page needs a client boot bundle only if it needs hydration — matches
+ * discover.js's needsHydration() exactly (mutations || actions || persist ||
+ * store). Call this on source that has already had stripServerOnlyKeys/Imports
+ * applied, and that has already been confirmed to have a `view:` key
+ * (a view alone is necessary but not sufficient — a purely server-rendered
+ * page, e.g. a redirect handler or a spec.submit-only form, has a view and
+ * no hydration need at all).
+ *
+ * `store` counts even with no local mutations/actions: mount() is what wires
+ * up data-store-event dispatch AND the live SSE store-push subscription — a
+ * store-only page with no client bundle would silently never receive
+ * pushStore() broadcasts and have a dead data-store-event button.
+ */
+function needsClientBundle(strippedSource) {
+  return /\b(mutations|actions|persist|store)\s*:/.test(strippedSource)
+}
+
+/**
  * Strip import statements for server-only modules and any top-level
  * variable declarations whose right-hand side calls the imported names.
  *
@@ -456,6 +474,14 @@ const bootstrapFiles = pages.flatMap(({ filePath }) => {
   const source   = fs.readFileSync(filePath, 'utf8')
   const stripped = stripServerOnlyImports(stripServerOnlyKeys(source))
   if (!/\bview\s*:/.test(stripped)) return []
+  // A view alone doesn't need hydration — see needsClientBundle's doc comment.
+  // Without this, a purely server-rendered page (a redirect handler, a custom
+  // 404, any spec.submit-only page) got a client bundle generated anyway —
+  // wasted build output that's silently never referenced, and worse, a real
+  // build failure if that page imports a local server-only helper module
+  // (e.g. a persistence layer using node:fs) that esbuild then tries to
+  // bundle for the browser.
+  if (!needsClientBundle(stripped)) return []
 
   // Use the path relative to src/pages/ so nested pages get unique names.
   // e.g. src/pages/api/products.js → 'api--products' (not 'products')

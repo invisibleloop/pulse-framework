@@ -50,6 +50,11 @@ function strip(source) {
   return stripServerOnlyImports(stripServerOnlyKeys(source))
 }
 
+// Mirrors needsClientBundle() in build.js exactly — see its doc comment there.
+function needsClientBundle(strippedSource) {
+  return /\b(mutations|actions|persist|store)\s*:/.test(strippedSource)
+}
+
 function isInsideString(source, pos) {
   let i = 0
   const stack = []
@@ -423,6 +428,61 @@ test('package-root import (pushStore) is stripped — the root export is the ser
 test('subpath imports (/ui) are NOT stripped by the root entry',
   `import { button } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => button({ label: 'x' }),\n}`,
   `import { button } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => button({ label: 'x' }),\n}`
+)
+
+// ---------------------------------------------------------------------------
+// needsClientBundle — must match discover.js's needsHydration() exactly.
+// Regression: found via dogfooding. This check used to be "does the spec have
+// a `view:` key" alone, so a purely server-rendered page (a redirect handler,
+// a custom 404, a spec.submit-only form) still got a client bundle generated —
+// and if that page imported a local server-only helper module (e.g. a
+// node:fs-based persistence layer), the production build failed outright when
+// esbuild tried to bundle Node built-ins for the browser.
+// ---------------------------------------------------------------------------
+
+console.log('\nneedsClientBundle — matches discover.js hydration logic\n')
+
+function boolTest(label, input, expected) {
+  const got = needsClientBundle(strip(input))
+  if (got === expected) {
+    console.log('  ✓ ' + label)
+    pass++
+  } else {
+    console.log('  ✗ ' + label)
+    console.log('    expected: ' + expected)
+    console.log('    got:      ' + got)
+    fail++
+  }
+}
+
+boolTest('a view-only spec (no mutations/actions/persist) does not need a bundle — the exact bug this fixes',
+  `export default {\n  route: '/:code',\n  guard: async (ctx) => {},\n  view: () => '',\n}`,
+  false
+)
+
+boolTest('a spec.submit-only page does not need a bundle',
+  `export default {\n  route: '/',\n  submit: async (ctx) => ({ redirect: '/' }),\n  view: () => '',\n}`,
+  false
+)
+
+boolTest('mutations require a bundle',
+  `export default {\n  route: '/x',\n  state: {},\n  mutations: {\n    inc: (s) => ({ n: s.n + 1 }),\n  },\n  view: () => '',\n}`,
+  true
+)
+
+boolTest('actions require a bundle',
+  `export default {\n  route: '/x',\n  state: {},\n  actions: {\n    save: { run: async () => {} },\n  },\n  view: () => '',\n}`,
+  true
+)
+
+boolTest('persist requires a bundle',
+  `export default {\n  route: '/x',\n  state: { count: 0 },\n  persist: ['count'],\n  view: () => '',\n}`,
+  true
+)
+
+boolTest('store alone (no local mutations/actions) requires a bundle — regression: mount() is what wires up data-store-event dispatch AND the live SSE store-push subscription; a store-only page with no client bundle would silently never receive pushStore() broadcasts and have a dead data-store-event button',
+  `export default {\n  route: '/x',\n  store: ['count'],\n  state: {},\n  view: (state, server) => \`\${server.count}\`,\n}`,
+  true
 )
 
 // ---------------------------------------------------------------------------
