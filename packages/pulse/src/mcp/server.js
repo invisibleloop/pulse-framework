@@ -22,6 +22,9 @@
  *   pulse_validate       — validate a spec against the schema
  *   pulse_review         — full code review (pass quick:true for lightweight mid-build check)
  *   pulse_stamp          — write the .pulse-verified stamp (call as last step of /verify)
+ *   pulse_diagnose       — read the dev-only error journal (.pulse/errors.json)
+ *   pulse_resolve_error  — mark error journal entries resolved
+ *   pulse_check_bundles  — inspect production bundle contents (not just sizes)
  *   pulse_check_version  — installed vs static vs npm latest
  *   pulse_update         — re-copy pulse-ui assets from package → public/
  */
@@ -36,6 +39,10 @@ import http                      from 'http'
 import { execFileSync, spawn, spawnSync } from 'child_process'
 
 import { loadPages } from '../cli/discover.js'
+import { validateContent, validateFile, formatValidationResult } from '../cli/validate.js'
+import { readJournal, formatJournal, resolveEntries, formatResolveResult } from '../cli/diagnose.js'
+import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
+import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
 
 // ---------------------------------------------------------------------------
 // Crash guards — an uncaught error in any tool handler must not kill the
@@ -77,6 +84,22 @@ const IS_PULSE_PROJECT = (() => {
 const PKG_VERSION = JSON.parse(
   fs.readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf8')
 ).version
+
+// Reads pulse.config.js fresh on every call (cache-busted — the project's
+// config can change between calls in a long-lived MCP server process, e.g.
+// a user flips `design: 'freeform'` mid-session and the agent restarts the
+// server or just calls a tool again). Returns {} if there is no config file
+// or it fails to load — every caller treats missing keys as "use the default".
+async function readPulseConfig() {
+  const configPath = path.join(ROOT, 'pulse.config.js')
+  if (!fs.existsSync(configPath)) return {}
+  try {
+    const mod = await import(`${configPath}?t=${Date.now()}`)
+    return mod.default ?? {}
+  } catch {
+    return {}
+  }
+}
 
 // Common synonym → canonical vibe normalisation
 // Prevents hard enum errors when agents use intuitive names like "modern-minimal"
@@ -237,6 +260,25 @@ server.registerResource(
 
     const isNewProject = pageCount === 0
 
+    const config = await readPulseConfig()
+    // 'components' (default) — the standard pulse_intake/sketch/intent pipeline
+    // and src/ui/* component-first mandate below apply as normal.
+    // 'freeform' — the user has opted this project out of that pipeline: build
+    // plain hand-written HTML/CSS, no src/ui/* components, no intake/sketch
+    // ceremony. Read once per pulse://start fetch (project-wide, not a per-page
+    // choice) so it applies automatically every session without the user
+    // having to repeat it — set once in pulse.config.js, honoured everywhere.
+    const isFreeform = config.design === 'freeform'
+
+    const freeformBanner = isFreeform ? `
+> ⚠ **\`design: 'freeform'\` is set in pulse.config.js.** This project defaults to **Mode B — creative override** (see the persona's "Design Freedom" rule) on every page, every session — you do not need to ask the user or re-decide per page.
+> - Skip \`pulse_intake\` → \`pulse_sketch\` → \`pulse_intent\`'s component scaffolding. Go straight to the spec.
+> - Write plain hand-rolled HTML/CSS in the view — any structure, any class names, no \`@invisibleloop/pulse/ui\` components required.
+> - **Still write the override comment at the top of every new spec file** — \`// component-free — creative override: <reason>\` — even though the mode is project-wide. \`pulse_review\` detects Mode B by reading that comment from each file's source, not from this config; a spec without it will be flagged.
+> - Functional atoms (\`button\`, \`input\`, \`badge\`, \`modal\`) can still come from components where there's no design reason not to — Mode B doesn't forbid them, it just removes the obligation.
+> - The pass bar is unchanged from Mode B: Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop + mobile), CLS 0.00, \`<main id="main-content">\`, and hex-in-\`theme.css\`-only — all still enforced by \`pulse_validate\`/\`/verify\`/\`pulse_review\`.
+` : ''
+
     return ({
       contents: [{
         uri:      'pulse://start',
@@ -246,19 +288,27 @@ server.registerResource(
 ${isNewProject
   ? `> **New project detected** — no pages found in src/pages/ yet.`
   : `> **Existing project** — ${pageCount} page${pageCount !== 1 ? 's' : ''} found.`}
-
+${freeformBanner}
 ---
 
 ## What are you doing?
 
 ### A — New page or new site from scratch
-Fetch \`pulse://workflow\` for the full phase/gate sequence, then follow the intake → sketch → intent pipeline.
+${isFreeform
+  ? `Skip the intake/sketch/intent component pipeline (this project is \`design: 'freeform'\` — Mode B on every page). Fetch \`pulse://workflow\` for the phase/gate sequence, but treat step 3a as already decided: Mode B, every page, no re-asking.
+
+Quick checklist before your first line of code:
+1. Ask the user for design inspiration first (a site, screenshot, or mood board) if they haven't already described a direction
+2. Ask: **light or dark?** Pulse renders dark when \`meta.theme\` is unset — decide before writing a single line
+3. Write the spec directly with hand-rolled HTML/CSS, including the \`// component-free — creative override: <reason>\` comment at the top of the file
+4. Fetch \`pulse://guide/design-references\` for aesthetic direction if useful — skip \`pulse://guide/components\``
+  : `Fetch \`pulse://workflow\` for the full phase/gate sequence, then follow the intake → sketch → intent pipeline.
 
 Quick checklist before your first line of code:
 1. Ask the user for design inspiration first (a site, screenshot, or mood board)
 2. Ask: **light or dark?** Pulse renders dark when \`meta.theme\` is unset — decide before writing a single line
 3. Run \`pulse_intake\` → \`pulse_sketch\` → \`pulse_intent\`
-4. Fetch \`pulse://guide/templates\` + \`pulse://guide/design-references\` for aesthetic direction
+4. Fetch \`pulse://guide/templates\` + \`pulse://guide/design-references\` for aesthetic direction`}
 
 ### B — Editing an existing page, adding a section, or fixing a bug
 Fetch \`pulse://quickstart\` — workflow phases, spec skeleton, components, and theming in one fetch.
@@ -414,6 +464,8 @@ export default {
 | Color picker | \`<input type="color" data-event="change:setColor">\` | same as select |
 | Range slider | \`<input type="range" data-event="input:setVolume">\` | \`input\` fires on every drag step |
 | Text / email / password / search | **No \`data-event\`** — read via FormData | \`data-event\` on text inputs re-renders on every keystroke, destroying cursor position and focus |
+| Continuous drag (vertex, panel resize, custom slider handle) | \`data-event="pointerdown:start pointermove:drag pointerup:end"\` | one element, multiple space-separated bindings — \`pointerdown\` captures the pointer so \`pointermove\`/\`pointerup\` keep firing on that element even off-bounds; \`pointercancel\` also routes to the \`pointerup\` mutation |
+| Keyboard shortcut / arrow-key nudge | \`<div tabindex="0" data-event="keydown:onKey">\` | fires on \`keydown\`; read \`e.key\` in the mutation |
 
 **Text input pattern (uncontrolled):**
 \`\`\`js
@@ -437,6 +489,25 @@ actions: {
 \`\`\`
 
 **\`change:\` is the blur/commit event** — it fires when a non-text input loses focus with a changed value. This is correct for selects, color pickers, checkboxes, and radios. It does NOT fire on every keystroke (use \`input:\` for live-updating sliders or search fields where re-render on every character is intentional and the element is not a free-text input).
+
+**Continuous drag pattern (pointer events):**
+\`\`\`js
+// view — pointerdown/pointermove/pointerup all bound on the same element
+view: (state) => \`
+  <circle
+    cx="\${state.x}" cy="\${state.y}" r="8"
+    data-event="pointerdown:startDrag pointermove:dragVertex pointerup:endDrag">
+  </circle>
+\`,
+mutations: {
+  startDrag:  (state) => ({ dragging: true }),
+  // gate on \`dragging\` — pointermove fires on every cursor move over the
+  // element, not just while a drag is active
+  dragVertex: (state, e) => state.dragging ? { x: e.clientX, y: e.clientY } : {},
+  endDrag:    (state) => ({ dragging: false }),
+}
+\`\`\`
+\`pointerdown\` calls \`setPointerCapture\` on its target automatically — no manual capture code needed. \`pointercancel\` (browser-interrupted gestures) fires the same mutation as \`pointerup\`, so a drag can never get stuck "in progress".
 
 ---
 
@@ -747,18 +818,9 @@ server.registerTool(
     if (content && file) {
       return text('Error: provide only one of content or file, not both')
     }
-    
-    if (file) {
-      if (!fs.existsSync(file)) {
-        return text(`File not found: ${file}`)
-      }
-      content = fs.readFileSync(file, 'utf8')
-      // Validate from the file's own directory so relative imports resolve
-      // correctly for pages in subdirectories
-      return validateContent(content, path.dirname(file))
-    }
 
-    return validateContent(content)
+    const result = file ? await validateFile(file, ROOT) : await validateContent(content, ROOT)
+    return text(formatValidationResult(result, { nextSteps: true }))
   }
 )
 
@@ -804,8 +866,8 @@ Rules for the spec you write:
     const content = fs.readFileSync(fullPath, 'utf8')
     // Validate from the file's own directory so relative imports resolve
     // correctly for pages in subdirectories (src/pages/news/index.js)
-    const validation = await validateContent(content, path.dirname(fullPath))
-    if (validation.content[0].text.startsWith('Invalid')) return validation
+    const result = await validateContent(content, ROOT, path.dirname(fullPath))
+    if (!result.valid) return text(formatValidationResult(result))
 
     const route = derivedRouteFromName(name)
     return text(`Validated ${path.relative(ROOT, fullPath)} → route "${route}"`)
@@ -1259,6 +1321,31 @@ server.registerTool(
 )
 
 // ---------------------------------------------------------------------------
+// pulse_check_bundles — inspect what's actually inside the production bundles
+// ---------------------------------------------------------------------------
+// Lighthouse checks scores, not contents. A bundle can be small enough to pass
+// every score and still contain something wrong: server-only code that leaked
+// through the build's hydration-need check (found via real dogfooding — a
+// page with no mutations/actions/persist got bundled anyway, and a bundle
+// that imported a node:fs-based helper failed the build outright), or a
+// boot file generated for a page that should ship zero client JS. This reads
+// the real files in public/dist/ after pulse_build, not just the manifest.
+
+server.registerTool(
+  'pulse_check_bundles',
+  {
+    description: `Inspect the actual production bundle files in public/dist/ after pulse_build — not just their sizes, their contents. Checks for two things Lighthouse's score-based gate cannot catch:
+
+1. A boot bundle exists for a page that doesn't need one (no mutations/actions/persist in its spec) — wasted output, and the exact shape of bug that can make a production build fail outright if that page also imports a server-only helper module.
+2. A boot bundle contains a literal reference to a Node built-in (node:fs, node:crypto, etc.) — a sign server-only code leaked into a client bundle instead of being stripped.
+
+Call this as part of the full /verify pass, after pulse_build, alongside Lighthouse — not part of /verify --quick, since it needs a production build to inspect.`,
+    inputSchema: {},
+  },
+  () => text(formatBundleCheck(checkBundles(ROOT)))
+)
+
+// ---------------------------------------------------------------------------
 // pulse_review
 // ---------------------------------------------------------------------------
 
@@ -1295,352 +1382,13 @@ any feature build.
       source = fs.readFileSync(file, 'utf8')
     }
 
-    // Quick mode — lightweight structural checks only, no full checklist or Lighthouse gate
     if (quick) {
-      const issues = []
-      const warnings = []
-
-      // Try to render the view
-      let renderedHtml = ''
-      if (file) {
-        try {
-          const mod  = await import(`${file}?quick=${Date.now()}`)
-          const spec = mod.default
-          if (spec && typeof spec.view === 'function') {
-            renderedHtml = spec.view(spec.state || {}, {})
-          }
-        } catch { /* ignore — server data dependency */ }
-      }
-
-      if (renderedHtml) {
-        if (!/<main[^>]*id=["']?main-content/.test(renderedHtml))
-          issues.push('✗ Missing `<main id="main-content">` landmark')
-        if (/<input[^>]*data-event/.test(renderedHtml))
-          issues.push('✗ `data-event` on `<input>` — destroys focus on every keystroke, use FormData in onStart instead')
-        if (/(className|htmlFor|onClick)=/.test(renderedHtml))
-          issues.push('✗ React patterns found (className / htmlFor / onClick) — use class, for, data-event')
-        if (/tabindex=["']?([1-9]\d*)/.test(renderedHtml))
-          issues.push('✗ Positive tabindex found — remove, reorder DOM instead')
-        const rawNavInSource = (source.match(/<nav[\s>]/gi) || []).length
-        if (rawNavInSource > 0)
-          issues.push(`✗ Raw <nav> tag in spec source — nav() renders <nav> internally; wrapping it in another <nav> creates duplicate landmarks that fail Lighthouse accessibility. Remove the outer <nav>.`)
-        const viewBlockStripped = renderedHtml
-          .replace(/href=["']#[^"']*["']/g, 'href="#"')
-          .replace(/id=["'][^"']*["']/g, 'id=""')
-          // Strip CSS custom property assignments from style attrs (--foo:#hex is a runtime
-          // data binding, not an authored colour — e.g. style="--swatch-bg:#E8524A").
-          // Standard property assignments like color:#000 are left intact and still flagged.
-          .replace(/style="([^"]*)"/g, (_, v) => `style="${v.replace(/--[a-zA-Z][^:]*:[^;"]*/g, '')}"`)
-        if (/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlockStripped))
-          warnings.push('⚠ Possible hex colour in rendered HTML — use var(--ui-*) tokens')
-
-        // Component pattern checks (unless creative override declared)
-        if (!/component.free|creative\s+override/i.test(source)) {
-          if (/<[^>]+class="[^"]*\bhero\b/.test(renderedHtml) && !source.includes('hero('))
-            warnings.push('⚠ `.hero` class in HTML but no `hero()` component — use the component or declare creative override')
-          if (/<[^>]+class="[^"]*\bcard\b/.test(renderedHtml) && !source.includes('card('))
-            warnings.push('⚠ `.card` class in HTML but no `card()` component — use the component or declare creative override')
-        }
-      }
-
-      // Source-level checks (don't need rendered HTML).
-      // Use line-anchored regex for actions: to avoid false positives from component
-      // prop strings like hero({ actions: '...' }) or card({ actions: '...' }).
-      const hasActionsBlock = /^\s{0,4}actions\s*:/m.test(source)
-      if (hasActionsBlock && !source.includes('onError:'))
-        issues.push('✗ Action missing `onError` — required, will throw at runtime')
-      if (hasActionsBlock && !source.includes('onSuccess:'))
-        issues.push('✗ Action missing `onSuccess` — required')
-      if (source.includes('hydrate:'))
-        issues.push('✗ `hydrate` is set manually — remove it, the framework sets it automatically')
-      if (/meta\s*:\s*async/.test(source))
-        issues.push('✗ `meta` is an async function — `meta` must be a plain object; make individual fields async instead')
-
-      // Structural confirmations — always shown regardless of issues, so the agent
-      // gets positive signal on what's correct, not just a list of failures.
-      const confirms = []
-      if (renderedHtml) {
-        confirms.push(/<main[^>]*id=["']?main-content/.test(renderedHtml) ? '✓ `<main id="main-content">` landmark present' : null)
-        const rawNavInSource = (source.match(/<nav[\s>]/gi) || []).length
-        if (rawNavInSource === 0) confirms.push('✓ No raw <nav> in spec source — nav() component handles landmarks correctly')
-        const headings = [...renderedHtml.matchAll(/<h([1-6])[^>]*>/g)].map(m => parseInt(m[1]))
-        if (headings.length > 0) {
-          const orderOk = headings.every((h, i) => i === 0 || h <= headings[i - 1] + 1)
-          confirms.push(orderOk ? `✓ Heading order correct (${headings.map(h => `h${h}`).join(' → ')})` : `⚠ Heading order may be skipping levels (${headings.map(h => `h${h}`).join(' → ')})`)
-        }
-        const interactiveWithoutLabel = [...renderedHtml.matchAll(/<button(?![^>]*aria-label)[^>]*>\s*<\/button>/g)]
-        confirms.push(interactiveWithoutLabel.length === 0 ? '✓ No empty buttons without aria-label detected' : `⚠ ${interactiveWithoutLabel.length} button(s) appear empty — check aria-label`)
-        const dataEvents = [...renderedHtml.matchAll(/data-event=/g)].length
-        if (dataEvents > 0) confirms.push(`✓ ${dataEvents} data-event binding(s) found`)
-        const creativeOverride = /component.free|creative\s+override/i.test(source)
-        if (creativeOverride) confirms.push('✓ Creative override declared — component pattern checks are advisory')
-      }
-
-      const lines = ['## Quick review\n']
-
-      if (confirms.filter(Boolean).length > 0) {
-        lines.push('### Structural checks\n')
-        for (const c of confirms.filter(Boolean)) lines.push(c)
-        lines.push('')
-      }
-
-      if (issues.length === 0 && warnings.length === 0) {
-        lines.push('✓ No issues found. Run `pulse_validate` next, then `/verify`.')
-      } else {
-        if (issues.length) {
-          lines.push('### Fix before proceeding\n')
-          for (const i of issues) lines.push(i)
-          lines.push('')
-        }
-        if (warnings.length) {
-          lines.push('### Warnings (check these)\n')
-          for (const w of warnings) lines.push(w)
-          lines.push('')
-        }
-        lines.push('---\nFix issues, then run `pulse_validate` → `/verify --quick`.')
-      }
-
-      return text(lines.join('\n'))
+      const result = await runQuickReview(source, file)
+      return text(formatQuickReview(result, { agentFacing: true }))
     }
 
-    // Run the validator in a child process (same as pulse_validate)
-    let validationResult = '(could not run validator)'
-    if (file) {
-      const validatorScript = new URL('./validate-worker.js', import.meta.url).pathname
-      try {
-        validationResult = execFileSync(process.execPath, [validatorScript, file], {
-          timeout: 10_000,
-          encoding: 'utf8',
-        }).trim()
-      } catch (err) {
-        validationResult = err.stdout?.trim() || err.message
-      }
-    } else {
-      // Content-only mode — write to temp file and validate
-      const tmpFile = path.join(os.tmpdir(), `pulse-review-${Date.now()}.js`)
-      fs.writeFileSync(tmpFile, source, 'utf8')
-      const validatorScript = new URL('./validate-worker.js', import.meta.url).pathname
-      try {
-        validationResult = execFileSync(process.execPath, [validatorScript, tmpFile], {
-          timeout: 10_000,
-          encoding: 'utf8',
-        }).trim()
-      } catch (err) {
-        validationResult = err.stdout?.trim() || err.message
-      } finally {
-        try { fs.unlinkSync(tmpFile) } catch {}
-      }
-    }
-
-    // Try to render the view with initial state
-    let renderedHtml = ''
-    let renderNote = ''
-    try {
-      const mod  = await import(`${file}?review=${Date.now()}`)
-      const spec = mod.default
-      if (spec && typeof spec.view === 'function') {
-        renderedHtml = spec.view(spec.state || {}, {})
-      } else if (spec && typeof spec.view === 'object') {
-        const segments = Object.entries(spec.view)
-          .map(([k, fn]) => `<!-- segment: ${k} -->\n${typeof fn === 'function' ? fn(spec.state || {}, {}) : ''}`)
-          .join('\n')
-        renderedHtml = segments
-        renderNote = '(streamed spec — segments rendered individually)'
-      }
-    } catch {
-      renderNote = '(view could not be rendered — may depend on server data)'
-    }
-
-    return text(`# Pulse Code Review
-
-You are now a **senior code reviewer**. Read the spec, find every problem, and fix them all before reporting back.
-
----
-
-## Validator output
-
-${validationResult}
-
-${validationResult.includes('✓') ? '' : `
-## Spec source (validation failed — showing for debugging)
-
-\`\`\`js
-${source}
-\`\`\`
-`}
-
-${renderNote.includes('could not') ? `
-## Render error
-
-${renderNote}
-
-\`\`\`js
-${source}
-\`\`\`
-` : ''}
-
----
-
-## Auto-checked items
-
-${(() => {
-  const checks = []
-  
-  // Check rendered HTML
-  if (renderedHtml) {
-    // Positive tabindex
-    const posTabindex = /tabindex=["']?([1-9]\d*)/.test(renderedHtml)
-    checks.push(posTabindex ? '✗ **Positive tabindex found** — remove tabindex > 0, reorder DOM instead' : '✓ No positive tabindex')
-    
-    // data-event on input
-    const dataEventInput = /<input[^>]*data-event/.test(renderedHtml)
-    checks.push(dataEventInput ? '✗ **data-event on <input>** — this destroys focus on every keystroke' : '✓ No data-event on text inputs')
-    
-    // React patterns
-    const reactPatterns = /(className|htmlFor|onClick)=/.test(renderedHtml)
-    checks.push(reactPatterns ? '✗ **React patterns found** — use class, for, data-event instead' : '✓ No React patterns (className/htmlFor/onClick)')
-    
-    // Emoji in HTML — strip SVG, data URIs, and aria-hidden elements before checking.
-    // Mathematical/decorative Unicode in aria-hidden elements is intentional and accessible.
-    const htmlNoSvg = renderedHtml
-      .replace(/<svg[\s\S]*?<\/svg>/gi, '')
-      .replace(/data:[^"']+/g, '')
-      .replace(/<[^>]+aria-hidden=["']true["'][^>]*>[\s\S]*?<\/[^>]+>/gi, '')
-    // Restrict to the emoji Unicode blocks only — excludes math symbols (∑, π, ∞, etc.),
-    // arrows, and other non-emoji Unicode that are commonly used as decorative text.
-    const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]/u
-    const hasEmoji = emojiRegex.test(htmlNoSvg)
-    checks.push(hasEmoji ? '⚠ **Emoji in HTML** — use icon components or aria-label instead (verify: may be intentional icon)' : '✓ No emoji in view HTML')
-    
-    // Main landmark
-    const hasMain = /<main[^>]*id=["']?main-content/.test(renderedHtml)
-    checks.push(hasMain ? '✓ <main id="main-content"> present' : '✗ **Missing main landmark** — add <main id="main-content">')
-  }
-  
-  // Check spec source
-  // Hex colours in view — strip anchor hrefs, id attributes, template literal expressions,
-  // and style attributes before checking so runtime-generated values (e.g. style="--swatch-bg:${hex}")
-  // are never flagged. Only flag literal hex values authored directly in the view string.
-  const viewBlock = source.slice(source.indexOf('view:'))
-  const viewBlockStripped = viewBlock
-    .replace(/href=["']#[^"']*["']/g, 'href="#"')   // href="#anchor" → href="#"
-    .replace(/id=["'][^"']*["']/g, 'id=""')          // id="foo" → id=""
-    .replace(/\$\{[^}]*\}/g, '${…}')                 // ${expr} — runtime values, not authored hex
-  const hexInView = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])/.test(viewBlockStripped)
-  if (hexInView) {
-    checks.push('⚠ **Possible hex colour in view** — use var(--ui-*) tokens only')
-  } else {
-    checks.push('✓ No obvious hex colours in view')
-  }
-  
-  // XSS test coverage — check whether the test file includes a <script>alert assertion
-  // for each user-controlled string interpolated into the view.
-  // Heuristic: if the view interpolates any exported string variable (escape(), or direct
-  // string props), the test file should contain a '<script>' XSS assertion.
-  if (file) {
-    const testFile = file.replace(/\.js$/, '.test.js')
-    let xssNote = ''
-    if (fs.existsSync(testFile)) {
-      const testSrc = fs.readFileSync(testFile, 'utf8')
-      const hasXssAssertion = testSrc.includes('<script>') || testSrc.includes('xss') || testSrc.includes('script>alert')
-      if (!hasXssAssertion) {
-        xssNote = '⚠ **No XSS test found** — test file exists but has no `<script>alert` assertion. Add at least one test that passes a `\'<script>alert(1)</script>\'` string as a user-controlled input and asserts it does not appear unescaped in the output.'
-      } else {
-        xssNote = '✓ XSS test assertion present'
-      }
-    } else {
-      xssNote = '○ No test file found — create one at ' + path.basename(testFile)
-    }
-    checks.push(xssNote)
-  }
-
-  // Creative override detection — check if spec declares component-free mode
-  const creativeOverride = /component.free|creative\s+override|raw\s+HTML\s+throughout/i.test(source)
-  checks.push(creativeOverride
-    ? '⚡ **Creative override declared** — component pattern checks are advisory only. Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop + mobile) plus CLS 0.00 is the pass bar.'
-    : '○ No creative override declared — component checks apply')
-
-  return checks.join('\n')
-})()}
-
----
-
-## Review checklist
-
-Work through every item. Fix anything that fails. Refer to the spec source at ${file} as needed — do not ask me to paste it.
-
-### Structure
-- [ ] \`route\` is set explicitly — not left to auto-discovery
-- [ ] \`hydrate\` is NOT set manually — the framework injects it automatically. Remove it if present.
-- [ ] \`state\` shape is consistent — no fields that flip between null/string/boolean
-- [ ] \`meta.title\` is meaningful and unique to this page
-- [ ] \`meta.description\` is a real description, not "Built with Pulse"
-
-### Mutations & actions
-- [ ] Every mutation returns a plain partial object — no side effects, no fetch, no DOM access
-- [ ] \`constraints\` are used for bounds instead of conditional logic inside mutations
-- [ ] \`disabled\` in the view matches the constraint bounds — but check: is it redundant with the constraint, or does it serve a UX purpose?
-- [ ] Actions read user input from FormData in \`onStart\`, not from mirrored state
-- [ ] \`onStart\` sets a loading status, \`onSuccess\`/\`onError\` resolve it
-- [ ] A single \`status\` field is used instead of multiple boolean flags
-
-### Components & HTML
-- [ ] Components from the UI library are used — no hand-written \`<button>\`, \`<input>\`, \`<table>\` etc where a component exists
-- [ ] **Component patterns check** — grep the rendered HTML for these class names:
-  - \`.hero\`, \`.-hero\`, \`__hero\` → should use \`hero()\` component
-  - \`.card\`, \`.product-card\`, \`.service-card\` → should use \`card()\` component
-  - Any two-column image + text layout → should use \`media()\` component
-  - \`.feature\`, \`.feature-card\` → should use \`feature()\` component
-
-  **Before flagging a pattern match**, ask: *can the \`hero()\` (or relevant) component actually reproduce this layout?* If the design uses full-viewport height, custom gradient glows, clamp-scaled display type, asymmetric layout, or other features the component doesn't support — that is a **creative override**, not a violation. Check the auto-checked items above: if "creative override declared" is shown, these checks are advisory only and Lighthouse is the pass bar.
-
-  If no creative override is declared and a component *could* reproduce the design, refactor to use it. Custom utility classes on top of components are fine (\`hero({ ... })\` + override CSS) — but do not write the entire structure from scratch when the component supports the layout.
-
-- [ ] **Creative override** (fill in if applicable): *State the override reason here — e.g. "full-viewport gradient hero not achievable with hero() component"*. Confirm Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop and mobile) plus CLS 0.00 before closing the review.
-- [ ] No \`data-event\` on text inputs — this destroys focus on every keystroke
-- [ ] No \`className\`, \`htmlFor\`, \`onClick=\`, or other React patterns
-- [ ] No hardcoded hex colours in view — only \`var(--ui-*)\` tokens (anchor \`href="#id"\` values are fine — those are not colours)
-- [ ] No emoji in view HTML (decorative emoji without accessible text is a fail; emoji with \`aria-label\` or inside \`<span aria-hidden="true">\` is acceptable)
-- [ ] **CTA must be wrapped in section/container** — grep the rendered HTML for \`<div class="ui-cta"\`. If it appears as a direct child of \`<main>\` or \`<div id="app">\` without a section or container wrapper, wrap it. CTA has no padding of its own.
-
-### Accessibility
-- [ ] \`<main id="main-content">\` is present
-- [ ] Icon-only buttons have \`aria-label\`
-- [ ] \`aria-live\` and \`aria-label\` are NOT on the same element
-- [ ] Heading hierarchy is correct — no skipped levels, starts at h1
-- [ ] Disabled state uses the \`disabled\` attribute, not just CSS or opacity
-- [ ] **Keyboard focusability** — every element carrying \`data-event\`, \`data-store-event\`, \`data-dialog-open\`, or \`data-dialog-close\` is either a natively interactive element (\`button\`, \`a\`, \`input\`, \`select\`, \`textarea\`, \`summary\`) or has \`tabindex="0"\`. Scan the rendered HTML above — a \`<div>\`, \`<span>\`, \`<li>\`, or any other non-interactive tag with one of these attributes is a keyboard accessibility failure. Prefer \`<button>\` over a div + tabindex.
-- [ ] **Purpose** — every interactive element has a clear accessible name. Buttons have visible text or \`aria-label\`. Links use descriptive text — flag generic labels ("click here", "here", "read more", "more"). Form inputs have an associated \`<label for="id">\` or \`aria-label\` — \`placeholder\` alone is not a label (it disappears on focus and is not read by all screen readers).
-- [ ] **State** — interactive elements communicate their current state via ARIA:
-  - Toggle controls (open/close, show/hide, expand/collapse) have \`aria-expanded="true|false"\` or \`aria-pressed="true|false"\`
-  - While an action is running, the trigger button has \`aria-busy="true"\` or its visible label changes (e.g. "Saving…") — a spinner alone is not sufficient
-  - Active navigation items have \`aria-current="page"\`
-  - Selected items in a list, tab set, or option group have \`aria-selected="true"\`
-- [ ] **Tab order** — scan the rendered HTML for these failures:
-  - No \`tabindex\` value greater than 0. \`tabindex="1"\` and above override the natural DOM order and almost always create a broken, unpredictable tab sequence. The only valid values are \`0\` (add to natural order) and \`-1\` (remove from order). If you find a positive tabindex, remove it and reorder the DOM instead.
-  - Off-screen or visually hidden interactive content is removed from the tab order. Elements that are hidden via CSS alone (e.g. \`opacity:0\`, \`visibility:hidden\` without \`display:none\`, off-canvas menus, collapsed panels) but remain in the DOM must have \`tabindex="-1"\` or \`inert\` so keyboard users cannot tab into invisible controls.
-  - DOM order matches the visual reading order. When CSS flexbox \`order\` or grid placement is used to visually reposition elements, the tab sequence follows the DOM — not the visual layout. Ensure the DOM is authored in the order a sighted user would read and interact with the page.
-
-### Defensive coding
-- [ ] Any \`fetch\` in actions or server fetchers checks \`res.ok\` before calling \`.json()\`
-- [ ] Fetch errors use the safe pattern — NOT \`throw new Error(await res.text())\` which exposes raw HTML in toasts:
-  \`\`\`js
-  if (!res.ok) {
-    let message = \`Request failed: \${res.status}\`
-    try { const j = await res.json(); message = j.message || j.error || message } catch {}
-    throw new Error(message)
-  }
-  \`\`\`
-- [ ] Optional chaining used for any data from external sources
-- [ ] URL params validated before use
-- [ ] \`onViewError\` defined if the view could crash on bad or missing data
-
----
-
-Fix every issue you find. Then confirm what was changed.
-
-**After confirming fixes: you are back in builder mode. Continue to the verification workflow — navigate to the page in the browser, take a screenshot, run Lighthouse desktop audit, run Lighthouse mobile audit. Do not stop at the review.**`)
-
+    const result = await runFullReview(source, file)
+    return text(formatFullReview(result, { source, file, agentFacing: true }))
   }
 )
 
@@ -1674,6 +1422,56 @@ The stop hook compares each changed spec's mtime against this stamp. Any spec ne
     } catch (err) {
       return text(`Error writing .pulse-verified: ${err.message}\nFallback: run \`date +%s > .pulse-verified\` in Bash.`)
     }
+  }
+)
+
+// ---------------------------------------------------------------------------
+// pulse_diagnose — read the dev-only error journal
+// ---------------------------------------------------------------------------
+// Errors that used to dead-end at console.error (server errors, SSR view
+// throws, post-hydration client view/action failures) are captured to
+// .pulse/errors.json by the dev server. This tool is the agent-facing read
+// side of that journal — a mechanized diagnostic instead of relying on the
+// agent to notice a console line or a user report.
+
+server.registerTool(
+  'pulse_diagnose',
+  {
+    description: `Read the dev-only error journal (.pulse/errors.json) — server errors, SSR view throws, and post-hydration client view/action failures that would otherwise only appear as a console.error line.
+
+Call this when something seems broken and you're not sure why, or proactively after building/testing a page to check nothing threw during the session. Each entry has a route, a phase (view/action/server/guard), a message, a stack trace, and a resolved flag.
+
+Pass \`route\` to filter to one page's errors — this is what /verify uses to check a specific page before stamping it. Omit it to see everything recorded this session.`,
+    inputSchema: {
+      route:           z.string().optional().describe('Filter to errors on this route only, e.g. "/dashboard". Omit to see all recorded errors.'),
+      includeResolved: z.boolean().optional().describe('Include entries already marked resolved. Default false — only unresolved errors are shown.'),
+    },
+  },
+  ({ route, includeResolved = false } = {}) => {
+    const result = readJournal(ROOT, { route, includeResolved })
+    let output = formatJournal(result, { route, includeResolved })
+    if (result.exists && !result.error && result.entries.length > 0) {
+      output += '\n---\nFix the underlying issue, then call `pulse_resolve_error` with the id (or route) to clear it from the unresolved list.'
+    }
+    return text(output)
+  }
+)
+
+// ---------------------------------------------------------------------------
+// pulse_resolve_error — mark journal entries resolved
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_resolve_error',
+  {
+    description: `Mark error journal entries as resolved after fixing the underlying issue. Pass a specific \`id\`, or \`route\` to resolve every unresolved entry for that page at once — /verify's stamp step calls this automatically for the target route on a clean pass, so you usually don't need to call it manually. Use it directly when you've fixed something pulse_diagnose surfaced but aren't running the full /verify loop right now.`,
+    inputSchema: {
+      id:    z.string().optional().describe('Resolve one entry by its id.'),
+      route: z.string().optional().describe('Resolve every unresolved entry for this route.'),
+    },
+  },
+  ({ id, route } = {}) => {
+    return text(formatResolveResult(resolveEntries(ROOT, { id, route })))
   }
 )
 
@@ -2288,7 +2086,12 @@ If your page genuinely doesn't fit a pattern, start from pulse://guide/spec and 
     lines.push(`1. **Light or dark?** Pulse renders **dark** by default when \`meta.theme\` is unset. If the user hasn't stated a preference, ask now — discovering the wrong theme at the screenshot costs a full edit → restart → re-approval cycle.`)
     lines.push(`   Add \`theme: 'light'\` to your plan or brief if confirmed light.`)
     lines.push(``)
-    lines.push(`2. **Design inspiration?** Ask: "Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop it into \`public/intake/\` or paste a URL." If yes, call \`pulse_extract_inspiration\` before proceeding.`)
+    if (key === 'dashboard') {
+      lines.push(`2. **Design inspiration — reframed for a functional/internal tool.** The standard aesthetic-inspiration question ("a site you love") lands oddly for a work screen or admin tool — most people building one have no mood board, and asking anyway invites either an awkward non-answer or, worse, an agent skipping the question rather than reinterpreting it on the fly. Ask instead: "Do you have any reference for how this should look, or should I go with a clean, functional dark-mode style typical of internal tools? Also — what's the most important thing to see at a glance, and roughly how many items/rows will be on screen at once?" This still surfaces genuine visual references if the user has one (some do), while asking what actually matters for a dashboard: information density and priority, not mood.`)
+      lines.push(`   If the user does name a real visual reference (a URL, an image, or a well-known site), call \`pulse_extract_inspiration\` as normal. A bare mention with nothing to point to ("no, we just use a whiteboard") is not skippable — the question itself is still mandatory — it just isn't inspiration to extract; fold the answer into \`pulse_intake\`'s vibe/anti-style fields and move on.`)
+    } else {
+      lines.push(`2. **Design inspiration?** Ask: "Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop it into \`public/intake/\` or paste a URL." If yes, call \`pulse_extract_inspiration\` before proceeding.`)
+    }
     lines.push(`   (Skip if this came from pulse_intake — it already asked.)`)
 
     lines.push(``)
@@ -2781,14 +2584,16 @@ server.registerTool(
 server.registerTool(
   'pulse_extract_inspiration',
   {
-    description: `Extract a structured design brief from a URL or image the user has shared as inspiration.
+    description: `Extract a structured design brief from a URL, image, or well-known named reference the user has shared as inspiration.
 
-Call this when the user says "I like the design of X", shares a URL, or pastes/attaches an image. It returns a structured extraction template that tells you exactly what to observe and capture. You then use your own browsing or vision tools to fill in the template, and feed the result into pulse_intake.
+Call this when the user shares a URL, pastes/attaches an image, or names a site you have real knowledge of well enough to describe its actual design (e.g. "make it feel like linear.app"). It returns a structured extraction template that tells you exactly what to observe and capture. You then use your own browsing or vision tools to fill in the template, and feed the result into pulse_intake.
 
 Works for:
 - URLs: visit the site with your browser tool, observe the rendered page
 - Images: use your vision capability to analyse the screenshot/photo the user shared
-- Named references: use your knowledge of the brand/site to populate the template
+- Named references you actually know: use your knowledge of the brand/site to populate the template
+
+**Do not call this for a name alone with nothing to extract** — a small or local business the user mentioned in passing ("there's a place called X, I like their logo, but I haven't looked at their site") with no URL, no image, and no training knowledge of what it actually looks like. That's not an inspiration source, it's a name — calling this tool on it produces a fabricated brief dressed up as an observation. Skip straight to pulse_intake with only what the user has actually described.
 
 The extracted values map directly to pulse_intake fields (palette, vibe, styleNotes, antiStyle, font).`,
     inputSchema: {
@@ -2818,7 +2623,9 @@ The extracted values map directly to pulse_intake fields (palette, vibe, styleNo
       lines.push('## Step 1 — Analyse the source (do this now)')
       lines.push(`Source: **${source}**`)
       lines.push('Use your vision capability or knowledge of this reference to fill in the template below.')
-      lines.push('**Return a completed extraction with your observations filled in — not a blank template.**\n')
+      lines.push('**Return a completed extraction with your observations filled in — not a blank template.**')
+      lines.push('')
+      lines.push('> **If you have no reliable knowledge of this specific reference** (a small or local business the user named but you have no training data on, and they have not described what it looks like — e.g. "there\'s a place called X, I like their logo, but I haven\'t actually looked at their site"): do not guess or fabricate a brief. There is nothing to extract here — this is not a real inspiration source, just a name in passing. Skip this tool entirely and proceed with `pulse_intake` using only what the user has actually described (their own words about tone, anti-style, etc.). Note in your build plan that no visual reference was available, rather than presenting a fabricated extraction as if it came from observing something real.\n')
     }
 
     lines.push('---\n')
@@ -3867,142 +3674,6 @@ async function waitForServer(port, maxMs = 10_000) {
   return false
 }
 
-// Common prop aliases that agents and developers pass by mistake.
-// Maps wrong name → { correct, component } for each well-known component.
-const PROP_ALIASES = [
-  { component: 'nav()',    wrong: 'brand',       correct: 'logo',    note: 'The nav logo is set with the `logo` prop, not `brand`.' },
-  { component: 'nav()',    wrong: 'actions',     correct: 'action',  note: 'nav() takes a single `action` string (HTML), not an array.' },
-  { component: 'footer()', wrong: 'items',       correct: 'links',   note: 'footer() top-level links use `links: [{ label, href }]`, not `items`.' },
-  { component: 'footer()', wrong: 'nav',         correct: 'links',   note: 'footer() links prop is `links`, not `nav`.' },
-  { component: 'input()',  wrong: 'autocomplete', correct: 'attrs: { autocomplete }', note: 'HTML attributes not in the component API (autocomplete, min, max, step, pattern, inputmode, etc.) go inside the `attrs` object: input({ attrs: { autocomplete: "email" } }).' },
-  { component: 'input()',  wrong: 'maxlength',   correct: 'attrs: { maxlength }',     note: 'HTML attributes go inside `attrs`: input({ attrs: { maxlength: "100" } }).' },
-  { component: 'input()',  wrong: 'minlength',   correct: 'attrs: { minlength }',     note: 'HTML attributes go inside `attrs`: input({ attrs: { minlength: "2" } }).' },
-  { component: 'input()',  wrong: 'pattern',     correct: 'attrs: { pattern }',       note: 'HTML attributes go inside `attrs`: input({ attrs: { pattern: "[0-9]+" } }).' },
-]
-
-async function validateContent(content, tmpDir = PAGES_DIR) {
-  // Source-level checks — run before the worker so errors are caught without importing
-  const sourceWarnings = []
-
-  // Component prop alias checks — flag known wrong prop names
-  for (const { component, wrong, correct, note } of PROP_ALIASES) {
-    // Match: nav({ ...wrong: or footer({ ...wrong: (within the call args)
-    const fnName = component.replace('()', '')
-    const re = new RegExp(`${fnName}\\s*\\(\\s*\\{([^}]*)\\b${wrong}\\s*:`, 'g')
-    let m
-    while ((m = re.exec(content)) !== null) {
-      // Inside attrs: { … } is the CORRECT placement for these HTML attributes —
-      // when the text between the call's opening brace and the prop ends inside
-      // an open attrs object, this is the recommended pattern, not a mistake.
-      // (The naive match crossed into attrs blocks and flagged exactly what the
-      // fix-it note tells people to write.)
-      if (/attrs\s*:\s*\{[^}]*$/.test(m[1])) continue
-      sourceWarnings.push(`"${wrong}" is not a recognised prop for ${component} — did you mean "${correct}"? ${note}`)
-      break
-    }
-  }
-
-  // External image URL check — warn if spec contains external image domains not
-  // commonly whitelisted in CSP. Caught here prevents a Lighthouse Best Practices failure.
-  const externalImgHosts = [
-    {
-      pattern: /https?:\/\/images\.unsplash\.com/,
-      host:    'images.unsplash.com',
-      entry:   'https://images.unsplash.com',
-      cookieWarning: true,
-      name: 'Unsplash',
-    },
-    {
-      pattern: /https?:\/\/(?:fastly\.)?picsum\.photos/,
-      host:    'picsum.photos',
-      entry:   'https://picsum.photos https://fastly.picsum.photos',
-      cookieWarning: false,
-      name: 'picsum',
-    },
-    {
-      pattern: /https?:\/\/res\.cloudinary\.com/,
-      host:    'res.cloudinary.com',
-      entry:   'https://res.cloudinary.com',
-      cookieWarning: true,
-      name: 'Cloudinary',
-    },
-    {
-      pattern: /https?:\/\/cdn\.shopify\.com/,
-      host:    'cdn.shopify.com',
-      entry:   'https://cdn.shopify.com',
-      cookieWarning: false,
-      name: 'Shopify CDN',
-    },
-  ]
-  const configPath = path.join(ROOT, 'pulse.config.js')
-  let configImgSrc = ''
-  if (fs.existsSync(configPath)) {
-    try { configImgSrc = fs.readFileSync(configPath, 'utf8') } catch { /* ignore */ }
-  }
-  for (const { pattern, host, entry, cookieWarning, name } of externalImgHosts) {
-    // Config match is by HOST, not full URL — CSP sources are valid without a
-    // scheme ('images.unsplash.com'), so requiring https?:// in the config
-    // produced false positives for correctly configured projects.
-    if (pattern.test(content) && !configImgSrc.includes(host)) {
-      const cookieNote = cookieWarning
-        ? `\n  ⚠ ${name} sets tracking cookies that fail Lighthouse Best Practices regardless of CSP. For production, download images to public/images/ instead of linking to ${name} directly.`
-        : ''
-      sourceWarnings.push(
-        `External image host detected (${name}). Add it to csp.img-src in pulse.config.js before running Lighthouse:\n` +
-        `    csp: { 'img-src': ['${entry}'] }\n` +
-        `  Without this, images will be blocked and Lighthouse Best Practices will fail.${cookieNote}`
-      )
-    }
-  }
-
-  // Write the temp file into the directory the spec actually lives in (passed by
-  // callers that know it) so relative imports resolve from the true location.
-  // A page at src/pages/news/index.js importing '../../components/layout.js'
-  // resolved wrongly when the temp file was always dropped in src/pages/ root.
-  fs.mkdirSync(tmpDir, { recursive: true })
-  const tmpFile = path.join(tmpDir, `.pulse-validate-${Date.now()}.mjs`)
-  try {
-    fs.writeFileSync(tmpFile, content, 'utf8')
-
-    // Run validation in a child process with a hard timeout so a hanging import
-    // (slow module, circular dep, network call) cannot block the MCP server.
-    const validatorScript = new URL('./validate-worker.js', import.meta.url).pathname
-    let output
-    try {
-      output = execFileSync(process.execPath, [validatorScript, tmpFile], {
-        timeout: 10_000,
-        encoding: 'utf8',
-      })
-    } catch (err) {
-      const msg = err.killed || err.signal === 'SIGTERM'
-        ? 'Invalid: validation timed out — spec may have a hanging import or infinite loop'
-        : `Invalid: could not parse — ${err.stdout || err.message}`
-      return text(msg)
-    }
-
-    let finalOutput = output.trim()
-    // Merge source-level prop warnings into the worker output
-    if (sourceWarnings.length > 0) {
-      const propNotes = sourceWarnings.map(w => `  ⚠ ${w}`).join('\n')
-      if (finalOutput.startsWith('Valid ✓')) {
-        finalOutput = finalOutput.replace('Valid ✓', 'Valid ✓ — but fix these issues:').replace(' — but fix these issues: — but fix these issues:', ' — but fix these issues:')
-        finalOutput = finalOutput + '\n' + propNotes
-      } else {
-        finalOutput = finalOutput + '\n' + propNotes
-      }
-    }
-
-    // Append browser check reminder on clean pass so agents don't skip Lighthouse
-    if (finalOutput.startsWith('Valid ✓') && !finalOutput.includes('Invalid')) {
-      finalOutput += '\n\n---\n**Next: browser check sequence** (do not skip)\n1. `pulse_fetch_page` → screenshot\n2. **New build?** Show screenshot to user and ask for design approval before continuing\n3. Once approved (or edit/fix): `pulse_design_review` (if intake ran) → `pulse_layout_review <url>` → `/verify`\nDo not run Lighthouse before the user approves the design. Do not report done until `/verify` passes.'
-    }
-
-    return text(finalOutput)
-  } finally {
-    try { fs.unlinkSync(tmpFile) } catch { /* ignore */ }
-  }
-}
-
 function findComponents() {
   if (!fs.existsSync(COMPONENTS_DIR)) return []
   return fs.readdirSync(COMPONENTS_DIR)
@@ -4092,7 +3763,7 @@ If you know your context already:
 ## Tools available
 
 **Pulse MCP tools** (always available):
-- \`pulse_extract_inspiration(source, focus?)\` — **Extract a structured design brief from a URL or image.** Call this when the user shares a website URL, a site name they admire, or pastes/attaches an inspiration image. Returns a structured extraction template — you fill it in using your browsing or vision tools, then feed the results into pulse_intake. Maps directly to palette, vibe, styleNotes, and font fields. **Always check \`public/intake/\` for images at the start of a new build — if any exist, call this before pulse_intake.**
+- \`pulse_extract_inspiration(source, focus?)\` — **Extract a structured design brief from a URL, image, or a named site you actually have real knowledge of.** Call this when the user shares a website URL, pastes/attaches an inspiration image, or names a site well-known enough that you can describe its real design (not just its existence). A name alone with no URL, no image, and no genuine knowledge of what it looks like isn't an inspiration source — skip this tool and go straight to \`pulse_intake\` with what the user actually described. Returns a structured extraction template — you fill it in using your browsing or vision tools, then feed the results into pulse_intake. Maps directly to palette, vibe, styleNotes, and font fields. **Always check \`public/intake/\` for images at the start of a new build — if any exist, call this before pulse_intake.**
 - \`pulse_intake(name, pitch, features, targetUser?, palette?, font?, theme?, vibe?, styleNotes?, antiStyle?, inspiration?)\` — **Capture product details before scaffolding.** Run this first for any new project or branded template — before pulse_sketch or pulse_intent. **Gather answers by asking the user one free-form question at a time — never use multi-choice lists for open-ended intake questions.** The final intake question must always be: "Do you have any design inspiration — a site you love, a screenshot, or a mood board? Drop images into \`public/intake/\` or share a URL." If the user provides references, call \`pulse_extract_inspiration\` before proceeding. After intake, call pulse_sketch to explore structural directions before writing code.
 - \`pulse_sketch(brief, vibe?, antiStyle?, pageType?)\` — **Generate 3 structurally distinct layout directions before writing any code.** Call after pulse_intake. Returns three named directions (full-bleed, asymmetric split, typography-only, editorial flow, dense grid, story scroll, content-first) with wireframes, key decisions, and component strategies. Prevents defaulting to "centred hero + three columns" on every project. After choosing a direction, fetch \`pulse://guide/explore\` for raw HTML patterns.
 - \`pulse_intent(description)\` — Describe what you want to build in plain language and get back a matched archetype, component recommendations, a ready-to-adapt spec scaffold, and which guides to read. Use after pulse_intake and pulse_sketch, before fetching guides.
@@ -4114,6 +3785,7 @@ If you know your context already:
 - \`pulse_fetch_page(url)\` — HTTP GET the dev server URL. Use to verify SSR output.
 - \`pulse_restart_server\` — hot-reload specs in the running dev server (~200 ms). Falls back to full kill/restart if the server is not running.
 - \`pulse_build\` — production build + starts prod server on devPort+1 for Lighthouse. Returns the URL. Call \`pulse_restart_server\` after to return to dev. **Slow — takes 30–60 s. Tell the user before calling.**
+- \`pulse_check_bundles\` — inspects what's actually inside the generated \`public/dist/\` bundles after \`pulse_build\`, not just their sizes. Flags a boot bundle that exists for a page with no mutations/actions/persist (should ship zero JS), and a literal Node built-in reference inside a bundle (server-only code that leaked through stripping). Lighthouse checks scores; this checks content — call it as part of the full \`/verify\` pass, right after \`pulse_build\`.
 - \`pulse_check_version\` — check installed package version, static asset version, and latest on npm. Use this instead of running npm commands when the user asks about updates.
 - \`pulse_update\` — install the latest \`@invisibleloop/pulse\` package and re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist into \`public/\`. One command does the full upgrade.
 

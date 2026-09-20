@@ -9,3 +9,5 @@ pulse start --port 3001
 If `pulse.config.js` sets a custom `port`, use that value + 1 instead.
 
 > **Why the flag:** plain `pulse start` binds the configured port (3000) because in real deployment it is the only server and platforms inject `PORT`. Locally that collides with the dev server and breaks the convention used by `pulse_build`, Lighthouse, and the performance trace — production is always dev port + 1. Never use `--port` in actual deployment.
+
+**If the server doesn't come up on the port you expected:** check whether a `PORT` environment variable is set in this shell (`echo $PORT`) — it silently overrides `--port` (correct behavior for real PaaS deployment, where the platform's injected `PORT` must always win, but a stray local `PORT` from a sandbox/CI/shell profile will do the same thing here with no indication why). `pulse start` now warns to stderr when this happens; if you see that warning, either unset `PORT` for this session or work with whatever port it actually bound to.

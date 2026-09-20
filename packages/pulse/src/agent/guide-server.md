@@ -80,6 +80,8 @@ All pages that declare `spec.store` with the affected keys re-render automatical
 - Page-level `server` keys win over store keys if there is a name collision
 - Pages with `spec.store` are never HTML-cached (same rule as pages with `spec.server`)
 
+**Testing `pulse.store.js` — put the test file next to it, at the project root, not under `src/`.** `npm test`'s glob covers `src/**/*.test.js` plus a root-level `*.test.js` specifically so `pulse.store.test.js` is picked up — a store test placed anywhere under `src/pages/` instead (following the page-test convention out of habit) still runs, but `pulse.store.test.js` itself only runs from the root. Import the store the normal relative way: `import store from '../pulse.store.js'` from `src/pages/`, or `import store from './pulse.store.js'` from the root.
+
 **Reactive updates — no refresh needed**
 
 Return `_storeUpdate` from a page action's `onSuccess` to push a change into the global store. All mounted pages that subscribe to the affected keys re-render immediately:
@@ -177,6 +179,67 @@ export default {
 - Escape user-submitted values before interpolating them into HTML (`escHtml`).
 - **Progressive enhancement:** add `data-action="send"` to the same form — hydrated visitors get the async action with no page reload; no-JS visitors fall back to the POST.
 - Multi-instance deployments: pass a stable `secret` to `createServer` (e.g. from an env var) so CSRF tokens issued by one instance validate on another.
+- **On a longer page, a form mid-page needs to scroll the success/error state into view after the redirect.** The 303 lands the browser at the top of the page — a success message rendered next to the form (or anywhere below the fold) is invisible until the visitor scrolls down manually, which they have no reason to do after just submitting. Give the form section an `id`, add `${server.form?.sent ? '<script nonce=\"${server.nonce}\">document.getElementById(\"contact-form\").scrollIntoView()</script>' : ''}` right after it, or simplest: `<form id="contact-form" method="POST">`. Don't skip this on a short/single-purpose page (the form IS the page, nothing to scroll past) — it only matters once the form sits below other content.
+
+## Server-side data persistence — outside the store and `spec.persist`
+
+Neither of Pulse's two built-in state mechanisms is durable, shared server-side storage:
+- `spec.persist` is **client-side** `localStorage`, scoped per route — gone if the visitor clears their browser, invisible to other visitors.
+- The global store (`pulse.store.js`) is **in-memory**, shared across connected clients via SSE, but reset on every server restart and never written to disk.
+
+For anything that needs to survive a restart and be shared across all requests — a URL shortener's code→URL map, a simple content store, any small dataset a form writes to — there's no built-in database, and the framework has no opinion on which one to use. **A JSON file on disk is a reasonable zero-dependency default for a small, low-concurrency dataset** (a few thousand records, not a high-write-throughput service); for anything bigger, bring your own database. Either way, write the persistence layer as its own module under `src/lib/`, imported from `guard`/`server`/`submit`/`actions.*.run` — never from the view.
+
+```js
+// src/lib/data-store.js — a minimal safe pattern for a small JSON-backed store
+import fs   from 'node:fs/promises'
+import path from 'node:path'
+
+const FILE = path.join(process.cwd(), 'data', 'store.json')
+let cache = null                 // in-memory, refreshed on write — avoids a disk read per request
+let writeQueue = Promise.resolve()  // serializes writes so concurrent requests can't interleave
+
+async function load() {
+  if (cache) return cache
+  try {
+    cache = JSON.parse(await fs.readFile(FILE, 'utf8'))
+  } catch {
+    cache = {}   // file doesn't exist yet — start empty
+  }
+  return cache
+}
+
+async function persist(next) {
+  // Atomic write: write to a temp file, then rename — rename is atomic on POSIX,
+  // so a crash mid-write can never leave a corrupt/partial file on disk.
+  const tmp = FILE + '.tmp'
+  await fs.mkdir(path.dirname(FILE), { recursive: true })
+  await fs.writeFile(tmp, JSON.stringify(next, null, 2))
+  await fs.rename(tmp, FILE)
+  cache = next
+}
+
+// Serialize every write through one promise chain — without this, two
+// concurrent requests can both read the same state, modify it separately,
+// and the second write silently clobbers the first (a classic lost update).
+export function mutate(fn) {
+  writeQueue = writeQueue.then(load).then(async (data) => {
+    const next = await fn(data)
+    await persist(next)
+    return next
+  })
+  return writeQueue
+}
+
+export const read = load
+```
+
+**Rules:**
+- Load-on-first-read, cache in memory, refresh the cache on every write — the hot path (a read-heavy redirect lookup, say) shouldn't hit disk on every request.
+- Serialize writes through a single promise queue, as above. This is single-process only — it does not protect against two separate server *instances* writing the same file; for multi-instance deployment, use a real database instead.
+- Write via temp-file-then-rename, never `fs.writeFile` directly to the real path — a process killed mid-write leaves the rename-source temp file intact and the real file untouched, not a half-written JSON file that fails to parse on next boot.
+- Add the data file to `.gitignore` — it's runtime state, not something to commit.
+- **This local helper module must not be imported into a page's `view` or client-side `mutations`/`actions`** — only into `guard`, `server` fetchers, `submit`, or an action's `run`. A local module using `node:fs` (or any Node built-in) that ends up reachable from client code will break the production build — see the next point.
+- **A page whose only server-side logic is `guard`/`submit`/`server` (no `mutations`, `actions`, or `persist`) gets zero client JS** — this is the normal, correct outcome for a redirect handler, a form-only page, or anything else that's purely server-rendered. If a build ever tries to bundle a local server-only module (e.g. you see esbuild choke on `node:fs` or similar), that's the build's hydration-need check misfiring, not something to work around in your spec — it should already match this rule.
 
 ## Third-party inline scripts — `server.nonce`
 
@@ -228,11 +291,13 @@ Body parsing is available in `guard`, `server.*` fetchers, and `render` (raw spe
 ```js
 await ctx.json()      // parse JSON body → object | null
 await ctx.text()      // raw string body → string
-await ctx.formData()  // URL-encoded body → plain object | null
+await ctx.formData()  // URL-encoded body → plain object | null — NOT a FormData, see below
 await ctx.buffer()    // raw Buffer
 ```
 
 Bodies larger than `maxBody` (default 1 MB, configurable in `createServer`) are rejected with a 413 response before the handler runs.
+
+**`ctx.formData()` returns a plain object, not a browser `FormData`.** Read fields directly — `data?.email`, not `data.get('email')` — the latter throws `TypeError: data.get is not a function`. This trips people up because client-side action code (`actions.*.run(state, serverState, formData)`) receives a real `FormData` object with a `.get()` method — same method name, different context, different shape. If you're writing `spec.submit` and reach for `.get()`, that's the tell you've copied the client-side pattern by mistake.
 
 **Page specs only accept GET/HEAD by default** (POST → 405). To handle POST on a page spec, opt in with `spec.methods`:
 
@@ -329,6 +394,22 @@ Key properties:
 - `HEAD /healthz` is supported (no body)
 - `Cache-Control: no-store` — proxies never serve a stale health status
 - Fires before route matching — a user spec at `/healthz` is shadowed when the built-in is enabled
+
+## Error journal — mechanized, agent-facing error tracking
+
+In dev mode (`dev: true`), every error the three error layers above catch — plus post-hydration client view/action failures — is also recorded to `.pulse/errors.json`. This is a machine-checkable diagnostic, not a console line you have to notice: read it with `pulse_diagnose`, clear entries with `pulse_resolve_error`.
+
+```js
+// .pulse/errors.json — written automatically, never edit directly
+[{ id, ts, route, phase, message, stack, resolved }]
+// phase: 'view' | 'action' | 'server' | 'guard'
+```
+
+**Call `pulse_diagnose` when something seems broken and the cause isn't obvious**, or proactively after building/testing a page to confirm nothing threw during the session. Pass `{ route }` to filter to one page. `/verify` already calls this automatically before writing the stamp — an unresolved error for the target route blocks the stamp; a clean pass auto-resolves the route's entries via `pulse_stamp`. You don't need to call `pulse_resolve_error` manually in the normal `/verify` flow — only if you fixed something outside that loop and want it cleared immediately.
+
+- Ring-buffered at 50 entries — a diagnostic tool, not a production error tracker
+- `dev`-only — nothing is written in production, and the client-reporting endpoint (`/__pulse/error`) doesn't exist outside dev mode
+- Never write to this file directly — it's framework-managed
 
 ## Graceful shutdown
 

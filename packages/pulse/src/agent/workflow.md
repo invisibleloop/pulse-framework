@@ -32,6 +32,7 @@ For any **new page, landing page, or branded site**, run the intake sequence fir
 ```
 
 - **Step 0 — Ask for inspiration first (mandatory):** Before calling any tool or presenting any plan, ask the user: *"Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop images into `public/intake/` or paste a URL and I'll extract the design intent before we start."* Wait for the answer. Do not skip this question, even if the user's brief already seems detailed. Check `public/intake/` for any images already dropped there.
+  - **Internal/functional tools (a staff dashboard, an admin screen, an internal work tool — not something customers see):** the question itself is still mandatory, but the aesthetic framing lands oddly ("a site you love" doesn't map onto "a work screen an employee glances at"). Ask instead: *"Do you have any reference for how this should look, or should I go with a clean, functional style typical of internal tools? Also — what's the most important thing to see at a glance, and how much will typically be on screen at once?"* This still catches a real visual reference if one exists, while asking what actually matters for this kind of build (information density, priority) instead of forcing a mood-board answer nobody has. A "no, we don't have anything" answer here is common and not a reason to skip `pulse_intake`'s theme/vibe/anti-style questions that follow — fold the answer in and move on, same as any other build.
 - **`pulse_extract_inspiration`** — call this after step 0 if the user supplies a URL, site name, or image they like. Also call it for any images already present in `public/intake/`. Gives you a structured extraction template: visit the URL or analyse the image with your vision tools, extract colours, layout, typography, and feel, then feed those findings into pulse_intake. If the user explicitly says they have no reference, skip this step.
 - **`pulse_intake`** — captures the real content (name, pitch, features, palette, theme, vibe, what it should NOT look like). Returns a brief with copy-ready content and early contrast warnings. Always ask the user one question at a time — never multi-choice for open-ended questions. **Always ask light or dark** — Pulse renders dark when `meta.theme` is unset, so an unstated light design ships dark.
 - **`pulse_sketch`** — generates 3 structurally distinct layout directions (full-bleed, asymmetric split, typography-only, editorial, dense grid, story scroll, content-first). **Call this before writing any code.** Prevents defaulting to centred hero + three-column features every time.
@@ -163,29 +164,9 @@ If you're about to type `class="hero"` or `class="product-card"` in Mode A, stop
 **Reuse across specs (both modes):** one spec = one page; a site is many specs sharing code. Before writing a new section, check `src/components/` — and if a section you're writing already exists in another spec, extract it to `src/components/` *now* and import it from both, rather than pasting a copy. Same for CSS: a shared section's styles go in the shared `app.css` (listed in `meta.styles` by every spec that uses it), never duplicated into per-page stylesheets.
 
 **Mode B — Creative override (raw HTML throughout)**
-When the design intent calls for a more expressive, unconventional, or typographically-driven layout that components would constrain, you may build with raw HTML throughout. This is a deliberate design decision, not a shortcut.
+When the design intent calls for a more expressive, unconventional, or typographically-driven layout that components would constrain, you may build with raw HTML throughout. Full criteria for when this is (and isn't) warranted, and the required spec comment, are in `checklist.md`'s "Components first — or creative override" section — read that before choosing Mode B. In short: it's a deliberate design decision for cases components structurally can't express (full-viewport bleed, brutalist/neon/editorial vibes, clamp-scaled display type, asymmetric layouts) — never a shortcut for "easier to write raw HTML."
 
-**When to choose Mode B — use the component, unless:**
-- The layout requires **full-viewport height or edge-to-edge bleed** that the component doesn't support (e.g. `hero()` doesn't fill the viewport)
-- The design uses **custom gradient glows, parallax, or large-scale image fills** that the component would wrap in unwanted structure
-- The vibe is **brutalist, retro, neon, paper, or typographic-editorial** and the structural feel would be actively fought by the component's default padding/spacing/radius
-- The typography is **clamp-scaled display type** (e.g. `clamp(4rem, 10vw, 12rem)`) that breaks inside a component's internal box model
-- The layout is **asymmetric or zone-based** (e.g. 70/30 split, overlapping elements, staggered grid) that no single component supports
-- A **Figma/reference design was provided** that clearly departs from the component's output
-
-**When to use the component (not a valid reason for override):**
-- "The component doesn't have a perfect prop for this" — add a utility class or wrapper div instead
-- "I want a slightly different colour or size" — override with CSS tokens
-- "I'm not sure what the component looks like" — check the guide first
-- "It's easier to write raw HTML" — this is never a valid reason
-
-Rules for Mode B:
-- **Declare it in a comment at the top of the spec file:** `// component-free — creative override: <reason>`. The review tool detects creative override by reading this comment from the source — without it, `pulse_review` will flag every component pattern as a violation even though you chose Mode B deliberately. Announcing the mode in chat is not enough; the comment must be in the file.
-- Load `/pulse-ui.css` in `meta.styles` — the token system is still required
-- Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason
-- The quality gate is Lighthouse 100 on Accessibility, Best Practices, and SEO (desktop and mobile) plus CLS 0.00 — this replaces the component checklist as the pass bar. Performance is reported but not gated.
-
-Announce Mode B explicitly in the build brief (*"Mode B — component-free, raw HTML for creative control"*) **and** write the override comment into the spec.
+Announce Mode B explicitly in the build brief (*"Mode B — component-free, raw HTML for creative control"*) **and** write `// component-free — creative override: <reason>` at the top of the spec file — `pulse_review` only detects Mode B by reading that comment from the source, not from chat.
 
 ### 3b — Announce before writing
 

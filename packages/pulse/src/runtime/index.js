@@ -29,6 +29,21 @@ const loadStore = () => _storeModule
 const dispatchStoreMutationLazy = (name, payload) =>
   loadStore().then(({ dispatchStoreMutation }) => dispatchStoreMutation(name, payload))
 
+// Best-effort error reporting to the dev-only error journal. The endpoint
+// only exists when the server is running in dev mode — in production this
+// POSTs to a route that 404s, so there's no dev-detection needed here and
+// no risk to production behaviour. Never throws, never blocks the UI.
+function reportError({ phase, message, stack }) {
+  try {
+    fetch('/__pulse/error', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ route: location.pathname, phase, message, stack }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch { /* fetch unavailable or blocked — drop it */ }
+}
+
 // ---------------------------------------------------------------------------
 // Mount
 // ---------------------------------------------------------------------------
@@ -174,6 +189,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
       html = resolveView(spec, state, getEffectiveServerState())
     } catch (err) {
       console.error('[Pulse] view error:', err)
+      reportError({ phase: 'view', message: err.message, stack: err.stack })
       const serverState = getEffectiveServerState()
       html = spec.onViewError
         ? spec.onViewError(err, state, serverState)
@@ -250,6 +266,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
       applyResult(action.onSuccess(state, result))
     } catch (error) {
       console.error(`[Pulse] action "${name}" failed:`, error)
+      reportError({ phase: 'action', message: `action "${name}" failed: ${error.message}`, stack: error.stack })
       applyResult(action.onError(state, error))
     }
 
@@ -323,10 +340,19 @@ function resolveView(spec, state, serverState) {
  * Uses event delegation — one listener per event type per element.
  *
  * Attribute format:
- *   data-event="mutationName"           → fires on click
- *   data-event="change:mutationName"    → fires on change
- *   data-event="input:mutationName"     → fires on input
- *   data-action="actionName"            → fires on form submit
+ *   data-event="mutationName"             → fires on click
+ *   data-event="change:mutationName"      → fires on change
+ *   data-event="input:mutationName"       → fires on input
+ *   data-event="pointerdown:mutationName" → fires on pointerdown, captures the pointer
+ *   data-event="pointermove:mutationName" → fires on pointermove (while captured)
+ *   data-event="pointerup:mutationName"   → fires on pointerup or pointercancel
+ *   data-event="keydown:mutationName"     → fires on keydown
+ *   data-action="actionName"              → fires on form submit
+ *
+ * data-event accepts multiple space-separated bindings on one element —
+ * needed for pointer drag, where pointerdown/pointermove/pointerup must all
+ * resolve on the same captured element:
+ *   data-event="pointerdown:start pointermove:drag pointerup:end"
  *
  * @param {HTMLElement} el
  * @param {function} dispatch
@@ -376,8 +402,8 @@ function bindEvents(el, dispatch, signal) {
     // Spec events
     const target = e.target?.closest?.('[data-event]')
     if (!target) return
-    const [type, name] = parseEventAttr(target.dataset.event)
-    if (type !== 'click') return
+    const name = findEventBinding(target, 'click')
+    if (!name) return
     e.preventDefault()
     dispatch(name, e)
   }, opts)
@@ -391,8 +417,8 @@ function bindEvents(el, dispatch, signal) {
     }
     const target = e.target?.closest?.('[data-event]')
     if (!target) return
-    const [type, name] = parseEventAttr(target.dataset.event)
-    if (type !== 'change') return
+    const name = findEventBinding(target, 'change')
+    if (!name) return
     dispatchTimed(target, name, e, dispatch)
   }, opts)
 
@@ -405,8 +431,8 @@ function bindEvents(el, dispatch, signal) {
     }
     const target = e.target?.closest?.('[data-event]')
     if (!target) return
-    const [type, name] = parseEventAttr(target.dataset.event)
-    if (type !== 'input') return
+    const name = findEventBinding(target, 'input')
+    if (!name) return
     dispatchTimed(target, name, e, dispatch)
   }, opts)
 
@@ -416,6 +442,57 @@ function bindEvents(el, dispatch, signal) {
     e.preventDefault()
     dispatch(target.dataset.action, new FormData(target))
     if (target.hasAttribute('data-reset')) target.reset()
+  }, opts)
+
+  // Pointer events — click/input/change only cover discrete interactions.
+  // Continuous drag (grab a vertex, drag a slider handle, resize a panel) needs
+  // the raw pointer stream. pointerdown sets pointer capture on the target so
+  // pointermove/pointerup keep firing on it even once the cursor leaves the
+  // element's bounds — without capture, dragging fast loses the element under
+  // the cursor and the drag appears to "let go".
+  el.addEventListener('pointerdown', e => {
+    const target = e.target?.closest?.('[data-event]')
+    if (!target) return
+    const name = findEventBinding(target, 'pointerdown')
+    if (!name) return
+    target.setPointerCapture?.(e.pointerId)
+    dispatch(name, e)
+  }, opts)
+
+  el.addEventListener('pointermove', e => {
+    // Pointer capture routes the event straight to the captured target, so no
+    // closest() lookup is needed (and none would work once the cursor is
+    // outside the element's bounds).
+    const target = e.target
+    if (!target?.dataset?.event) return
+    const name = findEventBinding(target, 'pointermove')
+    if (!name) return
+    dispatchTimed(target, name, e, dispatch)
+  }, opts)
+
+  el.addEventListener('pointerup', e => {
+    const target = e.target
+    const name = target?.dataset?.event ? findEventBinding(target, 'pointerup') : null
+    if (name) dispatch(name, e)
+    target?.releasePointerCapture?.(e.pointerId)
+  }, opts)
+
+  // pointercancel fires instead of pointerup for interrupted gestures (browser
+  // gesture takeover, tab switch mid-drag, etc). Routed to the same handler
+  // as pointerup so a drag never gets stuck "in progress".
+  el.addEventListener('pointercancel', e => {
+    const target = e.target
+    const name = target?.dataset?.event ? findEventBinding(target, 'pointerup') : null
+    if (name) dispatch(name, e)
+    target?.releasePointerCapture?.(e.pointerId)
+  }, opts)
+
+  el.addEventListener('keydown', e => {
+    const target = e.target?.closest?.('[data-event]')
+    if (!target) return
+    const name = findEventBinding(target, 'keydown')
+    if (!name) return
+    dispatch(name, e)
   }, opts)
 }
 
@@ -535,10 +612,44 @@ function morphAttrs(cur, nxt) {
     if (cur.tagName === 'DIALOG' && name === 'open') continue
     if (!nxt.hasAttribute(name)) cur.removeAttribute(name)
   }
+  syncFormProperty(cur, nxt)
 }
 
 /**
- * Parse a data-event attribute value.
+ * setAttribute('value', …) / setAttribute('checked', …) above only touch the
+ * *default* value/checkedness a form control resets to — not the live
+ * `.value`/`.checked` property the browser actually renders. Once a user has
+ * focused+edited a field (or any code has assigned `.value`/`.checked`
+ * directly), the attribute and the property permanently diverge — this is
+ * standard DOM behaviour, not a Pulse bug in the attribute-sync loop above.
+ * Re-rendering after that point (e.g. a `change:`-committed input, a value
+ * driven by a drag elsewhere on the page) would otherwise leave the field
+ * showing a stale value even though the attribute updated correctly. Sync
+ * the live property directly for the form-control elements where this
+ * matters, skipping the element the user is actively typing in — the
+ * common "don't destroy focus for a live input:-bound field" case already
+ * has its own guidance (use FormData, not a controlled value) but this
+ * covers every other legitimate re-render source.
+ */
+function syncFormProperty(cur, nxt) {
+  const tag = cur.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') {
+    const type = cur.type
+    if (type === 'checkbox' || type === 'radio') {
+      const next = nxt.hasAttribute('checked')
+      if (cur.checked !== next) cur.checked = next
+    } else if (document.activeElement !== cur) {
+      const next = nxt.getAttribute('value') ?? ''
+      if (cur.value !== next) cur.value = next
+    }
+  } else if (tag === 'SELECT' && document.activeElement !== cur) {
+    const next = nxt.getAttribute('value')
+    if (next !== null && cur.value !== next) cur.value = next
+  }
+}
+
+/**
+ * Parse a single data-event binding.
  * "click:increment" → ['click', 'increment']
  * "increment"       → ['click', 'increment']  (click is default)
  *
@@ -549,6 +660,28 @@ function parseEventAttr(value) {
   const parts = value.split(':')
   if (parts.length === 1) return ['click', parts[0]]
   return [parts[0], parts[1]]
+}
+
+/**
+ * Look up the mutation/action name bound to `eventType` on `target`'s
+ * data-event attribute. Supports multiple space-separated bindings on one
+ * element — needed for pointer drag, where pointerdown/pointermove/pointerup
+ * must all resolve on the same captured element:
+ *   data-event="pointerdown:start pointermove:drag pointerup:end"
+ * A plain single binding ("increment" or "change:setName") still works
+ * unchanged — split() on a string with no spaces returns a one-element array.
+ *
+ * @param {HTMLElement} target
+ * @param {string} eventType
+ * @returns {string|null}
+ */
+function findEventBinding(target, eventType) {
+  for (const binding of target.dataset.event.split(' ')) {
+    if (!binding) continue
+    const [type, name] = parseEventAttr(binding)
+    if (type === eventType) return name
+  }
+  return null
 }
 
 /**

@@ -49,8 +49,15 @@ export default {
   // Server-side form handling — POST works with JavaScript disabled.
   // { redirect } → 303 PRG; anything else → re-render with the value as server.form.
   // CSRF enforced automatically: the view MUST include ${server.csrf} inside the <form>.
+  //
+  // ⚠ ctx.formData() here is NOT the same type as the client-side FormData used
+  // in actions.run above. Server-side it's already parsed into a plain object —
+  // read fields directly (data?.email), not with .get('email'). Calling .get()
+  // on it throws "data.get is not a function". This is the single most common
+  // mistake writing spec.submit — the two formData()s look identical but return
+  // different shapes because one runs in the browser and one runs server-side.
   submit: async (ctx) => {
-    const data = await ctx.formData()
+    const data = await ctx.formData()   // plain object: { email: '...', ... } | null
     if (!data?.email) return { errors: { email: 'Required' }, values: data ?? {} }
     await save(data)
     return { redirect: '/thanks' }

@@ -10,6 +10,9 @@
 
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let passed = 0
 let failed = 0
@@ -77,6 +80,27 @@ test('discover: nested pages get unique names (collision prevention)', () => {
   if (r1 === r2) {
     throw new Error(`Route collision: both products.js and api/products.js derived '${r1}'`)
   }
+})
+
+test('discover: a store-only spec (no local mutations/actions/persist) still gets a hydrate URL — regression: mount() is what wires up data-store-event dispatch AND the live SSE store-push subscription; without this a store-only page silently ships zero JS and never receives pushStore() broadcasts', async () => {
+  const fs   = await import('fs')
+  const os   = await import('os')
+  const path = await import('path')
+  const { loadPages } = modules[1].value
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-discover-store-test-'))
+  fs.mkdirSync(path.join(root, 'src', 'pages'), { recursive: true })
+  fs.writeFileSync(
+    path.join(root, 'src', 'pages', 'storey.js'),
+    `export default {\n  route: '/storey',\n  store: ['count'],\n  state: {},\n  view: (state, server) => \`\${server.count}\`,\n}\n`
+  )
+
+  const specs = await loadPages(root)
+  const storey = specs.find(s => s.route === '/storey')
+  fs.rmSync(root, { recursive: true, force: true })
+
+  if (!storey) throw new Error('loadPages did not find the /storey spec')
+  if (!storey.hydrate) throw new Error('store-only spec should have gotten a hydrate URL, got: ' + storey.hydrate)
 })
 
 // ---------------------------------------------------------------------------
@@ -231,6 +255,87 @@ console.log('\nCoverage-check exemptions\n')
 }
 
 // ---------------------------------------------------------------------------
+// pulse start — PORT env var override warning
+// ---------------------------------------------------------------------------
+// Regression: found via a real dogfooding session. A `PORT` env var set on the
+// local machine for unrelated reasons (common in sandboxes/CI) silently
+// overrode --port with no explanation, even though this exact --port usage is
+// the documented local /verify convention (pulse-start.md). The behavior
+// (PORT always wins — correct for real PaaS deployment) is unchanged; this
+// only adds a visible warning when the override actually happens.
+
+{
+  console.log('\npulse start — PORT env var override\n')
+
+  const { spawnSync } = await import('child_process')
+  const os             = (await import('os')).default
+  const fsMod          = await import('fs')
+
+  function scaffoldMinimalBuiltProject() {
+    const dir = fsMod.mkdtempSync(path.join(os.tmpdir(), 'pulse-start-test-'))
+    fsMod.mkdirSync(path.join(dir, 'src', 'pages'), { recursive: true })
+    fsMod.mkdirSync(path.join(dir, 'public', 'dist'), { recursive: true })
+    fsMod.writeFileSync(path.join(dir, 'src', 'pages', 'home.js'),
+      `export default { route: '/', state: {}, view: () => '<main id="main-content">hi</main>' }`)
+    // start.js only needs public/dist/ + manifest.json to exist to pass its
+    // pre-flight checks — a real build isn't necessary to test port selection.
+    fsMod.writeFileSync(path.join(dir, 'public', 'dist', 'manifest.json'), '{}')
+    return dir
+  }
+
+  const startScriptPath = path.join(__dirname, 'start.js')
+
+  function runStart(dir, portFlag, env) {
+    const args = ['--root', dir]
+    if (portFlag) args.push('--port', String(portFlag))
+    return spawnSync(process.execPath, [startScriptPath, ...args], {
+      encoding: 'utf8',
+      timeout: 5000,
+      env: { ...process.env, ...env },
+    })
+  }
+
+  test('warns to stderr when PORT env var overrides an explicit --port flag', () => {
+    const dir = scaffoldMinimalBuiltProject()
+    try {
+      const result = runStart(dir, 3001, { PORT: '9999' })
+      if (!result.stderr.includes('PORT=9999') || !result.stderr.includes('overrides --port 3001'))
+        throw new Error(`Expected an override warning naming both ports, got stderr: ${result.stderr}`)
+    } finally {
+      cleanupTmpDir(dir)
+    }
+  })
+
+  test('no warning when PORT env var matches the requested --port', () => {
+    const dir = scaffoldMinimalBuiltProject()
+    try {
+      const result = runStart(dir, 3001, { PORT: '3001' })
+      if (result.stderr.includes('overrides --port'))
+        throw new Error(`Should not warn when PORT matches --port, got stderr: ${result.stderr}`)
+    } finally {
+      cleanupTmpDir(dir)
+    }
+  })
+
+  test('no warning when PORT is unset and only --port is used', () => {
+    const dir = scaffoldMinimalBuiltProject()
+    const env = { ...process.env }
+    delete env.PORT
+    try {
+      const result = spawnSync(process.execPath, [startScriptPath, '--root', dir, '--port', '3001'], {
+        encoding: 'utf8', timeout: 5000, env,
+      })
+      if (result.stderr.includes('overrides --port'))
+        throw new Error(`Should not warn when PORT is unset, got stderr: ${result.stderr}`)
+    } finally {
+      cleanupTmpDir(dir)
+    }
+  })
+
+  function cleanupTmpDir(dir) {
+    fsMod.rmSync(dir, { recursive: true, force: true })
+  }
+}
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)

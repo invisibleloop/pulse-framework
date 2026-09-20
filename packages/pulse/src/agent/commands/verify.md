@@ -40,7 +40,8 @@ Use `mcp__chrome-devtools__navigate_page` to load the page route, then `mcp__chr
 
 **Pre-flight (required before every Lighthouse run):**
 1. Call `pulse_build` to produce a production build and start the production server on port 3001.
-2. Call `navigate_page` with `url: "http://localhost:3001/"` so the browser is on the production server.
+2. Call `pulse_check_bundles` — reads the actual generated bundle files, not just their sizes. Lighthouse scores can pass on a bundle that shouldn't exist at all (a page with no mutations/actions/persist that got a boot file anyway) or one containing leaked server-only code — neither shows up as a score failure. If it flags anything, fix it and restart from step 3.
+3. Call `navigate_page` with `url: "http://localhost:3001/"` so the browser is on the production server.
 
 Then run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop" }`.
 
@@ -88,9 +89,7 @@ Use `mcp__chrome-devtools__list_console_messages` — report any errors or unexp
 
 ### 11. Code review
 
-Call `pulse_review` with the spec file path. This runs a full code review AND atomically writes the `.pulse-verified` stamp server-side, eliminating any race condition with the stop hook.
-
-Work through every item the review returns. Fix anything that fails before proceeding.
+Call `pulse_review` with the spec file path. Work through every item the review returns. Fix anything that fails before proceeding.
 
 ### 12. Close extra browser tabs
 
@@ -98,20 +97,27 @@ Use `mcp__chrome-devtools__list_pages` to get all open pages. Close every page *
 
 If there is only one page open, skip this step — there is nothing to close.
 
-### 13. Write verification stamp
+### 13. Check for unresolved errors on this route
 
-Call `pulse_stamp`. This writes `.pulse-verified` via the MCP server, which is more reliable than the `date +%s` shell command — the MCP write always lands after all spec edits, avoiding the mtime race condition that can cause the stop hook to block immediately after verification.
+Call `pulse_diagnose` with `{ route: "<this page's route>" }`. If it returns any unresolved entries, **do not proceed to step 14** — something threw during this session that hasn't been addressed. Fix the underlying issue and restart from step 3.
+
+If it returns none, continue — `pulse_stamp` in the next step auto-resolves any journal entries for this route, since a clean pass this far means whatever was flagged either wasn't real or has already been fixed by an earlier step in this loop.
+
+### 14. Write verification stamp
+
+Call `pulse_stamp`. This writes `.pulse-verified` via the MCP server, which is more reliable than the `date +%s` shell command — the MCP write always lands after all spec edits, avoiding the mtime race condition that can cause the stop hook to block immediately after verification. It also marks any error-journal entries for this route as resolved.
 
 **This must be the last operation before stopping.** The stop hook compares each edited spec's mtime against this stamp — if any spec is newer than the stamp, the hook blocks. Do not edit any spec file after calling `pulse_stamp`.
 
-### 14. Report
+### 15. Report
 
 Summarise:
 - Validation: pass or fail (with errors if any)
 - Visual: desktop screenshot — any issues found and fixed
 - Console: any errors
 - Review: pass or issues found and fixed
-- **Full mode only:** Lighthouse desktop/mobile scores, mobile layout check, LCP and CLS values
+- Error journal: clean, or resolved N entries
+- **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, mobile layout check, LCP and CLS values
 
 In quick mode, end with: "Quick check passed — run `/verify` when you're ready for the full Lighthouse audit."
 

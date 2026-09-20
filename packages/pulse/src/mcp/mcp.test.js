@@ -10,6 +10,7 @@
 import fs   from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Package root (packages/pulse/) — canonical source for src/agent/*.
@@ -42,6 +43,15 @@ function assert(condition, msg) {
 // ── Read source files ────────────────────────────────────────────────────────
 
 const serverSrc = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8')
+// validateContent's real logic — extracted from server.js into cli/validate.js
+// so `pulse validate` (CLI) and pulse_validate (MCP) share one implementation.
+const validateSrc = fs.readFileSync(path.join(ROOT, 'src/cli/validate.js'), 'utf8')
+// checkBundles' real logic — extracted into cli/check-bundles.js so
+// `pulse check-bundles` (CLI) and pulse_check_bundles (MCP) share one implementation.
+const checkBundlesSrc = fs.readFileSync(path.join(ROOT, 'src/cli/check-bundles.js'), 'utf8')
+// pulse_review's real logic — extracted into cli/review.js so `pulse review`
+// (CLI) and pulse_review (MCP) share one implementation.
+const reviewSrc = fs.readFileSync(path.join(ROOT, 'src/cli/review.js'), 'utf8')
 const agentDir  = path.join(ROOT, 'src/agent')
 
 // All guide-*.md files that exist on disk
@@ -120,6 +130,8 @@ const SYNC_PAIRS = [
   ['src/agent/checklist.md',        'docs/.claude/pulse-checklist.md'],
   ['src/agent/checklist.md',        'examples/.claude/pulse-checklist.md'],
   ['src/agent/commands/verify.md',  '.claude/commands/verify.md'],
+  ['src/agent/commands/verify.md',  'docs/.claude/commands/verify.md'],
+  ['src/agent/commands/verify.md',  'examples/.claude/commands/verify.md'],
   ['src/agent/coverage-check.js',   'docs/.claude/coverage-check.js'],
   ['src/agent/coverage-check.js',   'examples/.claude/coverage-check.js'],
 ]
@@ -293,7 +305,9 @@ test('pulse_validate prop-alias check excludes attrs blocks (false-positive fix)
   // Regression: input({ attrs: { autocomplete } }) — the RECOMMENDED pattern —
   // was flagged as a wrong top-level prop because the match crossed into the
   // attrs object. The exclusion regex must be present in the alias loop.
-  assert(serverSrc.includes('attrs\\s*:\\s*\\{[^}]*$'),
+  // Logic lives in cli/validate.js — shared by pulse_validate (MCP) and
+  // `pulse validate` (CLI), not duplicated in server.js.
+  assert(validateSrc.includes('attrs\\s*:\\s*\\{[^}]*$'),
     'The PROP_ALIASES loop must exclude matches that fall inside an open attrs: { … } block')
 })
 
@@ -301,9 +315,9 @@ test('pulse_validate CSP check matches config by host, not full URL', () => {
   // Regression: CSP sources are valid without a scheme (images.unsplash.com),
   // but the config check required https?:// — flagging correctly configured
   // projects on every validate.
-  assert(serverSrc.includes('configImgSrc.includes(host)'),
+  assert(validateSrc.includes('configImgSrc.includes(host)'),
     'External-image CSP check must test the config for the bare host')
-  assert(serverSrc.includes(`host:    'images.unsplash.com'`),
+  assert(validateSrc.includes(`host:    'images.unsplash.com'`),
     'External image host entries must carry a bare host field')
 })
 
@@ -311,12 +325,30 @@ test('validator resolves relative imports from the spec file\'s own directory', 
   // Regression: the temp validation file was always written into src/pages/
   // root, so subdirectory pages (src/pages/news/index.js) had their relative
   // imports (../../components/layout.js) resolve from the wrong depth.
-  assert(/async function validateContent\(content, tmpDir = PAGES_DIR\)/.test(serverSrc),
+  assert(/export async function validateContent\(content, root, tmpDir = null\)/.test(validateSrc),
     'validateContent must accept a tmpDir parameter')
-  assert(serverSrc.includes('validateContent(content, path.dirname(fullPath))'),
+  assert(validateSrc.includes('validateFile(file, root)'),
+    'validateFile must exist and take (file, root)')
+  assert(serverSrc.includes('validateContent(content, ROOT, path.dirname(fullPath))'),
     'pulse_create_page must validate from the file\'s own directory')
-  assert(serverSrc.includes('validateContent(content, path.dirname(file))'),
-    'pulse_validate file mode must validate from the file\'s own directory')
+  assert(serverSrc.includes('validateFile(file, ROOT)'),
+    'pulse_validate file mode must validate from the file\'s own directory (via validateFile, which uses path.dirname internally)')
+})
+
+test('pulse validate CLI command exists and shares validate.js with the MCP tool', () => {
+  const cliSrc = fs.readFileSync(path.join(ROOT, 'src/cli/index.js'), 'utf8')
+  assert(cliSrc.includes("case 'validate':"), 'pulse validate must be a registered CLI command')
+  assert(cliSrc.includes('validateFile(file, root)'), 'the CLI command must call the shared validateFile() logic, not reimplement it')
+})
+
+test('pulse diagnose / resolve-error CLI commands exist and share diagnose.js with the MCP tools', () => {
+  const cliSrc = fs.readFileSync(path.join(ROOT, 'src/cli/index.js'), 'utf8')
+  assert(cliSrc.includes("case 'diagnose':"), 'pulse diagnose must be a registered CLI command')
+  assert(cliSrc.includes("case 'resolve-error':"), 'pulse resolve-error must be a registered CLI command')
+  assert(cliSrc.includes('readJournal(root'), 'the CLI diagnose command must call the shared readJournal() logic, not reimplement it')
+  assert(cliSrc.includes('resolveEntries(root'), 'the CLI resolve-error command must call the shared resolveEntries() logic, not reimplement it')
+  assert(serverSrc.includes('readJournal(ROOT'), 'the MCP pulse_diagnose tool must call the shared readJournal() logic')
+  assert(serverSrc.includes('resolveEntries(ROOT'), 'the MCP pulse_resolve_error tool must call the shared resolveEntries() logic')
 })
 
 test('package-root import is stripped from client bundles in build and dev', () => {
@@ -379,6 +411,195 @@ test('identity.md declares the creative override (Design Freedom) carve-out', ()
     'identity.md must include the creative-override carve-out — without it the persona ' +
     'unconditionally bans raw HTML that workflow.md Mode B explicitly permits.'
   )
+})
+
+test('pulse://start reads design:"freeform" from pulse.config.js and ties it to the Mode B override comment', () => {
+  // pulse.config.js's `design: 'freeform'` flag is a project-wide default for
+  // Mode B (see identity.md's "Design Freedom" rule / workflow.md 3a) — not a
+  // separate, unenforced concept. pulse_review still detects Mode B per-file
+  // by regexing the `// component-free — creative override` comment out of
+  // each spec's source, so the freeform banner must tell the agent to keep
+  // writing that comment into every new file even though the mode itself is
+  // set once, project-wide.
+  assert(/readPulseConfig/.test(serverSrc),
+    'server.js must define/use a readPulseConfig() helper to read pulse.config.js')
+  assert(/config\.design === 'freeform'/.test(serverSrc),
+    'pulse://start must check config.design === "freeform" from pulse.config.js')
+  assert(/component-free — creative override/.test(serverSrc) && /isFreeform/.test(serverSrc),
+    'the freeform banner must instruct writing the `// component-free — creative override` ' +
+    'comment into each spec file — pulse_review detects Mode B from that comment, not from config')
+})
+
+test('scaffolded pulse.config.js documents the design:"freeform" flag', () => {
+  const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  assert(/design: 'freeform'/.test(scaffoldSrc),
+    'scaffold.js should mention design: "freeform" in the generated pulse.config.js as a commented hint')
+})
+
+// ── pulse_review mechanized checks ────────────────────────────────────────────
+// These three rules used to live only as prose in checklist.md (unenforced).
+// They're now regex-checked in both pulse_review's quick and full modes —
+// tested here against fixture strings, not just "the pattern exists somewhere",
+// so a future edit that narrows/breaks the regex is actually caught.
+
+test('modal-state check catches state.modalOpen and misses unrelated state', () => {
+  const modalRegex = /state\.modalOpen|modalOpen\s*:/
+  assert(modalRegex.test(`state: { modalOpen: false }`), 'must catch modalOpen: in state block')
+  assert(modalRegex.test(`\${state.modalOpen ? modal() : ''}`), 'must catch state.modalOpen read in view')
+  assert(!modalRegex.test(`state: { dialogId: null }`), 'must not flag unrelated state fields')
+})
+
+test('CSRF check catches a POST form missing ${server.csrf} on a submit-handling page', () => {
+  const hasSubmit  = (src) => /\bsubmit\s*:\s*async/.test(src)
+  const hasPostForm = (src) => /<form[^>]*method=["']POST["']/i.test(src)
+  const hasCsrf     = (src) => src.includes('server.csrf')
+
+  const missing = `submit: async (ctx) => {}, view: () => \`<form method="POST"><input name="email"></form>\``
+  assert(hasSubmit(missing) && hasPostForm(missing) && !hasCsrf(missing),
+    'must flag a submit-page POST form with no ${server.csrf}')
+
+  const present = `submit: async (ctx) => {}, view: () => \`<form method="POST">\${server.csrf}<input name="email"></form>\``
+  assert(hasSubmit(present) && hasPostForm(present) && hasCsrf(present),
+    'must not flag a submit-page POST form that includes ${server.csrf}')
+
+  const noSubmit = `view: () => \`<form method="POST"><input name="email"></form>\``
+  assert(!hasSubmit(noSubmit),
+    'must not run the CSRF check at all on a page with no spec.submit (client-only action forms don\'t need it)')
+})
+
+test('_storeUpdate check catches a primitive and misses a real object literal', () => {
+  const badStoreUpdate = /_storeUpdate\s*:\s*(true|false|\d|['"`])/
+  assert(badStoreUpdate.test(`onSuccess: (state) => ({ _storeUpdate: true })`), 'must catch a boolean')
+  assert(badStoreUpdate.test(`onSuccess: (state) => ({ _storeUpdate: 'theme' })`), 'must catch a string literal')
+  assert(!badStoreUpdate.test(`onSuccess: (state, theme) => ({ _storeUpdate: { settings: { theme } } })`),
+    'must not flag a correctly-shaped object literal')
+})
+
+test('review.js defines all three new auto-checks in both quick and full pulse_review modes', () => {
+  // Logic lives in cli/review.js — shared by pulse_review (MCP) and
+  // `pulse review` (CLI), not duplicated in server.js.
+  const modalCount = (reviewSrc.match(/state\\\.modalOpen\|modalOpen\\s\*:/g) || []).length
+  assert(modalCount >= 2, `modal-state check must appear in both quick and full review modes (found ${modalCount})`)
+  assert(reviewSrc.split("source.includes('server.csrf')").length - 1 >= 2,
+    'CSRF check must appear in both quick and full review modes')
+  assert(reviewSrc.split('_storeUpdate\\s*:\\s*(true|false|\\d').length - 1 >= 2,
+    '_storeUpdate check must appear in both quick and full review modes')
+})
+
+test('pulse review CLI command exists and shares review.js with the MCP tool', () => {
+  const cliSrc = fs.readFileSync(path.join(ROOT, 'src/cli/index.js'), 'utf8')
+  assert(cliSrc.includes("case 'review':"), 'pulse review must be a registered CLI command')
+  assert(cliSrc.includes('runQuickReview(source, file)'), 'the CLI command must call the shared runQuickReview() logic')
+  assert(cliSrc.includes('runFullReview(source, file)'), 'the CLI command must call the shared runFullReview() logic')
+  assert(serverSrc.includes('runQuickReview(source, file)'), 'the MCP tool must call the shared runQuickReview() logic')
+  assert(serverSrc.includes('runFullReview(source, file)'), 'the MCP tool must call the shared runFullReview() logic')
+})
+
+test('the CLI-facing review formatter never carries agent-only framing', () => {
+  // The MCP tool's report talks directly to an agent ("you are now a senior
+  // code reviewer", "continue to the verification workflow"). That framing
+  // must not leak into the CLI output a human reads — formatFullReview and
+  // formatQuickReview must branch on agentFacing rather than hardcode it.
+  assert(reviewSrc.includes('agentFacing'), 'formatters must accept an agentFacing option')
+  assert(reviewSrc.includes("you are now a"), 'the agent-facing intro text must exist somewhere in review.js')
+  assert(/agentFacing\s*\?[\s\S]{0,200}you are now a/i.test(reviewSrc),
+    'the "you are now a reviewer" framing must be conditional on agentFacing, not unconditional')
+})
+
+// ── validate-worker.js path handling ────────────────────────────────────────
+// Regression: a relative path passed to the worker resolves against the
+// worker's own location (src/mcp/), not the caller's cwd, and fails with a
+// confusing "Cannot find package 'src'" error that reads as a bug in the
+// spec's imports rather than what it actually is — the worker was called
+// wrong. Found via a real dogfooding session where an agent shelled out to
+// the worker directly (bypassing the MCP tool's own absolute-path
+// normalisation) and lost several minutes to the misleading error.
+
+const validateWorkerPath = path.join(ROOT, 'src/mcp/validate-worker.js')
+
+function runValidateWorker(arg) {
+  try {
+    return { output: execFileSync(process.execPath, [validateWorkerPath, arg], { encoding: 'utf8' }), code: 0 }
+  } catch (err) {
+    return { output: err.stdout || err.message, code: err.status ?? 1 }
+  }
+}
+
+test('validate-worker.js gives a precise error for a relative path, not the raw Node resolver error', () => {
+  const { output } = runValidateWorker('src/pages/home.js')
+  assert(output.includes('requires an absolute path'),
+    `Expected a clear absolute-path error, got: ${output}`)
+  // The explanatory text is allowed to mention the phrase for context, but the
+  // raw Node stack-trace signature ("imported from ...") must not leak through —
+  // that's the actual confusing artifact this fix replaces.
+  assert(!output.includes('imported from'),
+    `Should not leak the raw Node resolver stack trace to the caller: ${output}`)
+})
+
+test('validate-worker.js still gives the file-not-found message for a missing absolute path', () => {
+  const { output } = runValidateWorker('/tmp/definitely-does-not-exist-pulse-test.js')
+  assert(output.includes('file not found'), `Expected a file-not-found message, got: ${output}`)
+})
+
+// ── pulse_intent dashboard-aware inspiration question ───────────────────────
+// Regression: found via dogfooding — the mandatory design-inspiration question
+// ("a site you love, a screenshot, a mood board") has no branch for internal/
+// functional tools, where it lands oddly and risks an agent reinterpreting or
+// skipping a mandatory step. pulse_intent's dashboard archetype now asks a
+// reframed question (visual reference OR clean functional default, plus
+// information-density questions) instead of the generic aesthetic one.
+
+test('pulse_intent reframes the inspiration question for the dashboard archetype', () => {
+  assert(/if \(key === 'dashboard'\)/.test(serverSrc),
+    'pulse_intent must branch on the dashboard archetype for the inspiration question')
+  assert(/reframed for a functional\/internal tool/.test(serverSrc),
+    'the dashboard branch must explain why the question is reframed')
+  assert(/is not skippable/.test(serverSrc),
+    'the reframed question must state it remains mandatory, not an excuse to skip a required step')
+})
+
+test('workflow.md documents the same internal-tool exception for Step 0', () => {
+  const workflow = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  assert(/Internal\/functional tools/.test(workflow),
+    'workflow.md must carry the same internal-tool branch as pulse_intent, since an agent following workflow.md directly (without calling pulse_intent) needs the same guidance')
+  assert(/the question itself is still mandatory/.test(workflow),
+    'must be explicit that the internal-tool branch reframes the question, it does not remove the requirement to ask it')
+})
+
+// ── pulse_check_bundles ──────────────────────────────────────────────────────
+// Verified live (build a real project, reproduce the exact bug it catches by
+// temporarily reverting the build.js fix, confirm the tool flags it, restore
+// the fix, confirm clean) during development — not re-run here since that
+// needs a full esbuild pass. This locks in the tool's structure so future
+// edits can't silently drop a check without a source-level test noticing.
+
+test('pulse_check_bundles checks both bundle-existence and node-builtin-leak', () => {
+  assert(/'pulse_check_bundles'/.test(serverSrc), 'pulse_check_bundles must be registered')
+  assert(serverSrc.includes("checkBundles(ROOT)"), 'the MCP tool must call the shared checkBundles() logic, not reimplement it')
+  assert(/mutations\|actions\|persist/.test(checkBundlesSrc),
+    'must check for mutations/actions/persist — same test as discover.js\'s needsHydration()')
+  assert(/NODE_BUILTINS/.test(checkBundlesSrc), 'must scan bundles for leaked Node built-in references')
+  assert(/node:fs/.test(checkBundlesSrc.slice(checkBundlesSrc.indexOf('NODE_BUILTINS'))),
+    'node:fs must be in the leak-detection list — the exact module a real persistence layer uses')
+})
+
+test('pulse check-bundles CLI command exists and shares check-bundles.js with the MCP tool', () => {
+  const cliSrc = fs.readFileSync(path.join(ROOT, 'src/cli/index.js'), 'utf8')
+  assert(cliSrc.includes("case 'check-bundles':"), 'pulse check-bundles must be a registered CLI command')
+  assert(cliSrc.includes("checkBundles(root)"), 'the CLI command must call the shared checkBundles() logic, not reimplement it')
+})
+
+test('verify.md calls pulse_check_bundles as part of the full Lighthouse pre-flight', () => {
+  const verify = fs.readFileSync(path.join(agentDir, 'commands', 'verify.md'), 'utf8')
+  assert(/pulse_check_bundles/.test(verify), 'verify.md must call pulse_check_bundles')
+  // Must appear in the Lighthouse pre-flight section (after pulse_build, before
+  // the actual lighthouse_audit call) — not buried somewhere it won't run.
+  const buildIdx = verify.indexOf('pulse_build` to produce a production build')
+  const checkIdx = verify.indexOf('pulse_check_bundles')
+  const auditIdx = verify.indexOf('lighthouse_audit` with `{ "device": "desktop" }')
+  assert(buildIdx !== -1 && checkIdx !== -1 && auditIdx !== -1, 'all three anchors must exist in verify.md')
+  assert(buildIdx < checkIdx && checkIdx < auditIdx,
+    'pulse_check_bundles must run after pulse_build and before the Lighthouse audit')
 })
 
 // ── Result ───────────────────────────────────────────────────────────────────

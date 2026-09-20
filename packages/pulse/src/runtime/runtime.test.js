@@ -54,6 +54,53 @@ function parseElements(html, selector) {
   return matches
 }
 
+/**
+ * A more realistic element for exercising bindEvents() delegation directly —
+ * unlike FakeElement above (which stubs addEventListener as a no-op and is
+ * only used to assert on rendered innerHTML), this one wires real listeners
+ * via the native EventTarget and supports closest()/dataset/pointer capture,
+ * so pointerdown/pointermove/pointerup/keydown routing can be verified.
+ */
+class DelegatingElement extends EventTarget {
+  constructor() {
+    super()
+    this.innerHTML = ''
+    this._captured = new Map()
+  }
+}
+
+class ChildElement extends EventTarget {
+  constructor(attrs = {}, parent = null) {
+    super()
+    this.dataset = {}
+    for (const [k, v] of Object.entries(attrs)) this.dataset[k] = v
+    this._parent = parent
+  }
+  closest(selector) {
+    const attr = selector.match(/\[([^\]]+)\]/)?.[1]
+    const key  = attr === 'data-event' ? 'event'
+      : attr === 'data-action' ? 'action'
+      : attr === 'data-store-event' ? 'storeEvent'
+      : attr === 'data-dialog-open' ? 'dialogOpen'
+      : attr === 'data-dialog-close' ? 'dialogClose'
+      : null
+    let node = this
+    while (node) {
+      if (key && node.dataset && node.dataset[key] !== undefined) return node
+      node = node._parent
+    }
+    return null
+  }
+  setPointerCapture(id) { this._root?._captured.set(id, this) }
+  releasePointerCapture(id) { this._root?._captured.delete(id) }
+}
+
+function fireOn(root, target, type, props = {}) {
+  const event = Object.assign(new Event(type, { bubbles: true }), props)
+  Object.defineProperty(event, 'target', { value: target, configurable: true })
+  root.dispatchEvent(event)
+}
+
 // ---------------------------------------------------------------------------
 // Test runner
 // ---------------------------------------------------------------------------
@@ -862,6 +909,158 @@ await testAsync('_toast in onError is stripped from spec state', async () => {
   await app.dispatch('save')
   assert(app.getState().failed === true,      'failed should be true')
   assert(app.getState()._toast === undefined, '_toast must not be in state')
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nPointer / keyboard event binding\n')
+
+test('pointerdown dispatches mutation and captures the pointer', () => {
+  const el = new DelegatingElement()
+  const dragSpec = {
+    route: '/drag',
+    state: { dragging: false },
+    view: (state) => `<div data-event="pointerdown:startDrag">${state.dragging}</div>`,
+    mutations: { startDrag: (state) => ({ dragging: true }) },
+  }
+  mount(dragSpec, el)
+
+  const child = new ChildElement({ event: 'pointerdown:startDrag' })
+  child._root = el
+  let captured = null
+  child.setPointerCapture = (id) => { captured = id }
+  fireOn(el, child, 'pointerdown', { pointerId: 1 })
+
+  assert(el.innerHTML.includes('true'), `Expected dragging=true, got: ${el.innerHTML}`)
+  assert(captured === 1, `Expected pointer capture with id 1, got ${captured}`)
+})
+
+test('pointermove dispatches mutation while captured, ignores elements without data-event', () => {
+  const el = new DelegatingElement()
+  const dragSpec = {
+    route: '/drag-move',
+    state: { x: 0 },
+    view: (state) => `<div data-event="pointermove:move">${state.x}</div>`,
+    mutations: { move: (state, e) => ({ x: e.clientX }) },
+  }
+  mount(dragSpec, el)
+
+  const child = new ChildElement({ event: 'pointermove:move' })
+  child._root = el
+  fireOn(el, child, 'pointermove', { clientX: 42 })
+  assert(el.innerHTML.includes('42'), `Expected x=42, got: ${el.innerHTML}`)
+
+  const plainChild = new ChildElement({})
+  plainChild._root = el
+  fireOn(el, plainChild, 'pointermove', { clientX: 999 })
+  assert(el.innerHTML.includes('42'), `Element without data-event should not dispatch: ${el.innerHTML}`)
+})
+
+test('pointerup dispatches mutation and releases capture', () => {
+  const el = new DelegatingElement()
+  const dragSpec = {
+    route: '/drag-up',
+    state: { dragging: true },
+    view: (state) => `<div data-event="pointerup:endDrag">${state.dragging}</div>`,
+    mutations: { endDrag: () => ({ dragging: false }) },
+  }
+  mount(dragSpec, el)
+
+  const child = new ChildElement({ event: 'pointerup:endDrag' })
+  child._root = el
+  let released = null
+  child.releasePointerCapture = (id) => { released = id }
+  fireOn(el, child, 'pointerup', { pointerId: 7 })
+
+  assert(el.innerHTML.includes('false'), `Expected dragging=false, got: ${el.innerHTML}`)
+  assert(released === 7, `Expected pointer capture released with id 7, got ${released}`)
+})
+
+test('pointercancel dispatches the same mutation as pointerup and releases capture', () => {
+  const el = new DelegatingElement()
+  const dragSpec = {
+    route: '/drag-cancel',
+    state: { dragging: true },
+    view: (state) => `<div data-event="pointerup:endDrag">${state.dragging}</div>`,
+    mutations: { endDrag: () => ({ dragging: false }) },
+  }
+  mount(dragSpec, el)
+
+  const child = new ChildElement({ event: 'pointerup:endDrag' })
+  child._root = el
+  let released = null
+  child.releasePointerCapture = (id) => { released = id }
+  fireOn(el, child, 'pointercancel', { pointerId: 3 })
+
+  assert(el.innerHTML.includes('false'), `Expected dragging=false after cancel, got: ${el.innerHTML}`)
+  assert(released === 3, `Expected pointer capture released on cancel, got ${released}`)
+})
+
+test('keydown dispatches mutation with the key', () => {
+  const el = new DelegatingElement()
+  const keySpec = {
+    route: '/key',
+    state: { key: '' },
+    view: (state) => `<div data-event="keydown:onKey">${state.key}</div>`,
+    mutations: { onKey: (state, e) => ({ key: e.key }) },
+  }
+  mount(keySpec, el)
+
+  const child = new ChildElement({ event: 'keydown:onKey' })
+  child._root = el
+  fireOn(el, child, 'keydown', { key: 'ArrowLeft' })
+
+  assert(el.innerHTML.includes('ArrowLeft'), `Expected key=ArrowLeft, got: ${el.innerHTML}`)
+})
+
+test('data-event supports multiple space-separated bindings on one element', () => {
+  const el = new DelegatingElement()
+  const dragSpec = {
+    route: '/drag-multi',
+    state: { dragging: false, x: 0 },
+    view: (state) => `<div data-event="pointerdown:startDrag pointermove:dragMove pointerup:endDrag">${state.dragging}:${state.x}</div>`,
+    mutations: {
+      startDrag: () => ({ dragging: true }),
+      dragMove:  (state, e) => state.dragging ? { x: e.clientX } : {},
+      endDrag:   () => ({ dragging: false }),
+    },
+  }
+  mount(dragSpec, el)
+
+  const child = new ChildElement({ event: 'pointerdown:startDrag pointermove:dragMove pointerup:endDrag' })
+  child._root = el
+
+  fireOn(el, child, 'pointerdown', { pointerId: 1 })
+  assert(el.innerHTML.includes('true:0'), `Expected dragging=true, got: ${el.innerHTML}`)
+
+  fireOn(el, child, 'pointermove', { clientX: 55 })
+  assert(el.innerHTML.includes('true:55'), `Expected x=55 while dragging, got: ${el.innerHTML}`)
+
+  fireOn(el, child, 'pointerup', { pointerId: 1 })
+  assert(el.innerHTML.includes('false:55'), `Expected dragging=false, got: ${el.innerHTML}`)
+
+  // pointermove after release is a no-op because the mutation gates on `dragging`
+  fireOn(el, child, 'pointermove', { clientX: 999 })
+  assert(el.innerHTML.includes('false:55'), `Expected no change after release, got: ${el.innerHTML}`)
+})
+
+test('pointerdown/pointerup ignore wrong event type on the same element', () => {
+  const el = new DelegatingElement()
+  const spec = {
+    route: '/only-down',
+    state: { count: 0 },
+    view: (state) => `<div data-event="pointerdown:bump">${state.count}</div>`,
+    mutations: { bump: (state) => ({ count: state.count + 1 }) },
+  }
+  mount(spec, el)
+
+  const child = new ChildElement({ event: 'pointerdown:bump' })
+  child._root = el
+  fireOn(el, child, 'pointerup', { pointerId: 1 })   // wrong type — should not fire
+  assert(el.innerHTML.includes('>0<'), `Should not have dispatched on pointerup: ${el.innerHTML}`)
+
+  fireOn(el, child, 'pointerdown', { pointerId: 1 }) // correct type — should fire
+  assert(el.innerHTML.includes('>1<'), `Expected count 1, got: ${el.innerHTML}`)
 })
 
 // ---------------------------------------------------------------------------

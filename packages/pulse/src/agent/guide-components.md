@@ -157,7 +157,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | `stat` | `label`, `value`, `change`, `trend` (up/down/neutral), `size` (sm/md/lg — lg for hero KPIs), `center` |
 | `avatar` | `src`, `alt`, `size` (sm/md/lg/xl), `initials` |
 | `empty` | `title`, `description`, `action` ({label,href,variant}) |
-| `table` | `headers`, `rows` (2D array of HTML strings), `caption` | ⚠ Each cell item must be **raw HTML content** — `table()` wraps each item in `<td>` itself. Do NOT pass `<td>...</td>` strings or you will get double-nested cells. |
+| `table` | `headers`, `rows` (2D array of HTML strings), `caption` | ⚠ Each cell item must be **raw HTML content** — `table()` wraps each item in `<td>` itself. Do NOT pass `<td>...</td>` strings or you will get double-nested cells. Raw HTML you put in a cell (a `<a>` link, a `<button>`, anything) gets **no styling from the component** — `table()` only styles the table structure, not injected content. A bare `<a href="...">text</a>` in a cell falls back to the browser's default link blue, which fails contrast on a dark theme. Style it explicitly (`color: var(--ui-accent)`, `:hover { color: var(--ui-accent-hover) }`) the same as any raw HTML you'd write directly in a view. |
 | `spinner` | `size` (sm/md/lg), `color` (accent/muted/white), `label` |
 | `progress` | `value`, `max` (100), `label`, `showLabel`, `showValue`, `variant`, `size` |
 | `breadcrumbs` | `items` ([{label,href}] — last item has no href), `separator` |
@@ -229,32 +229,14 @@ ${heading({ level: 1, text: 'In Search of Lost Code', class: 'display-heading' }
 
 #### When components feel restrictive
 
-**Symptom:** You're fighting a component's wrapper styles (padding, max-width, centering) in your CSS overrides.
+Symptom: fighting a component's wrapper styles (padding, max-width, centering) in CSS overrides. Fix, in order of preference:
+1. Editorial/typographic page → compose from `heading()`, `prose()`, raw HTML (creative override) instead of forcing `hero()`/`feature()`/`cta()` into that shape.
+2. Structure diverges significantly (asymmetric grid, full-bleed, custom positioning) → write the outer HTML yourself; still use components for primitives (`button`, `card`, `input`, `badge`).
+3. Only cosmetic → override with higher specificity in `app.css`: `.my-editorial-hero .ui-hero-inner { max-width: none; padding: 0; }` (component wrappers use single class names like `.ui-hero`).
 
-**Solutions:**
-1. **Use the right approach for your design.** If the page is editorial/typographic, compose from `heading()`, `prose()`, and raw HTML (creative override) instead of trying to force `hero()`, `feature()`, `cta()` into an editorial shape.
-2. **Write custom markup for structural differences.** Components provide sensible defaults for common patterns. When your design structure diverges significantly (asymmetric grid, full-bleed sections, custom positioning), write the HTML directly — that's permitted for layouts. Use components for the UI primitives (`button`, `card`, `input`, `badge`), but write the outer structure yourself.
-3. **Override with higher specificity.** Component wrappers use single class names (`.ui-hero`, `.ui-cta`). Override with a more specific selector in your `app.css`:
-   ```css
-   .my-editorial-hero .ui-hero-inner {
-     max-width: none;
-     padding: 0;
-   }
-   ```
+#### Vibes are a paint job, not a structural transformation
 
-Components are opinionated by design — they enforce accessibility, consistency, and tested patterns. When the design requires breaking those patterns, prefer custom markup over fighting the component.
-
-#### Important: Vibes affect CSS tokens, not component HTML structure
-
-The `meta.vibe` setting (`warm`, `editorial`, `playful`, `minimal`, `bold`, `brutalist`, `retro`, `corporate`, `neon`, `paper`) applies CSS variable overrides via `data-vibe` on the `<body>` element. This changes **visual styling** — border radius, font size, letter-spacing, heading weight — but does **not** change the **HTML structure** of components.
-
-For example:
-- `hero()` with `vibe: 'editorial'` still renders eyebrow + title + subtitle + actions (SaaS structure)
-- The vibe adjusts the font sizes, tracking, and spacing, but the component HTML is unchanged
-
-**If you need different HTML structure for an editorial design** — e.g., a large display title + asymmetric layout + drop cap instead of eyebrow/subtitle/actions — write custom markup styled with `heading()`/`prose()` plus utility classes or `app.css`. Do not expect `hero()` to become structurally editorial when `vibe: 'editorial'` is set.
-
-This is by design: vibes are a paint job, not a structural transformation. Components stay predictable and testable. When the design structure itself differs from the SaaS patterns (centred hero, three-column features, pricing cards), reach for custom layout instead of trying to force `hero()` / `feature()` / `cta()` into shapes they weren't designed for.
+`meta.vibe` (`warm`/`editorial`/`playful`/`minimal`/`bold`/`brutalist`/`retro`/`corporate`/`neon`/`paper`) sets `data-vibe` on `<body>` — changes radius/font-size/letter-spacing/weight tokens only. **Never changes component HTML structure.** `hero({ vibe: 'editorial' })` still renders eyebrow+title+subtitle+actions — vibe ≠ structural editorial layout. For a genuinely different structure (large display title + asymmetric layout + drop cap instead of eyebrow/subtitle/actions), write custom markup with `heading()`/`prose()` + utility classes — don't expect the vibe setting to produce it.
 
 ### Landing page components
 

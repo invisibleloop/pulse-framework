@@ -12,9 +12,25 @@
 import { validateSpec } from '../spec/schema.js'
 
 import { existsSync } from 'fs'
+import { isAbsolute }  from 'path'
 
 const tmpFile = process.argv[2]
 if (!tmpFile) { process.stdout.write('Invalid: no file path provided'); process.exit(0) }
+// A relative path here resolves against THIS FILE's location (src/mcp/), not the
+// caller's cwd — a path like "src/pages/home.js" then looks to Node's ESM resolver
+// like a bare package specifier ("Cannot find package 'src'"), which reads as an
+// import-resolution bug in the spec rather than what it actually is: this worker
+// was invoked with the wrong kind of path. Catch it here with a precise message
+// instead of letting it fall through to the generic import-failure branch below.
+if (!isAbsolute(tmpFile)) {
+  process.stdout.write(
+    `Invalid: validate-worker.js requires an absolute path, got a relative one — ${tmpFile}\n` +
+    `  A relative path resolves against this worker's own location, not your cwd, and often ` +
+    `fails with a confusing "Cannot find package" error that looks like a bug in the spec's ` +
+    `imports. Pass an absolute path instead.`
+  )
+  process.exit(0)
+}
 if (!existsSync(tmpFile)) { process.stdout.write(`Invalid: file not found — ${tmpFile}`); process.exit(0) }
 
 let mod

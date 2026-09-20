@@ -2,6 +2,8 @@
 
 Before finishing any spec, verify every point below. Fix anything that fails.
 
+**Most of these are already mechanically checked** by `pulse_review` (auto-checked items: hex colours, tabindex, `data-event` on inputs, React patterns, main landmark, XSS test presence, modal-state pattern, CSRF token presence, `_storeUpdate` shape, creative-override detection). Where a rule is auto-checked, this file states *why* the rule exists and how to judge edge cases (e.g. "is this a real creative override?") — it does not restate the mechanical check itself. Rules with no entry below in "Auto-checked" are prose-only — nothing catches them but you.
+
 ### Critical
 
 - **`meta` must be a plain object — never a function.** Individual fields (`title`, `description`, `styles`) can be `async (ctx) => value` functions, but `meta` itself is always `{}`.
@@ -37,15 +39,9 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - Navigation → `nav({ logo, links, actions })`
   - Footers → `footer({ logo, links, columns, legal, ... })`
 
-- **Creative override — raw HTML throughout is permitted** when the design intent genuinely calls for it: a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe where components would constrain the expression, or a layout that requires features a component simply doesn't support (e.g. full-viewport height, custom gradient glows, clamp-scaled display type). This is a deliberate design decision, not a shortcut. When taking this path:
-  - **Declare it in a comment at the top of the spec** so the reviewer recognises it: `// component-free — creative override: <reason>`. This is the signal the review tool reads.
-  - Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there is a specific design reason not to.
-  - `/pulse-ui.css` is always required — it provides the token system your custom CSS will use.
-  - The quality gate replaces the component checklist: **Lighthouse 100 on Accessibility, Best Practices, and SEO — desktop and mobile — plus CLS 0.00 is the pass bar.** (Performance is reported but not gated; it varies with machine load.) A component-free page that passes every audit is correct. A component-heavy page that fails accessibility is not.
+- **Creative override — raw HTML throughout is permitted** when the design intent genuinely calls for it: a highly custom visual identity, an asymmetric or typographically-driven layout, a brutalist/editorial/retro/neon/paper vibe where components would constrain the expression, or a layout that requires features a component simply doesn't support (e.g. full-viewport height, custom gradient glows, clamp-scaled display type). This is a deliberate design decision, not a shortcut. **Declare it in a comment at the top of the spec** — `// component-free — creative override: <reason>` — that's the only signal `pulse_review` reads to switch component checks from failures to advisory. Functional atoms (`button`, `input`, `badge`, `modal`) should still come from components unless there's a specific design reason not to. The quality gate replaces the component checklist: Lighthouse 100 on Accessibility/Best Practices/SEO, desktop and mobile, plus CLS 0.00.
 
-- **When reviewing**: before flagging a class name like `.hero` as a violation, first ask whether the `hero()` component could actually reproduce the layout. If the answer is no, it is a creative override — check Lighthouse instead of refactoring. Do not flatten a good custom layout into a generic component just to clear a pattern-match.
-
-- **The review tool auto-detects creative override** from the spec comment. When detected, component pattern checks are shown as advisory (`⚡`) not as failures, and the Lighthouse gate is the stated pass bar.
+- **The judgment call, not the mechanics:** before flagging a class name like `.hero` as a violation, ask whether the `hero()` component could actually reproduce the layout. If no, it's a legitimate creative override — check Lighthouse instead of refactoring. Don't flatten a good custom layout into a generic component just to clear a pattern-match.
 
 - **Never write App Store or Google Play download buttons by hand.** Always use `appBadge({ store: 'apple', href })` and `appBadge({ store: 'google', href })`. Raw `<a>` tags with badge images are incorrect — `appBadge` renders the correct accessible, styled badge for each store.
 
@@ -76,7 +72,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 - `persist` contains only serialisable state that should survive a page reload — not ephemeral UI state like a loading flag or temporary selection.
 - `e.target` assumptions in mutations are safe if the element has child nodes — use `e.target.closest('[data-index]')` rather than assuming `e.target` is the element with the attribute.
 - State shape is consistent — avoid a single field that is sometimes `null`, sometimes a string, sometimes a boolean. Use a dedicated `status` field instead.
-- **Never use `state.modalOpen` or conditional modal rendering.** This destroys the `<dialog>` on every render, breaking focus, animation, and native ESC handling. Instead, always render the `<dialog>` in the DOM and use `data-dialog-open="id"` to open it — the runtime handles this without any spec state:
+- **Never use `state.modalOpen` or conditional modal rendering** (auto-checked). This destroys the `<dialog>` on every render, breaking focus, animation, and native ESC handling. Instead, always render the `<dialog>` in the DOM and use `data-dialog-open="id"` to open it — the runtime handles this without any spec state:
   ```html
   <!-- always in the view, never conditional -->
   ${modal({ id: 'confirm', title: 'Confirm', content: '...' })}
@@ -105,14 +101,14 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 ### CSS
 
-- **`app.css` must contain no hex values or raw colour values.** A lint hook enforces this and will block the build. Hex values belong in `public/theme.css` as token definitions; `app.css` references them via `var()` only.
+- **`app.css` must contain no hex values or raw colour values** (auto-checked, lint hook also blocks the build). Hex values belong in `public/theme.css` as token definitions; `app.css` references them via `var()` only.
 - **Load order in `meta.styles`:** `pulse-ui.css` → `theme.css` → `app.css`. Theme tokens must be defined before `app.css` references them.
 - **CSS for a shared section lives in the shared `app.css`, once.** Every spec that renders the section lists the same file in `meta.styles`. Never copy a CSS block into a second per-page stylesheet — two copies drift apart. Per-page stylesheets are for styles only one page uses.
 
 ### Security
 
 - Any value from user input (URL params, form fields, external APIs) interpolated into view HTML must be escaped.
-- **Every `<form method="POST">` on a `submit` page includes `${server.csrf}`.** CSRF is enforced — a form without the hidden token field gets 403 on submit. Never set `csrf: false` to "fix" a 403; that disables the protection. `csrf: false` is only for endpoints with their own authentication (e.g. signed webhooks).
+- **Every `<form method="POST">` on a `submit` page includes `${server.csrf}`** (auto-checked). CSRF is enforced — a form without the hidden token field gets 403 on submit. Never set `csrf: false` to "fix" a 403; that disables the protection. `csrf: false` is only for endpoints with their own authentication (e.g. signed webhooks).
 - **`submit` returns `{ redirect }` after a successful mutation** (POST-redirect-GET). Rendering success directly from the POST means browser refresh resubmits the form.
 
 ### Server-side forms & error pages
@@ -162,7 +158,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 ### Store updates from actions
 
-- **Use `_storeUpdate` to push changes to the global store from an action.** Return it from `onSuccess` alongside the local state update — it is stripped from page state and forwarded to the store. All mounted pages that subscribe to the affected keys re-render immediately:
+- **Use `_storeUpdate` to push changes to the global store from an action.** Return it from `onSuccess` alongside the local state update — it is stripped from page state and forwarded to the store. It must be an object, not a primitive (auto-checked). All mounted pages that subscribe to the affected keys re-render immediately:
   ```js
   onSuccess: (state, theme) => ({
     saved:        true,

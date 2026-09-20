@@ -7,6 +7,11 @@
  *   pulse dev          dev server only (no AI)
  *   pulse build        production build → public/dist/
  *   pulse start        production server (requires prior build)
+ *   pulse validate <file>  validate a spec — same check pulse_validate (MCP) runs, no agent needed
+ *   pulse diagnose [--route </path>] [--include-resolved]  read the dev-only error journal
+ *   pulse resolve-error --id <id> | --route </path>        mark error journal entries resolved
+ *   pulse check-bundles                                     inspect public/dist/ bundle contents (requires prior build)
+ *   pulse review <file> [--quick]                           run the mechanized review checklist — same check pulse_review (MCP) runs
  *   pulse update       re-copy pulse-ui.css/js from installed package → public/
  *   pulse --version    print installed version and exit
  *   pulse -v           alias for --version
@@ -74,6 +79,110 @@ async function runBuild(root) {
     { stdio: 'inherit' }
   )
   proc.on('exit', code => process.exit(code ?? 0))
+}
+
+// ---------------------------------------------------------------------------
+// pulse validate — the same check pulse_validate (MCP) runs, reachable
+// without an agent. Shares validate.js's logic exactly — never a second
+// implementation that can drift from what an agent sees.
+// ---------------------------------------------------------------------------
+
+async function runValidate(root, fileArg) {
+  const { validateFile, formatValidationResult } = await import('./validate.js')
+
+  if (!fileArg) {
+    console.error('Usage: pulse validate <file>\n  <file> is a path to a spec file, relative to the current directory or absolute.')
+    process.exit(1)
+  }
+
+  const file = path.isAbsolute(fileArg) ? fileArg : path.resolve(root, fileArg)
+  const result = await validateFile(file, root)
+  console.log(formatValidationResult(result))
+  process.exit(result.valid ? 0 : 1)
+}
+
+// ---------------------------------------------------------------------------
+// pulse diagnose / pulse resolve-error — the dev-only error journal, reachable
+// without an agent. Shares diagnose.js's logic exactly with pulse_diagnose
+// and pulse_resolve_error (MCP tools).
+// ---------------------------------------------------------------------------
+
+function flagValue(subArgs, name) {
+  const i = subArgs.indexOf(name)
+  return i !== -1 ? subArgs[i + 1] : undefined
+}
+
+async function runDiagnose(root, subArgs) {
+  const { readJournal, formatJournal } = await import('./diagnose.js')
+  const route           = flagValue(subArgs, '--route')
+  const includeResolved = subArgs.includes('--include-resolved')
+
+  const result = readJournal(root, { route, includeResolved })
+  console.log(formatJournal(result, { route, includeResolved }))
+  process.exit(result.error ? 1 : 0)
+}
+
+async function runResolveError(root, subArgs) {
+  const { resolveEntries, formatResolveResult } = await import('./diagnose.js')
+  const id    = flagValue(subArgs, '--id')
+  const route = flagValue(subArgs, '--route')
+
+  if (!id && !route) {
+    console.error('Usage: pulse resolve-error --id <id>\n   or: pulse resolve-error --route </path>')
+    process.exit(1)
+  }
+
+  const result = resolveEntries(root, { id, route })
+  console.log(formatResolveResult(result))
+  process.exit(result.error ? 1 : 0)
+}
+
+// ---------------------------------------------------------------------------
+// pulse check-bundles — inspect production bundle contents (not just sizes),
+// reachable without an agent. Shares check-bundles.js's logic exactly with
+// pulse_check_bundles (MCP tool). Requires a prior `pulse build`.
+// ---------------------------------------------------------------------------
+
+async function runCheckBundles(root) {
+  const { checkBundles, formatBundleCheck } = await import('./check-bundles.js')
+  const result = checkBundles(root)
+  console.log(formatBundleCheck(result))
+  process.exit(result.error || result.issues.length > 0 ? 1 : 0)
+}
+
+// ---------------------------------------------------------------------------
+// pulse review — the same checklist pulse_review (MCP) runs, reachable
+// without an agent. Shares review.js's logic exactly — the report is
+// reformatted for a human reader (no "you are now a reviewer" framing,
+// no "continue to the verification workflow" — that's agent-only guidance).
+// ---------------------------------------------------------------------------
+
+async function runReview(root, subArgs) {
+  const quick = subArgs.includes('--quick')
+  const fileArg = subArgs.find(a => !a.startsWith('--'))
+
+  if (!fileArg) {
+    console.error('Usage: pulse review <file> [--quick]\n  <file> is a path to a spec file, relative to the current directory or absolute.')
+    process.exit(1)
+  }
+
+  const { runQuickReview, formatQuickReview, runFullReview, formatFullReview } = await import('./review.js')
+  const file = path.isAbsolute(fileArg) ? fileArg : path.resolve(root, fileArg)
+  if (!fs.existsSync(file)) {
+    console.error(`File not found: ${file}`)
+    process.exit(1)
+  }
+  const source = fs.readFileSync(file, 'utf8')
+
+  if (quick) {
+    const result = await runQuickReview(source, file)
+    console.log(formatQuickReview(result, { agentFacing: false }))
+    process.exit(result.issues.length > 0 ? 1 : 0)
+  } else {
+    const result = await runFullReview(source, file)
+    console.log(formatFullReview(result, { source, file, agentFacing: false }))
+    process.exit(result.validationResult.includes('✓') ? 0 : 1)
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -477,6 +586,11 @@ switch (command) {
     ${c.cyan('dev')}              start the dev server
     ${c.cyan('build')}            production build  ${c.dim('→ public/dist/')}
     ${c.cyan('start')}            production server ${c.dim('(requires prior build)')}
+    ${c.cyan('validate')} ${c.dim('<file>')}   validate a spec — the same check an agent runs, without an agent
+    ${c.cyan('diagnose')}         read the dev-only error journal ${c.dim('(.pulse/errors.json)')}
+    ${c.cyan('resolve-error')}    mark error journal entries resolved
+    ${c.cyan('check-bundles')}    inspect public/dist/ bundle contents ${c.dim('(requires prior build)')}
+    ${c.cyan('review')} ${c.dim('<file>')}     run the mechanized review checklist ${c.dim('[--quick]')}
     ${c.cyan('update')}           re-copy pulse-ui assets from installed package
 
   ${c.bold('Options:')}
@@ -504,6 +618,21 @@ switch (command) {
     break
   case 'start':
     await runStart(CWD)
+    break
+  case 'validate':
+    await runValidate(CWD, args[1])
+    break
+  case 'diagnose':
+    await runDiagnose(CWD, args.slice(1))
+    break
+  case 'resolve-error':
+    await runResolveError(CWD, args.slice(1))
+    break
+  case 'check-bundles':
+    await runCheckBundles(CWD)
+    break
+  case 'review':
+    await runReview(CWD, args.slice(1))
     break
   case 'report-server':
     await runReportServer(CWD)

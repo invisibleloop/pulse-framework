@@ -89,18 +89,6 @@ Use the global store (`pulse.store.js`) for state that needs to be consistent ac
 
 See `pulse://guide/server` for the full store API.
 
-## Site navigation
-
-Projects define navigation in src/components/layout.js via a NAV_LINKS array.
-To add a new page to the nav: edit NAV_LINKS in src/components/layout.js only — do NOT add links in individual page files.
-
-```js
-const NAV_LINKS = [
-  { label: 'Home', href: '/' },
-  { label: 'About', href: '/about' },  // ← add new pages here
-]
-```
-
 ## Page discovery — no registration needed
 
 Pulse automatically discovers every .js file under src/pages/ and registers it as a route. You NEVER need to edit a server.js or register specs manually. Just create the file and it is live.
