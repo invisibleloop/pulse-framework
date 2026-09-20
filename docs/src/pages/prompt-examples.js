@@ -144,23 +144,18 @@ export default {
       ${promptGroup('Performance & tooling', [
         {
           tag: 'Lighthouse audit',
-          prompt: 'Run a Lighthouse audit across all pages and show me the results.',
-          produces: 'The agent runs <code>/pulse-report</code>, which audits every registered route and opens the results dashboard.',
+          prompt: 'Run a Lighthouse audit on this page and show me the results.',
+          produces: 'The agent runs <code>/verify</code>, which builds for production, runs Lighthouse desktop and mobile against it, and reports the scores against the pass bar (100 on Accessibility, Best Practices, and SEO).',
         },
         {
-          tag: 'Score thresholds',
-          prompt: 'Make the audit fail if any page scores below 90 for performance or below 95 for accessibility.',
-          produces: 'A <code>lighthouse</code> block in <code>pulse.config.js</code> with <code>performance: 90</code> and <code>accessibility: 95</code>.',
+          tag: 'Mid-build check',
+          prompt: "I'm still iterating on this page — just check it's not broken, skip the full Lighthouse run.",
+          produces: 'The agent runs <code>/verify --quick</code>, which validates, screenshots, checks the console, and runs <code>pulse_review</code> without the ~90-second Lighthouse cost.',
         },
         {
           tag: 'Load test',
           prompt: 'Load test the /api/data endpoint with 50 concurrent connections for 30 seconds and tell me the p99 latency.',
-          produces: 'The agent runs <code>/pulse-load</code> against that route with the specified parameters and reports the results.',
-        },
-        {
-          tag: 'Environment config',
-          prompt: 'Set up a staging environment so I can run audits against https://staging.myapp.com instead of localhost.',
-          produces: 'An <code>environments.staging</code> block in <code>pulse.config.js</code> with the remote URL. The agent uses it when running <code>/pulse-report</code> or <code>/pulse-load</code>.',
+          produces: 'The agent runs <code>pulse load-test --url &lt;route&gt; --duration 30 --connections 50</code> from the terminal and reports the results.',
         },
       ])}
 

@@ -194,6 +194,9 @@ test('view renders increment and decrement buttons', () => {
   assert(result.has('[data-event="decrement"]'))
 })`, 'js'))}
       ${callout('note', 'Use <code>renderSync</code> for mutations and pure view tests — it\'s synchronous and needs no <code>await</code>. Use <code>render</code> when your spec has <code>server</code> fetchers you want to exercise for integration coverage.')}
+
+      ${section('why-tests-gate', 'Why these tests are load-bearing')}
+      <p>These aren't optional coverage an agent adds if it has time. Writing and passing tests is one of the pass gates in the build workflow — <code>pulse_run_tests</code> runs the suite, and <code>/verify</code> won't stamp a page as done while tests are failing. Combined with schema validation and <code>pulse_review</code>'s mechanized checks, tests are one more thing the framework's tooling checks for itself rather than trusting an agent's word that "it works."</p>
     `,
   }),
 }

@@ -38,8 +38,11 @@ export async function scaffold(targetDir, options = {}) {
       dev:   'pulse dev',
       build: 'pulse build',
       start: 'pulse start',
-      test:          'find src -name "*.test.js" | xargs node --test',
-      'test:coverage': 'find src -name "*.test.js" | xargs node --test --experimental-test-coverage --test-coverage-include=\'src/pages/!(*.test).js\'',
+      // Also picks up a root-level pulse.store.test.js — pulse.store.js itself
+      // lives at the project root (not under src/), so its test does too, and
+      // the src/-only glob used to silently exclude it (found via dogfooding).
+      test:          '(find src -name "*.test.js"; find . -maxdepth 1 -name "*.test.js") | xargs node --test',
+      'test:coverage': '(find src -name "*.test.js"; find . -maxdepth 1 -name "*.test.js") | xargs node --test --experimental-test-coverage --test-coverage-include=\'src/pages/!(*.test).js\'',
     },
     engines: {
       node: '>=22',
@@ -52,7 +55,8 @@ export async function scaffold(targetDir, options = {}) {
   // pulse.config.js — write agent if specified, otherwise leave as commented hint
   write(targetDir, 'pulse.config.js',
 `export default {
-${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  agent: '${agent}',\n` : `  // agent: 'copilot',  // uncomment to use GitHub Copilot CLI instead of Claude\n`}}
+${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  agent: '${agent}',\n` : `  // agent: 'copilot',  // uncomment to use GitHub Copilot CLI instead of Claude\n`}  // design: 'freeform',  // uncomment for hand-rolled HTML/CSS on every page — no src/ui/* components, no intake/sketch
+}
 `)
 
   // Home page + tests — working counter proves the app runs
@@ -452,7 +456,8 @@ public/intake/    ← drop design reference images here before starting (not com
 
 1. Run \`pulse_list_structure\` to see what already exists
 2. Read \`pulse://guide\` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns
-3. If images are present in \`public/intake/\`, call \`pulse_extract_inspiration\` on each before \`pulse_intake\` — the session hook will remind you if you forget
+3. **If the user is requesting a new page or site, ask before planning anything:** "Do you have any design inspiration — a site you love, a screenshot, a mood board image? Drop images into \`public/intake/\` or paste a URL and I will extract the design intent before we start." This is not optional — do not present a plan or write code first. (A name mentioned in passing with nothing to look at — no URL, no image, no site you actually know — isn't inspiration to extract; treat it as color for tone and move on to \`pulse_intake\` with what the user actually described.)
+4. If images are present in \`public/intake/\`, call \`pulse_extract_inspiration\` on each before \`pulse_intake\` — the session hook will remind you if you forget
 
 The MCP guide is the single source of truth. Follow it for all technical decisions, component usage, and the mandatory verification workflow.
 

@@ -49,7 +49,7 @@ export default {
       scope:         'openid profile email',
       state:         crypto.randomUUID(),
     })
-    ctx.setHeader('Location', \`https://\${AUTH0_DOMAIN}/authorize?\${params}\`)
+    // { redirect } sets the Location header and 302 status itself — no manual setHeader needed
     return { redirect: \`https://\${AUTH0_DOMAIN}/authorize?\${params}\` }
   },
 }`, 'js'))}
@@ -122,6 +122,9 @@ export default {
     return { redirect: \`https://\${AUTH0_DOMAIN}/v2/logout?client_id=\${AUTH0_CLIENT_ID}&returnTo=\${returnTo}\` }
   },
 }`, 'js'))}
+
+      ${section('csrf-note', 'CSRF and this flow')}
+      <p>Pulse's automatic CSRF protection (a double-submit HMAC token, enforced without configuration) is scoped to pages with a <code>spec.submit</code> handler. The login/callback/logout routes above are all raw response specs (<code>contentType</code> set) that redirect the browser to Auth0 directly — they sit outside that mechanism entirely, and that's fine: there's no Pulse-rendered form here for CSRF to protect. If your app later adds a form-based mutation on top of this session (e.g. a settings page with <code>spec.submit</code>), that page gets CSRF protection automatically, same as any other <code>submit</code> page — see <a href="/forms">Server-Side Forms</a>.</p>
 
       ${section('guard', 'Protecting routes')}
       <p>Use <code>guard</code> to verify the session token before any server data is fetched. For production, verify the JWT signature locally rather than calling Auth0 on every request.</p>

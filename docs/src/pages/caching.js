@@ -74,7 +74,7 @@ cache: { public: true, maxAge: 3600, staleWhileRevalidate: 86400 }
 // → Cache-Control: public, max-age=3600, stale-while-revalidate=86400`, 'js'))}
 
       ${section('html-default', 'Default HTML caching')}
-      <p>By default, Pulse sends <code>Cache-Control: no-store</code> for all HTML responses. Users always see fresh content — stale HTML is never served from browser or proxy caches unless you explicitly declare a <code>cache</code> policy in the spec.</p>
+      <p>By default, Pulse sends <code>Cache-Control: no-cache</code> for all HTML responses — a deliberate choice, not a lesser default. <code>no-cache</code> still revalidates on every direct load or refresh, so there's no risk of stale content; the difference from <code>no-store</code> is that it doesn't block the browser's back/forward cache. Stale HTML is never served from browser or proxy caches unless you explicitly declare a <code>cache</code> policy in the spec.</p>
 
       ${section('asset-caching', 'Asset caching')}
       <p>Static assets in <code>public/</code> receive <code>Cache-Control: max-age=3600</code> (one hour).</p>
@@ -84,7 +84,7 @@ cache: { public: true, maxAge: 3600, staleWhileRevalidate: 86400 }
       ${table(
         ['Resource', 'Development', 'Production'],
         [
-          ['HTML pages', '<code>no-store</code>', '<code>no-store</code> (or your <code>cache</code> config)'],
+          ['HTML pages', '<code>no-store</code>', '<code>no-cache</code> (or your <code>cache</code> config)'],
           ['Static assets (<code>/public/*</code>)', '<code>max-age=3600</code>', '<code>max-age=3600</code>'],
           ['JS bundles (<code>/dist/*</code>)', 'N/A (source files served directly)', '<code>immutable, max-age=31536000</code>'],
         ]

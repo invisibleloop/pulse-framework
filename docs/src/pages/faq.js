@@ -91,8 +91,10 @@ export default {
 
       ${q(
         'What is the AI-native claim actually about?',
-        `<p>Two things. First, the spec format was designed to be easy for an AI agent to generate correctly — one JS object per page, a validated schema, no ambiguous patterns. An agent that writes a Pulse spec either produces a valid spec or gets a schema error it can fix. There is no grey area.</p>
-        <p>Second, the CLI starts an MCP server alongside the dev server, giving the agent tools to create pages, validate specs, screenshot routes, and run Lighthouse audits — without leaving the editor. The agent can build and verify a page end-to-end without human intervention on the tooling side.</p>`
+        `<p>Three things, and the third is the one that matters most for a codebase an agent keeps maintaining, not just scaffolds once.</p>
+        <p><strong>The format is easy to generate correctly.</strong> One JS object per page, no ambiguous patterns, no split files to keep in sync.</p>
+        <p><strong>The format is mechanically checked, not just prompted for.</strong> Every spec is validated against the schema at startup — a malformed spec fails the build, not production. On top of that, <code>pulse_review</code> runs its own checks against the rendered output for the mistakes agents actually tend to make: a modal wired to conditional state instead of <code>data-dialog-open</code>, a POST form missing its CSRF token, a malformed store update. These pass or fail without an LLM judging them — a validator runs in milliseconds, it doesn't have to remember the house rules.</p>
+        <p><strong>The CLI starts an MCP server</strong> alongside the dev server, giving the agent tools to create pages, run that validation, screenshot routes, and run Lighthouse audits — without leaving the editor. The agent can build and verify a page end-to-end, and the verification is enforced by the tooling, not by the agent's own diligence.</p>`
       )}
     `,
   }),

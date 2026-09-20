@@ -85,6 +85,23 @@ export default {
 
       ${callout('note', 'Three layers, three jobs: <code>route: \'*\'</code> for URLs that don\'t exist, <code>onViewError</code> for views that throw on bad data, <code>onError</code> for everything else that goes wrong server-side.')}
 
+      ${section('error-journal', 'The error journal — a fourth layer, for the agent')}
+      <p>The three layers above all handle an error <em>for the visitor</em> — they decide what the browser sees. None of them tell anyone the error happened. In dev mode (<code>dev: true</code>), every error caught by those layers — plus post-hydration client failures the browser never sends to the server on its own — is also recorded to <code>.pulse/errors.json</code>, a small rolling log an agent can query instead of relying on a <code>console.error</code> line landing in a terminal no one's watching.</p>
+      ${codeBlock(highlight(`// .pulse/errors.json — written automatically in dev mode
+[
+  {
+    "id":       "8f32da67-…",
+    "ts":       "2026-09-19T13:25:06.416Z",
+    "route":    "/dashboard",
+    "phase":    "view",        // 'view' | 'action' | 'server' | 'guard'
+    "message":  "Cannot read properties of undefined (reading 'name')",
+    "stack":    "TypeError: …",
+    "resolved": false
+  }
+]`, 'json'))}
+      <p>This isn't something you write to directly — the framework captures it. Two MCP tools read and manage it: <code>pulse_diagnose</code> (optionally filtered to one route) surfaces unresolved entries; <code>pulse_resolve_error</code> clears them once the underlying issue is fixed. <code>/verify</code> checks the journal for the route it's verifying before writing the <code>.pulse-verified</code> stamp — an unresolved error blocks the stamp, and a clean pass auto-resolves the route's entries. The same two checks are reachable with no agent involved — <code>pulse diagnose</code> and <code>pulse resolve-error</code> from a terminal share this exact logic.</p>
+      ${callout('note', 'The journal is a dev-only, build/iterate-time tool — capped at the most recent 50 entries, not a production error tracker. Nothing is written when <code>dev</code> is false, and the client-side reporting endpoint (<code>/__pulse/error</code>) doesn\'t exist outside dev mode either.')}
+
       ${section('reference', 'Reference')}
       ${table(
         ['Property', 'Where', 'Notes'],
@@ -92,6 +109,7 @@ export default {
           ['<code>route: \'*\'</code>', 'spec', 'Custom not-found page — rendered with status 404 when no route matches'],
           ['<code>onViewError</code>', 'spec', 'Fallback HTML when the view throws — returns 200'],
           ['<code>onError</code>', '<code>createServer</code> option', 'HTTP-level handler for unhandled server errors (500s)'],
+          ['<code>.pulse/errors.json</code>', 'dev mode only', 'Rolling error journal — read with <code>pulse_diagnose</code>, cleared with <code>pulse_resolve_error</code>'],
         ]
       )}
     `,

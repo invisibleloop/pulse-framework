@@ -64,8 +64,18 @@ if (fs.existsSync(configPath)) {
   } catch { /* ignore */ }
 }
 
-// Render (and other PaaS platforms) inject PORT — always takes precedence
-port = parseInt(process.env.PORT, 10) || port || 3000
+// Render (and other PaaS platforms) inject PORT — always takes precedence, even
+// over an explicit --port flag. This is correct for real deployment, but it also
+// means a PORT env var set on a local dev machine for unrelated reasons (common
+// in sandboxes, CI runners, some shell profiles) silently overrides the local
+// convention of `pulse start --port 3001` documented for /verify — with no error,
+// just a server on a port nobody asked for. Surface it instead of staying silent.
+const requestedPort = port
+const envPort       = parseInt(process.env.PORT, 10) || null
+port = envPort || port || 3000
+if (envPort && requestedPort && envPort !== requestedPort) {
+  console.error(`⚠  PORT=${envPort} in the environment overrides --port ${requestedPort} — starting on ${envPort} instead.\n   Unset PORT, or don't rely on --port locally while it's set.\n`)
+}
 
 // ---------------------------------------------------------------------------
 // Start

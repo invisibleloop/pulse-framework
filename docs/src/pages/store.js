@@ -113,8 +113,27 @@ export default {
         [
           ['<code>state</code>', 'object', 'Default values. Used as fallbacks when a server fetcher returns <code>undefined</code> or the server key is absent.'],
           ['<code>server</code>', 'object of functions', 'Async fetchers — <code>async (ctx) => value</code>. Receive the same <code>ctx</code> as page server fetchers. Results override <code>state</code> defaults.'],
+          ['<code>mutations</code>', 'object of functions', 'Synchronous client-side updates — same contract as <code>spec.mutations</code>: <code>(storeState, payload?) => Partial&lt;storeState&gt;</code>. Dispatched from any page via <code>data-store-event</code>. Broadcast to every mounted page subscribed to the affected keys.'],
         ]
       )}
+
+      ${section('store-mutations', 'Dispatching store mutations')}
+      <p>Define <code>mutations</code> in <code>pulse.store.js</code> the same way you'd define <code>spec.mutations</code> on a page. Any page can dispatch one with <code>data-store-event</code> — no need to declare the key in <code>spec.store</code> first, since dispatching doesn't read store state, only writes to it:</p>
+      ${codeBlock(highlight(`// pulse.store.js
+export default {
+  state: {
+    settings: { theme: 'dark' },
+  },
+  mutations: {
+    toggleTheme: (store) => ({
+      settings: { ...store.settings, theme: store.settings.theme === 'dark' ? 'light' : 'dark' },
+    }),
+  },
+}`, 'js'))}
+      ${codeBlock(highlight(`<!-- any page — click → store mutation, no spec.store needed to dispatch -->
+<button data-store-event="toggleTheme">Toggle theme</button>
+<select data-store-event="change:setLang">...</select>`, 'html'))}
+      <p>All pages that declare <code>spec.store</code> with the affected key re-render automatically when the mutation runs — no server round-trip, no page reload.</p>
 
       ${section('spec-store-reference', 'spec.store field')}
       ${table(

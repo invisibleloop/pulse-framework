@@ -67,7 +67,7 @@ export default {
 }`, 'js'))}
 
       ${section('placeholders', 'Deferred placeholders')}
-      <p>While deferred segments are loading, Pulse renders a <code>&lt;div id="pulse-slot-[name]"&gt;</code> placeholder in their place. When the segment resolves, the rendered HTML is appended to the stream and a small inline script swaps the placeholder content.</p>
+      <p>While deferred segments are loading, Pulse renders a <code>&lt;pulse-deferred id="pd-[name]"&gt;</code> placeholder in their place. When a segment resolves, its HTML is streamed in a <code>&lt;template&gt;</code> tag alongside a small nonce'd inline script that swaps the placeholder for the template's content — no client JS framework involved, just <code>replaceWith()</code>.</p>
       ${callout('note', 'The swap is done with a tiny inline script — not a separate JS bundle. Deferred streaming works even on pages with no hydration (<code>hydrate</code> omitted).')}
 
       ${section('server-data', 'Server data and streaming')}

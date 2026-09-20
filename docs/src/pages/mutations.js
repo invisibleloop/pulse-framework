@@ -43,8 +43,27 @@ export default {
           ['<code>click</code>', '<code>data-event="mutName"</code>', 'Buttons, links'],
           ['<code>change</code>', '<code>data-event="change:mutName"</code>', 'Select dropdowns, checkboxes'],
           ['<code>input</code>', '<code>data-event="input:mutName"</code>', 'Search/filter fields — add <code>data-debounce="300"</code> to rate-limit'],
+          ['<code>pointerdown</code>', '<code>data-event="pointerdown:mutName"</code>', 'Grabbing a draggable element — starts a drag'],
+          ['<code>pointermove</code>', '<code>data-event="pointermove:mutName"</code>', 'Continuous dragging — fires while the pointer moves'],
+          ['<code>pointerup</code>', '<code>data-event="pointerup:mutName"</code>', 'Releasing a drag — also fires on <code>pointercancel</code>'],
+          ['<code>keydown</code>', '<code>data-event="keydown:mutName"</code>', 'Keyboard shortcuts, arrow-key nudging'],
         ]
       )}
+
+      ${section('drag', 'Continuous drag with pointer events')}
+      <p>Combine <code>pointerdown</code>, <code>pointermove</code>, and <code>pointerup</code> on the same element to implement drag-to-move interactions — dragging a vertex, resizing a panel, moving a slider handle. <code>data-event</code> accepts multiple space-separated bindings on one element, so all three can live together on the draggable node itself:</p>
+      ${codeBlock(highlight(`<circle
+  cx="\${state.x}" cy="\${state.y}" r="8"
+  data-event="pointerdown:startDrag pointermove:dragVertex pointerup:endDrag">
+</circle>`, 'html'))}
+      ${codeBlock(highlight(`mutations: {
+  startDrag: (state) => ({ dragging: true }),
+  dragVertex: (state, e) =>
+    state.dragging ? { x: e.clientX, y: e.clientY } : {},
+  endDrag: (state) => ({ dragging: false }),
+}`, 'js'))}
+      <p><code>pointerdown</code> automatically captures the pointer on its target, so that same element's <code>pointermove</code>/<code>pointerup</code> bindings keep firing even once the cursor moves outside its own bounds — the drag never "lets go" mid-gesture. <code>pointercancel</code> (fired when the browser interrupts the gesture, e.g. a tab switch) is routed to the same mutation as <code>pointerup</code>, so a drag never gets stuck in-progress.</p>
+      ${callout('tip', 'Gate the <code>pointermove</code> mutation on a <code>dragging</code> flag in state so it is a no-op until a drag is actually in progress — pointermove fires on every cursor movement over the bound element, dragging or not.')}
 
       ${section('debounce', 'Debounce and throttle')}
       <p>Add <code>data-debounce="300"</code> alongside <code>data-event</code> to delay the mutation until typing stops. The mutation fires once, 300ms after the last keystroke — not on every character. Use this for live search and filter inputs.</p>
