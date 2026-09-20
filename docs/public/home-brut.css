@@ -120,15 +120,15 @@
 }
 
 .brut-hero-line1 {
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-size: clamp(3.25rem, 7.5vw, 6.75rem);
   display: block;
   color: var(--brut-ink);
 }
 
 .brut-hero-line2 {
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-size: clamp(3.25rem, 7.5vw, 6.75rem);
   display: block;
-  line-height: 1.05;
+  line-height: 1.02;
   margin-top: 0.1em;
 }
 
@@ -269,10 +269,12 @@
 }
 
 .brut-stat-lbl {
-  font-size: 0.78rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
   color: rgba(250, 248, 242, 0.6);
   font-weight: 500;
   line-height: 1.4;
+  letter-spacing: 0.01em;
 }
 
 /* ─── The idea ────────────────────────────────────────────────────────────── */
@@ -326,7 +328,7 @@
   margin-bottom: 1.5rem;
 }
 
-.brut-idea-step h2 {
+.brut-idea-step h3 {
   font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -379,6 +381,103 @@
 /* Code window on dark bg within an otherwise light page — keep it legible */
 .brut-code-block .ui-code-window {
   border: 1px solid rgba(250, 248, 242, 0.14);
+}
+
+/* ─── Review demo section — real pulse_review output, spec + output side by side ── */
+.brut-review-section {
+  background: var(--brut-surface);
+  border-bottom: 2px solid var(--brut-ink);
+  padding: 5rem 2.5rem 6rem;
+}
+
+.brut-review-header {
+  max-width: 640px;
+  margin: 0 auto 3rem;
+  text-align: center;
+}
+
+.brut-review-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--brut-gold-deep);
+  margin-bottom: 0.75rem;
+}
+
+.brut-review-header h2 {
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--brut-ink);
+  margin-bottom: 1rem;
+}
+
+.brut-review-header p {
+  font-size: 1.05rem;
+  color: var(--brut-muted);
+  line-height: 1.7;
+}
+
+.brut-review-header code {
+  font-family: var(--mono);
+  font-size: 0.92em;
+}
+
+.brut-review-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* OS-window treatment: squared corners, solid ink title bar, mono label —
+   more "instrument panel" than the softer macOS chrome used elsewhere. */
+.brut-review-panel .ui-code-window {
+  border: 2px solid var(--brut-ink);
+  border-radius: 0;
+}
+
+.brut-review-panel .ui-code-window-chrome {
+  background: var(--brut-ink);
+  border-bottom: 2px solid var(--brut-ink);
+  padding: 0.55rem 0.9rem;
+}
+
+.brut-review-panel .ui-code-window-dot {
+  display: none;
+}
+
+.brut-review-panel .ui-code-window-filename {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--brut-surface);
+  margin-left: 0;
+}
+
+.brut-review-output {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.brut-review-output .rev-ok {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.brut-review-output .rev-fail {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.brut-review-output .rev-note {
+  color: var(--brut-muted);
 }
 
 /* ─── Constraint / AI section ─────────────────────────────────────────────── */
@@ -511,6 +610,13 @@
   line-height: 1;
   letter-spacing: -0.04em;
   color: var(--brut-surface);
+}
+
+.brut-versus-sub {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--brut-muted);
+  margin-top: 1.25rem;
 }
 
 .brut-table {
@@ -679,7 +785,8 @@
 }
 
 .brut-metrics-sub {
-  font-size: 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
   color: var(--brut-muted);
   margin-bottom: 3rem;
 }
@@ -703,9 +810,10 @@
 }
 
 .brut-metrics-group-label {
+  font-family: var(--mono);
   font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--brut-ink);
@@ -900,6 +1008,13 @@
   .brut-code-header {
     max-width: none;
     position: static;
+  }
+
+  .brut-review-section {
+    padding: 3.5rem 1.5rem 4rem;
+  }
+  .brut-review-panels {
+    grid-template-columns: 1fr;
   }
 
   .brut-pillar {

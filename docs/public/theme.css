@@ -1,34 +1,41 @@
-/* Brut theme tokens — home page only, scoped to [data-theme="light"] on <body> */
+/* Brut theme tokens — pink field / white surface / dark ink. Scoped to
+   [data-theme="light"] on <body>. Pink is the dominant field colour (--bg);
+   white is the accent surface (cards, panels, code windows sit on white
+   against the pink field). Dark sections (nav bar, footer, code panels)
+   stay near-black for contrast — this is not an all-pink reskin. */
 [data-theme="light"] {
-  /* Confident saturated gold — solid block fill (dark ink text sits on top) */
-  --brut-gold: #e8b613;
-  --brut-gold-deep: #c99700;
+  /* Rich pink-magenta accent — passes AA both as text-on-white (6.25:1)
+     and as a background with white text on top (6.25:1); also stays ≥4.5:1
+     as text directly on the field pink below (nudged darker to clear that
+     bar once the field itself deepened). */
+  --brut-gold: #b81f54;
+  --brut-gold-deep: #921941;
   --brut-ink: #171512;
-  --brut-surface: #faf8f2;
-  --brut-surface-2: #f1ede1;
+  --brut-surface: #f7d3dc;
+  --brut-surface-2: #f2c3d0;
   --brut-muted: #5c574c;
   --brut-dark: #171512;
   --brut-darker: #100f0c;
-  --brut-surface-dot: #e6e0d2;
+  --brut-surface-dot: #ecadbf;
 }
 
 /* Site-wide light theme tokens — feeds docs.css's :root token names (--bg,
    --surface, --text, --accent, etc.) and pulse-ui.css's input tokens, so
    every docs page (nav, sidebar, guides, component reference, templates
-   gallery) picks up the same warm/gold/paper palette as the home page. */
+   gallery) picks up the same pink/white/ink palette as the home page. */
 [data-theme="light"] {
   --bg:            var(--brut-surface);
   --surface:       #ffffff;
   --surface-2:     var(--brut-surface-2);
-  --border:        #ddd6c4;
-  --border-subtle: #ece7d9;
+  --border:        #d592a4;
+  --border-subtle: #e8b3c2;
   --text:          var(--brut-ink);
   --muted:         var(--brut-muted);
   --muted-2:       #736b5c;
-  --accent:        #8a6300;
-  --accent-text:   var(--brut-ink);
-  --accent-hover:  #7a5700;
-  --accent-dim:    rgba(201, 151, 0, 0.12);
+  --accent:        var(--brut-gold);
+  --accent-text:   #ffffff;
+  --accent-hover:  var(--brut-gold-deep);
+  --accent-dim:    rgba(184, 31, 84, 0.12);
   --green:         #166534;
   --red:           #b91c1c;
 
@@ -43,7 +50,7 @@
   --tok-punct: #57534e;
 
   /* Sticky header background — replaces the hardcoded rgba(13,13,16,.9) */
-  --header-bg: rgba(250, 248, 242, 0.9);
+  --header-bg: rgba(247, 211, 220, 0.9);
 
   /* Callout / tag accents that were hardcoded dark-theme hex in docs.css */
   --callout-note-icon: #1d4ed8;
