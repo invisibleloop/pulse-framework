@@ -2,6 +2,8 @@ node_modules/
 public/dist/
 docs/public/dist/
 packages/pulse/public/dist/
+benchmark/public/dist/
+companion/public/dist/
 packages/pulse/.pulse-build/
 docs/.pulse-build/
 .DS_Store

@@ -1,5 +1,3 @@
 {
-  "/src/pages/counter.js": "/../benchmark/public/dist/counter.boot-PO6SNSJZ.js",
-  "/src/pages/home.js": "/../benchmark/public/dist/home.boot-YK6VAEQI.js",
-  "_runtime": "/../benchmark/public/dist/runtime-5Y7ESAIB.js"
+  "/src/pages/counter.js": "/dist/counter.boot-HNXBC765.js"
 }
