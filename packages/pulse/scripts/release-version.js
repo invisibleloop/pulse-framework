@@ -11,10 +11,10 @@
  *   feat:                                       →  minor
  *   anything else (fix, perf, chore, docs…)    →  patch
  *
- * Scoped to `-- packages/pulse`: this repo is a monorepo with sibling
- * packages (e.g. packages/tui) sharing the same git history — without the
- * path filter, a commit that only touches packages/tui would incorrectly
- * drive a version bump for the @invisibleloop/pulse framework package.
+ * Scoped to `-- packages/pulse`: this repo is a monorepo where sibling
+ * packages could share the same git history — without the path filter, a
+ * commit that only touches a sibling package would incorrectly drive a
+ * version bump for the @invisibleloop/pulse framework package.
  *
  * Usage: node scripts/release-version.js (run from packages/pulse/)
  */
