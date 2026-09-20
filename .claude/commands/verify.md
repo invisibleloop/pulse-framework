@@ -47,13 +47,25 @@ Then run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop" }`
 
 **Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Performance is measured and reported but is not a hard requirement (it varies with machine load). Report the actual scores. If Accessibility, Best Practices, or SEO is below 100, identify the failing audit(s), fix the issue, and restart from step 3.
 
-Once the run passes the bar, persist it: `pulse save-report --url "http://localhost:3001/<route>" --data '{"scores":{"performance":N,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":N,"cls":N,"fcp":N,"tbt":N}}'` (run from the project root; fill in the real numbers from the audit result — this is a `Bash` call, not an MCP tool). Without this, the score only ever exists in this conversation — nothing lands in `.pulse/reports/` for `pulse report-server` or a companion dashboard to show, no matter how many times `/verify` passes.
+Keep the score numbers from this run — step 7a saves both desktop and mobile together.
 
 ### 7. Lighthouse — mobile *(skip in quick mode)*
 
 The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "mobile" }`.
 
-**Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3. Once it passes, save it the same way as the desktop run in step 6.
+**Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3.
+
+### 7a. Save the Lighthouse reports *(skip in quick mode — do not skip this if you ran steps 6–7)*
+
+**This is a required step, not optional narrative — a Lighthouse run that passes step 6/7 and skips this one leaves no record anywhere except this conversation.** `pulse report-server` and any dashboard watching `.pulse/reports/` (including a companion app) read only what actually got saved to disk; reporting scores in chat is not the same as saving them, no matter how many times `/verify` passes.
+
+Run one `Bash` call per device — **not an MCP tool call**, and run from the project root (the directory containing `pulse.config.js`):
+
+```
+pulse save-report --url "http://localhost:3001/<route>" --data '{"scores":{"performance":<N>,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":<N>,"cls":<N>,"fcp":<N>,"tbt":<N>}}'
+```
+
+Use the real numbers from step 6's result for one call and step 7's result for a second call. `<route>` is the page's route (`/` for the homepage). Confirm each call printed `✓ Report saved for ... (slug: ...)` — if it errored, fix the command and retry before moving on; do not silently continue to step 8 with an unsaved report.
 
 **Stay on the production server (port 3001)** — steps 8 and 9 use it too. Do not call `pulse_restart_server` yet.
 
@@ -107,7 +119,9 @@ If it returns none, continue — `pulse_stamp` in the next step auto-resolves an
 
 ### 14. Write verification stamp
 
-Call `pulse_stamp`. This writes `.pulse-verified` via the MCP server, which is more reliable than the `date +%s` shell command — the MCP write always lands after all spec edits, avoiding the mtime race condition that can cause the stop hook to block immediately after verification. It also marks any error-journal entries for this route as resolved.
+Call `pulse_stamp` with `{ route: "<this page's route>", mode: "full" }` in full mode, or just `{ route: "<this page's route>" }` in quick mode (quick never runs Lighthouse, so there's nothing to check). This writes `.pulse-verified` via the MCP server, which is more reliable than the `date +%s` shell command — the MCP write always lands after all spec edits, avoiding the mtime race condition that can cause the stop hook to block immediately after verification. It also marks any error-journal entries for this route as resolved.
+
+**In full mode, `pulse_stamp` refuses to write the stamp unless it finds a Lighthouse report actually saved for this route in the last 10 minutes** (i.e. step 7a genuinely happened, not just step 6/7's scores existing in this conversation). If it refuses, go back and run the missing `pulse save-report` call(s) from step 7a, then call `pulse_stamp` again — do not work around the refusal any other way.
 
 **This must be the last operation before stopping.** The stop hook compares each edited spec's mtime against this stamp — if any spec is newer than the stamp, the hook blocks. Do not edit any spec file after calling `pulse_stamp`.
 
@@ -119,7 +133,7 @@ Summarise:
 - Console: any errors
 - Review: pass or issues found and fixed
 - Error journal: clean, or resolved N entries
-- **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, mobile layout check, LCP and CLS values
+- **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, whether both were saved via `pulse save-report` (step 7a), mobile layout check, LCP and CLS values
 
 In quick mode, end with: "Quick check passed — run `/verify` when you're ready for the full Lighthouse audit."
 

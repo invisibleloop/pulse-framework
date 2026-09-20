@@ -10,6 +10,7 @@
  *   pulse validate <file>  validate a spec — same check pulse_validate (MCP) runs, no agent needed
  *   pulse diagnose [--route </path>] [--include-resolved]  read the dev-only error journal
  *   pulse resolve-error --id <id> | --route </path>        mark error journal entries resolved
+ *   pulse stamp [--route </path>] [--full|--quick]          write .pulse-verified — same check pulse_stamp (MCP) runs
  *   pulse check-bundles                                     inspect public/dist/ bundle contents (requires prior build)
  *   pulse review <file> [--quick]                           run the mechanized review checklist — same check pulse_review (MCP) runs
  *   pulse update       re-copy pulse-ui.css/js from installed package → public/
@@ -136,6 +137,20 @@ async function runResolveError(root, subArgs) {
   const result = resolveEntries(root, { id, route })
   console.log(formatResolveResult(result))
   process.exit(result.error ? 1 : 0)
+}
+
+// ---------------------------------------------------------------------------
+// pulse stamp — write .pulse-verified, same check pulse_stamp (MCP) runs
+// ---------------------------------------------------------------------------
+
+async function runStamp(root, subArgs) {
+  const { writeStamp, formatStampResult } = await import('./stamp.js')
+  const route = flagValue(subArgs, '--route')
+  const mode  = subArgs.includes('--full') ? 'full' : subArgs.includes('--quick') ? 'quick' : undefined
+
+  const result = writeStamp(root, { route, mode })
+  console.log(formatStampResult(result, { agentFacing: false }))
+  process.exit(result.stamped ? 0 : 1)
 }
 
 // ---------------------------------------------------------------------------
@@ -601,6 +616,7 @@ switch (command) {
     ${c.cyan('validate')} ${c.dim('<file>')}   validate a spec — the same check an agent runs, without an agent
     ${c.cyan('diagnose')}         read the dev-only error journal ${c.dim('(.pulse/errors.json)')}
     ${c.cyan('resolve-error')}    mark error journal entries resolved
+    ${c.cyan('stamp')}            write .pulse-verified ${c.dim('[--route </path>] [--full|--quick]')}
     ${c.cyan('check-bundles')}    inspect public/dist/ bundle contents ${c.dim('(requires prior build)')}
     ${c.cyan('review')} ${c.dim('<file>')}     run the mechanized review checklist ${c.dim('[--quick]')}
     ${c.cyan('update')}           re-copy pulse-ui assets from installed package
@@ -639,6 +655,9 @@ switch (command) {
     break
   case 'resolve-error':
     await runResolveError(CWD, args.slice(1))
+    break
+  case 'stamp':
+    await runStamp(CWD, args.slice(1))
     break
   case 'check-bundles':
     await runCheckBundles(CWD)

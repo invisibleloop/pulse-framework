@@ -41,6 +41,7 @@ import { spawn, spawnSync } from 'child_process'
 import { loadPages } from '../cli/discover.js'
 import { validateContent, validateFile, formatValidationResult } from '../cli/validate.js'
 import { readJournal, formatJournal, resolveEntries, formatResolveResult } from '../cli/diagnose.js'
+import { writeStamp, formatStampResult } from '../cli/stamp.js'
 import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
 import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
 import { killPulseServerOnPort } from '../cli/process-utils.js'
@@ -1431,19 +1432,17 @@ server.registerTool(
 
 Call this as the **last step** of /verify — after Lighthouse desktop + mobile both pass 100/100/100, pulse_review is complete, and no further spec edits will be made.
 
+Pass \`route\` and \`mode: "full"\` (full /verify, not --quick) and this refuses to stamp unless \`pulse save-report\` was actually run for that route in the last 10 minutes — a real Lighthouse run that passed the score bar but was never saved (a documented step this has been silently skipped for before, since prose alone didn't stop it) leaves nothing for \`pulse report-server\` or a companion dashboard to show. Omit \`mode\` (or pass "quick") to skip this check — quick mode never runs Lighthouse, so there is nothing to have saved.
+
+When \`route\` is passed, also marks any unresolved error-journal entries for that route as resolved (a clean pass this far means whatever was flagged either wasn't real or was already fixed by an earlier /verify step) — this previously only happened via the separate pulse_resolve_error tool, despite this tool's own description having claimed it happened here.
+
 The stop hook compares each changed spec's mtime against this stamp. Any spec newer than the stamp blocks the session. Do NOT call this before Lighthouse or before fixing issues found in pulse_review.`,
-    inputSchema: {},
+    inputSchema: {
+      route: z.string().optional().describe('The route just verified, e.g. "/dashboard" — enables the saved-report check and error-journal auto-resolve. Omit only if truly not tied to one route.'),
+      mode:  z.enum(['full', 'quick']).optional().describe('Which /verify mode this is. "full" enforces that a Lighthouse report was actually saved via pulse save-report in the last 10 minutes. Omit or "quick" skips that check.'),
+    },
   },
-  () => {
-    const stampPath = path.join(ROOT, '.pulse-verified')
-    const ts = String(Math.floor(Date.now() / 1000))
-    try {
-      fs.writeFileSync(stampPath, ts, 'utf8')
-      return text(`✓ .pulse-verified written (${ts}). Stop hook cleared — session can end.`)
-    } catch (err) {
-      return text(`Error writing .pulse-verified: ${err.message}\nFallback: run \`date +%s > .pulse-verified\` in Bash.`)
-    }
-  }
+  ({ route, mode } = {}) => text(formatStampResult(writeStamp(ROOT, { route, mode }), { agentFacing: true }))
 )
 
 // ---------------------------------------------------------------------------
