@@ -65,7 +65,7 @@ const agentFlow = `<ol class="hiw-flow">${[
     {
       dot: '✓',
       label: 'Done',
-      content: card({ content: `<strong style="color:var(--ui-text)">The spec is the source of truth</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">Validate clean. Lighthouse 100. Tests passing. Review clear. When all four gates pass, the page is done.</p>` }),
+      content: card({ content: `<strong style="color:var(--ui-text)">The spec is the source of truth</strong><p style="color:var(--ui-muted);margin:.25rem 0 0">Validate clean. Lighthouse 100. Tests passing. Review clear. No unresolved errors in the journal for this route. When every gate passes, the page is done — and the stamp write marks the route's error-journal entries resolved.</p>` }),
     },
   ].map(flowStep).join('')}</ol>`
 
@@ -170,6 +170,9 @@ export default {
 
         <dt><code>pulse_check_contrast</code></dt>
         <dd>Static WCAG contrast checker. Extracts colour variable definitions from a theme file and checks common foreground/background pairings for WCAG AA compliance. Run immediately after writing a theme file to catch palette mistakes before Lighthouse.</dd>
+
+        <dt><code>pulse_check_csp</code></dt>
+        <dd>Resolves the redirect chains of external asset URLs (images, fonts, stylesheets) and returns the complete set of origins the CSP must allow. Many asset hosts redirect to a CDN origin — allowlisting only the URL you wrote still blocks the bytes. Run before the first Lighthouse pass on any page using external assets.</dd>
       </dl>
 
       <h3 class="doc-h3">Scaffolding</h3>
@@ -185,6 +188,9 @@ export default {
 
         <dt><code>pulse_create_action</code></dt>
         <dd>Scaffolds a reusable server action — useful for shared form submission logic, API calls, or mutations that appear on more than one page.</dd>
+
+        <dt><code>pulse_create_tests</code></dt>
+        <dd>Generates a starter test file for a page spec — stubs the formulaic cases (null data, empty arrays, XSS injection, view landmarks, mutation logic, <code>onViewError</code>) so a page starts with coverage scaffolding instead of a blank file.</dd>
       </dl>
 
       <h3 class="doc-h3">Inspection</h3>
@@ -205,16 +211,28 @@ export default {
       <h3 class="doc-h3">Validation &amp; review</h3>
       <dl class="definition-list">
         <dt><code>pulse_validate</code></dt>
-        <dd>Validates a spec against the Pulse schema. Returns errors (which block progress) and warnings (which must also be resolved). The agent calls this after writing or editing every spec file.</dd>
+        <dd>Validates a spec against the Pulse schema. Returns errors (which block progress) and warnings (which must also be resolved). The agent calls this after writing or editing every spec file. The identical check is also reachable from a terminal with no agent involved — <code>pulse validate &lt;file&gt;</code> runs the exact same shared logic and exits non-zero on failure, so it composes with a pre-commit hook or CI just like any other check.</dd>
 
         <dt><code>pulse_suggest</code></dt>
         <dd>Draft-mode feedback — paste a partial or complete spec and get constructive suggestions before running the hard validator. Unlike <code>pulse_validate</code>, it is collaborative rather than a gate: it notices patterns, spots likely omissions, and offers ideas. Used mid-build for a second opinion.</dd>
 
         <dt><code>pulse_review</code></dt>
-        <dd>Switches the agent into reviewer mode. Returns the spec source, the rendered HTML output, and a structured checklist covering accessibility, empty states, error handling, component usage, security, and correctness. The agent reads its own output critically and fixes every issue before continuing.</dd>
+        <dd>Switches the agent into reviewer mode. Returns the spec source, the rendered HTML output, and a structured checklist. Part of that checklist is mechanized — no LLM judgment involved, just a check that passes or fails: a conditionally-rendered modal (<code>state.modalOpen</code>), a POST form missing its CSRF token, a malformed <code>_storeUpdate</code>. The rest — accessibility, empty states, error handling, component usage, broader security — is a structured checklist the agent works through critically. Every issue found is fixed before continuing. The exact same mechanized checks are reachable without an agent: <code>pulse review &lt;file&gt;</code> (add <code>--quick</code> for the lightweight mid-build pass) runs the identical logic from a terminal, reported in plain language rather than as an instruction to an agent.</dd>
 
         <dt><code>pulse_run_tests</code></dt>
         <dd>Runs the project test suite (<code>npm test</code>) and returns the full output. Called after writing or editing specs to verify nothing is broken.</dd>
+
+        <dt><code>pulse_stamp</code></dt>
+        <dd>Writes the <code>.pulse-verified</code> stamp that clears the stop-hook verification gate. Called only as the last step of <code>/verify</code> — after Lighthouse passes on desktop and mobile and <code>pulse_review</code> is complete. A spec edited after the stamp was written blocks the session until verification runs again. Also marks any error-journal entries for the verified route as resolved.</dd>
+
+        <dt><code>pulse_diagnose</code></dt>
+        <dd>Reads the dev-only error journal (<code>.pulse/errors.json</code>) — server errors, SSR view throws, and post-hydration client view/action failures that would otherwise only appear as a <code>console.error</code> line no one's watching. Optionally filtered to one route. <code>/verify</code> calls this automatically before stamping a page; call it directly when something seems broken and the cause isn't obvious. Also reachable without an agent: <code>pulse diagnose [--route /path] [--include-resolved]</code> from the terminal, and <code>pulse resolve-error --id &lt;id&gt;</code> (or <code>--route</code>) to clear entries — both share this exact logic.</dd>
+
+        <dt><code>pulse_resolve_error</code></dt>
+        <dd>Marks journal entries resolved after fixing the underlying issue — by <code>id</code> or by <code>route</code> (every unresolved entry for that page at once). <code>pulse_stamp</code> already does this automatically for the route it verifies, so this is mainly for clearing an entry outside the <code>/verify</code> loop.</dd>
+
+        <dt><code>pulse_await_approval</code></dt>
+        <dd>Pauses the workflow gates for one turn-end, for a legitimate stopping point — a design-approval question, a progress update mid-verification. Lets the agent end its turn without the Stop hooks demanding <code>/verify</code> first. Consumed automatically on the user's next message; the gates return in full force after.</dd>
       </dl>
 
       <h3 class="doc-h3">Server &amp; maintenance</h3>
@@ -224,6 +242,9 @@ export default {
 
         <dt><code>pulse_build</code></dt>
         <dd>Builds the project for production. Bundles specs, hashes assets, and writes the manifest. Called when the agent needs to verify the production build or prepare a release.</dd>
+
+        <dt><code>pulse_check_bundles</code></dt>
+        <dd>Inspects what's actually inside the generated bundle files after <code>pulse_build</code> — not just their sizes. Lighthouse checks scores; this checks content. Flags a boot bundle generated for a page that doesn't need one (no mutations/actions/persist — should ship zero client JS), and a literal Node built-in reference inside a bundle (server-only code, e.g. a persistence layer using <code>node:fs</code>, that leaked through stripping instead of being caught by the build). Run as part of the full <code>/verify</code> pass, right after <code>pulse_build</code>. Also reachable without an agent: <code>pulse check-bundles</code> after <code>pulse build</code> runs this exact check from the terminal.</dd>
 
         <dt><code>pulse_check_version</code></dt>
         <dd>Reports the installed Pulse version and whether an update is available.</dd>
