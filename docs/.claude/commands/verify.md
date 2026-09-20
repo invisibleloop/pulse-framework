@@ -47,11 +47,13 @@ Then run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop" }`
 
 **Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Performance is measured and reported but is not a hard requirement (it varies with machine load). Report the actual scores. If Accessibility, Best Practices, or SEO is below 100, identify the failing audit(s), fix the issue, and restart from step 3.
 
+Once the run passes the bar, persist it: `pulse save-report --url "http://localhost:3001/<route>" --data '{"scores":{"performance":N,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":N,"cls":N,"fcp":N,"tbt":N}}'` (run from the project root; fill in the real numbers from the audit result — this is a `Bash` call, not an MCP tool). Without this, the score only ever exists in this conversation — nothing lands in `.pulse/reports/` for `pulse report-server` or a companion dashboard to show, no matter how many times `/verify` passes.
+
 ### 7. Lighthouse — mobile *(skip in quick mode)*
 
 The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "mobile" }`.
 
-**Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3.
+**Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3. Once it passes, save it the same way as the desktop run in step 6.
 
 **Stay on the production server (port 3001)** — steps 8 and 9 use it too. Do not call `pulse_restart_server` yet.
 
