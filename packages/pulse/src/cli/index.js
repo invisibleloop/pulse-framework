@@ -23,6 +23,7 @@
 import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
+import { killPulseServerOnPort } from './process-utils.js'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -370,7 +371,6 @@ async function launchCopilotSession(root, mcpServerPath, spawn, os) {
 // ---------------------------------------------------------------------------
 
 async function runStop(root) {
-  const { execSync } = await import('child_process')
   let port = 3000
   const configPath = path.join(root, 'pulse.config.js')
   if (fs.existsSync(configPath)) {
@@ -379,13 +379,25 @@ async function runStop(root) {
       if (mod.default?.port) port = mod.default.port
     } catch { /* use default */ }
   }
-  try {
-    // Kill the dev server AND the local production server (dev port + 1) —
-    // pulse_build spawns the prod server detached, so without this it lingers
-    // after the session and blocks the next build's Lighthouse run.
-    execSync(`lsof -ti:${port} | xargs kill -9 2>/dev/null; lsof -ti:${port + 1} | xargs kill -9 2>/dev/null; true`, { stdio: 'inherit' })
-    console.log(`\n⚡ Servers on ports ${port} (dev) and ${port + 1} (prod) stopped.\n`)
-  } catch { /* nothing was running */ }
+  // Kill the dev server AND the local production server (dev port + 1) —
+  // pulse_build spawns the prod server detached, so without this it lingers
+  // after the session and blocks the next build's Lighthouse run. Only
+  // kills a process that's actually a Pulse server — see
+  // killPulseServerOnPort's doc comment for why: a blind lsof|kill on the
+  // port used to kill whatever else happened to be listening there.
+  const dev  = killPulseServerOnPort(port)
+  const prod = killPulseServerOnPort(port + 1)
+  const stopped = [
+    ...(dev.killed.length  ? [`${port} (dev)`]     : []),
+    ...(prod.killed.length ? [`${port + 1} (prod)`] : []),
+  ]
+  if (stopped.length > 0) console.log(`\n⚡ Server${stopped.length > 1 ? 's' : ''} on ${stopped.join(' and ')} stopped.\n`)
+  for (const skipped of [...dev.skipped, ...prod.skipped]) {
+    console.log(`⚠  Left PID ${skipped.pid} running — not a Pulse server: ${skipped.command}`)
+  }
+  if (stopped.length === 0 && dev.skipped.length === 0 && prod.skipped.length === 0) {
+    console.log('\nNothing running on those ports.\n')
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -36,13 +36,14 @@ import { z }                   from 'zod'
 import path                      from 'path'
 import fs                        from 'fs'
 import http                      from 'http'
-import { execFileSync, spawn, spawnSync } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 
 import { loadPages } from '../cli/discover.js'
 import { validateContent, validateFile, formatValidationResult } from '../cli/validate.js'
 import { readJournal, formatJournal, resolveEntries, formatResolveResult } from '../cli/diagnose.js'
 import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
 import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
+import { killPulseServerOnPort } from '../cli/process-utils.js'
 
 // ---------------------------------------------------------------------------
 // Crash guards — an uncaught error in any tool handler must not kill the
@@ -1258,8 +1259,19 @@ server.registerTool(
       return text(`Dev server specs reloaded (hot) on port ${port}`)
     }
 
-    // Slow path — server not running or unresponsive, do a full kill/restart
-    try { execFileSync('sh', ['-c', `lsof -ti:${port} | xargs kill -9 2>/dev/null; true`]) } catch { /* nothing running */ }
+    // Slow path — server not running or unresponsive, do a full kill/restart.
+    // Only kill a process on this port if it's actually a Pulse server — see
+    // killPulseServerOnPort's doc comment. If something else owns the port,
+    // report that instead of starting a second server that will just fail
+    // to bind (or, worse, silently kill someone else's unrelated process).
+    const { killed, skipped } = killPulseServerOnPort(port)
+    if (skipped.length > 0 && killed.length === 0) {
+      return text(
+        `Port ${port} is occupied by a process that is not a Pulse server — refusing to kill it:\n` +
+        skipped.map(s => `  PID ${s.pid}: ${s.command}`).join('\n') +
+        `\n\nFree the port yourself, or set a different port in pulse.config.js.`
+      )
+    }
 
     const devScript = new URL('../cli/dev.js', import.meta.url).pathname
     const proc = spawn(process.execPath, [devScript, '--root', ROOT], { detached: true, stdio: 'ignore' })
@@ -1303,8 +1315,17 @@ server.registerTool(
       return resolve(text(`Build failed:\n${build.stderr || build.stdout}`))
     }
 
-    // Kill anything on prodPort
-    try { execFileSync('sh', ['-c', `lsof -ti:${prodPort} | xargs kill -9 2>/dev/null; true`]) } catch { /* ok */ }
+    // Kill only a Pulse server on prodPort — see killPulseServerOnPort's doc
+    // comment. Refuse (don't kill, don't start a second server on the same
+    // port) if something else owns it.
+    const { killed: prodKilled, skipped: prodSkipped } = killPulseServerOnPort(prodPort)
+    if (prodSkipped.length > 0 && prodKilled.length === 0) {
+      return resolve(text(
+        `Build succeeded, but port ${prodPort} is occupied by a process that is not a Pulse server — refusing to kill it:\n` +
+        prodSkipped.map(s => `  PID ${s.pid}: ${s.command}`).join('\n') +
+        `\n\nFree the port yourself, or set a different port in pulse.config.js.`
+      ))
+    }
 
     // Start prod server detached on prodPort
     const startScript = new URL('../cli/start.js', import.meta.url).pathname
