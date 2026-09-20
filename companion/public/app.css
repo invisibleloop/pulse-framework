@@ -1,0 +1,33 @@
+.companion-header {
+  padding: 2rem 1.5rem 0;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.companion-header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ui-text);
+  margin: 0 0 0.35rem;
+}
+
+.companion-sub {
+  font-family: var(--ui-mono);
+  font-size: 0.85rem;
+  color: var(--ui-muted);
+  margin: 0;
+}
+
+.lh-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.lh-meta {
+  font-size: 0.8rem;
+  color: var(--ui-muted);
+  margin: 0;
+}
