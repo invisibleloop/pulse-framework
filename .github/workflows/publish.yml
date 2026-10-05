@@ -30,7 +30,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/pulse
-          VERSION=$(node scripts/release-version.js)
+          VERSION=$(node ../../scripts/release-version.js)
           # Fallback: if this exact version is somehow already on npm, bump patch
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
