@@ -31,11 +31,9 @@ import { stack }       from './stack.js'
 import { cluster }     from './cluster.js'
 import { divider }     from './divider.js'
 import { media }       from './media.js'
-import { fieldset }    from './fieldset.js'
 import { slider }     from './slider.js'
 import { toggle }     from './switch.js'
 import { radio, radioGroup } from './radio.js'
-import { segmented }  from './segmented.js'
 import { fileUpload } from './fileupload.js'
 import { modal, modalTrigger } from './modal.js'
 import { uiImage }             from './uiimage.js'
@@ -806,40 +804,6 @@ test('media: gap lg adds modifier class', () => {
   assert.match(media({ image: '', content: '', gap: 'lg' }), /ui-media--gap-lg/)
 })
 
-// ---------------------------------------------------------------------------
-// fieldset
-// ---------------------------------------------------------------------------
-
-test('fieldset: renders fieldset element', () => {
-  assert.match(fieldset({ legend: 'Address', content: '<p>fields</p>' }), /<fieldset/)
-})
-
-test('fieldset: renders legend', () => {
-  assert.match(fieldset({ legend: 'Billing', content: '' }), /ui-fieldset-legend/)
-  assert.match(fieldset({ legend: 'Billing', content: '' }), /Billing/)
-})
-
-test('fieldset: no legend element when omitted', () => {
-  assert.doesNotMatch(fieldset({ content: 'fields' }), /ui-fieldset-legend/)
-})
-
-test('fieldset: renders content in body', () => {
-  assert.match(fieldset({ content: '<input>' }), /ui-fieldset-body/)
-  assert.match(fieldset({ content: '<input>' }), /<input>/)
-})
-
-test('fieldset: gap lg adds modifier class', () => {
-  assert.match(fieldset({ gap: 'lg', content: '' }), /ui-fieldset--gap-lg/)
-})
-
-test('fieldset: no gap modifier for default md', () => {
-  assert.doesNotMatch(fieldset({ content: '' }), /ui-fieldset--gap/)
-})
-
-test('fieldset: escapes legend to prevent XSS', () => {
-  assert.match(fieldset({ legend: '<script>bad</script>', content: '' }), /&lt;script&gt;/)
-})
-
 // ─── slider ──────────────────────────────────────────────────────────────────
 
 test('slider: renders range input with label', () => {
@@ -987,45 +951,6 @@ test('radioGroup: error renders role=alert', () => {
   const html = radioGroup({ name: 'x', options: [], error: 'Pick one' })
   assert.match(html, /role="alert"/)
   assert.match(html, /Pick one/)
-})
-
-// ─── segmented ───────────────────────────────────────────────────────────────
-
-test('segmented: renders radio inputs for each option', () => {
-  const html = segmented({ name: 'tab', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] })
-  const inputs = [...html.matchAll(/type="radio"/g)]
-  assert.equal(inputs.length, 2)
-  assert.match(html, /name="tab"/)
-})
-
-test('segmented: marks selected value as checked', () => {
-  const html = segmented({ name: 'x', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }], value: 'b' })
-  assert.match(html, /value="b"[\s\S]*?checked/)
-})
-
-test('segmented: event prop renders data-event on all inputs', () => {
-  const html = segmented({ name: 'x', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }], event: 'change:setTab' })
-  const matches = [...html.matchAll(/data-event="change:setTab"/g)]
-  assert.equal(matches.length, 2)
-})
-
-test('segmented: no data-event when event not provided', () => {
-  const html = segmented({ name: 'x', options: [{ value: 'a', label: 'A' }] })
-  assert.doesNotMatch(html, /data-event/)
-})
-
-test('segmented: size sm adds modifier class', () => {
-  assert.match(segmented({ name: 'x', options: [], size: 'sm' }), /ui-segmented--sm/)
-})
-
-test('segmented: size lg adds modifier class', () => {
-  assert.match(segmented({ name: 'x', options: [], size: 'lg' }), /ui-segmented--lg/)
-})
-
-test('segmented: disabled applies to all inputs', () => {
-  const html = segmented({ name: 'x', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }], disabled: true })
-  const matches = [...html.matchAll(/disabled/g)]
-  assert.ok(matches.length >= 2)
 })
 
 // ─── fileUpload ───────────────────────────────────────────────────────────────

@@ -277,14 +277,6 @@ export interface ModalTriggerProps {
 }
 export function modalTrigger(props?: ModalTriggerProps): string
 
-export interface TooltipProps {
-  content?: string
-  trigger?: string
-  position?: 'top' | 'bottom' | 'left' | 'right'
-  class?:   string
-}
-export function tooltip(props?: TooltipProps): string
-
 // ---------------------------------------------------------------------------
 // Data display
 // ---------------------------------------------------------------------------
@@ -406,19 +398,6 @@ export interface SliderProps {
   class?:     string
 }
 export function slider(props?: SliderProps): string
-
-export interface SegmentedOption {
-  label: string
-  value: string
-}
-export interface SegmentedProps {
-  name?:    string
-  options?: Array<string | SegmentedOption>
-  value?:   string
-  event?:   string
-  class?:   string
-}
-export function segmented(props?: SegmentedProps): string
 
 export interface RadioOption {
   label: string
