@@ -19,8 +19,8 @@
 
 import {
   nav, footer, button, input, stat, cta, card, badge,
-} from '../src/ui/index.js'
-import { iconMapPin, iconPhone, iconClock, iconSend, iconStar } from '../src/ui/icons.js'
+} from '../packages/pulse/src/ui/index.js'
+import { iconMapPin, iconPhone, iconClock, iconSend, iconStar } from '../packages/pulse/src/ui/icons.js'
 
 // ---------------------------------------------------------------------------
 // Static data

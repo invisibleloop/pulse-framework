@@ -131,7 +131,7 @@ export default {
 }`, 'js'))}
 
       ${section('webhooks', 'Webhook handler')}
-      <p>Stripe sends signed POST requests to your webhook endpoint. Use a raw response spec to verify the signature and handle events. The raw body is required for signature verification — access it via <code>ctx.rawBody</code> if your server is configured to populate it, or read it from the request stream.</p>
+      <p>Stripe sends signed POST requests to your webhook endpoint. Use a raw response spec to verify the signature and handle events. Signature verification needs the raw, unparsed body — use <code>ctx.buffer()</code>, not <code>ctx.json()</code>, since Stripe's SDK hashes the exact bytes it sent.</p>
       ${codeBlock(highlight(`// src/pages/webhooks/stripe.js
 import Stripe from 'stripe'
 
@@ -145,7 +145,7 @@ export default {
   server: {
     event: async (ctx) => {
       const sig  = ctx.headers['stripe-signature']
-      const body = ctx.rawBody // raw Buffer — see note below
+      const body = await ctx.buffer()   // raw Buffer — required for signature verification
 
       try {
         return stripe.webhooks.constructEvent(body, sig, webhookSecret)
@@ -176,7 +176,7 @@ export default {
   },
 }`, 'js'))}
 
-      ${callout('warning', 'Stripe signature verification requires the raw request body before JSON parsing. Configure your Pulse server with <code>onRequest</code> to capture <code>ctx.rawBody</code> for the webhook route, or use a dedicated webhook path handled before Pulse\'s request pipeline.')}
+      ${callout('warning', 'Body-parsing methods are lazy and memoised per request — calling <code>ctx.buffer()</code> in the fetcher above is safe even though other code on the same request might also read the body; the underlying stream is only consumed once.')}
 
       ${section('reference', 'Pattern summary')}
       ${table(

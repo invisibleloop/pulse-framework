@@ -10,7 +10,7 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/products
  */
 
-import { badge, button, empty, card, heading, search, select, uiImage } from '../src/ui/index.js'
+import { badge, button, empty, card, heading, search, select, uiImage } from '../packages/pulse/src/ui/index.js'
 import { examplesNav } from './shared.js'
 
 function esc(s) {

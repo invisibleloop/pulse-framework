@@ -39,6 +39,7 @@ await createServer(entries, options)`, 'js'))}
           ['<code>port</code>', '<code>number</code>', '<code>3000</code>', 'Port to listen on.'],
           ['<code>stream</code>', '<code>boolean</code>', '<code>true</code>', 'Enable streaming SSR globally. Individual specs also declare a <code>stream</code> field to opt in.'],
           ['<code>staticDir</code>', '<code>string</code>', '<code>undefined</code>', 'Path to a directory of static files to serve. Relative to the process working directory.'],
+          ['<code>staticCache</code>', '<code>boolean | number | object</code>', '<code>null</code>', 'Cache-Control for static files served from <code>staticDir</code> (excludes <code>/dist/</code>, which is always immutable/1yr). Default without this option: <code>public, max-age=3600</code>. Same shape as <code>defaultCache</code>.'],
           ['<code>manifest</code>', '<code>string | object</code>', '<code>null</code>', 'Explicit manifest path or object. Overrides auto-detection from <code>staticDir/dist/manifest.json</code>.'],
           ['<code>trailingSlash</code>', '<code>"remove" | "add" | "allow"</code>', '<code>"remove"</code>', '<code>"remove"</code> — 301 redirect <code>/about/</code> → <code>/about</code>. <code>"add"</code> — 301 redirect <code>/about</code> → <code>/about/</code>. <code>"allow"</code> — serve both, no redirect.'],
           ['<code>root</code>', '<code>URL | string</code>', '<code>process.cwd()</code>', 'Project root used to derive browser-importable paths from URL entries. Pass <code>new URL(\'.\', import.meta.url)</code> for a CWD-independent value.'],
@@ -184,6 +185,7 @@ await createServer(specs, {
   view: () => \`<form method="POST">...</form>\`,
 }`, 'js'))}
       ${callout('note', 'Raw response specs (<code>contentType</code> set) accept any HTTP method without <code>spec.methods</code> — they are always method-agnostic.')}
+      ${callout('warning', 'This <code>guard</code>-based POST pattern has <strong>no CSRF protection</strong> — Pulse\'s automatic CSRF token is only wired up for <code>spec.submit</code> pages. Prefer <code>spec.submit</code> (see <code>pulse://guide/server</code>) for any form that mutates data; reach for this pattern only for POST endpoints with their own authentication (signed webhooks, bearer-token APIs) where CSRF doesn\'t apply.')}
 
       ${section('escaping', 'Escaping user data')}
       <p>Import <code>escHtml</code> from <code>@invisibleloop/pulse/html</code> to safely embed untrusted values in HTML view strings:</p>
@@ -243,7 +245,7 @@ Cross-Origin-Resource-Policy: same-origin`, 'bash'))}
       <p>This is automatic — no configuration required. On plain HTTP the header is omitted. The <code>preload</code> directive means you can submit the domain to <a href="https://hstspreload.org" target="_blank" rel="noopener" aria-label="hstspreload.org (opens in new tab)">hstspreload.org</a> so browsers enforce HTTPS before the first connection — this is a separate manual step, not automatic.</p>
 
       ${section('cookies', 'Cookie defaults')}
-      <p>Cookies set via <code>ctx.setCookie()</code> default to <code>SameSite=Lax</code>. CSRF protection is on by default — omitting a <code>sameSite</code> option does not weaken it.</p>
+      <p>Cookies set via <code>ctx.setCookie()</code> default to <code>SameSite=Lax</code>. This is separate from CSRF protection, which is a distinct mechanism scoped to <code>spec.submit</code> pages (an HMAC double-submit token, enforced automatically — see <code>pulse://guide/server</code>) — it is not derived from cookie <code>sameSite</code> settings, and setting a cookie on a non-<code>submit</code> route gets no CSRF coverage from that alone.</p>
 
       ${section('compression', 'Compression')}
       <p>Pulse compresses all compressible responses using brotli (preferred) or gzip (fallback), based on the <code>Accept-Encoding</code> header. Streaming responses use transform streams so compression and delivery happen concurrently.</p>

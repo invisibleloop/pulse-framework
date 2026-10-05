@@ -17,7 +17,7 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/bookworms
  */
 
-import { nav, button, footer } from '../src/ui/index.js'
+import { nav, button, footer } from '../packages/pulse/src/ui/index.js'
 
 // ---------------------------------------------------------------------------
 // Static data

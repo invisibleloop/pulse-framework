@@ -58,14 +58,23 @@ createServer([home], {
       )}
 
       ${section('raw-server', 'Accessing the raw server')}
-      <p><code>createServer</code> returns a <code>{ server }</code> object where <code>server</code> is a plain Node.js <code>http.Server</code>. You can attach any listener to it directly.</p>
-      ${codeBlock(highlight(`const { server } = createServer([home], { port: 3000 })
+      <p><code>createServer</code> returns more than just the server. <code>server</code> is a plain Node.js <code>http.Server</code> you can attach any listener to directly — but <code>shutdown</code> and <code>pushStore</code> are also part of the return value and are the ones you'll actually reach for:</p>
+      ${codeBlock(highlight(`const { server, shutdown, pushStore } = createServer([home], { port: 3000, live: true })
 
 // The server instance is available immediately after createServer() returns.
 // It starts listening automatically — no need to call server.listen().
 server.on('listening', () => {
   console.log('ready')
-})`, 'js'))}
+})
+
+// shutdown() triggers the same graceful-shutdown sequence as SIGTERM —
+// useful in tests or a custom process manager. Idempotent.
+// shutdown()
+
+// pushStore(partial) broadcasts a store patch to every connected browser —
+// only present when live: true. See the Global Store guide.
+// pushStore({ stock: 42 })`, 'js'))}
+      ${callout('note', 'Also returned: <code>updateSpecs(newSpecs)</code> and <code>updateStore(newStoreDef)</code> — used internally by the dev server for hot-reloading page and store definitions without a full restart. Not typically called directly in application code.')}
 
       ${section('websockets', 'WebSockets')}
       <p>Use the <code>upgrade</code> event on the server instance. The <code>ws</code> package handles the WebSocket handshake and framing.</p>

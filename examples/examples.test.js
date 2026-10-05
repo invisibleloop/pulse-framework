@@ -9,7 +9,7 @@
 
 import { test } from 'node:test'
 import assert    from 'node:assert/strict'
-import { renderSync, render } from '../src/testing/index.js'
+import { renderSync, render } from '../packages/pulse/src/testing/index.js'
 
 import counter  from './counter.js'
 import todos    from './todos.js'

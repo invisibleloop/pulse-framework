@@ -16,7 +16,7 @@
 import {
   nav, button, footer, card, grid,
   iconZap, iconShield, iconCheck, iconPhone, iconMail, iconHome, iconClock, iconSettings, iconAlertTriangle, iconStar,
-} from '../../../../src/ui/index.js'
+} from '../../../../packages/pulse/src/ui/index.js'
 import { asset } from '../../lib/layout.js'
 
 const PHONE      = '01623 555 014'

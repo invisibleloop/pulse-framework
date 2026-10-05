@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table, callout } from '../../lib/layout.js'
-import { toggle, stack } from '../../../../src/ui/index.js'
+import { toggle, stack } from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/toggle')
 

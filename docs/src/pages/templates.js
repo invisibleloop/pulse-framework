@@ -6,7 +6,7 @@
 
 import { renderLayout, h1, lead, section } from '../lib/layout.js'
 import { prevNext }                        from '../lib/nav.js'
-import { badge }                           from '../../../src/ui/index.js'
+import { badge }                           from '../../../packages/pulse/src/ui/index.js'
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -176,7 +176,7 @@ const TEMPLATES = [
       'Best Practices': '100',
       'SEO':           '100',
       'CLS':           '0.00',
-      'JS':            '~4.2 kB',
+      'JS':            '< 6 kB',
     },
   },
   {
@@ -190,7 +190,7 @@ const TEMPLATES = [
       'Best Practices': '100',
       'SEO':           '100',
       'CLS':           '0.00',
-      'JS':            '~4.2 kB',
+      'JS':            '< 6 kB',
     },
   },
   {
@@ -512,6 +512,9 @@ const content = `
   ${section('design-directions', 'Design directions')}
   <p>Templates give you the structure. The <a href="/meta#vibe">meta.vibe</a> system gives you the personality. Combine a template with a vibe to get a page that feels right for the product — not just correct.</p>
   <p style="margin-top:0.75rem">When building a new site, ask: <em>what kind of business is this?</em> A dog groomer and a SaaS dashboard have the same sections but completely different aesthetics. Use the design directions guide (<code>pulse://guide/design-references</code>) to make that decision consciously.</p>
+
+  ${section('adapting', 'How a template becomes your page')}
+  <p>These aren't files to copy by hand — an agent adapts one for you. Tell it which template fits (or just describe the product; it can match one itself), give it your name, copy, and brand colours, and it substitutes them into the template's spec, registers the page, and verifies it the same way it verifies anything it builds. This runs as a lighter-weight pass than a from-scratch build — one confirmation of what's being substituted, not the full plan-and-approval cycle — because the template's structure and quality bar are already established.</p>
 
   ${section('adding', 'Suggesting a template')}
   <p>Have an idea for a template? <a href="https://github.com/invisibleloop/pulse-framework/issues" target="_blank" rel="noopener noreferrer">Open an issue on GitHub</a> with the layout you have in mind and we'll consider adding it to the library.</p>

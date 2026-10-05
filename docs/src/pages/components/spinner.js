@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
-import { spinner, button, cluster } from '../../../../src/ui/index.js'
+import { spinner, button, cluster } from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/spinner')
 

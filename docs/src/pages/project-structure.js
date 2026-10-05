@@ -27,7 +27,7 @@ export default {
 │   ├── app.css
 │   └── dist/              # generated bundles (pulse build)
 │       ├── manifest.json
-│       ├── runtime-[hash].js
+│       ├── chunk-[hash].js    # shared code, when pages share imports
 │       └── [name].boot-[hash].js
 └── src/
     ├── pages/             # one file per page — auto-discovered

@@ -11,7 +11,7 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/todos
  */
 
-import { button, card, checkbox, empty, input, section, container, stack, cluster } from '../src/ui/index.js'
+import { button, card, checkbox, empty, input, section, container, stack, cluster } from '../packages/pulse/src/ui/index.js'
 import { examplesNav } from './shared.js'
 
 function esc(s) {

@@ -335,11 +335,11 @@ a:hover {
 
 .btn-accent {
   background: var(--accent);
-  color: #0d0d10;
+  color: var(--accent-text);
 }
 .btn-accent:hover {
   background: var(--accent-hover);
-  color: #0d0d10;
+  color: var(--accent-text);
   transform: translateY(-1px);
 }
 

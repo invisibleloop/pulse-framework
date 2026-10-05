@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
-import { modal } from '../../../../src/ui/index.js'
+import { modal } from '../../../../packages/pulse/src/ui/index.js'
 import {
   button, feature,
   iconArrowLeft, iconArrowRight, iconArrowUp, iconArrowDown,
@@ -25,7 +25,7 @@ import {
   iconUtensils, iconCoffee, iconPizza, iconApple, iconCarrot,
   iconWine, iconCakeSlice, iconFish, iconCherry, iconEgg,
   iconCookie, iconIceCream, iconCroissant, iconSalad, iconWheat,
-} from '../../../../src/ui/index.js'
+} from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/icons')
 

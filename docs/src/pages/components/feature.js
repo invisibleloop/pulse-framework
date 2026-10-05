@@ -1,8 +1,8 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table } from '../../lib/layout.js'
-import { feature } from '../../../../src/ui/index.js'
-import { iconZap, iconLock, iconPhone } from '../../../../src/ui/icons.js'
+import { feature } from '../../../../packages/pulse/src/ui/index.js'
+import { iconZap, iconLock, iconPhone } from '../../../../packages/pulse/src/ui/icons.js'
 
 const { prev, next } = prevNext('/components/feature')
 

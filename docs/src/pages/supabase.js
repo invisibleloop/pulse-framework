@@ -87,6 +87,7 @@ export default {
       <p>Supabase Auth issues a JWT access token and a refresh token on login. Store both in <code>httpOnly</code> cookies — they are never accessible to JavaScript and survive page navigations.</p>
 
       ${section('login', 'Login page')}
+      <p>Setting an <code>httpOnly</code> cookie requires a server response header — something a client-side <code>action</code> can never touch, since actions run entirely in the browser and only return state. Use <code>spec.submit</code> instead: it's a plain server-side POST handler with a real <code>ctx</code>, so it can call <code>ctx.setCookie</code> directly.</p>
       ${codeBlock(highlight(`// src/pages/auth/login.js
 import { supabase } from '../../lib/supabase.js'
 import { escHtml } from '@invisibleloop/pulse/html'
@@ -99,55 +100,41 @@ export default {
     if (ctx.cookies.access_token) return { redirect: '/dashboard' }
   },
 
-  state: { status: 'idle', error: '' },
+  state: {},
 
-  view: (state) => \`
+  submit: async (ctx) => {
+    const data = await ctx.formData()
+    const { data: authData, error } = await supabase().auth.signInWithPassword({
+      email:    data?.email,
+      password: data?.password,
+    })
+    if (error) return { error: error.message, values: { email: data?.email ?? '' } }
+
+    const opts = { httpOnly: true, sameSite: 'Lax', path: '/' }
+    ctx.setCookie('access_token',  authData.session.access_token,  { ...opts, maxAge: 3600 })
+    ctx.setCookie('refresh_token', authData.session.refresh_token, { ...opts, maxAge: 604800 })
+    return { redirect: '/dashboard' }
+  },
+
+  view: (state, server) => \`
     <main id="main-content">
       <h1>Sign in</h1>
-      <form data-action="login">
+      <form method="POST">
+        \${server.csrf}
         <label for="email">Email</label>
-        <input id="email" name="email" type="email" required autocomplete="email">
+        <input id="email" name="email" type="email" required autocomplete="email" value="\${escHtml(server.form?.values?.email ?? '')}">
 
         <label for="password">Password</label>
         <input id="password" name="password" type="password" required autocomplete="current-password">
 
-        \${state.error ? \`<p role="alert">\${escHtml(state.error)}</p>\` : ''}
+        \${server.form?.error ? \`<p role="alert">\${escHtml(server.form.error)}</p>\` : ''}
 
-        <button type="submit">
-          \${state.status === 'loading' ? 'Signing in…' : 'Sign in'}
-        </button>
+        <button type="submit">Sign in</button>
       </form>
     </main>
   \`,
-
-  actions: {
-    login: {
-      onStart: () => ({ status: 'loading', error: '' }),
-
-      run: async (_state, _server, formData) => {
-        const { data, error } = await supabase().auth.signInWithPassword({
-          email:    formData.get('email'),
-          password: formData.get('password'),
-        })
-        if (error) throw new Error(error.message)
-        return data.session
-      },
-
-      onSuccess: (state, session, ctx) => {
-        const opts = { httpOnly: true, sameSite: 'Lax', path: '/' }
-        ctx.setCookie('access_token',  session.access_token,  { ...opts, maxAge: 3600 })
-        ctx.setCookie('refresh_token', session.refresh_token, { ...opts, maxAge: 604800 })
-        ctx.setHeader('Location', '/dashboard')
-        return { status: 'success' }
-      },
-
-      onError: (_state, err) => ({
-        status: 'idle',
-        error:  err.message || 'Sign in failed',
-      }),
-    },
-  },
 }`, 'js'))}
+      ${callout('note', '<code>${server.csrf}</code> is required inside the form — a POST without the token is rejected with 403. This is enforced automatically for every <code>spec.submit</code> page; there is nothing to configure.')}
 
       ${section('guard', 'Protecting routes')}
       <p>Use <code>guard</code> to verify the session before any server data is fetched. Pass the token to your fetchers so Supabase enforces Row Level Security for that user.</p>

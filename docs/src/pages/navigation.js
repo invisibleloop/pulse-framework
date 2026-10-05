@@ -41,23 +41,40 @@ import { initNavigation } from '@invisibleloop/pulse/navigate'
 mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
 initNavigation(root, mount)`, 'js'))}
 
-      ${section('json-response', 'JSON response shape')}
-      <p>When Pulse receives a request with <code>X-Pulse-Navigate: true</code>, it renders the page and returns:</p>
+      ${section('json-response', 'Response shape')}
+      <p>When Pulse receives a request with <code>X-Pulse-Navigate: true</code>, it renders the page and responds one of two ways, depending on whether the page has deferred streaming segments (<code>spec.stream.deferred</code>).</p>
+
+      <h3 class="doc-h3">Most pages — a single JSON object</h3>
+      <p>Pages with no <code>spec.stream.deferred</code> segments get one buffered JSON response:</p>
       ${codeBlock(highlight(`{
   "html":        "<main>...the page content...</main>",
   "title":       "New Page Title — Site",
+  "styles":      ["/app.css"],
+  "scripts":     [],
   "hydrate":     "/dist/new-page.boot-abc123.js",
-  "serverState": { "key": "value" }
+  "serverState": { "key": "value" },
+  "storeState":  { "user": { "name": "Jane" } }
 }`, 'js'))}
       ${table(
         ['Field', 'Description'],
         [
           ['<code>html</code>', 'The rendered page content (the output of the view function, without the full document wrapper).'],
           ['<code>title</code>', 'The new page title, set via <code>document.title</code>.'],
+          ['<code>styles</code> / <code>scripts</code>', "The new page's <code>meta.styles</code> / <code>meta.scripts</code>, applied to the document before mount."],
           ['<code>hydrate</code>', 'The bundle path for the new spec. <code>null</code> if the page has no hydration.'],
-          ['<code>serverState</code>', 'The server data for the new page, used when mounting the new spec.'],
+          ['<code>serverState</code>', 'The server data for the new page, used when mounting the new spec. Omitted if empty.'],
+          ['<code>storeState</code>', 'The store state the new page subscribes to, if any. Omitted if empty.'],
         ]
       )}
+
+      <h3 class="doc-h3">Pages with deferred segments — streaming NDJSON</h3>
+      <p>A page that declares <code>spec.stream.deferred</code> streams instead — the client reads <code>Content-Type: application/x-ndjson</code> and applies newline-delimited JSON messages progressively as they arrive, rather than waiting for one buffered response:</p>
+      ${codeBlock(highlight(`{"type":"meta","hydrate":"...","title":"...","styles":[...],"scripts":[...]}
+{"type":"html","html":"<main>...shell...</main>","deferred":["feed"]}
+{"type":"deferred","id":"feed","html":"<section>...</section>"}
+{"type":"done","serverState":{...},"storeState":{...}}`, 'js'))}
+      <p>Shell HTML fills immediately; deferred segments land inside their <code>&lt;pulse-deferred id="pd-[name]"&gt;</code> placeholder as each one resolves. This mirrors the streaming SSR behaviour on a full page load — client navigation gets the same shell-then-deferred experience, not a degraded fallback.</p>
+      ${callout('note', "Both paths are picked automatically by the server based on the target page's <code>spec.stream</code> field — nothing to configure on the client.")}
 
       ${section('link-interception', 'Which links are intercepted')}
       <p>Only same-origin links are intercepted. Links with <code>target="_blank"</code>, <code>download</code>, <code>rel="external"</code>, or any cross-origin <code>href</code> are ignored and behave normally:</p>

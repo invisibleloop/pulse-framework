@@ -90,7 +90,7 @@ export default {
 
       ${section('view-signature', 'View function signature')}
       <p>For raw responses, the <code>view</code> function signature is <code>(ctx, serverState)</code>, not <code>(state, serverState)</code>. The <code>ctx</code> argument is the request context object with <code>params</code>, <code>query</code>, <code>headers</code>, and <code>cookies</code>.</p>
-      ${callout('note', 'There is no client state (<code>state</code>) for raw response specs — they are purely server-side. The <code>state: {}</code> field is still required for spec validation, but is not used.')}
+      ${callout('note', 'There is no client state (<code>state</code>) for raw response specs — they are purely server-side. Validation skips the <code>state</code> check entirely for a spec with <code>contentType</code> set, so it can be omitted; the examples on this page include it only for clarity.')}
 
       ${section('escaping', 'Escaping in XML and HTML')}
       <p>Pulse does not auto-escape raw response bodies. When returning XML or HTML, escaping all user-supplied and dynamic content is required — unescaped output is an injection vulnerability:</p>

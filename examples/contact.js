@@ -10,7 +10,7 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/contact
  */
 
-import { button, alert, heading, input, textarea, card, container, section, stack, grid, iconMail, iconPhone, iconMapPin, iconClock, iconCheckCircle } from '../src/ui/index.js'
+import { button, alert, heading, input, textarea, card, container, section, stack, grid, iconMail, iconPhone, iconMapPin, iconClock, iconCheckCircle } from '../packages/pulse/src/ui/index.js'
 import { examplesNav } from './shared.js'
 
 function infoDetail(icon, label, value, href) {

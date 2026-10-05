@@ -28,7 +28,7 @@ scripts/
 public/
   pulse.css               # base stylesheet (dark theme)
   dist/                   # generated — do not edit
-    runtime-[hash].js     # shared runtime chunk (mount + navigate)
+    chunk-[hash].js       # shared code (runtime + anything pages import in common)
     [name].boot-[hash].js # per-page spec bundle
     manifest.json         # source hydrate paths → bundle paths
 ```
@@ -253,10 +253,10 @@ The bundle is self-executing (imports spec, calls `mount` + `initNavigation` int
 
 ## Build Output
 
-`npm run build` generates three things per app:
+`npm run build` generates these per app:
 
-- `public/dist/runtime-[hash].js` — shared runtime (mount + navigate + store, ~3.8 kB brotli)
-- `public/dist/[name].boot-[hash].js` — per-page spec bundle (~0.5–0.9 kB brotli)
+- `public/dist/chunk-[hash].js` — shared code, split out by esbuild whenever multiple pages import the same thing (the runtime included). Zero, one, or several of these may exist depending on actual import overlap — there is no single fixed filename or size to quote. Check the network tab or run `pulse_check_bundles` for real numbers on your build.
+- `public/dist/[name].boot-[hash].js` — per-page spec bundle
 - `public/dist/manifest.json` — maps `/examples/foo.js` → `/dist/foo.boot-HASH.js`
 
 To add a new page to the build, add its spec path to the `ENTRIES` array in `scripts/build.js`.
@@ -497,7 +497,7 @@ meta: {
 - **`X-Pulse-Navigate: true`** — returns JSON `{ html, title, hydrate, serverState }` for client-side navigation
 - **Security headers** — on every response: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`
 - **Compression** — brotli preferred, gzip fallback for all compressible types
-- **Cache** — `/dist/*` bundles: `immutable, max-age=31536000`; static assets: `max-age=3600`; HTML: `no-store`
+- **Cache** — `/dist/*` bundles: `immutable, max-age=31536000`; static assets: `max-age=3600`; HTML with no `spec.cache`/`defaultCache` configured: `no-cache` (always revalidates, but doesn't block the browser's back/forward cache the way `no-store` does — see `spec.cache`/`defaultCache` above for opting into a longer TTL)
 
 ## Client Navigation
 
@@ -683,12 +683,7 @@ If you're about to write `class="hero"` or `class="product-card"`, stop — impo
 
 ## Performance Baseline
 
-| Page | CLS | JS (brotli) |
-|---|---|---|
-| /counter | 0.00 | 4.2 kB (first visit) / 0.4 kB (cached runtime) |
-| /contact | 0.00 | 4.3 kB (first visit) / 0.5 kB (cached runtime) |
-
-First-visit JS = runtime chunk (~3.8 kB) + per-page boot file (~0.4–0.9 kB). On repeat visits the runtime is served from cache — only the boot file is fetched. If multiple pages share UI components, esbuild's code splitting extracts those into the runtime chunk, so the runtime chunk grows with shared code.
+CLS: 0.00. JS bundle sizes are **not quoted here as fixed numbers** — they shift as the runtime and each spec evolve, and a stale hardcoded figure in this guide has caused real drift before (see `docs/src/lib/stats.js` history). Get real numbers with `pulse_check_bundles`, the network tab, or `pulse build` + brotli-compressing the output yourself. First-visit JS = shared `chunk-[hash].js` file(s), if any exist for this app, + the page's own boot file. On repeat visits and same-app navigation, cached chunks aren't re-fetched — only a new page's own boot file is.
 
 Lighthouse: 100/100/100 (Accessibility / Best Practices / SEO) on both pages.
 

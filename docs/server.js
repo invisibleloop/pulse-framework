@@ -1,5 +1,5 @@
 import fs                      from 'fs'
-import { createServer }        from '../src/server/index.js'
+import { createServer }        from '../packages/pulse/src/server/index.js'
 import { initLayoutManifest }  from './src/lib/layout.js'
 import { metrics }             from './src/lib/stats.js'
 import { metricsStore }        from './src/lib/metrics-store.js'

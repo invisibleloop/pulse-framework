@@ -22,7 +22,7 @@ import {
   iconCheckCircle,
   iconCalendar,
   iconMapPin,
-} from '../../../../src/ui/index.js'
+} from '../../../../packages/pulse/src/ui/index.js'
 
 // ── Navigation ───────────────────────────────────���────────────────────────────
 

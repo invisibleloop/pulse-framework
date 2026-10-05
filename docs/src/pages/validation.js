@@ -55,8 +55,8 @@ export default {
         ['Format', 'What it checks'],
         [
           ['<code>email</code>', 'Basic email structure — must contain <code>@</code> and a domain.'],
-          ['<code>url</code>', 'Must start with <code>http://</code> or <code>https://</code>.'],
-          ['<code>numeric</code>', 'Must consist entirely of digit characters.'],
+          ['<code>url</code>', 'Must be a valid URL (parsed with the native <code>URL</code> constructor) — any scheme is accepted, not only <code>http(s)://</code>.'],
+          ['<code>numeric</code>', 'Must be a valid number (<code>Number(value)</code> is not <code>NaN</code>) — decimals and negative numbers pass, not only digit characters.'],
         ]
       )}
 
@@ -87,13 +87,13 @@ validation: {
       ${callout('note', 'Validation reads from <strong>state</strong>, not from raw <code>FormData</code>. <code>onStart</code> must copy form values into state first — this is what makes them available to dot-path rules.')}
 
       ${section('error-structure', 'Error structure')}
-      <p>When validation fails, the runtime throws an error object with a <code>validation</code> array:</p>
+      <p>When validation fails, the runtime throws an error object with a <code>validation</code> array. Each entry's <code>path</code> is the dot-path key from <code>validation</code> — not <code>field</code>:</p>
       ${codeBlock(highlight(`{
   message: 'Validation failed',
   validation: [
-    { field: 'fields.email',   rule: 'format',   message: 'Must be a valid email address' },
-    { field: 'fields.name',    rule: 'required',  message: 'Required' },
-    { field: 'fields.age',     rule: 'min',       message: 'Must be at least 18' },
+    { path: 'fields.email',   rule: 'format',   message: 'fields.email must be a valid email address' },
+    { path: 'fields.name',    rule: 'required', message: 'fields.name is required' },
+    { path: 'fields.age',     rule: 'min',      message: 'fields.age must be at least 18' },
   ]
 }`, 'js'))}
       <p>In your action's <code>onError</code>, check for <code>err?.validation</code> to distinguish validation errors from other failures:</p>
@@ -103,10 +103,10 @@ validation: {
 })`, 'js'))}
 
       ${section('rendering', 'Rendering errors')}
-      <p>The errors array maps to UI in the view — a global error list, or inline errors using the <code>field</code> property to place them next to each input:</p>
+      <p>The errors array maps to UI in the view — a global error list, or inline errors using the <code>path</code> property to place them next to each input:</p>
       ${codeBlock(highlight(`view: (state) => {
-  const errFor = (field) => {
-    const e = state.errors.find(e => e.field === field)
+  const errFor = (path) => {
+    const e = state.errors.find(e => e.path === path)
     return e ? \`<p class="field-error">\${e.message}</p>\` : ''
   }
 

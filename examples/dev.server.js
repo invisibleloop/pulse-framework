@@ -22,7 +22,7 @@
 
 import fs   from 'fs'
 import path from 'path'
-import { createServer } from '../src/server/index.js'
+import { createServer } from '../packages/pulse/src/server/index.js'
 import { themeScript }  from './shared.js'
 
 const ROOT = path.resolve(import.meta.dirname, '..')

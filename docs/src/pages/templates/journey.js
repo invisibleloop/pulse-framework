@@ -18,8 +18,8 @@
  * Run: node examples/dev.server.js  →  http://localhost:3001/journey
  */
 
-import { appBadge } from '../../../../src/ui/index.js'
-import { iconTag, iconPlus, iconSend, iconArrowDown, iconFeather } from '../../../../src/ui/icons.js'
+import { appBadge } from '../../../../packages/pulse/src/ui/index.js'
+import { iconTag, iconPlus, iconSend, iconArrowDown, iconFeather } from '../../../../packages/pulse/src/ui/icons.js'
 
 // ---------------------------------------------------------------------------
 // Timeline data

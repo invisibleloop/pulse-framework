@@ -22,9 +22,9 @@ import {
   avatar,
   prose,
   input,
-} from '../src/ui/index.js'
+} from '../packages/pulse/src/ui/index.js'
 
-import { iconCode, iconCheck } from '../src/ui/icons.js'
+import { iconCode, iconCheck } from '../packages/pulse/src/ui/icons.js'
 
 // ---------------------------------------------------------------------------
 // Code block helper

@@ -22,7 +22,7 @@ import {
   button,
   footer,
   input,
-} from '../../../../src/ui/index.js'
+} from '../../../../packages/pulse/src/ui/index.js'
 import { asset } from '../../lib/layout.js'
 
 // ---------------------------------------------------------------------------

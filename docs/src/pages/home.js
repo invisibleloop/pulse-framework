@@ -1,8 +1,8 @@
 // component-free — creative override: asymmetric typography-driven layout (wide headline column + narrower supporting column), a solid gold mark treatment on "page.", and a light/dark section rhythm that component patterns cannot express
 import { highlight }                                        from '../lib/highlight.js'
-import { iconZap, iconShield, iconSettings }               from '../../../src/ui/icons.js'
+import { iconZap, iconShield, iconSettings }               from '../../../packages/pulse/src/ui/icons.js'
 import { metricsStore }  from '../lib/metrics-store.js'
-import pkg from '../../../package.json' with { type: 'json' }
+import pkg from '../../../packages/pulse/package.json' with { type: 'json' }
 
 // macOS-style code window chrome — raw HTML (creative override), replacing
 // the removed codeWindow() component. Reuses the same .ui-code-window*
@@ -49,6 +49,50 @@ const exampleSpec = highlight(`export default {
     </main>
   \`,
 }`, 'js')
+
+// Real, unedited output — captured by running the actual pulse_review checks
+// against the spec below (a common agent-shaped mistake: conditionally
+// rendering a <dialog> based on state, instead of always rendering it and
+// opening it with data-dialog-open). Nothing here is written for effect.
+//
+// Note for anyone running pulse_review against this file: the "modalOpen"
+// auto-check below will flag a false positive here — it's matching this
+// demo's string literals (the buggy example spec is intentionally embedded
+// as text), not real spec state in this page.
+const buggySpec = highlight(`export default {
+  route: '/settings',
+  state: { modalOpen: false },
+  mutations: {
+    openModal:  (state) => ({ modalOpen: true }),
+    closeModal: (state) => ({ modalOpen: false }),
+  },
+  view: (state) => \`
+    <main id="main-content">
+      <button data-event="openModal">Edit profile</button>
+      \${state.modalOpen ? \`
+        <dialog open>
+          <p>Edit your profile</p>
+          <button data-event="closeModal">Close</button>
+        </dialog>
+      \` : ''}
+    </main>
+  \`,
+}`, 'js')
+
+const reviewLines = [
+  { ok: true,  text: 'No positive tabindex' },
+  { ok: true,  text: 'No data-event on text inputs' },
+  { ok: true,  text: 'No React patterns (className/htmlFor/onClick)' },
+  { ok: true,  text: 'No emoji in view HTML' },
+  { ok: true,  text: '&lt;main id="main-content"&gt; present' },
+  { ok: true,  text: 'No obvious hex colours in view' },
+  { ok: false, text: 'modalOpen-style state found — never conditionally render a &lt;dialog&gt;; always render it unconditionally and open it with data-dialog-open' },
+  { ok: true,  text: 'No malformed _storeUpdate found' },
+]
+
+const reviewOutput = reviewLines
+  .map(({ ok, text }) => `<span class="${ok ? 'rev-ok' : 'rev-fail'}">${ok ? '✓' : '✗'}</span> ${text}`)
+  .join('\n') + '\n\n<span class="rev-note">Fix before proceeding, then run pulse validate again.</span>'
 
 export default {
   route: '/',
@@ -118,8 +162,8 @@ export default {
 
         <div class="brut-stats-bar">
           <div class="brut-stat">
-            <span class="brut-stat-val">4 kB</span>
-            <span class="brut-stat-lbl">Runtime JS · first visit</span>
+            <span class="brut-stat-val">${server.metrics?.measured ? server.metrics.bundles[1].value : '< 6 kB'}</span>
+            <span class="brut-stat-lbl">JS · first visit, measured live →</span>
           </div>
           <div class="brut-stat">
             <span class="brut-stat-val">0.00</span>
@@ -136,21 +180,21 @@ export default {
         </div>
 
         <section class="brut-idea">
-          <div class="brut-idea-label">THE IDEA</div>
+          <h2 class="brut-idea-label">THE IDEA</h2>
           <div class="brut-idea-grid">
             <div class="brut-idea-step">
               <div class="brut-idea-num" aria-hidden="true">01</div>
-              <h2>The spec is the page</h2>
+              <h3>The spec is the page</h3>
               <p>Everything a page needs lives in one plain JS object: server data, client state, mutations, and view. One format. No split files. No hidden conventions.</p>
             </div>
             <div class="brut-idea-step">
               <div class="brut-idea-num" aria-hidden="true">02</div>
-              <h2>The schema is the contract</h2>
+              <h3>The schema is the contract</h3>
               <p>Every spec is validated at startup. Either it's correct or it's rejected. No ambiguity, no misconfiguration that surfaces later in production.</p>
             </div>
             <div class="brut-idea-step">
               <div class="brut-idea-num" aria-hidden="true">03</div>
-              <h2>The framework is the guarantee</h2>
+              <h3>The framework is the guarantee</h3>
               <p>Streaming SSR, security headers, and production caching come from the architecture. You write the product logic. The framework ships the quality.</p>
             </div>
           </div>
@@ -163,6 +207,30 @@ export default {
           </div>
           <div class="brut-code-block">
             ${codeWindow({ content: exampleSpec, filename: 'src/pages/dashboard.js', lang: 'JavaScript' })}
+          </div>
+        </section>
+
+        <section class="brut-review-section">
+          <div class="brut-review-header">
+            <div class="brut-review-label">SEE IT CATCH A MISTAKE</div>
+            <h2>This isn't a linter opinion.<br>It's a real check, run for real.</h2>
+            <p>This is the actual output of <code>pulse_review</code> against the spec on the right — not paraphrased, not staged for the page. A common agent-shaped mistake: a modal whose visibility is driven by state instead of always being in the DOM.</p>
+          </div>
+          <div class="brut-review-panels">
+            <div class="brut-review-panel">
+              ${codeWindow({ content: buggySpec, filename: 'src/pages/settings.js', lang: 'JavaScript' })}
+            </div>
+            <div class="brut-review-panel brut-review-panel--output">
+              <div class="ui-code-window" role="region" aria-label="pulse_review output">
+                <div class="ui-code-window-chrome" aria-hidden="true">
+                  <span class="ui-code-window-dot"></span>
+                  <span class="ui-code-window-dot"></span>
+                  <span class="ui-code-window-dot"></span>
+                  <span class="ui-code-window-filename">pulse_review output</span>
+                </div>
+                <pre class="ui-code-window-pre brut-review-output"><code>${reviewOutput}</code></pre>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -197,7 +265,8 @@ export default {
         <section class="brut-versus">
           <div class="brut-versus-header">
             <div class="brut-versus-label">HOW PULSE COMPARES</div>
-            <h2 class="brut-versus-h2">Constraints enforced.<br>Not recommended.</h2>
+            <h2 class="brut-versus-h2">Checked by the framework.<br>Not just by whoever wrote it.</h2>
+            <p class="brut-versus-sub">Every framework can be written well by a careful human or a careful agent. The question is what happens when the next edit isn't careful — what actually catches it, and how fast.</p>
           </div>
           <div class="versus-table-wrap table-sticky-col">
             <table class="brut-table">
@@ -215,46 +284,34 @@ export default {
               </thead>
               <tbody>
                 <tr>
-                  <th scope="row">Ways to write a page</th>
-                  <td class="v-yes">One: the spec schema</td>
-                  <td class="v-no">App Router, Pages Router, RSC, client components, loaders…</td>
-                  <td class="v-no">+page.svelte, +page.server.js, load(), form actions…</td>
+                  <th scope="row">Can a tool check a page with no LLM in the loop?</th>
+                  <td class="v-yes">Yes — the spec is one plain object; a validator can <code>import()</code> and check it in milliseconds</td>
+                  <td class="v-no">TypeScript checks types, not spec semantics — a page can type-check and still be structurally wrong</td>
+                  <td class="v-no">Same — the compiler checks syntax and types, not framework-level correctness</td>
                 </tr>
                 <tr>
-                  <th scope="row">Agent-readable structure</th>
-                  <td class="v-yes">One JS object per page</td>
-                  <td class="v-no">Files, folders, magic exports spread across dirs</td>
-                  <td class="v-no">Files, folders, Svelte syntax</td>
+                  <th scope="row">What rejects a broken page before it ships?</th>
+                  <td class="v-yes">Schema validation at startup — malformed specs fail the build, not production</td>
+                  <td class="v-partial">Build succeeds on most structural mistakes; failures often surface at runtime</td>
+                  <td class="v-partial">Same — the compiler catches syntax errors, not framework misuse</td>
                 </tr>
                 <tr>
-                  <th scope="row">SSR out of the box</th>
-                  <td class="v-yes">Streaming SSR, zero config</td>
-                  <td class="v-partial">Yes, but client hydration adds JS on every page</td>
-                  <td class="v-partial">Yes, but requires an adapter and client runtime on every page</td>
+                  <th scope="row">Does it catch agent-shaped mistakes specifically?</th>
+                  <td class="v-yes">Purpose-built checks for the failure modes agents actually make — a conditionally-rendered modal, a missing CSRF token, a malformed store update</td>
+                  <td class="v-no">General-purpose lint only — nothing aimed at how an agent tends to get this framework wrong</td>
+                  <td class="v-no">Same — no agent-specific verification layer</td>
                 </tr>
                 <tr>
-                  <th scope="row">Client JS shipped</th>
-                  <td class="v-yes">~4 kB brotli on first visit; 0 kB on static pages</td>
-                  <td class="v-no">50–200 kB+ depending on features used</td>
-                  <td class="v-partial">~15 kB brotli</td>
+                  <th scope="row">Can an agent safely maintain this six months on, unsupervised?</th>
+                  <td class="v-yes">The validator re-runs on every change — drift gets caught mechanically, not by someone remembering the house rules</td>
+                  <td class="v-no">Depends entirely on the agent's memory and the human catching regressions in review</td>
+                  <td class="v-no">Same — correctness is only as durable as whoever's reviewing the diffs</td>
                 </tr>
                 <tr>
-                  <th scope="row">Security headers</th>
-                  <td class="v-yes">On every response, built in</td>
-                  <td class="v-no">Manual middleware or plugin</td>
-                  <td class="v-no">Manual hooks setup</td>
-                </tr>
-                <tr>
-                  <th scope="row">Runtime dependencies</th>
-                  <td class="v-yes">Zero. Pure Node.js HTTP</td>
-                  <td class="v-no">React, 50+ transitive packages</td>
-                  <td class="v-no">Svelte runtime + adapters</td>
-                </tr>
-                <tr>
-                  <th scope="row">Production build step</th>
-                  <td class="v-yes">Server needs none. <code>node server.js</code> is production</td>
-                  <td class="v-no">Required: <code>next build</code></td>
-                  <td class="v-no">Required: <code>vite build</code></td>
+                  <th scope="row">Client JS · build step · dependencies</th>
+                  <td class="v-yes">A few kB brotli on an interactive page, 0 kB on static pages — check the network tab or <code>pulse_check_bundles</code>, no need to trust a doc · no build step in dev or prod · zero runtime deps</td>
+                  <td class="v-no">50–200 kB+ depending on features · <code>next build</code> required · React + 50+ transitive packages</td>
+                  <td class="v-partial">~15 kB brotli · <code>vite build</code> required · Svelte runtime + adapters</td>
                 </tr>
               </tbody>
             </table>
@@ -265,30 +322,30 @@ export default {
           <div class="brut-pillar">
             <div class="brut-pillar-icon">${iconZap({ size: 36 })}</div>
             <div class="brut-pillar-body">
-              <h3>Performance by design</h3>
-              <p>The shell streams to the browser instantly. Deferred segments arrive as data resolves. ~4 kB of JS on first visit. Zero CLS. Immutable bundle caching on deploy. Not configured. Structural.</p>
+              <h3>Performance is enforced</h3>
+              <p>Streaming SSR and zero CLS aren't defaults you can quietly regress — there's no client router to add, no bundler config that grows. The architecture only has one way to ship a page, and that way is fast.</p>
             </div>
           </div>
           <div class="brut-pillar brut-pillar--alt">
             <div class="brut-pillar-icon">${iconShield({ size: 36 })}</div>
             <div class="brut-pillar-body">
-              <h3>Safe by design</h3>
-              <p>Security headers on every response, including 404 and 500. Declarative constraints enforce state bounds after every mutation. Guard runs before any server fetcher. Not a plugin. Part of the pipeline.</p>
+              <h3>Safety is enforced</h3>
+              <p>Security headers on every response, including 404 and 500. Declarative constraints enforce state bounds after every mutation. CSRF and guard checks run before your code does. Not a plugin you can forget to install — part of the pipeline.</p>
             </div>
           </div>
           <div class="brut-pillar">
             <div class="brut-pillar-icon">${iconSettings({ size: 36 })}</div>
             <div class="brut-pillar-body">
-              <h3>Nothing to configure</h3>
-              <p>No bundler config. No runtime dependencies to install, audit, or upgrade. <code>node server.js</code> is production. No breaking upgrades. Page files have no framework imports to version.</p>
+              <h3>Simplicity is enforced</h3>
+              <p>No bundler config to drift from a template. No runtime dependencies to install, audit, or upgrade. <code>node server.js</code> is production. The schema validator rejects a spec that breaks convention before it ever ships.</p>
             </div>
           </div>
         </section>
 
         ${server.metrics ? `<section class="brut-metrics">
           <div class="brut-metrics-label">BY THE NUMBERS</div>
-          <h2 class="brut-metrics-h2">Performance you can measure.</h2>
-          <p class="brut-metrics-sub">Report generated ${server.metrics.generatedAt} · measured from a real Pulse build</p>
+          <h2 class="brut-metrics-h2">Not claimed. Measured.</h2>
+          <p class="brut-metrics-sub">Report generated ${server.metrics.generatedAt} · from an actual build on this deploy, recomputed on every server start</p>
           <div class="brut-metrics-grid">
             <div class="brut-metrics-group">
               <div class="brut-metrics-group-label">Lighthouse</div>

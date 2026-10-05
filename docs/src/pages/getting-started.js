@@ -18,7 +18,7 @@ export default {
     next,
     content: `
       ${h1('Getting Started')}
-      ${lead('Install Pulse, run one command, and have an AI agent building your first page — with streaming SSR, security headers, and a 100 Lighthouse score already in place.')}
+      ${lead('Install Pulse, run one command, and have an AI agent building your first page. Every spec it writes is checked against the schema before it ships — streaming SSR, security headers, and a 100 Lighthouse score come from the architecture, not from the agent remembering to add them.')}
 
       ${section('requirements', 'Requirements')}
       <ul>
@@ -75,6 +75,7 @@ Validate the email format before submitting."`, 'bash'))}
         <li>Open the page in the browser and confirm it looks right</li>
       </ol>
       <p>You do not need to explain Pulse to the agent. The MCP server supplies the reference. Just describe what you want.</p>
+      <p>Step 4 is the load-bearing one. Schema validation and <code>pulse_review</code>'s checks aren't documentation the agent might read — they're a real gate the agent's own spec has to pass, checked by a validator, not by the agent's judgment. That's what makes it safe to keep asking the same agent to modify this page six months from now: correctness doesn't rely on it remembering today's conversation.</p>
 
       ${section('what-was-created', 'What got created')}
       <p>When you ran <code>pulse</code> in step 2, these files were written to your directory:</p>

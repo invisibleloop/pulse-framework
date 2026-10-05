@@ -1,0 +1,446 @@
+## meta.styles and meta.scripts
+
+- meta.styles — array of CSS paths loaded as <link rel="stylesheet">. Always include '/app.css'.
+- meta.scripts — array of JS paths loaded as <script defer>. Required for interactive UI components.
+
+Interactive Pulse UI components (tooltip) require BOTH:
+```js
+meta: {
+  styles: ['/app.css', '/pulse-ui.css'],
+  scripts: ['/pulse-ui.js'],
+}
+```
+Non-interactive components (nav, hero, button, card, etc.) only need '/pulse-ui.css' in styles.
+
+## Theming — always use CSS custom properties
+
+pulse-ui.css exposes CSS custom properties for every token. app.css MUST use these tokens — never hardcode colour hex values.
+
+### How theming works — two-layer token system
+
+Pulse uses a **two-layer token system**:
+
+1. **Input tokens** (unprefixed: `--bg`, `--text`, `--accent`, etc.) — you define these in `:root` or `[data-theme="light"]` to set your palette
+2. **Output tokens** (prefixed: `--ui-bg`, `--ui-text`, `--ui-accent`, etc.) — pulse-ui components read these; you reference them in app.css
+
+pulse-ui.css sets `--ui-*` tokens to `var(--your-input-token, fallback)`. When you override `--accent`, components automatically pick it up via `--ui-accent`.
+
+**Which token names to use where:**
+
+| File | Define input tokens | Reference output tokens |
+|---|---|---|
+| `public/theme.css` | ✓ `--accent: #e25;` | — |
+| `app.css` | — | ✓ `color: var(--ui-accent);` |
+| Pulse components | — | ✓ (already done internally) |
+
+**Common mistake:** defining `--color-accent` or `--brand-primary` expecting components to use them. Components only read the canonical unprefixed names: `--accent`, `--text`, `--bg`, `--surface`, `--border`, `--muted`, `--radius`. Define those, and everything updates.
+
+### Dark by default
+
+**The library is dark by default.** `pulse-ui.css` applies `background-color: var(--ui-bg)` and `color: var(--ui-text)` to `html, body` automatically using the dark palette defined in `:root` — you do NOT need to add these to app.css.
+
+For a **light theme**, set `meta.theme: 'light'` in the spec — this adds `data-theme="light"` to the `<body>` and activates the built-in light token set (accessible contrast for badges, alerts, and all semantic colours).
+
+### Overriding tokens in your theme
+
+Override input tokens to retheme all components at once. The pattern is the same for both dark and light themes — set the unprefixed input token in the appropriate selector:
+
+```css
+/* Dark theme overrides — in :root */
+:root {
+  --bg:           #0d0d10;   /* page background */
+  --surface:      #111116;   /* card / panel background */
+  --surface-2:    #18181f;   /* inset / code background */
+  --border:       #38383f;
+  --text:         #e2e2ea;
+  --muted:        #9090a0;
+  --accent:       #9b8dff;
+  --accent-hover: #b5aaff;
+  --radius:       8px;
+}
+
+/* Light theme overrides — in [data-theme="light"] */
+[data-theme="light"] {
+  --bg:           #ffffff;
+  --surface:      #f5f5fa;
+  --accent:       #e25;       /* overrides the light default #6b5ce7 */
+}
+```
+
+pulse-ui.css maps input → output via `var()` in **both** the dark (`:root`) and light (`[data-theme="light"]`) blocks, so the same two-layer pattern works in both themes.
+
+Then use the computed --ui-* tokens everywhere in app.css:
+```css
+/* pulse-ui.css already sets background-color and color on html/body — do not repeat them */
+h1   { color: var(--ui-text); }
+p    { color: var(--ui-muted); }
+a    { color: var(--ui-accent); }
+code { background: var(--ui-surface-2); color: var(--ui-accent); border: 1px solid var(--ui-border); }
+```
+
+> **Light theme escape hatch:** if you need to override a specific output token that has no input equivalent, you can set `--ui-accent` directly inside `[data-theme="light"]` — but prefer input tokens wherever possible.
+
+```js
+meta: {
+  theme: 'light',
+  styles: ['/pulse-ui.css', '/app.css'],
+}
+```
+
+**Colour tokens:** `--ui-bg`, `--ui-surface`, `--ui-surface-2`, `--ui-border`, `--ui-text`, `--ui-muted`, `--ui-accent`, `--ui-accent-hover`, `--ui-accent-dim`, `--ui-accent-text`, `--ui-green`, `--ui-red`, `--ui-yellow`, `--ui-blue`, `--ui-radius`, `--ui-radius-sm`, `--ui-font`, `--ui-font-display`, `--ui-mono`. Never hardcode hex values — override the tokens.
+
+> **⚠ `--ui-muted` contrast on warm/light palettes** — The default `--ui-muted` value (`#60607a` in light theme) achieves 4.5:1 on the default white `--ui-bg`. When you set a warm or coloured background (`--bg: #f5e6d3` etc.) the luminance difference shrinks and `--ui-muted` can drop below the WCAG AA threshold of 4.5:1. **Always override `--muted` when changing `--bg`**, and run `pulse_check_contrast` immediately after writing your `theme.css`. A common failure mode: stat labels, nav links, and feature descriptions all use `--ui-muted` and will fail contrast silently if this token is not rechecked against your actual background colour.
+
+> **⚠ `section--dark` in light theme** — `section({ variant: 'dark' })` uses `--ui-surface-2` as its background, which in the default light theme resolves to `#f0f0f8` — a light grey, not a dark background. The framework now auto-corrects this via a `[data-theme="light"] .ui-section--dark` override (navy `#1a1a2e`), and ghost buttons inside it get automatic light-text treatment. If you use a custom `--surface-2` override in your theme, set `--ui-dark-bg` and `--ui-dark-text` to pin the dark section to specific values:
+> ```css
+> [data-theme="light"] { --ui-dark-bg: #1a1a2e; --ui-dark-text: #e8e0d0; }
+> ```
+
+> **Ghost buttons on dark backgrounds** — use `variant: 'ghost-light'` instead of `variant: 'ghost'` whenever the button sits on a dark background (custom hero div, `section--dark`, navy sections). `ghost-light` renders white text with a subtle white border, maintaining 4.5:1 contrast regardless of the surrounding theme. `ghost` uses `--ui-muted` text which fails on dark backgrounds in light theme.
+
+**Display font token:** `--ui-font-display` is used for hero titles and section headings. By default it inherits `--ui-font`. Override it separately to get a display/heading face that differs from body text:
+```css
+/* app.css */
+:root { --font-display: 'Playfair Display', Georgia, serif; }
+```
+
+**Letter-spacing token:** `--ui-letter-spacing-display` (default `-0.025em`) controls heading tightness. Override in `:root` to match your typeface:
+```css
+:root { --letter-spacing-display: -0.04em; }  /* tighter for heavy condensed fonts */
+```
+
+## Visual personality — meta.vibe
+
+`meta.vibe` sets `data-vibe` on `<body>` and adjusts geometry + type tokens as a preset. It doesn't touch colour — pair it with a `theme.css` for full personality.
+
+```js
+meta: {
+  vibe:   'warm',   // warm | editorial | playful | minimal | bold
+  theme:  'light',
+  styles: ['/pulse-ui.css', '/theme.css', '/app.css'],
+}
+```
+
+| Vibe | Effect | Pairs well with |
+|---|---|---|
+| `warm` | radius 14px, softer letter-spacing | rounded photo cards, `section: paper`, warm palette |
+| `editorial` | radius 0, serif display font, tight letter-spacing | `hero layout: overlap`, `section: diagonal`, `pullquote` |
+| `playful` | radius 22px, neutral letter-spacing | rounded image grid, scrolling strip (creative override), bright accent |
+| `minimal` | radius 2px, open letter-spacing, no shadows | left-aligned hero, `section: spotlight`, monochrome |
+| `bold` | radius 6px, very tight letter-spacing | `section: dark`, large `stat` components, gradient hero |
+
+Vibes affect `--ui-radius`, `--ui-font-display`, and `--ui-letter-spacing-display`. All component shapes, borders, and heading appearance change automatically.
+
+**Custom override:** Set vibe first, then fine-tune with CSS variable overrides in `public/theme.css`:
+```css
+/* Fine-tune the warm vibe */
+[data-vibe="warm"] { --ui-radius: 18px; }
+```
+
+**Spacing tokens** (`--ui-space-N`): `--ui-space-1` (4px), `--ui-space-2` (8px), `--ui-space-3` (12px), `--ui-space-4` (16px), `--ui-space-5` (20px), `--ui-space-6` (24px), `--ui-space-8` (32px), `--ui-space-10` (40px), `--ui-space-12` (48px), `--ui-space-16` (64px), `--ui-space-20` (80px), `--ui-space-24` (96px). Use these for `padding`, `margin`, and `gap`.
+
+**Type-scale tokens** (`--ui-text-*`): `--ui-text-xs` (12px), `--ui-text-sm` (14px), `--ui-text-base` (16px), `--ui-text-lg` (18px), `--ui-text-xl` (20px), `--ui-text-2xl` (24px), `--ui-text-3xl` (30px), `--ui-text-4xl` (36px). Use these for `font-size`.
+
+## Custom fonts
+
+All components use `--ui-font` (body) and `--ui-mono` (code). These resolve from `--font` and `--mono` respectively, so overriding those two variables in `:root` is all that is ever needed — no other CSS changes required.
+
+**To display monospace/code text, use a `<code>` element — not a utility class.** There is no `u-font-mono` class. `<code>` automatically inherits `--ui-mono` and gets the correct background and colour from pulse-ui.css.
+
+**Two rules that must never be broken:**
+- **Never `@import url(...)` a font in CSS** — use `meta.styles` instead. CSS `@import` is render-blocking; a `<link>` tag is not.
+- **Never set `font-family` directly on `body` or any element** — this bypasses `--ui-font` and breaks component inheritance. Always set `--font` in `:root`.
+
+```css
+/* app.css */
+:root {
+  --font: 'Inter', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+```
+
+### Google Fonts
+
+**Google Fonts requires CSP configuration** — the default CSP blocks external font and stylesheet sources. You must pass `csp` to `createServer`, otherwise the font will be blocked and the page will fail Lighthouse Best Practices:
+
+```js
+// server.js
+createServer(specs, {
+  port: 3000,
+  csp: {
+    'style-src':  ['https://fonts.googleapis.com'],
+    'font-src':   ['https://fonts.gstatic.com'],
+  },
+})
+```
+
+Then add the URL **before** `pulse-ui.css` in `meta.styles`. Use `family=Name:wght@weights` and always include `&display=swap`.
+
+```js
+meta: {
+  styles: [
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+    '/pulse-ui.css',
+    '/app.css',
+  ],
+}
+```
+
+Then in app.css:
+```css
+:root { --font: 'Inter', system-ui, sans-serif; }
+```
+
+If you cannot modify `createServer` (e.g. the project uses auto-discovery), use a self-hosted font in `public/fonts/` with `@font-face` in `app.css` — no CSP changes needed.
+
+### External images (img-src)
+
+The default CSP does **not** restrict `img-src` — it inherits `default-src 'self'`, which means images served from the same origin load fine. But if you load images from an external host (e.g. `https://images.unsplash.com`, `https://picsum.photos`, a CDN), you must add the host to `img-src`.
+
+**Do this at build time, before writing any image tags.** If you know you'll use external images, add the CSP entry to `pulse.config.js` first — discovering the block at Lighthouse time costs an extra round-trip.
+
+**Use `pulse_check_csp` to get the origin list right first time.** Many hosts redirect to a CDN origin (picsum.photos → fastly.picsum.photos), and allowing only the URL you wrote still blocks the actual bytes. Pass it the URLs you plan to use and it follows each redirect chain and returns ready-to-paste CSP config with every origin included.
+
+```js
+// pulse.config.js
+export default {
+  csp: {
+    'img-src': ['https://picsum.photos', 'https://fastly.picsum.photos'],
+  },
+}
+```
+
+Or via `createServer`:
+
+```js
+createServer(specs, {
+  csp: {
+    'img-src': ['https://images.unsplash.com', 'https://picsum.photos', 'https://fastly.picsum.photos'],
+  },
+})
+```
+
+**Common hosts to add:**
+| Source | `img-src` entry |
+|---|---|
+| picsum.photos | `https://picsum.photos https://fastly.picsum.photos` |
+| Unsplash | `https://images.unsplash.com` |
+| Cloudinary | `https://res.cloudinary.com` |
+| Imgix | your subdomain, e.g. `https://mysite.imgix.net` |
+
+> **picsum CDN note:** `picsum.photos` redirects image requests through `fastly.picsum.photos`. You must whitelist **both** domains — whitelisting only `https://picsum.photos` will still block the actual image bytes and the browser error will point to the `fastly.picsum.photos` URL, which is confusing to debug.
+
+> **⚠ Unsplash and third-party cookies — Lighthouse Best Practices failure:** `images.unsplash.com` sets tracking cookies (`azk`, `azk-ss`) on every image request. These are classified as third-party cookies and cause Lighthouse Best Practices to drop to ~77, failing the 100 pass bar. **For production builds, download images locally instead of referencing Unsplash URLs directly.** Use `curl` to save images to `public/images/`:
+> ```bash
+> curl -sL "https://images.unsplash.com/photo-ID?w=900&q=85" -o public/images/hero.jpg
+> ```
+> Then reference `/images/hero.jpg` in your spec. This also improves performance (no external DNS lookup) and avoids rate limiting. `picsum.photos` does **not** set tracking cookies and is safe to use via CDN for prototypes.
+
+Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
+
+### Third-party scripts (ad networks, analytics SDKs)
+
+**Every `csp` key merges the same way — including `trusted-types` and `require-trusted-types-for`.** This is a real, tested behavior, not a guess: `csp` passed to `createServer` (or `pulse.config.js`) is spread onto the framework's base CSP directive-by-directive, so `csp: { 'trusted-types': ['google'] }` produces `trusted-types pulse google` in the response header — it does not replace or drop the framework's own `pulse` policy.
+
+A third-party script (Google AdSense, GTM, and similar SDKs) typically needs up to three separate CSP extensions — do not assume only one is needed:
+
+```js
+// pulse.config.js
+export default {
+  csp: {
+    // The loader <script src="..."> itself — origin allowlist, no nonce needed
+    'script-src':    ['https://pagead2.googlesyndication.com'],
+    // If the SDK creates its own Trusted Types policy (some ad SDKs do) —
+    // scoped to exactly the policy name it registers, not a broad relaxation
+    'trusted-types': ['google'],
+  },
+}
+```
+
+For the **inline** per-slot script the SDK's own docs tell you to paste in (e.g. `(adsbygoogle = window.adsbygoogle || []).push({})`), use `server.nonce` — see "Third-party inline scripts" in `pulse://guide/server`. `csp.script-src` origin allowlisting only covers `<script src="...">`, not inline `<script>` content.
+
+**Without the `trusted-types` extension, this is a hard failure, not a cosmetic one:** a script that calls `trustedTypes.createPolicy(...)` under a name other than `pulse` throws in the browser console, the SDK fails to initialize, AND `lighthouse_audit` fails Best Practices on the resulting console error/CSP violation — confirmed directly (an agent hit exactly this running a real audit against AdSense). This is not a "check the console if something seems off" edge case; if you're integrating a third-party SDK and Lighthouse Best Practices won't reach 100, check the browser console for a Trusted Types policy rejection before assuming the problem is elsewhere.
+
+For multiple weights or italic variants, separate them with a semicolon in the URL:
+```
+?family=Inter:ital,wght@0,400;0,700;1,400&display=swap
+```
+
+### Adobe Fonts (Typekit)
+
+Adobe Fonts provides a per-project CSS URL from your kit settings. Add it before `pulse-ui.css` in `meta.styles` — the font-family name comes from your Adobe Fonts kit.
+
+```js
+meta: {
+  styles: [
+    'https://use.typekit.net/YOURPROJECTID.css',
+    '/pulse-ui.css',
+    '/app.css',
+  ],
+}
+```
+
+Then in app.css, use the exact font name shown in your Adobe Fonts kit:
+```css
+:root { --font: 'proxima-nova', system-ui, sans-serif; }
+```
+
+### Self-hosted fonts
+
+Place font files in `public/fonts/` and declare them with `@font-face` in `app.css`. Always use `woff2` format and `font-display: swap`.
+
+```css
+/* app.css */
+@font-face {
+  font-family: 'MyFont';
+  src: url('/fonts/myfont-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root { --font: 'MyFont', system-ui, sans-serif; }
+```
+
+### Multi-brand fonts
+
+For multi-brand sites, keep `@font-face` declarations (or the font service URL) in the per-brand theme file and override `--font` there:
+
+```css
+/* themes/acme.css */
+:root { --font: 'proxima-nova', system-ui, sans-serif; }
+```
+
+## CSS rules — where to put styles and when to use utilities
+
+### The hex colour rule — know this upfront
+
+There are three places you write colour values. The rules are different for each:
+
+| Where | Hex/raw values | `var(--ui-*)` tokens | Inline `style=""` |
+|---|---|---|---|
+| `public/theme.css` or `public/themes/*.css` | **✓ allowed** — this is where palette values live | ✓ allowed | — |
+| `app.css` or any `.css` file in `public/` | **✗ blocked by lint** | **✓ required** | — |
+| JS spec files (the `view` function) | **✓ allowed** (e.g. `color: '#fff'` on component props) | ✓ allowed | **✗ avoid** |
+
+The rule in plain English: **CSS files reference tokens; theme files define them.** JS spec files are exempt because component props like `hero({ background: '#1a1a2e' })` are intentional design overrides, not CSS authoring.
+
+**Common mistake:** Writing `--ui-accent: #e25;` directly in `app.css`. This trips the lint. Move it to `public/theme.css` (dark theme in `:root`) or `public/themes/brand.css` (light theme in `[data-theme="light"]`).
+
+```css
+/* public/theme.css — hex values live here ✓ */
+[data-theme="light"] { --ui-accent: #e25; }
+
+/* app.css — var() only ✓ */
+.hero { color: var(--ui-accent); }
+
+/* app.css — this will be blocked ✗ */
+.hero { color: #e25; }
+```
+
+Load order in `meta.styles` matters: `pulse-ui.css` → `theme.css` → `app.css`. Theme tokens must exist before `app.css` references them.
+
+RULE: Never use inline style attributes (style="...") in HTML. Always use classes.
+
+RULE: For spacing, typography, layout, and colour, always prefer pulse-ui utility classes first. Only add to app.css if you need something the utilities cannot provide (e.g. a unique component style, a keyframe animation, a custom grid).
+
+pulse-ui.css includes a utility layer (u- prefix). **Only use classes from this exact list — do not invent variations. `u-container` does not exist; use the `container()` component instead.**
+
+Spacing — exact available values only:
+  Margin top:    u-mt-0  u-mt-1  u-mt-2  u-mt-3  u-mt-4  u-mt-5  u-mt-6  u-mt-8  u-mt-10  u-mt-12  u-mt-16
+  Margin bottom: u-mb-0  u-mb-1  u-mb-2  u-mb-3  u-mb-4  u-mb-5  u-mb-6  u-mb-8  u-mb-10  u-mb-12  u-mb-16
+  Margin x/auto: u-mx-auto  u-ml-auto  u-mr-auto
+  Padding all:   u-p-0  u-p-1  u-p-2  u-p-3  u-p-4  u-p-5  u-p-6  u-p-8
+  Padding x:     u-px-0  u-px-2  u-px-3  u-px-4  u-px-5  u-px-6  u-px-8
+  Padding y:     u-py-0  u-py-2  u-py-3  u-py-4  u-py-5  u-py-6  u-py-8   ← max is u-py-8, not u-py-16
+
+Typography:
+  u-text-{xs,sm,base,lg,xl,2xl,3xl,4xl}
+  u-font-{normal,medium,semibold,bold}   ← weight only; there is NO u-font-mono
+  u-text-{left,center,right}
+  u-text-{default,muted,accent,green,red,yellow,blue}
+  u-leading-{tight,snug,normal,relaxed,loose}
+  u-text-balance  u-break-all
+
+Layout:
+  u-flex  u-flex-col  u-flex-wrap  u-flex-1  u-shrink-0
+  u-items-{start,center,end,stretch}
+  u-justify-{start,center,end,between}
+  u-gap-1  u-gap-2  u-gap-3  u-gap-4  u-gap-5  u-gap-6  u-gap-8
+  u-w-full  u-w-auto
+  u-max-w-{xs,sm,md,lg,xl,prose}
+  u-block  u-inline  u-inline-block  u-hidden
+
+Visual:
+  u-rounded  u-rounded-md  u-rounded-lg  u-rounded-xl  u-rounded-full
+  u-border  u-border-t  u-border-b
+  u-bg-surface  u-bg-surface2  u-bg-accent
+  u-overflow-hidden  u-overflow-auto
+  u-relative  u-absolute  u-opacity-50  u-opacity-75
+
+Example — a centred hero block using only utilities, no custom CSS:
+```html
+<div class="u-flex u-flex-col u-items-center u-text-center u-py-8 u-gap-4">
+  <h1 class="u-text-4xl u-font-bold">Hello</h1>
+  <p class="u-text-lg u-text-muted u-max-w-prose">Subtitle goes here.</p>
+</div>
+```
+
+When you DO need to write CSS, add it to public/app.css — never inline.
+
+
+## Placeholder images for prototypes
+
+**Use `picsum.photos` with numeric IDs for anything Lighthouse-audited.** Unsplash direct IDs rotate and 404 without warning. Picsum seeds are convenient for development but can return `ERR_CONNECTION_CLOSED` under Lighthouse's burst-load pattern — use numeric IDs for pages you'll audit:
+
+```html
+<!-- Best for Lighthouse: numeric IDs — stable under burst load -->
+<img src="https://picsum.photos/id/10/1200/600" alt="..." width="1200" height="600">
+<img src="https://picsum.photos/id/64/80/80" alt="..." width="80" height="80">
+
+<!-- OK for dev / visual work only: seeds can fail under Lighthouse burst -->
+<img src="https://picsum.photos/seed/hero/1200/600" alt="..." width="1200" height="600">
+```
+
+The numeric ID is sequential (1–1000+). Browse options at `https://picsum.photos/images`. Use numeric IDs whenever you're running Lighthouse — seeds are fine for screenshots and dev iteration.
+
+**Avoid:** `https://images.unsplash.com/photo-LONGID?...` — these are unstable for prototypes. If you use Unsplash, add `https://images.unsplash.com` to `csp.img-src` in `pulse.config.js`, and expect some IDs to rot.
+
+> **Unsplash photo IDs must be the full hash.** The format is `photo-` followed by an 11-character alphanumeric hash, e.g. `photo-1506905925346-21bda4d32df4`. A truncated or partial ID (e.g. `photo-1506905925346`) returns a 404 silently — the image is missing with no obvious error. Always copy the full ID from the Unsplash URL.
+
+
+## CSS gotchas
+
+### calc() with + and − requires whitespace
+
+The CSS specification **requires** whitespace around `+` and `−` inside `calc()` when either operand is a value that starts with a sign (including CSS custom properties, since their resolved value may start with `−`):
+
+```css
+/* ✓ CORRECT — spaces around + */
+padding-top: calc(64px + var(--ui-space-16));
+
+/* ✗ WRONG — will silently fail in browsers, padding becomes 0 */
+padding-top: calc(64px+var(--ui-space-16));
+```
+
+The Pulse production CSS minifier preserves these spaces. Never manually collapse `calc()` expressions.
+
+### Padding shorthand vs. longhand ordering
+
+CSS processes declarations top-to-bottom. A shorthand that appears **after** a longhand will silently override it:
+
+```css
+/* ✗ WRONG — padding-top: 0 because shorthand resets it */
+.block {
+  padding-top: var(--ui-space-8);  /* set */
+  padding: 0 var(--ui-space-6);   /* shorthand resets padding-top to 0 */
+}
+
+/* ✓ CORRECT — shorthand first, longhand overrides */
+.block {
+  padding: 0 var(--ui-space-6);
+  padding-top: var(--ui-space-8);
+}
+```
+
+This produces no browser error and is invisible at a glance — the expected spacing just doesn't appear. Always write shorthand before longhand in the same declaration block.
