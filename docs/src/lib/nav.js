@@ -86,7 +86,6 @@ export const NAV = [
       { label: 'Checkbox',    href: '/components/checkbox'    },
       { label: 'Charts',      href: '/components/charts'      },
       { label: 'Empty',       href: '/components/empty'       },
-      { label: 'Fieldset',    href: '/components/fieldset'    },
       { label: 'File Upload', href: '/components/file-upload' },
       { label: 'Heading',     href: '/components/heading'     },
       { label: 'Icons',       href: '/components/icons'       },
@@ -98,8 +97,6 @@ export const NAV = [
       { label: 'Pullquote',   href: '/components/pullquote'   },
       { label: 'Radio',       href: '/components/radio'       },
       { label: 'Rating',      href: '/components/rating'      },
-      { label: 'Search',      href: '/components/search'      },
-      { label: 'Segmented',   href: '/components/segmented'   },
       { label: 'Select',      href: '/components/select'      },
       { label: 'Slider',      href: '/components/slider'      },
       { label: 'Spinner',     href: '/components/spinner'     },
@@ -108,7 +105,6 @@ export const NAV = [
       { label: 'Table',       href: '/components/table'       },
       { label: 'Textarea',    href: '/components/textarea'    },
       { label: 'Toggle',      href: '/components/toggle'      },
-      { label: 'Tooltip',     href: '/components/tooltip'     },
     ],
   },
   {
@@ -120,7 +116,6 @@ export const NAV = [
       { label: 'Feature',     href: '/components/feature'     },
       { label: 'Hero',        href: '/components/hero'        },
       { label: 'Nav',         href: '/components/nav'         },
-      { label: 'Phone Frame', href: '/components/phone-frame' },
     ],
   },
   {
