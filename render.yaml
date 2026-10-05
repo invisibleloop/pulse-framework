@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: pulse-docs
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm run docs:start
+    envVars:
+      - key: NODE_VERSION
+        value: 22
