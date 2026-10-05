@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext } from '../../lib/nav.js'
 import { table, callout } from '../../lib/layout.js'
-import { radio, radioGroup, fieldset } from '../../../../packages/pulse/src/ui/index.js'
+import { radio, radioGroup } from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/radio')
 
@@ -141,20 +141,12 @@ export default {
       )}
 
       <h2 class="doc-h2" id="single">Single radio</h2>
-      <p>Use <code>radio()</code> directly when you need to compose your own group layout — for example inside a <a href="/components/fieldset">fieldset</a> alongside other controls.</p>
+      <p>Use <code>radio()</code> directly when you need to compose your own group layout.</p>
       ${demo(
-        fieldset({
-          legend: 'Preferred contact',
-          content:
-            radio({ name: 'contact', value: 'email', label: 'Email', checked: true }) +
-            radio({ name: 'contact', value: 'phone', label: 'Phone' }),
-        }),
-        `fieldset({
-  legend:  'Preferred contact',
-  content:
-    radio({ name: 'contact', value: 'email', label: 'Email', checked: true }) +
-    radio({ name: 'contact', value: 'phone', label: 'Phone' }),
-})`,
+        radio({ name: 'contact', value: 'email', label: 'Email', checked: true }) +
+        radio({ name: 'contact', value: 'phone', label: 'Phone' }),
+        `radio({ name: 'contact', value: 'email', label: 'Email', checked: true }) +
+radio({ name: 'contact', value: 'phone', label: 'Phone' })`,
         { col: true }
       )}
 

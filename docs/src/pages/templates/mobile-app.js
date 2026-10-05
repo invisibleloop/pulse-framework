@@ -12,7 +12,6 @@ import { asset } from '../../lib/layout.js'
 import {
   nav        as uiNav,
   hero,
-  phoneFrame,
   section,
   container,
   grid,
@@ -113,7 +112,7 @@ const pageHero = hero({
   background:   '#7b9e87',
   eyebrowColor: '#1a2e24',
   color:        '#1a2e24',
-  image:    phoneFrame({ content: phoneScreen }),
+  image:    `<img src="/example-screen.png" alt="App screenshot">`,
   actions:  `
     <div class="u-flex u-gap-3 u-flex-wrap u-justify-center">
       ${appBadge({ store: 'apple',  href: '#download' })}

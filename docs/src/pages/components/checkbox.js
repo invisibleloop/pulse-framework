@@ -1,7 +1,7 @@
 import { renderComponentPage, demo } from '../../lib/component-page.js'
 import { prevNext }                   from '../../lib/nav.js'
 import { table, callout }             from '../../lib/layout.js'
-import { checkbox, fieldset }         from '../../../../packages/pulse/src/ui/index.js'
+import { checkbox }                   from '../../../../packages/pulse/src/ui/index.js'
 
 const { prev, next } = prevNext('/components/checkbox')
 
@@ -18,7 +18,7 @@ export default {
     prev,
     next,
     name: 'checkbox',
-    description: 'Custom-styled checkbox with animated check mark, full keyboard and screen-reader support. Pairs with <a href="/components/fieldset">fieldset</a> for labelled groups.',
+    description: 'Custom-styled checkbox with animated check mark, full keyboard and screen-reader support.',
     content: `
 
       <h2 class="doc-h2" id="basic">Basic</h2>
@@ -70,25 +70,17 @@ export default {
         { col: true }
       )}
 
-      <h2 class="doc-h2" id="group">Group in a fieldset</h2>
-      <p>Compose multiple checkboxes inside a <a href="/components/fieldset">fieldset</a> for a semantic group.</p>
+      <h2 class="doc-h2" id="group">Group checkboxes</h2>
+      <p>Compose multiple checkboxes together for a cohesive group.</p>
       ${demo(
-        fieldset({
-          legend: 'Notifications',
-          content:
-            checkbox({ name: 'notif', value: 'email',   label: 'Email',            checked: true  }) +
-            checkbox({ name: 'notif', value: 'sms',     label: 'SMS'                              }) +
-            checkbox({ name: 'notif', value: 'browser', label: 'Browser push',     checked: true  }) +
-            checkbox({ name: 'notif', value: 'weekly',  label: 'Weekly digest',    disabled: true }),
-        }),
-        `fieldset({
-  legend:  'Notifications',
-  content:
-    checkbox({ name: 'notif', value: 'email',   label: 'Email',         checked: true }) +
-    checkbox({ name: 'notif', value: 'sms',     label: 'SMS'                          }) +
-    checkbox({ name: 'notif', value: 'browser', label: 'Browser push',  checked: true }) +
-    checkbox({ name: 'notif', value: 'weekly',  label: 'Weekly digest', disabled: true }),
-})`,
+        checkbox({ name: 'notif', value: 'email',   label: 'Email',            checked: true  }) +
+        checkbox({ name: 'notif', value: 'sms',     label: 'SMS'                              }) +
+        checkbox({ name: 'notif', value: 'browser', label: 'Browser push',     checked: true  }) +
+        checkbox({ name: 'notif', value: 'weekly',  label: 'Weekly digest',    disabled: true }),
+        `checkbox({ name: 'notif', value: 'email',   label: 'Email',         checked: true }) +
+checkbox({ name: 'notif', value: 'sms',     label: 'SMS'                          }) +
+checkbox({ name: 'notif', value: 'browser', label: 'Browser push',  checked: true }) +
+checkbox({ name: 'notif', value: 'weekly',  label: 'Weekly digest', disabled: true })`,
         { col: true }
       )}
 

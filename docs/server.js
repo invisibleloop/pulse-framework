@@ -78,7 +78,6 @@ await createServer(
     new URL('./src/pages/components/checkbox.js',    import.meta.url),
     new URL('./src/pages/components/charts.js',      import.meta.url),
     new URL('./src/pages/components/empty.js',       import.meta.url),
-    new URL('./src/pages/components/fieldset.js',    import.meta.url),
     new URL('./src/pages/components/fileupload.js',  import.meta.url),
     new URL('./src/pages/components/heading.js',     import.meta.url),
     new URL('./src/pages/components/icons.js',       import.meta.url),
@@ -90,8 +89,6 @@ await createServer(
     new URL('./src/pages/components/pullquote.js',   import.meta.url),
     new URL('./src/pages/components/radio.js',       import.meta.url),
     new URL('./src/pages/components/rating.js',      import.meta.url),
-    new URL('./src/pages/components/search.js',      import.meta.url),
-    new URL('./src/pages/components/segmented.js',   import.meta.url),
     new URL('./src/pages/components/select.js',      import.meta.url),
     new URL('./src/pages/components/slider.js',      import.meta.url),
     new URL('./src/pages/components/spinner.js',     import.meta.url),
@@ -100,7 +97,6 @@ await createServer(
     new URL('./src/pages/components/table.js',       import.meta.url),
     new URL('./src/pages/components/textarea.js',    import.meta.url),
     new URL('./src/pages/components/toggle.js',      import.meta.url),
-    new URL('./src/pages/components/tooltip.js',     import.meta.url),
     // Landing Components
     new URL('./src/pages/components/accordion.js',   import.meta.url),
     new URL('./src/pages/components/app-badge.js',   import.meta.url),
@@ -108,7 +104,6 @@ await createServer(
     new URL('./src/pages/components/feature.js',     import.meta.url),
     new URL('./src/pages/components/hero.js',        import.meta.url),
     new URL('./src/pages/components/nav.js',         import.meta.url),
-    new URL('./src/pages/components/phone-frame.js', import.meta.url),
     // Templates
     new URL('./src/pages/templates.js',                     import.meta.url),
     new URL('./src/pages/templates/mobile-app.js',          import.meta.url),
