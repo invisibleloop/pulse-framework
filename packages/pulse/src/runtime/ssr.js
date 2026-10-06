@@ -365,7 +365,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     : ''
 
   const styleLinks = (meta.styles || [])
-    .map((href, i) => `<link rel="stylesheet" href="${esc(href)}"${i === 0 ? ' fetchpriority="high"' : ''}>`)
+    .map((href, i) => `<link rel="stylesheet" href="${esc(href)}"${i < 2 ? ' fetchpriority="high"' : ''}>`)
     .join('\n  ')
 
   // Deferred styles — injected via a nonce'd script so CSP is respected.

@@ -8,3 +8,16 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22
+    headers:
+      - path: /pulse-ui.css
+        name: Cache-Control
+        value: public, immutable, max-age=31536000
+      - path: /theme.css
+        name: Cache-Control
+        value: public, immutable, max-age=31536000
+      - path: /docs.css
+        name: Cache-Control
+        value: public, immutable, max-age=31536000
+      - path: /home-brut.css
+        name: Cache-Control
+        value: public, immutable, max-age=31536000
