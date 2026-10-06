@@ -13,4 +13,4 @@ docs/.pulse-build/
 .env.*
 /tmp/pulse-lhr*.json
 .claude/commands/
-*.coverage.js
+.claude/coverage-check.js
