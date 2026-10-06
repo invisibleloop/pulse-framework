@@ -9,7 +9,7 @@ import zlib  from 'zlib'
 import { fileURLToPath } from 'url'
 
 const ROOT = path.resolve(fileURLToPath(import.meta.url), '../../../..')
-const DIST = path.join(ROOT, 'benchmark', 'public', 'dist')
+const DIST = path.join(ROOT, 'docs', 'public', 'dist')
 
 function brotliKb(filepath) {
   try {
@@ -35,8 +35,8 @@ function measureBundles() {
     .filter(kb => kb !== null)
     .reduce((sum, kb) => sum + kb, 0)
 
-  const counterBoot = files.find(f => f.startsWith('counter.boot-'))
-  const staticBoot  = files.find(f => f.startsWith('home.boot-'))
+  const counterBoot = files.find(f => f.startsWith('counter.boot'))
+  const staticBoot  = files.find(f => f.startsWith('home.boot'))
 
   const runtimeKb    = chunkFiles.length > 0 ? chunkKb : null
   const pageBootKb   = counterBoot ? brotliKb(path.join(DIST, counterBoot)) : null
