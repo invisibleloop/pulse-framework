@@ -193,14 +193,14 @@
     color 0.1s;
 }
 .brut-btn-primary:hover {
-  background: #ff5591;
+  background: var(--brut-gold-bright);
   color: #ffffff;
-  border-color: #ff5591;
+  border-color: var(--brut-gold-bright);
 }
 .brut-btn-primary--inv {
-  background: #d4335f !important;
+  background: var(--brut-gold) !important;
   color: #ffffff !important;
-  border-color: #d4335f !important;
+  border-color: var(--brut-gold) !important;
 }
 .brut-btn-primary--inv:hover {
   background: var(--brut-surface);
@@ -455,12 +455,12 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #ff5591;
+  color: var(--brut-gold-bright);
   margin-left: 0;
 }
 
 .brut-review-panel .ui-code-window-lang {
-  color: #ff5591;
+  color: var(--brut-gold-bright);
 }
 
 .brut-review-output {
@@ -548,7 +548,7 @@
 }
 
 .brut-col-head--hi {
-  color: #ff5591;
+  color: var(--brut-gold-bright);
 }
 
 .brut-col-list {
@@ -619,7 +619,7 @@
 .brut-versus-sub {
   font-size: 0.95rem;
   line-height: 1.65;
-  color: #ff5591;
+  color: var(--brut-gold-bright);
   margin-top: 1.25rem;
 }
 
@@ -633,7 +633,7 @@
 }
 
 .brut-table thead {
-  background: rgba(232, 182, 19, 0.1);
+  background: rgba(8, 145, 178, 0.1);
 }
 
 .brut-table thead th {

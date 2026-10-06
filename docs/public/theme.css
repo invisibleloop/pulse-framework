@@ -1,20 +1,20 @@
-/* Brut theme tokens — pink field / white surface / dark ink. Scoped to
-   [data-theme="light"] on <body>. Pink is the dominant field colour (--bg);
+/* Brut theme tokens — teal field / white surface / dark ink. Scoped to
+   [data-theme="light"] on <body>. Teal is the dominant field colour (--bg);
    white is the accent surface (cards, panels, code windows sit on white
-   against the pink field). Dark sections (nav bar, footer, code panels)
-   stay near-black for contrast — this is not an all-pink reskin. */
+   against the teal field). Dark sections (nav bar, footer, code panels)
+   stay near-black for contrast — this is not an all-teal reskin. */
 [data-theme="light"] {
-  /* Hot magenta accent — achieves 4.5:1 contrast on dark for Lighthouse AAA. */
-  --brut-gold: #e84c7d;
-  --brut-gold-deep: #b81563;
-  --brut-gold-bright: #ff5591;
+  /* Vibrant teal accent — achieves 4.5:1 contrast on dark for Lighthouse AAA. */
+  --brut-gold: #0891b2;
+  --brut-gold-deep: #0e7490;
+  --brut-gold-bright: #06b6d4;
   --brut-ink: #171512;
-  --brut-surface: #f7d3dc;
-  --brut-surface-2: #f2c3d0;
+  --brut-surface: #cffafe;
+  --brut-surface-2: #a5f3fc;
   --brut-muted: #5c574c;
   --brut-dark: #171512;
   --brut-darker: #100f0c;
-  --brut-surface-dot: #ecadbf;
+  --brut-surface-dot: #7ee8fb;
 }
 
 /* Site-wide light theme tokens — feeds docs.css's :root token names (--bg,
@@ -25,15 +25,15 @@
   --bg:            var(--brut-surface);
   --surface:       #ffffff;
   --surface-2:     var(--brut-surface-2);
-  --border:        #d592a4;
-  --border-subtle: #e8b3c2;
+  --border:        #67e8f9;
+  --border-subtle: #a5f3fc;
   --text:          var(--brut-ink);
   --muted:         var(--brut-muted);
   --muted-2:       #736b5c;
   --accent:        var(--brut-gold);
   --accent-text:   #ffffff;
   --accent-hover:  var(--brut-gold-deep);
-  --accent-dim:    rgba(184, 31, 84, 0.12);
+  --accent-dim:    rgba(8, 145, 178, 0.12);
   --green:         #166534;
   --red:           #b91c1c;
 
@@ -48,7 +48,7 @@
   --tok-punct: #6b5f54;
 
   /* Sticky header background — replaces the hardcoded rgba(13,13,16,.9) */
-  --header-bg: rgba(247, 211, 220, 0.9);
+  --header-bg: rgba(207, 250, 254, 0.9);
 
   /* Callout / tag accents that were hardcoded dark-theme hex in docs.css */
   --callout-note-icon: #1d4ed8;

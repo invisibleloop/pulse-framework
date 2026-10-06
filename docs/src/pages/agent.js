@@ -246,18 +246,18 @@ export default {
     <main id="main-content">
       <style>
         body { font-family: monospace; background: #fff; color: #171512; }
-        pre { background: #f7d3dc; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
+        pre { background: #cffafe; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; line-height: 1.5; }
         .section { margin-bottom: 3rem; border-bottom: 2px solid #171512; padding-bottom: 2rem; }
         .section h2 { font-size: 1.5rem; margin-bottom: 1rem; }
-        .tree { margin: 1rem 0; padding: 1rem; background: #f2c3d0; }
-        .tree-node { margin: 0.5rem 0; padding: 0.5rem; background: #fff; border-left: 3px solid #e84c7d; }
-        .example { margin: 0.5rem 0; padding: 0.75rem; background: #f2c3d0; }
+        .tree { margin: 1rem 0; padding: 1rem; background: #a5f3fc; }
+        .tree-node { margin: 0.5rem 0; padding: 0.5rem; background: #fff; border-left: 3px solid #0891b2; }
+        .example { margin: 0.5rem 0; padding: 0.75rem; background: #a5f3fc; }
         table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
         th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #171512; }
         th { background: #171512; color: #fff; font-weight: bold; }
         .perfect { color: #166534; font-weight: bold; }
         .warning { color: #b91c1c; font-weight: bold; }
-        .code-block { background: #f2c3d0; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
+        .code-block { background: #a5f3fc; padding: 1rem; margin: 1rem 0; border-radius: 4px; }
       </style>
 
       <section class="section">
