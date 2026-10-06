@@ -88,7 +88,7 @@
 .brut-hero-tag {
   width: 100%;
   background: var(--brut-ink);
-  color: var(--brut-gold);
+  color: var(--brut-surface);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.15em;
