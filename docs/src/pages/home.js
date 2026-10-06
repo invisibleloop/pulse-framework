@@ -100,8 +100,7 @@ export default {
     title: 'Pulse — The spec-first web framework',
     description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page: server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
     theme: 'light',
-    styles: ['/pulse-ui.css', '/theme.css', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap'],
-    deferredStyles: ['/docs.css', '/home-brut.css'],
+    styles: ['/pulse-ui.css', '/theme.css', '/docs.css', '/home-brut.css', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap'],
     schema: {
       '@context': 'https://schema.org',
       '@type': 'SoftwareApplication',
