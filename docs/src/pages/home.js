@@ -158,7 +158,7 @@ export default {
 
         <div class="brut-stats-bar">
           <div class="brut-stat">
-            <span class="brut-stat-val">${server.metrics?.measured ? server.metrics.bundles[1].value : '< 6 kB'}</span>
+            <span class="brut-stat-val">${server.metrics?.bundles?.[1]?.value ?? '< 6 kB'}</span>
             <span class="brut-stat-lbl">JS · first visit, measured live →</span>
           </div>
           <div class="brut-stat">
