@@ -12,6 +12,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@invisibleloop/pulse": "workspace:*"
+    "@invisibleloop/pulse": "file:../packages/pulse"
   }
 }
