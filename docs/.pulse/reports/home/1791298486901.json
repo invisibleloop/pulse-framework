@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-10-06T14:54:46.900Z",
+  "url": "http://localhost:3001/",
+  "scores": {
+    "performance": 100,
+    "accessibility": 96,
+    "bestPractices": 100,
+    "seo": 100
+  },
+  "metrics": {
+    "lcp": 1000,
+    "cls": 0.003,
+    "fcp": 1000,
+    "tbt": 0
+  }
+}
