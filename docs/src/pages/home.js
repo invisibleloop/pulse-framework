@@ -151,6 +151,7 @@ export default {
             <div class="brut-hero-ctas">
               <a href="/getting-started" class="brut-btn-primary">Get Started</a>
               <a href="/spec" class="brut-btn-ghost">Read the Spec</a>
+              <a href="/agent" class="brut-btn-ghost">For Agents</a>
             </div>
           </div>
         </section>
