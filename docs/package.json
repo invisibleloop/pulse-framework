@@ -1,0 +1,17 @@
+{
+  "name": "pulse-docs",
+  "version": "0.20.12",
+  "private": true,
+  "type": "module",
+  "description": "Pulse framework documentation site",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@invisibleloop/pulse": "workspace:*"
+  }
+}
