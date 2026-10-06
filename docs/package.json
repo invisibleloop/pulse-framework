@@ -12,6 +12,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@invisibleloop/pulse": "file:../packages/pulse"
+    "@invisibleloop/pulse": "file:../packages/pulse",
+    "glob": "^11.0.0"
   }
 }
