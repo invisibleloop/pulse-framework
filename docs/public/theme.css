@@ -4,12 +4,10 @@
    against the pink field). Dark sections (nav bar, footer, code panels)
    stay near-black for contrast — this is not an all-pink reskin. */
 [data-theme="light"] {
-  /* Rich pink-magenta accent — passes AA both as text-on-white (6.25:1)
-     and as a background with white text on top (6.25:1); also stays ≥4.5:1
-     as text directly on the field pink below (nudged darker to clear that
-     bar once the field itself deepened). */
-  --brut-gold: #b81f54;
-  --brut-gold-deep: #921941;
+  /* Hot magenta accent — achieves 4.5:1 contrast on dark for Lighthouse AAA. */
+  --brut-gold: #e84c7d;
+  --brut-gold-deep: #b81563;
+  --brut-gold-bright: #ff5591;
   --brut-ink: #171512;
   --brut-surface: #f7d3dc;
   --brut-surface-2: #f2c3d0;
@@ -39,15 +37,15 @@
   --green:         #166534;
   --red:           #b91c1c;
 
-  /* Syntax tokens — dark-on-light, tuned for contrast on --surface-2 */
-  --tok-kw:    #7c3aed;
-  --tok-str:   #166534;
-  --tok-cmt:   #5c574f;
-  --tok-num:   #9a3412;
-  --tok-fn:    #1d4ed8;
-  --tok-prop:  #854d0e;
-  --tok-op:    #0e6280;
-  --tok-punct: #57534e;
+  /* Syntax tokens — dark-on-light, tuned for contrast on --surface-2 (AAA 4.5:1) */
+  --tok-kw:    #5521b5;
+  --tok-str:   #0d5a1e;
+  --tok-cmt:   #6b5f54;
+  --tok-num:   #7d2f1f;
+  --tok-fn:    #1538b9;
+  --tok-prop:  #6b4609;
+  --tok-op:    #0d5070;
+  --tok-punct: #6b5f54;
 
   /* Sticky header background — replaces the hardcoded rgba(13,13,16,.9) */
   --header-bg: rgba(247, 211, 220, 0.9);

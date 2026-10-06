@@ -193,14 +193,14 @@
     color 0.1s;
 }
 .brut-btn-primary:hover {
-  background: var(--brut-gold);
-  color: var(--brut-ink);
-  border-color: var(--brut-gold);
+  background: #ff5591;
+  color: #ffffff;
+  border-color: #ff5591;
 }
 .brut-btn-primary--inv {
-  background: var(--brut-gold);
-  color: var(--brut-ink);
-  border-color: var(--brut-gold);
+  background: #d4335f !important;
+  color: #ffffff !important;
+  border-color: #d4335f !important;
 }
 .brut-btn-primary--inv:hover {
   background: var(--brut-surface);
@@ -263,7 +263,7 @@
 .brut-stat-val {
   font-size: 2.25rem;
   font-weight: 900;
-  color: var(--brut-gold);
+  color: #ffffff;
   letter-spacing: -0.03em;
   line-height: 1;
 }
@@ -322,8 +322,8 @@
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
-  color: #ffffff;
-  background: var(--brut-gold);
+  color: #171512;
+  background: var(--brut-gold-bright);
   padding: 0.4em 0.6em;
   margin-bottom: 1.5rem;
 }
@@ -455,8 +455,12 @@
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--brut-surface);
+  color: #ff5591;
   margin-left: 0;
+}
+
+.brut-review-panel .ui-code-window-lang {
+  color: #ff5591;
 }
 
 .brut-review-output {
@@ -540,11 +544,11 @@
   letter-spacing: 0.15em;
   text-transform: uppercase;
   margin-bottom: 1.25rem;
-  color: var(--brut-muted);
+  color: var(--brut-gold-deep);
 }
 
 .brut-col-head--hi {
-  color: var(--brut-gold);
+  color: #ff5591;
 }
 
 .brut-col-list {
@@ -600,7 +604,7 @@
   font-weight: 900;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--brut-gold);
+  color: var(--brut-gold-bright);
   margin-bottom: 1rem;
 }
 
@@ -615,7 +619,7 @@
 .brut-versus-sub {
   font-size: 0.95rem;
   line-height: 1.65;
-  color: var(--brut-muted);
+  color: #ff5591;
   margin-top: 1.25rem;
 }
 
@@ -643,7 +647,7 @@
 }
 
 .brut-th-pulse {
-  color: var(--brut-gold) !important;
+  color: var(--brut-gold-bright) !important;
 }
 
 .brut-table thead th:first-child,
@@ -681,7 +685,7 @@
 }
 
 .brut-table .v-yes {
-  color: var(--brut-gold);
+  color: var(--brut-gold-bright);
 }
 
 .brut-table .v-partial,
