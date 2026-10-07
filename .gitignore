@@ -1,6 +1,5 @@
 node_modules/
 public/dist/
-public/
 docs/public/dist/
 packages/pulse/public/dist/
 benchmark/public/dist/
