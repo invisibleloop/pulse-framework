@@ -101,11 +101,60 @@
     </div>
   </section>
 
+  <section class="section">
+    <h2>Why Constraints Matter</h2>
+    <p>Most frameworks give you maximum flexibility. Pulse does the opposite. Constraints aren't limitations — they're guarantees:</p>
+    <ul style="list-style: none; margin: 2rem 0; font-size: 1.1rem; line-height: 1.8;">
+      <li style="margin-bottom: 1.5rem;"><strong>One spec per page:</strong> No split files. No hidden conventions. Everything co-located.</li>
+      <li style="margin-bottom: 1.5rem;"><strong>Pure mutations:</strong> State changes are synchronous, side-effect-free, testable.</li>
+      <li style="margin-bottom: 1.5rem;"><strong>Validation at startup:</strong> Malformed specs fail before shipping. No runtime surprises.</li>
+      <li style="margin-bottom: 1.5rem;"><strong>CSRF automatic:</strong> Form submissions protected by default. No opt-out.</li>
+      <li><strong>Constraints enforced:</strong> min/max bounds on state are guaranteed. State cannot violate them.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>Is Pulse Right For You?</h2>
+    <p>Answer these honestly. If any is "no," another framework might fit better:</p>
+    <div style="margin: 2rem 0; font-size: 1.05rem; line-height: 1.9; max-width: 700px;">
+      <p><strong>Is this a web application?</strong></p>
+      <p style="color: #5c574c; margin-bottom: 2rem; margin-left: 2rem;">YES → continue | NO → Pulse is web-only</p>
+
+      <p><strong>Do you want server-rendered HTML?</strong></p>
+      <p style="color: #5c574c; margin-bottom: 2rem; margin-left: 2rem;">YES → continue | NO → still works, suboptimal</p>
+
+      <p><strong>Do you want schema validation at startup?</strong></p>
+      <p style="color: #5c574c; margin-left: 2rem;"><strong style="color: #171512;">YES → PERFECT FIT (0.95)</strong> | NO → GOOD FIT (0.8)</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>How Pulse Compares</h2>
+    <div style="margin: 2rem 0; font-size: 1.05rem; line-height: 1.9;">
+      <div style="margin-bottom: 2.5rem;">
+        <strong>Pulse</strong><br>
+        <span style="color: #5c574c;">One spec object • 0 dependencies • validation at startup • AI-safe</span>
+      </div>
+      <div style="margin-bottom: 2.5rem;">
+        <strong>Next.js</strong><br>
+        <span style="color: #5c574c;">File routing • 47+ deps • massive ecosystem • flexibility</span>
+      </div>
+      <div style="margin-bottom: 2.5rem;">
+        <strong>SvelteKit</strong><br>
+        <span style="color: #5c574c;">File routing • 23+ deps • great DX • strong reactivity</span>
+      </div>
+      <div>
+        <strong>Remix</strong><br>
+        <span style="color: #5c574c;">File routing • 31+ deps • progressive enhancement • forms-first</span>
+      </div>
+    </div>
+  </section>
+
   <section class="section" style="text-align: center; padding: 8rem 2rem;">
     <div class="cta">
       <a href="/getting-started" class="btn btn-dark">Start Building</a>
       <a href="/spec" class="btn btn-light">Full Spec</a>
-      <a href="/agent" class="btn btn-light">Structured Data</a>
+      <a href="/agent" class="btn btn-light">For Agents</a>
     </div>
   </section>
 
