@@ -6,7 +6,6 @@ export const NAV = [
   {
     section: 'Framework',
     items: [
-      { label: 'Overview',          href: '/'                  },
       { label: 'FAQ',               href: '/faq'               },
       { label: 'Project Structure', href: '/project-structure' },
       { label: 'Spec Reference',    href: '/spec'              },

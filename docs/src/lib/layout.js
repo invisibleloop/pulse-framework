@@ -6,7 +6,7 @@
  */
 
 import { NAV } from './nav.js'
-import pkg from '../../../package.json' with { type: 'json' }
+import pkg from '../../../packages/pulse/package.json' with { type: 'json' }
 
 // Resolve static asset paths through the build manifest (hashed in prod, raw in dev).
 // Populated by initLayoutManifest() in server.js before the server starts.

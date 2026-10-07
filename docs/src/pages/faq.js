@@ -1,6 +1,6 @@
 import { renderLayout, h1, lead } from '../lib/layout.js'
 import { prevNext } from '../lib/nav.js'
-import pkg from '../../../package.json' with { type: 'json' }
+import pkg from '../../../packages/pulse/package.json' with { type: 'json' }
 
 const { version } = pkg
 
