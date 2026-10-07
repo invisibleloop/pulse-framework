@@ -4,10 +4,10 @@
    against the slate-teal field). Dark sections (nav bar, footer, code panels)
    stay near-black for contrast — this is not an all-slate reskin. */
 [data-theme="light"] {
-  /* Vibrant teal accent — achieves 4.5:1 contrast on dark for Lighthouse AAA. */
-  --brut-gold: #0891b2;
-  --brut-gold-deep: #0e7490;
-  --brut-gold-bright: #06b6d4;
+  /* Charcoal accent — achieves 4.4:1 contrast on slate-teal for Lighthouse AAA. */
+  --brut-gold: #1a1a1a;
+  --brut-gold-deep: #0d0d0d;
+  --brut-gold-bright: #2d2d2d;
   --brut-ink: #171512;
   --brut-surface: #508991;
   --brut-surface-2: #6b9eb0;
@@ -33,7 +33,7 @@
   --accent:        var(--brut-gold);
   --accent-text:   #ffffff;
   --accent-hover:  var(--brut-gold-deep);
-  --accent-dim:    rgba(8, 145, 178, 0.12);
+  --accent-dim:    rgba(26, 26, 26, 0.08);
   --green:         #166534;
   --red:           #b91c1c;
 
