@@ -29,9 +29,15 @@
     .btn-light { background: transparent; color: #171512; }
     .btn-light:hover { background: #f0f0f0; }
 
-    .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; position: relative; }
-    .section h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; margin: 0 0 2rem; }
+    .section { padding: 5rem 2rem; max-width: 1200px; margin: 0 auto; position: relative; }
+    .section h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; margin: 0 0 3rem; }
     .section p { font-size: 1.1rem; color: #5c574c; line-height: 1.7; max-width: 700px; }
+
+    ul { list-style: none; }
+    li { margin-bottom: 1.8rem; display: flex; gap: 1.5rem; align-items: flex-start; font-size: 1.05rem; line-height: 1.7; }
+    li:last-child { margin-bottom: 0; }
+    .icon { width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    li strong { display: block; margin-bottom: 0.3rem; font-weight: 700; }
 
     .section--blue { background: #4f6cff; color: #ffffff; }
     .section--blue h2, .section--blue p, .section--blue strong, .section--blue li { color: #ffffff; }
@@ -117,48 +123,52 @@
   <section class="section section--blue">
     <h2>Why Constraints Matter</h2>
     <p>Most frameworks give you maximum flexibility. Pulse does the opposite. Constraints aren't limitations — they're guarantees:</p>
-    <ul style="list-style: none; margin: 2rem 0; font-size: 1.1rem; line-height: 1.8;">
-      <li style="margin-bottom: 1.5rem;"><strong>One spec per page:</strong> No split files. No hidden conventions. Everything co-located.</li>
-      <li style="margin-bottom: 1.5rem;"><strong>Pure mutations:</strong> State changes are synchronous, side-effect-free, testable.</li>
-      <li style="margin-bottom: 1.5rem;"><strong>Validation at startup:</strong> Malformed specs fail before shipping. No runtime surprises.</li>
-      <li style="margin-bottom: 1.5rem;"><strong>CSRF automatic:</strong> Form submissions protected by default. No opt-out.</li>
-      <li><strong>Constraints enforced:</strong> min/max bounds on state are guaranteed. State cannot violate them.</li>
+    <ul style="margin: 3rem 0;">
+      <li><div class="icon">📄</div><div><strong>One spec per page</strong> No split files. No hidden conventions. Everything co-located.</div></li>
+      <li><div class="icon">⚡</div><div><strong>Pure mutations</strong> State changes are synchronous, side-effect-free, testable.</div></li>
+      <li><div class="icon">✓</div><div><strong>Validation at startup</strong> Malformed specs fail before shipping. No runtime surprises.</div></li>
+      <li><div class="icon">🔒</div><div><strong>CSRF automatic</strong> Form submissions protected by default. No opt-out.</div></li>
+      <li><div class="icon">🎯</div><div><strong>Constraints enforced</strong> min/max bounds on state are guaranteed. State cannot violate them.</div></li>
     </ul>
   </section>
 
   <section class="section section--purple">
     <h2>Is Pulse Right For You?</h2>
     <p>Answer these honestly. If any is "no," another framework might fit better:</p>
-    <div style="margin: 2rem 0; font-size: 1.05rem; line-height: 1.9; max-width: 700px;">
+    <div style="margin: 3rem 0; font-size: 1.05rem; line-height: 1.9; max-width: 700px;">
       <p><strong>Is this a web application?</strong></p>
-      <p style="color: #5c574c; margin-bottom: 2rem; margin-left: 2rem;">YES → continue | NO → Pulse is web-only</p>
+      <p style="color: rgba(255,255,255,0.8); margin-bottom: 2rem; margin-left: 2rem;">YES → continue | NO → Pulse is web-only</p>
 
       <p><strong>Do you want server-rendered HTML?</strong></p>
-      <p style="color: #5c574c; margin-bottom: 2rem; margin-left: 2rem;">YES → continue | NO → still works, suboptimal</p>
+      <p style="color: rgba(255,255,255,0.8); margin-bottom: 2rem; margin-left: 2rem;">YES → continue | NO → still works, suboptimal</p>
 
       <p><strong>Do you want schema validation at startup?</strong></p>
-      <p style="color: #5c574c; margin-left: 2rem;"><strong style="color: #171512;">YES → PERFECT FIT (0.95)</strong> | NO → GOOD FIT (0.8)</p>
+      <p style="color: rgba(255,255,255,0.8); margin-left: 2rem;"><strong style="color: #ffffff;">YES → PERFECT FIT (0.95)</strong> | NO → GOOD FIT (0.8)</p>
     </div>
   </section>
 
   <section class="section section--orange">
     <h2>How Pulse Compares</h2>
-    <div style="margin: 2rem 0; font-size: 1.05rem; line-height: 1.9;">
-      <div style="margin-bottom: 2.5rem;">
-        <strong>Pulse</strong><br>
-        <span style="color: #5c574c;">One spec object • 0 dependencies • validation at startup • AI-safe</span>
+    <div style="margin: 3rem 0; font-size: 1.05rem; line-height: 1.8; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem;">
+      <div style="padding: 2rem; background: rgba(0,0,0,0.15); border-radius: 4px;">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">⚡</div>
+        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">Pulse</strong>
+        <span style="color: rgba(255,255,255,0.85); font-size: 0.95rem;">One spec • 0 deps • validated • AI-safe</span>
       </div>
-      <div style="margin-bottom: 2.5rem;">
-        <strong>Next.js</strong><br>
-        <span style="color: #5c574c;">File routing • 47+ deps • massive ecosystem • flexibility</span>
+      <div style="padding: 2rem; background: rgba(0,0,0,0.15); border-radius: 4px;">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">▲</div>
+        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">Next.js</strong>
+        <span style="color: rgba(255,255,255,0.85); font-size: 0.95rem;">File routing • 47+ deps • ecosystem</span>
       </div>
-      <div style="margin-bottom: 2.5rem;">
-        <strong>SvelteKit</strong><br>
-        <span style="color: #5c574c;">File routing • 23+ deps • great DX • strong reactivity</span>
+      <div style="padding: 2rem; background: rgba(0,0,0,0.15); border-radius: 4px;">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">⚙</div>
+        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">SvelteKit</strong>
+        <span style="color: rgba(255,255,255,0.85); font-size: 0.95rem;">File routing • 23+ deps • great DX</span>
       </div>
-      <div>
-        <strong>Remix</strong><br>
-        <span style="color: #5c574c;">File routing • 31+ deps • progressive enhancement • forms-first</span>
+      <div style="padding: 2rem; background: rgba(0,0,0,0.15); border-radius: 4px;">
+        <div style="font-size: 2rem; margin-bottom: 1rem;">📝</div>
+        <strong style="font-size: 1.1rem; display: block; margin-bottom: 0.5rem;">Remix</strong>
+        <span style="color: rgba(255,255,255,0.85); font-size: 0.95rem;">File routing • 31+ deps • forms</span>
       </div>
     </div>
   </section>
