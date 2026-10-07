@@ -4,13 +4,14 @@ export default {
     title: 'Pulse — The spec-first web framework',
     description: 'One plain JavaScript object per page. Server data, state, mutations, view. Zero runtime dependencies.',
     theme: 'light',
-    styles: ['/pulse-ui.css', '/theme.css', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'],
+    styles: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'],
   },
   view: () => `
     <main id="main-content">
       <style>
-        * { box-sizing: border-box; }
-        body { background: #ffffff; color: #171512; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif; line-height: 1.6; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { background: #ffffff; color: #171512; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif; line-height: 1.6; }
+        main { display: block; }
 
         .v2-container { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
         .v2-header { padding: 3rem 2rem; text-align: center; border-bottom: 1px solid #e8e8e8; }
