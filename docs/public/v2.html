@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pulse — The spec-first web framework</title>
-  <meta name="description" content="One plain JavaScript object per page. Server data, state, mutations, view. Zero runtime dependencies.">
+  <meta name="description" content="One plain JavaScript object per page. Zero runtime dependencies. Server data, state, mutations, view.">
   <link rel="icon" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,54 +13,42 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { background: #ffffff; color: #171512; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif; line-height: 1.6; }
 
-    .nav { display: flex; justify-content: space-between; align-items: center; max-width: 900px; margin: 0 auto; padding: 1rem 2rem; border-bottom: 1px solid #f0f0f0; }
-    .nav-logo { font-weight: 800; font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; color: #171512; }
-    .nav-links { display: flex; gap: 2rem; }
-    .nav-links a { text-decoration: none; color: #5c574c; font-size: 0.9rem; font-weight: 500; transition: color 0.1s; }
-    .nav-links a:hover { color: #171512; }
+    .nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; max-width: 100%; }
+    .nav-logo { font-weight: 800; font-size: 0.85rem; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; color: #171512; }
+    .nav-links { display: flex; gap: 2rem; font-size: 0.9rem; }
+    .nav-links a { text-decoration: none; color: #171512; transition: opacity 0.1s; }
+    .nav-links a:hover { opacity: 0.6; }
 
-    .hero { padding: 5rem 2rem; text-align: center; max-width: 900px; margin: 0 auto; }
-    .hero h1 { font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900; margin: 0 0 1rem; line-height: 1.1; letter-spacing: -0.02em; }
-    .hero .tagline { font-size: 1.25rem; color: #5c574c; margin: 2rem 0; max-width: 600px; margin-left: auto; margin-right: auto; font-weight: 500; line-height: 1.5; }
-    .cta { display: inline-flex; gap: 1rem; margin-top: 2.5rem; flex-wrap: wrap; justify-content: center; }
-    .btn { display: inline-block; padding: 0.75rem 1.5rem; border-radius: 3px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: all 0.1s; }
-    .btn-primary { background: #1a1a1a; color: #ffffff; }
-    .btn-primary:hover { background: #2d2d2d; }
-    .btn-secondary { background: transparent; color: #171512; border: 2px solid #e8e8e8; }
-    .btn-secondary:hover { border-color: #171512; background: #f9f9f9; }
+    .hero { padding: 6rem 2rem; text-align: center; min-height: 90vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .hero h1 { font-size: clamp(3.5rem, 14vw, 9rem); font-weight: 900; line-height: 0.95; letter-spacing: -0.04em; margin: 0 0 2rem; }
+    .hero .subtitle { font-size: clamp(1rem, 2.5vw, 1.4rem); color: #5c574c; margin: 0 0 3rem; font-weight: 500; line-height: 1.4; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .hero .cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn { padding: 0.85rem 1.75rem; border-radius: 2px; text-decoration: none; font-weight: 600; font-size: 0.9rem; transition: all 0.15s; border: 2px solid #171512; }
+    .btn-dark { background: #171512; color: #ffffff; }
+    .btn-dark:hover { background: #2d2d2d; border-color: #2d2d2d; }
+    .btn-light { background: transparent; color: #171512; }
+    .btn-light:hover { background: #f0f0f0; }
 
-    .section { padding: 4rem 2rem; border-bottom: 1px solid #f0f0f0; max-width: 900px; margin: 0 auto; }
-    .section h2 { font-size: 1.8rem; font-weight: 800; margin: 0 0 1.5rem; }
-    .section > p { font-size: 1.05rem; color: #5c574c; margin-bottom: 2rem; max-width: 700px; }
+    .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; margin: 0 0 2rem; }
+    .section p { font-size: 1.1rem; color: #5c574c; line-height: 1.7; max-width: 700px; }
 
-    .code-block { background: #f9f9f9; border: 1px solid #e8e8e8; border-radius: 6px; padding: 2rem; margin: 2rem 0; overflow-x: auto; }
-    .code-block pre { margin: 0; font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace; font-size: 0.85rem; line-height: 1.6; }
+    .code-box { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 4px; padding: 3rem 2rem; margin: 3rem 0 0; overflow-x: auto; }
+    .code-box pre { margin: 0; font-family: "SF Mono", Monaco, monospace; font-size: 0.8rem; line-height: 1.8; }
 
-    .tree { background: #f9f9f9; border-radius: 6px; padding: 2rem; margin: 2rem 0; }
-    .tree-step { margin-bottom: 1.5rem; }
-    .tree-step:last-child { margin-bottom: 0; }
-    .tree-q { font-weight: 700; display: block; margin-bottom: 0.75rem; }
-    .tree-answer { font-size: 0.95rem; color: #5c574c; margin-left: 1.5rem; }
-    .tree-answer strong { color: #1a1a1a; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 3rem; margin: 3rem 0 0; }
+    .metric { }
+    .metric-val { font-size: 3rem; font-weight: 900; }
+    .metric-label { font-size: 0.85rem; color: #5c574c; margin-top: 1rem; text-transform: uppercase; letter-spacing: 0.05em; }
 
-    .constraint-list { display: flex; flex-direction: column; gap: 1.5rem; margin: 2rem 0; }
-    .constraint-item { border-left: 3px solid #508991; padding-left: 1.5rem; }
-    .constraint-item h3 { margin: 0 0 0.5rem; font-size: 1.05rem; }
-    .constraint-item p { margin: 0; color: #5c574c; font-size: 0.95rem; }
-
-    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin: 2rem 0; }
-    .metric { text-align: center; }
-    .metric-val { font-size: 2.5rem; font-weight: 900; color: #1a1a1a; }
-    .metric-label { font-size: 0.9rem; color: #5c574c; margin-top: 0.5rem; }
-
-    .footer { padding: 3rem 2rem; text-align: center; border-top: 1px solid #f0f0f0; color: #5c574c; font-size: 0.9rem; max-width: 900px; margin: 0 auto; }
+    .footer { padding: 3rem 2rem; text-align: center; border-top: 1px solid #f0f0f0; color: #5c574c; font-size: 0.85rem; }
     .footer a { color: #5c574c; text-decoration: none; }
     .footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <nav class="nav">
-    <a href="/v2" class="nav-logo">⚡ Pulse</a>
+    <a href="/" class="nav-logo">⚡ Pulse</a>
     <div class="nav-links">
       <a href="/getting-started">Docs</a>
       <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener">GitHub</a>
@@ -68,135 +56,61 @@
   </nav>
 
   <section class="hero">
-    <h1>The spec is the page.</h1>
-    <p class="tagline">One plain JavaScript object. Server data, client state, mutations, and view. Everything a page needs, nothing it doesn't.</p>
+    <h1>THE SPEC<br>IS THE<br>PAGE</h1>
+    <p class="subtitle">One plain JavaScript object. Server data, client state, mutations, view. Zero runtime dependencies.</p>
     <div class="cta">
-      <a href="/getting-started" class="btn btn-primary">Get Started</a>
-      <a href="/spec" class="btn btn-secondary">Read the Spec</a>
-      <a href="/agent" class="btn btn-secondary">For Agents</a>
+      <a href="/getting-started" class="btn btn-dark">Get Started</a>
+      <a href="/spec" class="btn btn-light">Read Spec</a>
+      <a href="/agent" class="btn btn-light">For Agents</a>
     </div>
   </section>
 
   <section class="section">
-    <h2>One Spec, Complete</h2>
-    <p>No split files. No hidden conventions. Server data, state, mutations, and view in one verifiable object:</p>
-    <div class="code-block">
+    <h2>One Object</h2>
+    <p>No split files. No hidden conventions. Everything in one verifiable spec:</p>
+    <div class="code-box">
       <pre>export default {
   route: '/dashboard',
-  meta: { title: 'Dashboard', styles: ['/app.css'] },
-  server: {
-    data: async (ctx) => ({
-      user: await db.users.find(ctx.cookies.userId),
-      stats: await db.stats.forUser(ctx.cookies.userId)
-    })
-  },
+  server: { data: async (ctx) => ({ user: ... }) },
   state: { filter: 'all' },
-  mutations: {
-    setFilter: (state, event) => ({ filter: event.target.value })
-  },
-  view: (state, server) => `
-    &lt;main id="main-content"&gt;
-      &lt;h1&gt;Hello, ${server.user.name}&lt;/h1&gt;
-      &lt;select data-event="change:setFilter"&gt;
-        &lt;option&gt;All&lt;/option&gt;
-        &lt;option&gt;This week&lt;/option&gt;
-      &lt;/select&gt;
-      &lt;p&gt;${server.stats[state.filter].total} requests&lt;/p&gt;
-    &lt;/main&gt;
-  `
+  mutations: { setFilter: (s, e) => ({ filter: e.target.value }) },
+  view: (state, server) => `&lt;main&gt;...&lt;/main&gt;`
 }</pre>
     </div>
   </section>
 
   <section class="section">
-    <h2>Is Pulse Right For You?</h2>
-    <p>Answer honestly. If any is "no," another framework might fit better:</p>
-    <div class="tree">
-      <div class="tree-step">
-        <span class="tree-q">Is this a web application?</span>
-        <div class="tree-answer">
-          <strong>YES</strong> → continue<br>
-          <strong>NO</strong> → Pulse is web-only
-        </div>
-      </div>
-      <div class="tree-step">
-        <span class="tree-q">Do you want server-rendered HTML with streaming?</span>
-        <div class="tree-answer">
-          <strong>YES</strong> → continue<br>
-          <strong>NO</strong> → still works, but suboptimal
-        </div>
-      </div>
-      <div class="tree-step">
-        <span class="tree-q">Do you want schema validation at startup?</span>
-        <div class="tree-answer">
-          <strong>YES</strong> → <strong style="color: #1a1a1a;">PERFECT FIT (score: 0.95)</strong><br>
-          <strong>NO</strong> → <strong style="color: #1a1a1a;">GOOD FIT (score: 0.8)</strong>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>What Pulse Forbids</h2>
-    <p>Constraints aren't limitations — they're guarantees. Pulse stops you from shipping broken code:</p>
-    <div class="constraint-list">
-      <div class="constraint-item">
-        <h3>One Spec Per Page</h3>
-        <p>Every page is exactly one plain JS object. You can't accidentally split it across files or decouple data from view.</p>
-      </div>
-      <div class="constraint-item">
-        <h3>Pure Mutations</h3>
-        <p>State changes must be synchronous, side-effect-free functions. State is predictable, testable, instantly debuggable.</p>
-      </div>
-      <div class="constraint-item">
-        <h3>Dialogs Always Render</h3>
-        <p>Modals must be in the DOM unconditionally. Opened with data-dialog-open, never conditionally rendered based on state. Avoids a common agent mistake.</p>
-      </div>
-      <div class="constraint-item">
-        <h3>Constraints Always Enforced</h3>
-        <p>min/max bounds on state are guaranteed after every mutation. State literally cannot violate them.</p>
-      </div>
-      <div class="constraint-item">
-        <h3>CSRF Protection Mandatory</h3>
-        <p>Form submissions are protected by default. No opt-out. You can't forget it.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>Built For Production</h2>
+    <h2>Built for Production</h2>
     <div class="metrics">
       <div class="metric">
         <div class="metric-val">0</div>
-        <div class="metric-label">Runtime dependencies</div>
+        <div class="metric-label">Dependencies</div>
       </div>
       <div class="metric">
-        <div class="metric-val">< 6 kB</div>
-        <div class="metric-label">JS bundle (first visit, brotli)</div>
+        <div class="metric-val">< 6KB</div>
+        <div class="metric-label">Bundle</div>
       </div>
       <div class="metric">
         <div class="metric-val">0.00</div>
-        <div class="metric-label">Cumulative layout shift</div>
+        <div class="metric-label">Layout Shift</div>
       </div>
       <div class="metric">
-        <div class="metric-val">100/100/100</div>
-        <div class="metric-label">Lighthouse (A11y / Best Practices / SEO)</div>
+        <div class="metric-val">100/100</div>
+        <div class="metric-label">Lighthouse</div>
       </div>
     </div>
   </section>
 
-  <section class="section" style="text-align: center; padding: 5rem 2rem;">
-    <h2>Ready?</h2>
-    <p style="font-size: 1.1rem; color: #5c574c; margin-bottom: 2rem;">Pick your path:</p>
+  <section class="section" style="text-align: center; padding: 8rem 2rem;">
     <div class="cta">
-      <a href="/getting-started" class="btn btn-primary">Getting Started</a>
-      <a href="/spec" class="btn btn-secondary">Full Specification</a>
-      <a href="/agent" class="btn btn-secondary">For Agents</a>
+      <a href="/getting-started" class="btn btn-dark">Start Building</a>
+      <a href="/spec" class="btn btn-light">Full Spec</a>
+      <a href="/agent" class="btn btn-light">Structured Data</a>
     </div>
   </section>
 
   <footer class="footer">
-    <p>MIT License · <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener">GitHub</a> · <a href="/getting-started">Get started in 2 minutes</a></p>
+    <p>MIT License · <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener">GitHub</a></p>
   </footer>
 </body>
 </html>
