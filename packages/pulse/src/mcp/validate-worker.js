@@ -171,7 +171,8 @@ try {
 
   // Inline <script> blocks in view — blocked by Pulse CSP nonce policy
   // meta.scripts is the correct way to add JS: it receives the server nonce automatically.
-  if (/<script[\s>]/i.test(html)) {
+  // External scripts (<script src="…">) are allowed by script-src 'self', so only flag tags without a src.
+  if (/<script(?=[\s>])(?![^>]*\ssrc\s*=)/i.test(html)) {
     warnings.push('Inline <script> block detected in view — Pulse\'s CSP (script-src with nonces) will block these scripts at runtime. Move JavaScript to a file in public/ and reference it via meta.scripts: [\'/my-script.js\'] in the spec instead.')
   }
 

@@ -77,6 +77,37 @@ test('external image host warning is suppressed when the bare host is in pulse.c
   fs.rmSync(root, { recursive: true, force: true })
 })
 
+test('inline <script> warning does NOT fire for external scripts with a src', async () => {
+  const root = tmpProject()
+  const view = [
+    '<script src="/menu.js" defer></script>',
+    '<script defer src="/a.js"></script>',
+    '<script type="module" src=\'/b.js\'></script>',
+  ].join('')
+  const content = `export default {\n  route: '/x',\n  view: () => \`<main id="main-content">${view}</main>\`,\n}`
+  const result = await validateContent(content, root)
+  assert.equal(result.valid, true)
+  assert.doesNotMatch(result.schemaOutput, /Inline <script>/,
+    `Expected no inline-script warning for external scripts, got: ${result.schemaOutput}`)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('inline <script> warning still fires for real inline scripts', async () => {
+  const root = tmpProject()
+  const content = `export default {\n  route: '/x',\n  view: () => \`<main id="main-content"><script>alert(1)</script></main>\`,\n}`
+  const result = await validateContent(content, root)
+  assert.match(result.schemaOutput, /Inline <script> block detected/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('inline <script> warning still fires when only data-src is present', async () => {
+  const root = tmpProject()
+  const content = `export default {\n  route: '/x',\n  view: () => \`<main id="main-content"><script data-src="/a.js">alert(1)</script></main>\`,\n}`
+  const result = await validateContent(content, root)
+  assert.match(result.schemaOutput, /Inline <script> block detected/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
 test('validateFile resolves relative imports from the spec\'s own directory', async () => {
   const root = tmpProject()
   fs.mkdirSync(path.join(root, 'src', 'components'), { recursive: true })
