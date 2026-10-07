@@ -41,7 +41,7 @@ await createServer(
     defaultCache: true,
     csp: {
       'img-src':   ['https://picsum.photos', 'https://fastly.picsum.photos', 'https://images.unsplash.com'],
-      'style-src': ['https://fonts.googleapis.com'],
+      'style-src': ['https://fonts.googleapis.com', 'https://unpkg.com'],
       'font-src':  ['https://fonts.gstatic.com'],
     },
     onRequest(req, res) {
