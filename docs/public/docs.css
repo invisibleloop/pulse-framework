@@ -25,14 +25,15 @@
 }
 
 /* ─── Tokens ───────────────────────────────────────────────────────────────── */
-:root {
+/* Dark theme — only apply when body is not explicitly light-themed */
+body:not([data-theme="light"]) {
   --bg: #0d0d10;
   --surface: #111116;
   --surface-2: #18181f;
   --border: #38383f;
   --border-subtle: #1a1a20;
   --text: #e2e2ea;
-  --muted: ##3d3d38;
+  --muted: #3d3d38;
   --muted-2: #7e7e92;
   --accent: #c9b800;
   --accent-text: #0a0a0a;
@@ -50,7 +51,44 @@
   --tok-prop: #ffcb6b;
   --tok-op: #89ddff;
   --tok-punct: #7e8899;
+}
 
+/* Light theme — explicitly set in docs.css to ensure it takes priority */
+body[data-theme="light"] {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --border: #cbd5e1;
+  --border-subtle: #e2e8f0;
+  --text: #0f172a;
+  --muted: #475569;
+  --muted-2: #64748b;
+  --accent: #0f766e;
+  --accent-text: #ffffff;
+  --accent-hover: #134e4a;
+  --accent-dim: rgba(15, 118, 110, 0.08);
+  --green: #166534;
+  --red: #b91c1c;
+
+  /* Syntax tokens — dark-on-light */
+  --tok-kw: #5521b5;
+  --tok-str: #0d5a1e;
+  --tok-cmt: #64748b;
+  --tok-num: #7d2f1f;
+  --tok-fn: #1538b9;
+  --tok-prop: #6b4609;
+  --tok-op: #0d5070;
+  --tok-punct: #64748b;
+
+  /* Extra light theme customizations */
+  --header-bg: rgba(250, 250, 249, 0.95);
+  --callout-note-icon: #0f766e;
+  --tag-required-bg: rgba(185, 28, 28, 0.12);
+  --tag-required-text: #b91c1c;
+}
+
+/* Layout and type — always set these on :root, independent of theme */
+:root {
   /* Layout */
   --sidebar-w: 260px;
   --header-h: 52px;

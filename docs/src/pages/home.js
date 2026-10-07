@@ -1,65 +1,206 @@
-// component-free — creative override: asymmetric typography-driven layout (wide headline column + narrower supporting column), a solid gold mark treatment on "page.", and a light/dark section rhythm that component patterns cannot express
-import { highlight }                                        from '../lib/highlight.js'
-import { iconZap, iconShield, iconSettings }               from '../../../packages/pulse/src/ui/icons.js'
-import { metricsStore }  from '../lib/metrics-store.js'
-import pkg from '../../../packages/pulse/package.json' with { type: 'json' }
-
-// macOS-style code window chrome — raw HTML (creative override), replacing
-// the removed codeWindow() component. Reuses the same .ui-code-window*
-// CSS classes still defined in pulse-ui.css.
-const codeWindow = ({ content = '', filename = '', lang = '' }) => `
-  <div class="ui-code-window" role="region"${filename ? ` aria-label="${filename}"` : ''}>
-    <div class="ui-code-window-chrome" aria-hidden="true">
-      <span class="ui-code-window-dot"></span>
-      <span class="ui-code-window-dot"></span>
-      <span class="ui-code-window-dot"></span>
-      ${filename ? `<span class="ui-code-window-filename">${filename}</span>` : ''}
-      ${lang     ? `<span class="ui-code-window-lang">${lang}</span>` : ''}
-    </div>
-    <pre class="ui-code-window-pre"><code class="ui-code-window-code">${content}</code></pre>
-  </div>
-`
-
-const { version } = pkg
-
-const exampleSpec = highlight(`export default {
-  route: '/dashboard',
+export default {
+  route: '/',
   meta: {
-    title: 'Dashboard — My App',
-    styles: ['/app.css'],
+    title: 'Pulse — The spec-first web framework for AI agents',
+    description: 'One plain JavaScript object per page. Zero runtime dependencies. Server data, state, mutations, view. Built for AI agents to write production web apps.',
+    styles: ['/pulse-ui.css', '/home.css'],
   },
-  server: {
-    data: async (ctx) => {
-      const user = await db.users.find(ctx.cookies.userId)
-      return { user, stats: await db.stats.forUser(user.id) }
+
+  state: {
+    audience: 'agent',
+    demoMode: 'broken',
+    copied: false,
+  },
+
+  mutations: {
+    setAudience: (state, event) => {
+      const audience = event.currentTarget.dataset.audience
+      return { audience, copied: false }
+    },
+    setDemoMode: (state, event) => {
+      return { demoMode: event.currentTarget.dataset.mode }
+    },
+    copyCommand: (state) => {
+      return { copied: true }
+    },
+    clearCopy: (state) => {
+      return { copied: false }
     },
   },
-  state: { filter: 'all' },
-  mutations: {
-    setFilter: (state, event) => ({ filter: event.target.value }),
-  },
-  view: (state, server) => \`
-    <main id="main-content">
-      <h1>Hello, \${server.data.user.name}</h1>
-      <select data-event="change:setFilter">
-        <option value="all">All time</option>
-        <option value="week">This week</option>
-      </select>
-      <p>\${server.data.stats[state.filter].total} requests</p>
-    </main>
-  \`,
-}`, 'js')
 
-// Real, unedited output — captured by running the actual pulse_review checks
-// against the spec below (a common agent-shaped mistake: conditionally
-// rendering a <dialog> based on state, instead of always rendering it and
-// opening it with data-dialog-open). Nothing here is written for effect.
-//
-// Note for anyone running pulse_review against this file: the "modalOpen"
-// auto-check below will flag a false positive here — it's matching this
-// demo's string literals (the buggy example spec is intentionally embedded
-// as text), not real spec state in this page.
-const buggySpec = highlight(`export default {
+  view: (state) => {
+    const isAgent = state.audience === 'agent'
+    const isBroken = state.demoMode === 'broken'
+
+    const installCmd = 'npm install -g @invisibleloop/pulse'
+    const agentPrompt = 'Build this with Pulse. Read https://pulseframework.dev/agent first.'
+
+    return `
+      <main id="main-content">
+        <div style="background:#fafaf9;min-height:100vh;display:flex;flex-direction:column">
+
+          <!-- Header -->
+          <header style="max-width:1240px;margin:0 auto;padding:24px clamp(20px,4vw,56px);width:100%;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap" role="banner">
+            <a href="/" style="display:flex;align-items:center;gap:10px;font-weight:600;font-size:19px;letter-spacing:-0.02em;color:#0f172a;text-decoration:none">
+              <span style="width:28px;height:28px;border-radius:7px;border:1px solid #e2e8f0;background:#ffffff;display:grid;place-items:center;font-size:17px;color:#0f766e">⚡</span>
+              <span>Pulse</span>
+            </a>
+            <nav style="display:flex;align-items:center;gap:28px;font-size:15px;flex-wrap:wrap">
+              <a href="/getting-started" style="color:#475569;text-decoration:none">Docs</a>
+              <a href="/spec" style="color:#475569;text-decoration:none">Spec</a>
+              <a href="/agent" style="color:#475569;text-decoration:none">Agent docs</a>
+              <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" style="color:#475569;text-decoration:none;display:flex;align-items:center;gap:6px">GitHub</a>
+              <a href="/getting-started" style="display:flex;align-items:center;gap:6px;padding:9px 16px;border-radius:999px;background:#0f172a;color:#fafaf9;font-weight:500;text-decoration:none">Get started</a>
+            </nav>
+          </header>
+
+          <!-- Hero Section -->
+          <section style="max-width:1240px;margin:0 auto;padding:clamp(48px,8vw,112px) clamp(20px,4vw,56px) clamp(72px,9vw,128px);width:100%">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(36px,5vw,56px)">
+              <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:#64748b">
+                <span>v0.20.17</span>
+                <span style="width:20px;height:1px;background:#e2e8f0"></span>
+                <span>Early access</span>
+                <span style="width:20px;height:1px;background:#e2e8f0"></span>
+                <span>MIT</span>
+              </div>
+              <fieldset style="display:flex;align-items:center;gap:4px;padding:4px;border:1px solid #cbd5e1;border-radius:999px;background:#ffffff;font-size:14px;border-style:none">
+                <legend style="padding:0 10px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#64748b">Reading as:</legend>
+                <button data-event="click:setAudience" data-audience="agent" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;background:${isAgent ? '#0f172a' : 'transparent'};color:${isAgent ? '#fafaf9' : '#475569'};font-weight:500;border:1px solid ${isAgent ? '#0f172a' : 'transparent'};transition:all 0.1s">
+                  🤖 Agent
+                </button>
+                <button data-event="click:setAudience" data-audience="human" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;background:${!isAgent ? '#0f172a' : 'transparent'};color:${!isAgent ? '#fafaf9' : '#475569'};font-weight:500;border:1px solid ${!isAgent ? '#0f172a' : 'transparent'};transition:all 0.1s">
+                  👤 Human
+                </button>
+              </fieldset>
+            </div>
+
+            <h1 style="margin:0;font-size:clamp(54px,8.6vw,124px);line-height:0.94;letter-spacing:-0.048em;font-weight:500;max-width:${isAgent ? '11ch' : '12ch'};text-wrap:balance">
+              ${isAgent ? 'One spec per page. <span style="color:#0f766e">Nothing to guess.</span>' : 'The web framework <span style="color:#0f766e">your agents write.</span>'}
+            </h1>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:clamp(48px,7vw,112px);margin-top:clamp(48px,6vw,80px);align-items:start">
+              <div style="display:flex;flex-direction:column;gap:36px">
+                <p style="margin:0;font-size:clamp(19px,1.55vw,22px);line-height:1.55;color:oklch(0.42 0.012 260);max-width:36ch;text-wrap:pretty">
+                  ${isAgent ? 'Each page is one plain JavaScript object: server data, state, mutations, view. Pulse validates it against a schema before it runs and tells you exactly what to fix. There is one correct way to build a page, and the validator knows it.' : 'Pulse gives your agent one format, one set of rules, and a validator that checks its work on every change. You describe the product. Streaming SSR, security headers and caching come from the architecture.'}
+                </p>
+
+                <div style="display:flex;flex-direction:column;gap:10px;max-width:480px">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.55 0.01 260)">${isAgent ? 'Install, then run pulse' : 'Paste into your agent'}</span>
+                  <div style="display:flex;align-items:center;gap:12px;padding:6px 6px 6px 18px;border:1px solid oklch(0.88 0.006 90);border-radius:12px;background:#ffffff;font-family:'IBM Plex Mono',monospace;font-size:14.5px">
+                    <span style="color:#0f766e">$</span>
+                    <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isAgent ? installCmd : agentPrompt}</span>
+                    <button data-event="click:copyCommand" aria-label="Copy" style="all:unset;cursor:pointer;width:38px;height:38px;display:grid;place-items:center;border-radius:8px;font-size:18px;color:#475569;transition:background 0.1s" data-hover="background:oklch(0.95 0.005 90)">
+                      ${state.copied ? '✓' : '📋'}
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:28px;flex-wrap:wrap;font-size:15px;font-weight:500">
+                  <a href="/getting-started" style="display:flex;align-items:center;gap:6px;color:#0f172a;text-decoration:none">Get started →</a>
+                  <a href="/spec" style="display:flex;align-items:center;gap:6px;color:#475569;text-decoration:none">Read the spec ↗</a>
+                </div>
+              </div>
+
+              <div style="border:1px solid #cbd5e1;border-radius:18px;background:#ffffff;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid oklch(0.92 0.006 90)">
+                  <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500">🤖 Machine entrypoints</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#64748b">no HTML required</span>
+                </div>
+                <a href="/agent" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90);text-decoration:none;color:#0f172a">
+                  <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.025 160);color:oklch(0.45 0.12 160);display:grid;place-items:center;font-size:20px">🔌</span>
+                  <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px">MCP server</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">Connected by <code style="font-family:'IBM Plex Mono',monospace">pulse</code>. Guide, project structure, tools.</span></span>
+                  <span style="font-size:16px;color:oklch(0.6 0.01 260)">↗</span>
+                </a>
+                <a href="/llms.txt" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90);text-decoration:none;color:#0f172a">
+                  <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px">📄</span>
+                  <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px">/llms.txt</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">Plain-text index of every doc page.</span></span>
+                  <span style="font-size:16px;color:oklch(0.6 0.01 260)">↗</span>
+                </a>
+                <a href="/api/framework" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;text-decoration:none;color:#0f172a">
+                  <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px">{ }</span>
+                  <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px"><span style="color:#0f766e">GET</span> /api/framework</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">The full specification as JSON.</span></span>
+                  <span style="font-size:16px;color:oklch(0.6 0.01 260)">↗</span>
+                </a>
+              </div>
+            </div>
+          </section>
+
+          <!-- The Spec Section -->
+          <section style="border-top:1px solid oklch(0.91 0.006 90);max-width:1240px;margin:0 auto;padding:clamp(72px,9vw,128px) clamp(20px,4vw,56px);width:100%">
+            <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260);margin-bottom:28px">
+              <span style="color:#0f766e">01</span>
+              <span style="width:24px;height:1px;background:#e2e8f0"></span>
+              <span>The spec</span>
+            </div>
+            <h2 style="margin:0;font-size:clamp(40px,5.4vw,76px);line-height:1;letter-spacing:-0.04em;font-weight:500;max-width:16ch;text-wrap:balance">One object holds everything a page needs.</h2>
+            <p style="margin:28px 0 0;font-size:20px;line-height:1.55;color:#475569;max-width:52ch;text-wrap:pretty">Server fetchers, client state, mutations and view, co-located. No split files, no folder conventions to infer, no hidden config.</p>
+          </section>
+
+          <!-- Constraints Section -->
+          <section style="border-top:1px solid oklch(0.91 0.006 90);max-width:1240px;margin:0 auto;padding:clamp(72px,9vw,128px) clamp(20px,4vw,56px);width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:clamp(40px,6vw,96px)">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260);margin-bottom:28px">
+                <span style="color:#0f766e">02</span>
+                <span style="width:24px;height:1px;background:#e2e8f0"></span>
+                <span>Constraints</span>
+              </div>
+              <h2 style="margin:0;font-size:clamp(40px,5.4vw,76px);line-height:1;letter-spacing:-0.04em;font-weight:500;max-width:10ch;text-wrap:balance">Rules that can't be skipped.</h2>
+              <p style="margin:28px 0 0;font-size:20px;line-height:1.55;color:#475569;max-width:34ch;text-wrap:pretty">Each rule is enforced by the schema, the runtime or the server. Break one and validation fails with the rule's name and the fix.</p>
+            </div>
+            <div style="display:flex;flex-direction:column;border-top:1px solid #cbd5e1">
+              <div style="display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:18px;align-items:start;padding:24px 0;border-bottom:1px solid #cbd5e1">
+                <div style="font-size:24px;color:#0f766e">📦</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <span style="font-size:18px;font-weight:500">Every page is exactly one plain object</span>
+                  <span style="font-size:15px;line-height:1.5;color:oklch(0.5 0.012 260)">Data can't be split from view or spread across files.</span>
+                </div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.012 260);padding:4px 9px;border:1px solid #cbd5e1;border-radius:6px;white-space:nowrap">schema</span>
+              </div>
+              <div style="display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:18px;align-items:start;padding:24px 0;border-bottom:1px solid #cbd5e1">
+                <div style="font-size:24px;color:#0f766e">ƒ</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <span style="font-size:18px;font-weight:500">Mutations are synchronous and pure</span>
+                  <span style="font-size:15px;line-height:1.5;color:oklch(0.5 0.012 260)">State changes are predictable and testable.</span>
+                </div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.012 260);padding:4px 9px;border:1px solid #cbd5e1;border-radius:6px;white-space:nowrap">runtime</span>
+              </div>
+              <div style="display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:18px;align-items:start;padding:24px 0">
+                <div style="font-size:24px;color:#0f766e">🔒</div>
+                <div style="display:flex;flex-direction:column;gap:6px">
+                  <span style="font-size:18px;font-weight:500">Forms carry CSRF tokens</span>
+                  <span style="font-size:15px;line-height:1.5;color:oklch(0.5 0.012 260)">Added automatically. Unprotected submissions are rejected.</span>
+                </div>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.012 260);padding:4px 9px;border:1px solid #cbd5e1;border-radius:6px;white-space:nowrap">server</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Review Demo Section -->
+          <section style="border-top:1px solid oklch(0.91 0.006 90);background:oklch(0.975 0.005 90);max-width:100%;padding:clamp(72px,9vw,128px) clamp(20px,4vw,56px)">
+            <div style="max-width:1240px;margin:0 auto">
+              <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260);margin-bottom:28px">
+                <span style="color:#0f766e">03</span>
+                <span style="width:24px;height:1px;background:#e2e8f0"></span>
+                <span>pulse_review</span>
+              </div>
+              <div style="display:flex;align-items:end;justify-content:space-between;gap:32px;flex-wrap:wrap;margin-bottom:clamp(40px,5vw,64px)">
+                <div>
+                  <h2 style="margin:0;font-size:clamp(40px,5.4vw,76px);line-height:1;letter-spacing:-0.04em;font-weight:500;max-width:15ch;text-wrap:balance">A real check, catching a real mistake.</h2>
+                  <p style="margin:28px 0 0;font-size:20px;line-height:1.55;color:#475569;max-width:50ch;text-wrap:pretty">A common agent-shaped mistake: a modal whose visibility is driven by state instead of always being in the DOM. This is the actual output of <code style="font-family:'IBM Plex Mono',monospace;font-size:17px">pulse_review</code> against it.</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;padding:4px;border:1px solid #cbd5e1;border-radius:999px;background:#ffffff;font-size:14px;flex-shrink:0">
+                  <button data-event="click:setDemoMode" data-mode="broken" title="Show broken code example" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;background:${isBroken ? '#0f172a' : 'transparent'};color:${isBroken ? '#fafaf9' : '#475569'};font-weight:500;border:1px solid ${isBroken ? '#0f172a' : 'transparent'};transition:all 0.1s">❌ As written</button>
+                  <button data-event="click:setDemoMode" data-mode="fixed" title="Show fixed code example" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:999px;background:${!isBroken ? '#0f172a' : 'transparent'};color:${!isBroken ? '#fafaf9' : '#475569'};font-weight:500;border:1px solid ${!isBroken ? '#0f172a' : 'transparent'};transition:all 0.1s">✅ After fix</button>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:20px">
+                <div style="min-width:0;border:1px solid #cbd5e1;border-radius:16px;background:#ffffff;overflow:hidden">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid oklch(0.93 0.005 90);font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260)">
+                    <span style="display:flex;align-items:center;gap:8px">📄 src/pages/settings.js</span>
+                    <span>JavaScript</span>
+                  </div>
+                  <div style="padding:22px 24px;font-family:'IBM Plex Mono',monospace;font-size:14px;line-height:1.75;color:oklch(0.55 0.01 260);overflow-x:auto;white-space:pre;background:${isBroken ? '#ffffff' : 'oklch(0.97 0.004 90)'}">export default {
   route: '/settings',
   state: { modalOpen: false },
   mutations: {
@@ -67,337 +208,111 @@ const buggySpec = highlight(`export default {
     closeModal: (state) => ({ modalOpen: false }),
   },
   view: (state) => \`
-    <main id="main-content">
-      <button data-event="openModal">Edit profile</button>
+    &lt;main id="main-content"&gt;
+      &lt;button data-event="openModal"&gt;Edit profile&lt;/button&gt;
       \${state.modalOpen ? \`
-        <dialog open>
-          <p>Edit your profile</p>
-          <button data-event="closeModal">Close</button>
-        </dialog>
+        &lt;dialog open&gt;
+          &lt;p&gt;Edit your profile&lt;/p&gt;
+          &lt;button data-event="closeModal"&gt;Close&lt;/button&gt;
+        &lt;/dialog&gt;
       \` : ''}
-    </main>
+    &lt;/main&gt;
   \`,
-}`, 'js')
-
-const reviewLines = [
-  { ok: true,  text: 'No positive tabindex' },
-  { ok: true,  text: 'No data-event on text inputs' },
-  { ok: true,  text: 'No React patterns (className/htmlFor/onClick)' },
-  { ok: true,  text: 'No emoji in view HTML' },
-  { ok: true,  text: '&lt;main id="main-content"&gt; present' },
-  { ok: true,  text: 'No obvious hex colours in view' },
-  { ok: false, text: 'modalOpen-style state found — never conditionally render a &lt;dialog&gt;; always render it unconditionally and open it with data-dialog-open' },
-  { ok: true,  text: 'No malformed _storeUpdate found' },
-]
-
-const reviewOutput = reviewLines
-  .map(({ ok, text }) => `<span class="${ok ? 'rev-ok' : 'rev-fail'}">${ok ? '✓' : '✗'}</span> ${text}`)
-  .join('\n') + '\n\n<span class="rev-note">Fix before proceeding, then run pulse validate again.</span>'
-
-export default {
-  route: '/',
-  meta: {
-    title: 'Pulse — The spec-first web framework',
-    description: 'Pulse is a server-first Node.js framework with zero runtime dependencies. One spec object per page: server data, state, mutations, and view in plain JS. Streaming SSR, security headers, and production caching are enforced by the architecture.',
-    theme: 'light',
-    styles: ['/pulse-ui.css', '/theme.css', '/docs.css', '/home-brut.css', 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap'],
-    schema: {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      name: 'Pulse',
-      applicationCategory: 'DeveloperApplication',
-      operatingSystem: 'Node.js ≥ 22',
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-      license: 'https://opensource.org/licenses/MIT',
-      description: 'Spec-first Node.js web framework. Zero runtime dependencies. Streaming SSR, built-in security headers, and production caching enforced by the architecture.',
-      url: 'https://pulse.invisibleloop.com',
-      codeRepository: 'https://github.com/invisibleloop/pulse-framework',
-    },
-  },
-  state: {},
-  server: {
-    metrics: () => metricsStore.current,
-  },
-  view: (state, server) => `
-    <div class="brut">
-
-      <nav class="brut-nav" aria-label="Site navigation">
-        <a href="/" class="brut-nav-logo" aria-label="Pulse home">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
-          </svg>
-          <span>PULSE</span>
-        </a>
-        <div class="brut-nav-links">
-          <a href="/getting-started">Docs</a>
-          <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a>
-          <a href="/getting-started" class="brut-nav-cta">Get Started</a>
-        </div>
-      </nav>
-
-      <main id="main-content">
-
-        <section class="brut-hero">
-          <div class="brut-hero-tag">v${version} — EARLY ACCESS</div>
-          <h1 class="brut-hero-h1">
-            <span class="brut-hero-kicker">with Pulse</span>
-            <span class="brut-hero-line1">The spec is</span>
-            <span class="brut-hero-line2">the <span class="brut-hero-mark">page.</span></span>
-          </h1>
-          <div class="brut-hero-aside">
-            <p class="brut-hero-tag-inline">ONE SPEC. ONE WAY TO BUILD.</p>
-            <p class="brut-hero-desc">One plain JS object — server data, state, mutations, and view. No split files, no hidden conventions.</p>
-            <p class="brut-hero-sub"><strong>So constrained that doing it wrong isn't an option.<br>Whether you write it or an AI&nbsp;does.</strong></p>
-            <div class="brut-hero-ctas">
-              <a href="/getting-started" class="brut-btn-primary">Get Started</a>
-              <a href="/spec" class="brut-btn-ghost">Read the Spec</a>
-              <a href="/agent" class="brut-btn-ghost">For Agents</a>
-            </div>
-          </div>
-        </section>
-
-        <div class="brut-stats-bar">
-          <div class="brut-stat">
-            <span class="brut-stat-val">${server.metrics?.bundles?.[1]?.value ?? '< 6 kB'}</span>
-            <span class="brut-stat-lbl">JS · first visit, measured live →</span>
-          </div>
-          <div class="brut-stat">
-            <span class="brut-stat-val">0.00</span>
-            <span class="brut-stat-lbl">Cumulative Layout Shift</span>
-          </div>
-          <div class="brut-stat">
-            <span class="brut-stat-val">100</span>
-            <span class="brut-stat-lbl">Lighthouse · by design</span>
-          </div>
-          <div class="brut-stat">
-            <span class="brut-stat-val">0</span>
-            <span class="brut-stat-lbl">Runtime dependencies</span>
-          </div>
-        </div>
-
-        <section class="brut-idea">
-          <h2 class="brut-idea-label">THE IDEA</h2>
-          <div class="brut-idea-grid">
-            <div class="brut-idea-step">
-              <div class="brut-idea-num" aria-hidden="true">01</div>
-              <h3>The spec is the page</h3>
-              <p>Everything a page needs lives in one plain JS object: server data, client state, mutations, and view. One format. No split files. No hidden conventions.</p>
-            </div>
-            <div class="brut-idea-step">
-              <div class="brut-idea-num" aria-hidden="true">02</div>
-              <h3>The schema is the contract</h3>
-              <p>Every spec is validated at startup. Either it's correct or it's rejected. No ambiguity, no misconfiguration that surfaces later in production.</p>
-            </div>
-            <div class="brut-idea-step">
-              <div class="brut-idea-num" aria-hidden="true">03</div>
-              <h3>The framework is the guarantee</h3>
-              <p>Streaming SSR, security headers, and production caching come from the architecture. You write the product logic. The framework ships the quality.</p>
-            </div>
-          </div>
-        </section>
-
-        <section class="brut-code-section">
-          <div class="brut-code-header">
-            <h2>Everything a page needs.<br>Nothing it doesn't.</h2>
-            <p>Server fetchers, client state, mutations, and view. All co-located in one object. The spec <em>is</em> the page.</p>
-          </div>
-          <div class="brut-code-block">
-            ${codeWindow({ content: exampleSpec, filename: 'src/pages/dashboard.js', lang: 'JavaScript' })}
-          </div>
-        </section>
-
-        <section class="brut-review-section">
-          <div class="brut-review-header">
-            <div class="brut-review-label">SEE IT CATCH A MISTAKE</div>
-            <h2>This isn't a linter opinion.<br>It's a real check, run for real.</h2>
-            <p>This is the actual output of <code>pulse_review</code> against the spec on the right — not paraphrased, not staged for the page. A common agent-shaped mistake: a modal whose visibility is driven by state instead of always being in the DOM.</p>
-          </div>
-          <div class="brut-review-panels">
-            <div class="brut-review-panel">
-              ${codeWindow({ content: buggySpec, filename: 'src/pages/settings.js', lang: 'JavaScript' })}
-            </div>
-            <div class="brut-review-panel brut-review-panel--output">
-              <div class="ui-code-window" role="region" aria-label="pulse_review output">
-                <div class="ui-code-window-chrome" aria-hidden="true">
-                  <span class="ui-code-window-dot"></span>
-                  <span class="ui-code-window-dot"></span>
-                  <span class="ui-code-window-dot"></span>
-                  <span class="ui-code-window-filename">pulse_review output</span>
+}</div>
                 </div>
-                <pre class="ui-code-window-pre brut-review-output"><code>${reviewOutput}</code></pre>
+
+                <div style="min-width:0;border:1px solid #cbd5e1;border-radius:16px;background:#ffffff;overflow:hidden;display:flex;flex-direction:column">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid oklch(0.93 0.005 90);font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260)">
+                    <span style="display:flex;align-items:center;gap:8px">💻 pulse_review output</span>
+                    <span>${isBroken ? '7 passed · 1 failed' : '8 passed'}</span>
+                  </div>
+                  <div style="padding:22px 24px;font-family:'IBM Plex Mono',monospace;font-size:14px;line-height:1.75;color:oklch(0.35 0.012 260);display:flex;flex-direction:column;gap:2px;flex:1">
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No positive tabindex</span></div>
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No data-event on text inputs</span></div>
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No React patterns (className/htmlFor/onClick)</span></div>
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No emoji in view HTML</span></div>
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>&lt;main id="main-content"&gt; present</span></div>
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No obvious hex colours in view</span></div>
+                    ${isBroken ? '<div style="display:flex;gap:12px;margin:8px -12px;padding:12px;border-radius:10px;background:oklch(0.965 0.025 25);color:oklch(0.42 0.14 25)"><span>✗</span><span>modalOpen-style state found — never conditionally render a &lt;dialog&gt;; always render it unconditionally and open it with data-dialog-open</span></div>' : '<div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No conditionally rendered &lt;dialog&gt;</span></div>'}
+                    <div style="display:flex;gap:12px"><span style="color:#0f766e">✓</span><span>No malformed _storeUpdate found</span></div>
+                    <div style="margin-top:18px;padding-top:18px;border-top:1px solid oklch(0.93 0.005 90);color:#0f172a">
+                      ${isBroken ? 'Fix before proceeding, then run pulse validate again.' : 'All checks passed.'}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section class="brut-constraint">
-          <div class="brut-constraint-inner">
-            <div class="brut-constraint-label">AI + PULSE</div>
-            <h2 class="brut-constraint-h2">Constrained enough<br>to be trusted.<br>Free enough<br>to be creative.</h2>
-            <p class="brut-constraint-lead">The spec format tells an agent exactly how to wire up data, state, and behaviour. What it doesn't do is dictate the design. Layout, typography, CSS — those are still real decisions. The agent makes them. Pulse just makes sure the page it builds actually works.</p>
-            <div class="brut-constraint-cols">
-              <div class="brut-col">
-                <div class="brut-col-head">The structure is fixed</div>
-                <ul class="brut-col-list">
-                  <li>One spec format. No ambiguity about how a page should be built</li>
-                  <li>Schema validation at startup. Bad output is rejected before it ships</li>
-                  <li>Security, SSR, and caching are part of the architecture. Not optional</li>
-                  <li>Consistent, reviewable output across every agent and every session</li>
-                </ul>
+          <!-- Measured Section -->
+          <section style="border-top:1px solid oklch(0.91 0.006 90);max-width:1240px;margin:0 auto;padding:clamp(72px,9vw,128px) clamp(20px,4vw,56px);width:100%">
+            <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260);margin-bottom:28px">
+              <span style="color:#0f766e">04</span>
+              <span style="width:24px;height:1px;background:#e2e8f0"></span>
+              <span>Measured</span>
+            </div>
+            <h2 style="margin:0;font-size:clamp(40px,5.4vw,76px);line-height:1;letter-spacing:-0.04em;font-weight:500;max-width:14ch;text-wrap:balance">Not claimed. Measured.</h2>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));margin-top:clamp(48px,6vw,72px);border-top:1px solid #cbd5e1;border-left:1px solid #cbd5e1">
+              <div style="padding:28px 26px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;display:flex;flex-direction:column;gap:14px">
+                <div style="font-size:20px">📄</div>
+                <span style="font-size:clamp(40px,4.2vw,56px);line-height:1;letter-spacing:-0.04em;font-weight:500">0 kB</span>
+                <span style="font-size:15px;line-height:1.45;color:oklch(0.5 0.012 260)">Static page. No JS shipped.</span>
               </div>
-              <div class="brut-col brut-col--hi">
-                <div class="brut-col-head brut-col-head--hi">The design is not</div>
-                <ul class="brut-col-list">
-                  <li>The view is a plain JS function. The agent writes whatever HTML it wants</li>
-                  <li>CSS, layout, and typography are entirely up to the agent</li>
-                  <li>A component library is there when needed. Custom HTML when it isn't</li>
-                  <li>The result looks considered because the agent had room to make it so</li>
-                </ul>
+              <div style="padding:28px 26px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;display:flex;flex-direction:column;gap:14px">
+                <div style="font-size:20px">⚡</div>
+                <span style="font-size:clamp(40px,4.2vw,56px);line-height:1;letter-spacing:-0.04em;font-weight:500">&lt; 6 kB</span>
+                <span style="font-size:15px;line-height:1.45;color:oklch(0.5 0.012 260)">Single-page app. Runtime and page, brotli.</span>
+              </div>
+              <div style="padding:28px 26px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;display:flex;flex-direction:column;gap:14px">
+                <div style="font-size:20px">📏</div>
+                <span style="font-size:clamp(40px,4.2vw,56px);line-height:1;letter-spacing:-0.04em;font-weight:500">0.00</span>
+                <span style="font-size:15px;line-height:1.45;color:oklch(0.5 0.012 260)">Cumulative Layout Shift.</span>
+              </div>
+              <div style="padding:28px 26px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;display:flex;flex-direction:column;gap:14px">
+                <div style="font-size:20px">0️⃣</div>
+                <span style="font-size:clamp(40px,4.2vw,56px);line-height:1;letter-spacing:-0.04em;font-weight:500">0</span>
+                <span style="font-size:15px;line-height:1.45;color:oklch(0.5 0.012 260)">Runtime dependencies.</span>
+              </div>
+              <div style="padding:28px 26px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;display:flex;flex-direction:column;gap:14px">
+                <div style="font-size:20px">💯</div>
+                <span style="font-size:clamp(40px,4.2vw,56px);line-height:1;letter-spacing:-0.04em;font-weight:500">100</span>
+                <span style="font-size:15px;line-height:1.45;color:oklch(0.5 0.012 260)">Lighthouse.</span>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section class="brut-versus">
-          <div class="brut-versus-header">
-            <div class="brut-versus-label">HOW PULSE COMPARES</div>
-            <h2 class="brut-versus-h2">Checked by the framework.<br>Not just by whoever wrote it.</h2>
-            <p class="brut-versus-sub">Every framework can be written well by a careful human or a careful agent. The question is what happens when the next edit isn't careful — what actually catches it, and how fast.</p>
-          </div>
-          <div class="versus-table-wrap table-sticky-col">
-            <table class="brut-table">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th class="brut-th-pulse">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="vertical-align:middle;margin-right:.3rem">
-                      <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
-                    </svg>PULSE
-                  </th>
-                  <th>Next.js / Remix</th>
-                  <th>SvelteKit</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">Can a tool check a page with no LLM in the loop?</th>
-                  <td class="v-yes">Yes — the spec is one plain object; a validator can <code>import()</code> and check it in milliseconds</td>
-                  <td class="v-no">TypeScript checks types, not spec semantics — a page can type-check and still be structurally wrong</td>
-                  <td class="v-no">Same — the compiler checks syntax and types, not framework-level correctness</td>
-                </tr>
-                <tr>
-                  <th scope="row">What rejects a broken page before it ships?</th>
-                  <td class="v-yes">Schema validation at startup — malformed specs fail the build, not production</td>
-                  <td class="v-partial">Build succeeds on most structural mistakes; failures often surface at runtime</td>
-                  <td class="v-partial">Same — the compiler catches syntax errors, not framework misuse</td>
-                </tr>
-                <tr>
-                  <th scope="row">Does it catch agent-shaped mistakes specifically?</th>
-                  <td class="v-yes">Purpose-built checks for the failure modes agents actually make — a conditionally-rendered modal, a missing CSRF token, a malformed store update</td>
-                  <td class="v-no">General-purpose lint only — nothing aimed at how an agent tends to get this framework wrong</td>
-                  <td class="v-no">Same — no agent-specific verification layer</td>
-                </tr>
-                <tr>
-                  <th scope="row">Can an agent safely maintain this six months on, unsupervised?</th>
-                  <td class="v-yes">The validator re-runs on every change — drift gets caught mechanically, not by someone remembering the house rules</td>
-                  <td class="v-no">Depends entirely on the agent's memory and the human catching regressions in review</td>
-                  <td class="v-no">Same — correctness is only as durable as whoever's reviewing the diffs</td>
-                </tr>
-                <tr>
-                  <th scope="row">Client JS · build step · dependencies</th>
-                  <td class="v-yes">A few kB brotli on an interactive page, 0 kB on static pages — check the network tab or <code>pulse_check_bundles</code>, no need to trust a doc · no build step in dev or prod · zero runtime deps</td>
-                  <td class="v-no">50–200 kB+ depending on features · <code>next build</code> required · React + 50+ transitive packages</td>
-                  <td class="v-partial">~15 kB brotli · <code>vite build</code> required · Svelte runtime + adapters</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+          <!-- Get Started Section -->
+          <section style="border-top:1px solid oklch(0.91 0.006 90);max-width:1240px;margin:0 auto;padding:clamp(72px,9vw,128px) clamp(20px,4vw,56px);width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:clamp(48px,7vw,112px)">
+            <div>
+              <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260);margin-bottom:28px">
+                <span style="color:#0f766e">05</span>
+                <span style="width:24px;height:1px;background:#e2e8f0"></span>
+                <span>Get started</span>
+              </div>
+              <h2 style="margin:0;font-size:clamp(44px,6.4vw,92px);line-height:0.98;letter-spacing:-0.045em;font-weight:500;max-width:10ch;text-wrap:balance">Your first page in two minutes.</h2>
+              <p style="margin:28px 0 0;font-size:20px;line-height:1.55;color:#475569;max-width:40ch;text-wrap:pretty">Pulse is in early access. The goal is not to compete on features. It is to eliminate the class of problems that come from having too many of them.</p>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:40px;font-size:15px;font-weight:500">
+                <a href="/getting-started" style="display:flex;align-items:center;gap:8px;padding:13px 22px;border-radius:999px;background:#0f172a;color:#fafaf9;text-decoration:none">Get started →</a>
+                <a href="/spec" style="display:flex;align-items:center;gap:8px;padding:13px 22px;border-radius:999px;border:1px solid #e2e8f0;background:#ffffff;color:#0f172a;text-decoration:none">Read the spec</a>
+              </div>
+            </div>
+          </section>
 
-        <section class="brut-pillars">
-          <div class="brut-pillar">
-            <div class="brut-pillar-icon">${iconZap({ size: 36 })}</div>
-            <div class="brut-pillar-body">
-              <h3>Performance is enforced</h3>
-              <p>Streaming SSR and zero CLS aren't defaults you can quietly regress — there's no client router to add, no bundler config that grows. The architecture only has one way to ship a page, and that way is fast.</p>
+          <!-- Footer -->
+          <footer style="border-top:1px solid oklch(0.91 0.006 90);margin-top:auto" role="contentinfo">
+            <div style="max-width:1240px;margin:0 auto;padding:32px clamp(20px,4vw,56px);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:oklch(0.5 0.012 260)">
+              <span style="display:flex;align-items:center;gap:8px">⚡ Pulse · MIT License · v0.20.17</span>
+              <div style="display:flex;gap:24px;flex-wrap:wrap">
+                <a href="/getting-started" style="color:#475569;text-decoration:none">Docs</a>
+                <a href="/agent" style="color:#475569;text-decoration:none">Agent docs</a>
+                <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" style="color:#475569;text-decoration:none">GitHub</a>
+              </div>
             </div>
-          </div>
-          <div class="brut-pillar brut-pillar--alt">
-            <div class="brut-pillar-icon">${iconShield({ size: 36 })}</div>
-            <div class="brut-pillar-body">
-              <h3>Safety is enforced</h3>
-              <p>Security headers on every response, including 404 and 500. Declarative constraints enforce state bounds after every mutation. CSRF and guard checks run before your code does. Not a plugin you can forget to install — part of the pipeline.</p>
-            </div>
-          </div>
-          <div class="brut-pillar">
-            <div class="brut-pillar-icon">${iconSettings({ size: 36 })}</div>
-            <div class="brut-pillar-body">
-              <h3>Simplicity is enforced</h3>
-              <p>No bundler config to drift from a template. No runtime dependencies to install, audit, or upgrade. <code>node server.js</code> is production. The schema validator rejects a spec that breaks convention before it ever ships.</p>
-            </div>
-          </div>
-        </section>
+          </footer>
 
-        ${server.metrics ? `<section class="brut-metrics">
-          <div class="brut-metrics-label">BY THE NUMBERS</div>
-          <h2 class="brut-metrics-h2">Not claimed. Measured.</h2>
-          <p class="brut-metrics-sub">Report generated ${server.metrics.generatedAt} · from an actual build on this deploy, recomputed on every server start</p>
-          <div class="brut-metrics-grid">
-            <div class="brut-metrics-group">
-              <div class="brut-metrics-group-label">Lighthouse</div>
-              ${server.metrics.lighthouse.map(m => `
-                <div class="brut-metric">
-                  <span class="brut-metric-val brut-metric-val--hi">${m.value}</span>
-                  <span class="brut-metric-lbl">${m.label}</span>
-                </div>`).join('')}
-            </div>
-            <div class="brut-metrics-group">
-              <div class="brut-metrics-group-label">Bundle sizes</div>
-              ${server.metrics.bundles.map(m => `
-                <div class="brut-metric">
-                  <span class="brut-metric-val">${m.value}</span>
-                  <span class="brut-metric-lbl">${m.label}</span>
-                </div>`).join('')}
-            </div>
-            <div class="brut-metrics-group">
-              <div class="brut-metrics-group-label">Web Vitals</div>
-              ${server.metrics.vitals.map(m => `
-                <div class="brut-metric">
-                  <span class="brut-metric-val brut-metric-val--hi">${m.value}</span>
-                  <span class="brut-metric-lbl">${m.label}</span>
-                </div>`).join('')}
-            </div>
-            <div class="brut-metrics-group">
-              <div class="brut-metrics-group-label">Architecture</div>
-              ${server.metrics.architecture.map(m => `
-                <div class="brut-metric">
-                  <span class="brut-metric-val brut-metric-val--accent">${m.value}</span>
-                  <span class="brut-metric-lbl">${m.label}</span>
-                </div>`).join('')}
-            </div>
-          </div>
-        </section>` : ''}
-
-        <section class="brut-cta">
-          <h2 class="brut-cta-h2">Your first page<br>in under<br>2 minutes.</h2>
-          <p class="brut-cta-lead">One spec object. Server data, client state, mutations, and view. In one place. Streaming SSR, security headers, and 100 Lighthouse scores come with it. Nothing to configure.</p>
-          <p class="brut-cta-note">Pulse is in early access. The goal is not to compete on features. It is to eliminate the class of problems that come from having too many of them.</p>
-          <div class="brut-cta-actions">
-            <a href="/getting-started" class="brut-btn-primary brut-btn-primary--inv">Get Started</a>
-            <a href="/spec" class="brut-btn-ghost brut-btn-ghost--light">Read the Spec</a>
-          </div>
-        </section>
-
+        </div>
       </main>
-
-      <footer class="brut-footer">
-        <span>MIT License</span>
-        <span class="brut-footer-sep">·</span>
-        <a href="https://github.com/invisibleloop/pulse-framework" target="_blank" rel="noopener" aria-label="GitHub (opens in new tab)">GitHub</a>
-        <span class="brut-footer-sep">·</span>
-        <a href="/getting-started">Get started in 2 minutes</a>
-      </footer>
-
-    </div>
-  `,
+    `
+  },
 }
