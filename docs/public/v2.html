@@ -29,9 +29,22 @@
     .btn-light { background: transparent; color: #171512; }
     .btn-light:hover { background: #f0f0f0; }
 
-    .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section { padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; position: relative; }
     .section h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; line-height: 1.1; margin: 0 0 2rem; }
     .section p { font-size: 1.1rem; color: #5c574c; line-height: 1.7; max-width: 700px; }
+
+    .section--blue { background: #4f6cff; color: #ffffff; }
+    .section--blue h2, .section--blue p, .section--blue strong, .section--blue li { color: #ffffff; }
+    .section--blue p { color: rgba(255,255,255,0.9); }
+    .section--blue a { color: #ffffff; }
+
+    .section--purple { background: #2d1b4e; color: #ffffff; }
+    .section--purple h2, .section--purple p, .section--purple strong, .section--purple li { color: #ffffff; }
+    .section--purple p { color: rgba(255,255,255,0.85); }
+
+    .section--orange { background: #ff7a00; color: #ffffff; }
+    .section--orange h2, .section--orange p, .section--orange strong, .section--orange li { color: #ffffff; }
+    .section--orange p { color: rgba(255,255,255,0.9); }
 
     .code-box { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 4px; padding: 3rem 2rem; margin: 3rem 0 0; overflow-x: auto; }
     .code-box pre { margin: 0; font-family: "SF Mono", Monaco, monospace; font-size: 0.8rem; line-height: 1.8; }
@@ -101,7 +114,7 @@
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--blue">
     <h2>Why Constraints Matter</h2>
     <p>Most frameworks give you maximum flexibility. Pulse does the opposite. Constraints aren't limitations — they're guarantees:</p>
     <ul style="list-style: none; margin: 2rem 0; font-size: 1.1rem; line-height: 1.8;">
@@ -113,7 +126,7 @@
     </ul>
   </section>
 
-  <section class="section">
+  <section class="section section--purple">
     <h2>Is Pulse Right For You?</h2>
     <p>Answer these honestly. If any is "no," another framework might fit better:</p>
     <div style="margin: 2rem 0; font-size: 1.05rem; line-height: 1.9; max-width: 700px;">
@@ -128,7 +141,7 @@
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--orange">
     <h2>How Pulse Compares</h2>
     <div style="margin: 2rem 0; font-size: 1.05rem; line-height: 1.9;">
       <div style="margin-bottom: 2.5rem;">
