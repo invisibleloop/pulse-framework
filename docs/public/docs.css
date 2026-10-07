@@ -1692,11 +1692,23 @@ a:hover {
 .logo-link {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
   color: var(--text);
-  font-weight: 700;
-  font-size: 1rem;
+  font-weight: 600;
+  font-size: 1.1875rem;
+  letter-spacing: -0.02em;
   text-decoration: none;
+}
+.logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
 }
 .logo-link:hover {
   color: var(--accent);

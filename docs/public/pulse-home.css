@@ -1,0 +1,8 @@
+body{margin:0;background:oklch(0.985 0.004 90);color:oklch(0.2 0.012 260);font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+          a{color:oklch(0.2 0.012 260);text-decoration:none}
+          a:hover{color:oklch(0.5 0.13 160)}
+          ::selection{background:oklch(0.92 0.05 160)}
+.hv-1:hover{background:oklch(0.95 0.005 90)}
+.hv-2:hover{background:oklch(0.98 0.004 90)}
+.spec-code{grid-column:span 2}
+@media (max-width:903px){.spec-code{grid-column:auto}}

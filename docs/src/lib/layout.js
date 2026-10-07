@@ -16,6 +16,9 @@ export const asset = href => _manifest[href] || href
 
 const version = typeof pkg !== 'undefined' ? (pkg?.version ?? '') : ''
 
+// Phosphor "wave-sine" (light) — same mark as the home page logo
+const logoMark = () => `<span class="logo-mark"><svg width="17" height="17" viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><path d="M949.72 522.2c-86.36 184.080-161.72 269.8-237.72 269.8-95.32 0-156.8-131.040-221.88-269.8-53.080-113.52-113.44-242.2-178.12-242.2-36.72 0-100 42-194.12 242.2-4.005 7.999-12.137 13.394-21.529 13.394-13.255 0-24-10.745-24-24 0-3.547 0.769-6.914 2.15-9.944l-0.061 0.15c86.2-184.080 161.56-269.8 237.56-269.8 95.32 0 156.8 131.040 221.88 269.8 53.080 113.52 113.44 242.2 178.12 242.2 36.72 0 100.2-42 194.12-242.2 4.005-7.999 12.137-13.394 21.529-13.394 13.255 0 24 10.745 24 24 0 3.547-0.769 6.914-2.15 9.944l0.061-0.15z"/></svg></span>`
+
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -37,9 +40,7 @@ function sidebar(currentHref) {
     <aside class="docs-sidebar" id="docs-sidebar" aria-label="Documentation navigation">
       <div class="sidebar-logo">
         <a href="/" class="logo-link" aria-label="Pulse home">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1" stroke-linejoin="round"/>
-          </svg>
+          ${logoMark()}
           <span class="logo-name">Pulse</span>
         </a>
         <span class="version-badge">v${version}</span>
@@ -128,9 +129,7 @@ export function renderLayout({ currentHref, content, prev = null, next = null })
           </svg>
         </button>
         <a href="/" class="header-logo-mobile" aria-label="Pulse home">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M13 2L4.5 13.5H11L10 22L19.5 10.5H13L13 2Z" fill="var(--accent)" stroke="var(--accent)" stroke-width="1" stroke-linejoin="round"/>
-          </svg>
+          ${logoMark()}
         </a>
         <a href="https://github.com/invisibleloop/pulse-framework" class="header-github" aria-label="View on GitHub (opens in new tab)" target="_blank" rel="noopener noreferrer">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
