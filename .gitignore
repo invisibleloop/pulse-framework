@@ -6,6 +6,7 @@ benchmark/public/dist/
 companion/public/dist/
 packages/pulse/.pulse-build/
 docs/.pulse-build/
+docs/.pulse/errors.json
 .DS_Store
 *.log
 .env
