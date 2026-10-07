@@ -12,6 +12,7 @@
     "test": "npm run test --workspace packages/pulse",
     "typecheck": "npm run typecheck --workspace packages/pulse",
     "docs": "npm run docs --workspace packages/pulse",
+    "docs:build": "npm run docs:build --workspace packages/pulse",
     "docs:start": "npm run docs:start --workspace packages/pulse"
   },
   "engines": {
