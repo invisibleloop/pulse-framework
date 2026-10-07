@@ -3,11 +3,13 @@ export default {
   meta: {
     title: 'Pulse — The spec-first web framework',
     description: 'One plain JavaScript object per page. Server data, state, mutations, view. Zero runtime dependencies.',
-    theme: 'light',
-    styles: ['https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'],
+    styles: [],
   },
   view: () => `
     <main id="main-content">
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
       <style>
         /* Override framework defaults for clean white design */
         * { box-sizing: border-box; margin: 0; padding: 0; }
