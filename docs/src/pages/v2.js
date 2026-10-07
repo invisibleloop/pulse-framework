@@ -11,11 +11,13 @@ export default {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
       <style>
-        /* Override framework defaults for clean white design */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { background: #ffffff !important; color: #171512 !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif !important; line-height: 1.6 !important; }
-        main { display: block; background: #ffffff !important; }
+        /* Override all framework defaults for clean white design */
+        * { background: unset !important; }
+        html { background: #ffffff !important; }
+        body { background: #ffffff !important; color: #171512 !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif !important; line-height: 1.6 !important; }
+        main { background: #ffffff !important; }
         #pulse-root { background: #ffffff !important; }
+        [data-theme] { background: #ffffff !important; }
 
         .v2-container { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
         .v2-header { padding: 3rem 2rem; text-align: center; border-bottom: 1px solid #e8e8e8; }
