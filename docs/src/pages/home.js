@@ -4,8 +4,8 @@ export default {
     title: 'Pulse — The spec-first web framework for AI agents',
     description: 'One plain JavaScript object per page. Zero runtime dependencies. Server data, state, mutations, view. Built for AI agents to write production web apps.',
     styles: [
-      'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap',
       'https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css',
+      'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap',
     ],
   },
 
