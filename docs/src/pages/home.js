@@ -166,8 +166,8 @@ export default {
     <h2 style="margin:0;font-size:clamp(40px,5.4vw,76px);line-height:1;letter-spacing:-0.04em;font-weight:500;max-width:16ch;text-wrap:balance">One object holds everything a page needs.</h2>
     <p style="margin:28px 0 0;font-size:20px;line-height:1.55;color:oklch(0.45 0.012 260);max-width:52ch;text-wrap:pretty">Server fetchers, client state, mutations and view, co-located. No split files, no folder conventions to infer, no hidden config.</p>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:clamp(32px,5vw,72px);margin-top:clamp(48px,6vw,72px);align-items:start">
-      <div class="spec-code" style="min-width:0;border:1px solid oklch(0.9 0.006 90);border-radius:16px;background:oklch(0.995 0.002 90);overflow:hidden">
+    <div class="spec-grid" style="display:grid;gap:clamp(32px,5vw,72px);margin-top:clamp(48px,6vw,72px);align-items:start">
+      <div style="min-width:0;border:1px solid oklch(0.9 0.006 90);border-radius:16px;background:oklch(0.995 0.002 90);overflow:hidden">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid oklch(0.93 0.005 90);font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260)">
           <span style="display:flex;align-items:center;gap:8px"><i aria-hidden="true" class="ph-light ph-file-js" style="font-size:17px"></i>src/pages/dashboard.js</span>
           <span>JavaScript</span>
