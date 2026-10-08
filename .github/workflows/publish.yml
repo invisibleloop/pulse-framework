@@ -25,9 +25,14 @@ jobs:
 
       - run: npm test
 
+      # npm trusted publishing (OIDC) needs npm >= 11.5.1; Node 22 bundles npm 10.
+      - name: Install an npm that supports trusted publishing
+        run: npm install -g npm@11
+
+      # No npm token here on purpose: `npm publish` authenticates with the OIDC
+      # identity of this workflow (permissions.id-token), configured as a trusted
+      # publisher for @invisibleloop/pulse on npmjs.com.
       - name: Bump version from conventional commits, then publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/pulse
           VERSION=$(node scripts/release-version.js)
