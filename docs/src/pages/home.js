@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 const INSTALL = 'npm install -g @invisibleloop/pulse'
 const PROMPT  = 'Build this with Pulse. Read https://pulseframework.dev/agent first.'
 
@@ -13,6 +15,10 @@ export default {
       '/phosphor/style.css',
       '/pulse-home.css',
     ],
+  },
+
+  server: {
+    version: () => JSON.parse(readFileSync(new URL('../../../packages/pulse/package.json', import.meta.url), 'utf8')).version,
   },
 
   state: {
@@ -40,7 +46,8 @@ export default {
     },
   },
 
-  view: (state) => {
+  view: (state, server) => {
+    const { version } = server
     const { audience, demo, copied } = state
     const isAgent  = audience === 'agent'
     const isHuman  = !isAgent
@@ -79,7 +86,7 @@ export default {
 <section style="max-width:1240px;margin:0 auto;padding:clamp(48px,8vw,112px) clamp(20px,4vw,56px) clamp(72px,9vw,128px)">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(36px,5vw,56px)">
     <div style="display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:oklch(0.5 0.012 260)">
-      <span>v0.20.17</span><span style="width:20px;height:1px;background:oklch(0.86 0.006 90)"></span><span>Early access</span><span style="width:20px;height:1px;background:oklch(0.86 0.006 90)"></span><span>MIT</span>
+      <span>v${version}</span><span style="width:20px;height:1px;background:oklch(0.86 0.006 90)"></span><span>Early access</span><span style="width:20px;height:1px;background:oklch(0.86 0.006 90)"></span><span>MIT</span>
     </div>
     <div role="group" aria-label="Reading as" style="display:flex;align-items:center;gap:4px;padding:4px;border:1px solid oklch(0.9 0.006 90);border-radius:999px;background:oklch(0.995 0.002 90);font-size:14px">
       <span style="padding:0 10px 0 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.55 0.01 260)">Reading as</span>
@@ -472,7 +479,7 @@ export default {
 </main>
 <footer style="border-top:1px solid oklch(0.91 0.006 90)">
   <div style="max-width:1240px;margin:0 auto;padding:32px clamp(20px,4vw,56px);display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:oklch(0.5 0.012 260)">
-    <span style="display:flex;align-items:center;gap:8px"><i aria-hidden="true" class="ph-light ph-wave-sine" style="font-size:18px;color:oklch(0.5 0.13 160)"></i>Pulse · MIT License · v0.20.17</span>
+    <span style="display:flex;align-items:center;gap:8px"><i aria-hidden="true" class="ph-light ph-wave-sine" style="font-size:18px;color:oklch(0.5 0.13 160)"></i>Pulse · MIT License · v${version}</span>
     <div style="display:flex;gap:24px;flex-wrap:wrap">
       <a href="/getting-started" style="color:oklch(0.45 0.012 260)">Docs</a>
       <a href="/agent" style="color:oklch(0.45 0.012 260)">Agent docs</a>
