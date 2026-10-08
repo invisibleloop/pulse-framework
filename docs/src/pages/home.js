@@ -126,6 +126,7 @@ export default {
       </div>
     </div>
 
+    ${isAgent ? `
     <div style="border:1px solid oklch(0.9 0.006 90);border-radius:18px;background:oklch(0.995 0.002 90);overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid oklch(0.92 0.006 90)">
         <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500"><i aria-hidden="true" class="ph-light ph-robot" style="font-size:19px;color:oklch(0.5 0.13 160)"></i>Machine entrypoints</span>
@@ -157,6 +158,39 @@ export default {
         <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
       </a>
     </div>
+    ` : `
+    <div style="border:1px solid oklch(0.9 0.006 90);border-radius:18px;background:oklch(0.995 0.002 90);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;border-bottom:1px solid oklch(0.92 0.006 90)">
+        <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500"><i aria-hidden="true" class="ph-light ph-robot" style="font-size:19px;color:oklch(0.5 0.13 160)"></i>What your agent does</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.55 0.01 260)">you review, it builds</span>
+      </div>
+      <a href="/how-it-works" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90)" class="hv-2">
+        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.025 160);color:oklch(0.45 0.12 160);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-plugs-connected"></i></span>
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Reads the guide</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">The MCP server gives it the spec and your project structure.</span></span>
+        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
+      </a>
+      <a href="/spec" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90)" class="hv-2">
+        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-file-js"></i></span>
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Writes one spec per page</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">One plain object, in a format it can't get creative with.</span></span>
+        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
+      </a>
+      <a href="/agent" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90)" class="hv-2">
+        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-shield-check"></i></span>
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Validates</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">The schema check tells it exactly what to fix.</span></span>
+        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
+      </a>
+      <a href="/performance" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90)" class="hv-2">
+        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-browser"></i></span>
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Checks it in a browser</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">Screenshots, mobile layout and a Lighthouse audit on desktop and mobile.</span></span>
+        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
+      </a>
+      <a href="/slash-commands" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px" class="hv-2">
+        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-seal-check"></i></span>
+        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:500">Stamps it verified</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">A page isn't finished until every check has passed.</span></span>
+        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
+      </a>
+    </div>
+    `}
   </div>
 </section>
 
