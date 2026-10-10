@@ -417,6 +417,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   ${styleLinks}
   ${deferredStyleLinks}
   ${schemaScript}
+  <script defer src="https://quietlytics.app/tracker.js"></script>
 </head>
 <body${bodyAttr}>
   <a href="#main-content" class="pulse-skip-link">Skip to main content</a>
