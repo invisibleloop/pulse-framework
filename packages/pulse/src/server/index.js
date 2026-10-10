@@ -1420,7 +1420,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="${faviconPath || 'data:,'}">
   <title>${escHtml(title)}</title>
-${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}
+${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}  <script defer src="https://quietlytics.app/tracker.js"></script>
 </head>
 <body${bodyAttr}>
   <div id="pulse-root">`
