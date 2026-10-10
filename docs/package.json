@@ -1,6 +1,6 @@
 {
   "name": "pulse-docs",
-  "version": "0.20.12",
+  "version": "0.20.24",
   "private": true,
   "type": "module",
   "description": "Pulse framework documentation site",
