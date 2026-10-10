@@ -3,8 +3,8 @@ services:
     name: pulse-docs
     env: node
     plan: free
-    buildCommand: cd docs && npm install
-    startCommand: cd docs && npm run start
+    buildCommand: cd docs && npm install --no-save
+    startCommand: cd docs && npm start
     envVars:
       - key: NODE_VERSION
         value: 22

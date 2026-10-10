@@ -6,9 +6,8 @@
   "description": "Pulse framework documentation site",
   "scripts": {
     "dev": "node server.js",
-    "start": "node server.js",
-    "build": "node ../packages/pulse/scripts/build.js --root .",
-    "postinstall": "cd ../packages/pulse && npm install --no-package-lock --no-audit --no-fund --loglevel=error && cd ../../docs && npm run build"
+    "start": "npm run build && node server.js",
+    "build": "node ../packages/pulse/scripts/build.js --root ."
   },
   "engines": {
     "node": ">=22"
