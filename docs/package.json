@@ -8,7 +8,7 @@
     "dev": "node server.js",
     "start": "node server.js",
     "build": "node ../packages/pulse/scripts/build.js --root .",
-    "postinstall": "npm install --prefix ../packages/pulse --no-package-lock --no-audit --no-fund --loglevel=error && npm run build"
+    "postinstall": "cd ../packages/pulse && npm install --no-package-lock --no-audit --no-fund --loglevel=error && cd ../../docs && npm run build"
   },
   "engines": {
     "node": ">=22"
