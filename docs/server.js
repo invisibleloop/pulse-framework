@@ -44,6 +44,7 @@ await createServer(
       'script-src': ['https://quietlytics.app'],
       'style-src':  ['https://fonts.googleapis.com', 'https://unpkg.com'],
       'font-src':   ['https://fonts.gstatic.com'],
+      'connect-src': ['https://quietlytics.app'],
     },
     onRequest(req, res) {
       if (req.url !== '/search-index.json') return
