@@ -32,6 +32,34 @@ function assert(condition, msg) {
   if (!condition) throw new Error(msg || 'Assertion failed')
 }
 
+// Guard against a silent early exit. Production code calls process.exit() (graceful shutdown), and a
+// test that lets it through ends the whole run with status 0 — skipping every later test and hiding
+// earlier failures. The summary at the bottom sets `finished`; if the process exits without it, fail.
+let finished = false
+process.on('exit', () => {
+  if (finished) return
+  console.error(`\n  ✗ test run ended early after ${passed + failed} tests — something called process.exit() before the summary\n`)
+  process.exitCode = 1
+})
+
+/**
+ * Replace process.exit while a test runs so graceful-shutdown code can "exit" without killing the run.
+ * Returns { codes, waitForExit(ms), restore() } — always restore() in a finally.
+ */
+function captureExit() {
+  const real  = process.exit
+  const codes = []
+  let notify
+  const called = new Promise(resolve => { notify = resolve })
+  process.exit = (code = 0) => { codes.push(code); notify() }
+  return {
+    codes,
+    /** Resolves true once process.exit() has been called, false if it wasn't within `ms`. */
+    waitForExit: (ms = 2000) => Promise.race([called.then(() => true), new Promise(r => setTimeout(() => r(false), ms))]),
+    restore: () => { process.exit = real },
+  }
+}
+
 // ---------------------------------------------------------------------------
 // HTTP helpers
 // ---------------------------------------------------------------------------
@@ -2215,31 +2243,49 @@ await test('shutdown() is returned from createServer', async () => {
   await new Promise(resolve => result.server.close(resolve))
 })
 
+// shutdown() ends with server.close(() => process.exit(0)). That is right for production, but in a
+// test it would terminate the whole run, so each of these tests stubs process.exit (captureExit) and
+// waits for the stub to be hit before restoring it.
 await test('shutdown() stops the server from accepting new connections', async () => {
-  const port = nextPort++
-  const { server, shutdown } = await createServer([helloSpec], { port, stream: false })
-  await new Promise(resolve => server.once('listening', resolve))
+  const exit = captureExit()
+  try {
+    const port = nextPort++
+    const { server, shutdown } = await createServer([helloSpec], { port, stream: false })
+    await new Promise(resolve => server.once('listening', resolve))
 
-  // Confirm server is up
-  const before = await get(port, '/hello')
-  assert(before.status === 200, `Expected 200 before shutdown, got ${before.status}`)
+    // Confirm server is up
+    const before = await get(port, '/hello')
+    assert(before.status === 200, `Expected 200 before shutdown, got ${before.status}`)
 
-  shutdown()
+    shutdown()
 
-  // Server should no longer accept connections
-  await new Promise(resolve => setTimeout(resolve, 20))
-  let refused = false
-  try { await get(port, '/hello') } catch { refused = true }
-  assert(refused, 'Expected connection to be refused after shutdown()')
+    // Server should no longer accept connections
+    await new Promise(resolve => setTimeout(resolve, 20))
+    let refused = false
+    try { await get(port, '/hello') } catch { refused = true }
+    assert(refused, 'Expected connection to be refused after shutdown()')
+
+    assert(await exit.waitForExit(), 'Expected process.exit() once all connections closed')
+    assert(exit.codes.length === 1 && exit.codes[0] === 0, `Expected a single clean exit(0), got ${JSON.stringify(exit.codes)}`)
+  } finally {
+    exit.restore()
+  }
 })
 
 await test('shutdown() is idempotent — calling twice does not throw', async () => {
-  const port = nextPort++
-  const { server, shutdown } = await createServer([helloSpec], { port, stream: false })
-  await new Promise(resolve => server.once('listening', resolve))
-  shutdown()
-  shutdown() // second call is a no-op
-  await new Promise(resolve => setTimeout(resolve, 20))
+  const exit = captureExit()
+  try {
+    const port = nextPort++
+    const { server, shutdown } = await createServer([helloSpec], { port, stream: false })
+    await new Promise(resolve => server.once('listening', resolve))
+    shutdown()
+    shutdown() // second call is a no-op
+    assert(await exit.waitForExit(), 'Expected process.exit() once the server closed')
+    await new Promise(resolve => setTimeout(resolve, 20))
+    assert(exit.codes.length === 1, `Expected exactly one exit from two shutdown() calls, got ${JSON.stringify(exit.codes)}`)
+  } finally {
+    exit.restore()
+  }
 })
 
 await test('in-flight request completes after shutdown() is called', async () => {
@@ -2254,22 +2300,33 @@ await test('in-flight request completes after shutdown() is called', async () =>
     view: (_s, server) => `<p>${server.data}</p>`
   }
 
-  const { server, shutdown } = await createServer([slowSpec], { port, stream: false })
-  await new Promise(resolve => server.once('listening', resolve))
+  const exit = captureExit()
+  try {
+    const { server, shutdown } = await createServer([slowSpec], { port, stream: false })
+    await new Promise(resolve => server.once('listening', resolve))
 
-  // Start a request but don't resolve its server fetch yet
-  const pending = get(port, '/slow')
+    // Start a request but don't resolve its server fetch yet
+    const pending = get(port, '/slow')
 
-  // Small delay to ensure the request is in flight before shutdown
-  await new Promise(resolve => setTimeout(resolve, 20))
+    // Small delay to ensure the request is in flight before shutdown
+    await new Promise(resolve => setTimeout(resolve, 20))
 
-  shutdown()
+    shutdown()
 
-  // Now resolve the slow fetch — the response should still complete
-  resolveSlowFetch()
-  const { status, body } = await pending
-  assert(status === 200, `Expected 200, got ${status}`)
-  assert(body.includes('<p>done</p>'), `Expected response body, got: ${body}`)
+    // The process must wait for the in-flight request before exiting
+    assert(exit.codes.length === 0, 'Must not exit while a request is still in flight')
+
+    // Now resolve the slow fetch — the response should still complete
+    resolveSlowFetch()
+    const { status, body } = await pending
+    assert(status === 200, `Expected 200, got ${status}`)
+    assert(body.includes('<p>done</p>'), `Expected response body, got: ${body}`)
+
+    assert(await exit.waitForExit(), 'Expected process.exit() once the in-flight request finished')
+    assert(exit.codes[0] === 0, `Expected exit(0), got ${JSON.stringify(exit.codes)}`)
+  } finally {
+    exit.restore()
+  }
 })
 
 // ---------------------------------------------------------------------------
@@ -2388,4 +2445,5 @@ await test('ctx.formData() still handles URL-encoded body correctly', async () =
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
+finished = true
 if (failed > 0) process.exit(1)
