@@ -1524,6 +1524,81 @@ await test('submit pages are excluded from the in-process page cache', async () 
   })
 })
 
+// Regression: the client router fetches pages with X-Pulse-Navigate and the JSON / NDJSON
+// responses used to be written without ctx's queued cookies and headers. A first-time visitor
+// who reached a form via a link got a CSRF token but never the pulse_csrf cookie it is bound
+// to, so every submit failed with "Invalid or missing CSRF token".
+console.log('\nClient-side navigation — cookies and headers set during the request\n')
+
+await test('JSON navigation response sets the CSRF cookie for a submit page', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const res = await request(port, 'GET', '/signup', { 'X-Pulse-Navigate': 'true' })
+    assert(res.headers['content-type'].includes('application/json'), `Expected JSON, got ${res.headers['content-type']}`)
+    const setCookie = [].concat(res.headers['set-cookie'] || []).find(c => c.startsWith('pulse_csrf='))
+    assert(setCookie, `Expected a pulse_csrf Set-Cookie on the navigation response, got: ${JSON.stringify(res.headers['set-cookie'])}`)
+    assert(/HttpOnly/i.test(setCookie), 'CSRF cookie must stay HttpOnly')
+  })
+})
+
+await test('a form reached via client navigation can be submitted (cookie and token pair up)', async () => {
+  await withServer([formSpec], { stream: false }, async (port) => {
+    const res    = await request(port, 'GET', '/signup', { 'X-Pulse-Navigate': 'true' })
+    const cookie = [].concat(res.headers['set-cookie'] || []).find(c => c.startsWith('pulse_csrf='))?.split(';')[0] || ''
+    const token  = JSON.parse(res.body).html.match(/name="_csrf" value="([^"]+)"/)?.[1] || ''
+    assert(cookie && token, `Expected both a cookie and a token, got cookie="${cookie}" token="${token}"`)
+    const { status, headers } = await postForm(port, '/signup', { email: 'a@b.com', _csrf: token }, cookie)
+    assert(status === 303 && headers.location === '/signup?done=1', `Expected 303 for a valid POST, got ${status}`)
+  })
+})
+
+await test('JSON navigation response carries cookies and headers set by a server fetcher', async () => {
+  const spec = {
+    route:  '/nav-ctx',
+    meta:   { title: 'Nav ctx' },
+    server: {
+      flag: async (ctx) => {
+        ctx.setCookie('seen', '1', { httpOnly: true })
+        ctx.setHeader('X-Custom', 'yes')
+        return 'ok'
+      },
+    },
+    view: (_s, srv) => `<main id="main-content">${srv.flag}</main>`,
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const res = await request(port, 'GET', '/nav-ctx', { 'X-Pulse-Navigate': 'true' })
+    assert([].concat(res.headers['set-cookie'] || []).some(c => c.startsWith('seen=1')),
+      `Expected seen=1 cookie, got: ${JSON.stringify(res.headers['set-cookie'])}`)
+    assert(res.headers['x-custom'] === 'yes', `Expected X-Custom header, got: ${res.headers['x-custom']}`)
+    assert(res.headers['x-content-type-options'] === 'nosniff', 'Security headers must still be present')
+  })
+})
+
+await test('NDJSON (streaming) navigation response carries cookies and headers set in a guard', async () => {
+  const spec = {
+    ...deferredNavSpec,
+    route: '/deferred-nav-ctx',
+    guard: async (ctx) => {
+      ctx.setCookie('seen', '1', { httpOnly: true })
+      ctx.setHeader('X-Custom', 'yes')
+    },
+  }
+  await withServer([spec], { stream: true }, async (port) => {
+    const res = await request(port, 'GET', '/deferred-nav-ctx', { 'X-Pulse-Navigate': 'true' })
+    assert(res.headers['content-type'].includes('application/x-ndjson'), `Expected NDJSON, got ${res.headers['content-type']}`)
+    assert([].concat(res.headers['set-cookie'] || []).some(c => c.startsWith('seen=1')),
+      `Expected seen=1 cookie, got: ${JSON.stringify(res.headers['set-cookie'])}`)
+    assert(res.headers['x-custom'] === 'yes', `Expected X-Custom header, got: ${res.headers['x-custom']}`)
+    assert(res.headers['x-accel-buffering'] === 'no', 'Streaming headers must be preserved')
+  })
+})
+
+await test('navigation responses without queued cookies/headers are unchanged', async () => {
+  await withServer([helloSpec], { stream: false }, async (port) => {
+    const res = await request(port, 'GET', '/hello', { 'X-Pulse-Navigate': 'true' })
+    assert(res.status === 200 && res.headers['set-cookie'] === undefined, `Unexpected Set-Cookie: ${res.headers['set-cookie']}`)
+  })
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nDeclarative redirects\n')

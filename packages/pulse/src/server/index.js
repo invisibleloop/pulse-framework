@@ -1235,11 +1235,13 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
     storeState:  ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
   })
 
-  res.writeHead(200, {
+  // mergeCtxHeaders so cookies/headers queued on ctx during the request (the CSRF cookie, anything a
+  // guard or fetcher sets) reach the browser on client-side navigations, not just on full page loads.
+  res.writeHead(200, mergeCtxHeaders(ctx, {
     'Content-Type':  'application/json',
     'Cache-Control': buildCacheControl(spec, dev),
     ...SECURITY_HEADERS,
-  })
+  }))
   res.end(payload)
 }
 
@@ -1252,12 +1254,15 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
 async function handleNavStreamResponse(spec, ctx, req, res) {
   const meta = await resolveMeta(spec.meta, ctx)
 
-  res.writeHead(200, {
+  // Headers go out before the stream renders, so this merges what is already queued on ctx — the CSRF
+  // cookie, guard output, meta functions. A cookie set by a `server` fetcher runs later, inside the
+  // stream, and can no longer be sent; set cookies in `guard` for streamed pages.
+  res.writeHead(200, mergeCtxHeaders(ctx, {
     'Content-Type':      'application/x-ndjson',
     'Cache-Control':     'no-store',
     'X-Accel-Buffering': 'no',
     ...SECURITY_HEADERS,
-  })
+  }))
 
   const navStream = renderToNavStream(spec, ctx, meta)
   const reader    = navStream.getReader()
