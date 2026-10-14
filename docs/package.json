@@ -6,7 +6,7 @@
   "description": "Pulse framework documentation site",
   "scripts": {
     "dev": "node server.js",
-    "start": "npm run build && node server.js",
+    "start": "npm install --prefix ../packages/pulse --omit=dev --no-audit --no-fund && npm run build && node server.js",
     "build": "node ../packages/pulse/scripts/build.js --root ."
   },
   "engines": {
