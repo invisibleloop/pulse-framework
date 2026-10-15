@@ -148,7 +148,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
       const mergedAllState = applyCtxExtras(mergeStoreKeys(spec, allServerState, ctx.store), ctx)
       if (spec.hydrate && Object.keys(mergedAllState).length > 0) {
         controller.enqueue(encode(
-          `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(mergedAllState)};</script>`
+          `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${safeJson(mergedAllState)};</script>`
         ))
       }
 
@@ -275,7 +275,7 @@ export function buildStoreScript(spec, storeState, nonce, livePath = '') {
   // mount() connects only when the page actually subscribes to store keys.
   const liveFlag = livePath ? `window.__PULSE_LIVE__='${livePath}';` : ''
   if (storeState && Object.keys(storeState).length > 0) {
-    return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}window.__PULSE_STORE__=${JSON.stringify(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
+    return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}window.__PULSE_STORE__=${safeJson(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
   }
   return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}</script>`
 }
@@ -373,7 +373,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   const deferredStyleLinks = (meta.deferredStyles || []).length > 0
     ? `<script nonce="${nonce}">(function(){${
         (meta.deferredStyles || []).map(href =>
-          `var l=document.createElement('link');l.rel='stylesheet';l.href='${esc(href)}';document.head.appendChild(l);`
+          `var l=document.createElement('link');l.rel='stylesheet';l.href=${safeJson(href)};document.head.appendChild(l);`
         ).join('')
       }})();</script>`
     : ''
@@ -383,14 +383,14 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     .join('\n  ')
 
   const schemaScript = meta.schema
-    ? `<script type="application/ld+json">${JSON.stringify(meta.schema)}</script>`
+    ? `<script type="application/ld+json">${safeJson(meta.schema)}</script>`
     : ''
 
   // Serialise server state into the page so the client runtime can read it
   // without making a second request. Only needed when the page is hydrated —
   // purely server-rendered pages have no JS to read it.
   const serverStateScript = spec.hydrate && Object.keys(serverState).length > 0
-    ? `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${JSON.stringify(serverState)};</script>`
+    ? `<script nonce="${nonce}">window.__PULSE_SERVER__ = ${safeJson(serverState)};</script>`
     : ''
 
   const storeStateScript = buildStoreScript(spec, storeState, nonce, livePath)
@@ -675,6 +675,22 @@ function encode(str) {
  */
 function isBundle(hydratePath) {
   return typeof hydratePath === 'string' && hydratePath.startsWith('/dist/')
+}
+
+/**
+ * JSON.stringify for embedding inside an inline <script>. Plain JSON.stringify
+ * leaves `<`, `>` and `&` alone, so a value containing "</script>" (or "<!--")
+ * ends the script element early and the rest is parsed as HTML. Escaping those
+ * as \uXXXX keeps the output valid JS/JSON with the same parsed value. U+2028/9
+ * are escaped too (line terminators in JS string literals before ES2019).
+ */
+export function safeJson(value) {
+  return JSON.stringify(value)
+    ?.replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
 }
 
 /**

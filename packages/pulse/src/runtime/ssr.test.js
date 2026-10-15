@@ -3,7 +3,7 @@
  * run: node src/runtime/ssr.test.js
  */
 
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, withTimeout } from './ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, withTimeout, safeJson } from './ssr.js'
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -701,6 +701,47 @@ await test('stream.scope: meta arrives before slow deferred fetcher resolves', a
   assert(shellTime !== null,  'shell should have arrived')
   assert(metaTime  < 20,  `meta should arrive <20ms (fast), got ${metaTime}ms`)
   assert(shellTime < 40,  `shell should arrive <40ms (only awaits 'fast'), got ${shellTime}ms`)
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nScript-context serialisation\n')
+
+const HOSTILE = '</script><img src=x onerror=alert(1)><!-- \u2028 & '
+
+await test('safeJson never emits < > & or line separators, and round-trips the value', () => {
+  const value = { a: HOSTILE, nested: [HOSTILE], n: 1 }
+  const out   = safeJson(value)
+  assert(!/[<>&\u2028\u2029]/.test(out), `unsafe character left in: ${out}`)
+  assert(JSON.stringify(JSON.parse(out)) === JSON.stringify(value), 'value changed in round trip')
+})
+
+await test('safeJson(undefined) stays undefined like JSON.stringify', () => {
+  assert(safeJson(undefined) === undefined)
+})
+
+await test('wrapDocument cannot be broken out of via server state, store state or schema', () => {
+  const { html } = wrapDocument({
+    content: '<p>x</p>',
+    spec: { hydrate: '/dist/x.boot-1.js', meta: { title: 't', schema: { name: HOSTILE } } },
+    serverState: { comment: HOSTILE },
+    storeState: { note: HOSTILE },
+    nonce: 'abc',
+  })
+  assert(!html.includes('</script><img'), 'script element was closed early by data')
+  assert(!html.includes('onerror=alert(1)><!--'), 'raw hostile payload reached the document')
+  const state = html.match(/window\.__PULSE_SERVER__ = (.*?);<\/script>/s)[1]
+  assert(JSON.stringify(JSON.parse(state)) === JSON.stringify({ comment: HOSTILE }), 'state changed in round trip')
+})
+
+await test('wrapDocument deferred style hrefs are emitted as safe JS strings', () => {
+  const { html } = wrapDocument({
+    content: '',
+    spec: { meta: { title: 't', deferredStyles: ["/a.css';alert(1);//", '/b\\'] } },
+    nonce: 'abc',
+  })
+  assert(html.includes(`l.href="/a.css';alert(1);//"`), 'href must be a JSON string literal')
+  assert(html.includes('l.href="/b\\\\"'), 'trailing backslash must be escaped')
 })
 
 // ---------------------------------------------------------------------------

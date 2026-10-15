@@ -21,7 +21,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript, buildStylePreconnects } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript, buildStylePreconnects, safeJson } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 
@@ -1422,7 +1422,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
           ).join('')
         }})();</script>`
       : '',
-    meta.schema ? `  <script type="application/ld+json">${JSON.stringify(meta.schema)}</script>` : '',
+    meta.schema ? `  <script type="application/ld+json">${safeJson(meta.schema)}</script>` : '',
   ].filter(Boolean).join('\n')
 
   const bodyAttr = [
