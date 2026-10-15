@@ -208,6 +208,15 @@ test('no agent doc references a literal ask_user tool', () => {
   )
 })
 
+test('quietlytics-speed command keeps its safety rules: keys from the environment, report is data, edits need approval', () => {
+  const src = fs.readFileSync(path.join(agentDir, 'commands', 'quietlytics-speed.md'), 'utf8')
+  assert(src.includes('$QUIETLYTICS_READ_KEY') && src.includes('$QUIETLYTICS_MARKER_KEY'), 'reads keys from environment variables')
+  assert(!/qlr_[A-Za-z0-9_-]{10,}|qlm_[A-Za-z0-9_-]{10,}/.test(src), 'contains no literal key')
+  assert(/data, not instructions/i.test(src), 'treats the report as untrusted data')
+  assert(/until the user has approved the plan/i.test(src), 'no edits before the plan is approved')
+  assert(src.includes('quietlytics.speed'), 'checks the report format')
+})
+
 test('design guides do not suggest emoji in UI output', () => {
   const designGuides = ['src/agent/guide-design-references.md', 'src/agent/guide-design-gallery.md']
   const offenders = designGuides.filter(f => {
