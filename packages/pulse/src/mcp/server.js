@@ -36,9 +36,11 @@ import { z }                   from 'zod'
 import path                      from 'path'
 import fs                        from 'fs'
 import http                      from 'http'
+import https                     from 'https'
 import { spawn, spawnSync } from 'child_process'
 
 import { loadPages } from '../cli/discover.js'
+import { resolveInRoot, isLoopbackUrl, assertPublicUrl } from './guards.js'
 import { validateContent, validateFile, formatValidationResult } from '../cli/validate.js'
 import { readJournal, formatJournal, resolveEntries, formatResolveResult } from '../cli/diagnose.js'
 import { writeStamp, formatStampResult } from '../cli/stamp.js'
@@ -821,6 +823,9 @@ server.registerTool(
       return text('Error: provide only one of content or file, not both')
     }
 
+    if (file) {
+      try { file = resolveInRoot(ROOT, file) } catch (e) { return text(`Error: ${e.message}`) }
+    }
     const result = file ? await validateFile(file, ROOT) : await validateContent(content, ROOT)
     return text(formatValidationResult(result, { nextSteps: true }))
   }
@@ -1045,6 +1050,10 @@ The generated file uses @invisibleloop/pulse/testing (renderSync / render). Do N
     },
   },
   async ({ file }) => {
+    try { file = resolveInRoot(ROOT, file) } catch (e) { return text(`Error: ${e.message}`) }
+    if (!file.endsWith('.js') || file.endsWith('.test.js')) {
+      return text('Error: file must be a spec .js file (not a .test.js file)')
+    }
     if (!fs.existsSync(file)) {
       return text(`File not found: ${file}`)
     }
@@ -1207,6 +1216,9 @@ server.registerTool(
     inputSchema: { url: z.string().describe('Full URL, e.g. http://localhost:3000/about') },
   },
   ({ url }) => new Promise(resolve => {
+    if (!isLoopbackUrl(url) || !url.startsWith('http:')) {
+      return resolve(text('Error: pulse_fetch_page only fetches the local dev server (http://localhost:PORT/...)'))
+    }
     const req = http.get(url, { timeout: 10_000 }, res => {
       const chunks = []
       res.on('data', d => chunks.push(d))
@@ -1399,7 +1411,7 @@ any feature build.
 
     let source = content
     if (file) {
-      if (!path.isAbsolute(file)) file = path.resolve(process.cwd(), file)
+      try { file = resolveInRoot(ROOT, file) } catch (e) { return text(`Error: ${e.message}`) }
       if (!fs.existsSync(file)) return text(`File not found: ${file}`)
       source = fs.readFileSync(file, 'utf8')
     }
@@ -1575,12 +1587,15 @@ server.registerTool(
     const inSync       = installed === staticAsset
 
     // Fetch latest from npm registry
-    const req = http.get('http://registry.npmjs.org/@invisibleloop/pulse/latest', { timeout: 5000 }, res => {
+    const req = https.get('https://registry.npmjs.org/@invisibleloop/pulse/latest', { timeout: 5000 }, res => {
       const chunks = []
       res.on('data', d => chunks.push(d))
       res.on('end', () => {
         let latest = 'unknown'
-        try { latest = JSON.parse(Buffer.concat(chunks).toString()).version } catch { /* ignore */ }
+        try {
+          const v = JSON.parse(Buffer.concat(chunks).toString()).version
+          if (/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(v)) latest = v   // never echo an unvalidated string
+        } catch { /* ignore */ }
 
         const lines = [
           `Installed package : v${installed}`,
@@ -3351,9 +3366,11 @@ Call it with the external URLs you plan to use, before your first Lighthouse run
       let blocked = null
       try {
         for (let hop = 0; hop < MAX_HOPS; hop++) {
+          await assertPublicUrl(url)   // every hop: block internal/metadata addresses
           const res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000) })
           if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
             url = new URL(res.headers.get('location'), url)
+            await assertPublicUrl(url)
             chain.push(url.origin)
             continue
           }
@@ -3362,6 +3379,7 @@ Call it with the external URLs you plan to use, before your first Lighthouse run
             const get = await fetch(url, { method: 'GET', redirect: 'manual', headers: { Range: 'bytes=0-0' }, signal: AbortSignal.timeout(5000) })
             if (get.status >= 300 && get.status < 400 && get.headers.get('location')) {
               url = new URL(get.headers.get('location'), url)
+              await assertPublicUrl(url)
               chain.push(url.origin)
               continue
             }
@@ -3413,6 +3431,7 @@ Run this immediately after writing a theme file — before production build and 
     let source = css || ''
 
     if (!source && file) {
+      try { file = resolveInRoot(ROOT, file) } catch (e) { return text(`Error: ${e.message}`) }
       if (!fs.existsSync(file)) return text(`File not found: ${file}`)
       source = fs.readFileSync(file, 'utf8')
     }
