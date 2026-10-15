@@ -216,7 +216,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
             },
             {
               type: 'command',
-              command: `node .claude/coverage-check.js`,
+              command: `cd "$CLAUDE_PROJECT_DIR" && node .claude/coverage-check.js`,
               statusMessage: 'Checking test coverage...',
             },
             {
