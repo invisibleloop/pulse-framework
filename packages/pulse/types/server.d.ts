@@ -127,6 +127,14 @@ export interface ServerOptions {
    */
   csp?: Record<string, string[]>
 
+  /**
+   * Opt-in analytics script URL. Injected as `<script defer src>` in every page head,
+   * and its origin is added to `script-src` and `connect-src`. Off by default —
+   * Pulse never injects third-party scripts unless asked.
+   * @example analytics: 'https://quietlytics.app/tracker.js'
+   */
+  analytics?: string | { src: string }
+
   /** Called on unhandled errors. Receives (err, req, res). */
   onError?: (err: Error, req: IncomingMessage, res: ServerResponse) => void
 

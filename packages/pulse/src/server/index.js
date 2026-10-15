@@ -602,7 +602,11 @@ export async function createServer(entries, options = {}) {
     maxBody         = 1024 * 1024,  // max request body size in bytes (default 1 MB)
     shutdownTimeout = 30000,        // ms to wait for in-flight requests before force-exit
     healthCheck    = '/healthz',    // path for health check endpoint, or false to disable
-    csp            = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
+    csp: cspOption = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
+    analytics      = null,          // opt-in analytics script URL, e.g. 'https://quietlytics.app/tracker.js'.
+                                    // Injected as <script defer> in every page head; its origin is added
+                                    // to script-src + connect-src. Off by default — Pulse never injects
+                                    // third-party scripts unless asked.
     secret         = null,          // HMAC secret for CSRF tokens — set a stable value when running
                                     // multiple instances; defaults to a random per-boot secret
     sitemap        = false,         // true | { origin } — auto-serve /sitemap.xml + robots.txt from
@@ -714,6 +718,14 @@ export async function createServer(entries, options = {}) {
   // Live store push — SSE clients and the broadcast function. The heartbeat
   // comment keeps proxies from reaping idle connections; unref'd so it never
   // holds the process open.
+  const analyticsSrc = analytics ? (typeof analytics === 'string' ? analytics : analytics.src) : null
+  let csp = cspOption
+  if (analyticsSrc) {
+    const origin = new URL(analyticsSrc).origin
+    csp = { ...cspOption }
+    for (const k of ['script-src', 'connect-src']) csp[k] = [...(cspOption[k] || []), origin]
+  }
+  const analyticsTag = analyticsSrc ? `<script defer src="${escHtml(analyticsSrc)}"></script>` : ''
   const livePath    = live ? ((typeof live === 'object' && live.path) || '/__pulse/live') : null
   const liveClients = new Set()
   const liveHeartbeat = livePath
@@ -1102,11 +1114,11 @@ export async function createServer(entries, options = {}) {
       // string path — they are small, must carry an explicit status, and POST
       // bodies are already consumed.
       if (responseStatus !== 200 || req.method === 'POST') {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, responseStatus, livePath)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, responseStatus, livePath, analyticsTag)
       } else if (stream) {
-        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, livePath)
+        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, livePath, analyticsTag)
       } else {
-        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, 200, livePath)
+        await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, 200, livePath, analyticsTag)
       }
 
     } catch (err) {
@@ -1291,7 +1303,7 @@ async function handleNavStreamResponse(spec, ctx, req, res) {
  * Render to a complete string then send — simpler, easier to cache.
  * Checks the in-process page cache before rendering; stores result after.
  */
-async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, status = 200, livePath = '') {
+async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, status = 200, livePath = '', analyticsTag = '') {
   const cacheKey = buildCacheKey(spec, ctx)
   // Never cache POST re-renders or non-200 responses (custom 404s) — POST output
   // varies per submission and a cached 404 body would be served with a 200 later.
@@ -1315,7 +1327,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     const canonicalTag      = canonicalUrl ? `<link rel="canonical" href="${escHtml(canonicalUrl)}">` : ''
     const resolvedSpec      = { ...spec, meta: await resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
-    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag, nonce, runtimeBundle, faviconHref: faviconPath || '', livePath })
+    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag + analyticsTag, nonce, runtimeBundle, faviconHref: faviconPath || '', livePath })
     html              = wrapped.html
     serverTimingValue = wrapped.serverTimingValue
     if (ttl > 0) pageHtmlCache.set(cacheKey, { html }, ttl)
@@ -1343,7 +1355,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
  * Stream the response — shell first, deferred segments follow.
  * On a page-cache hit, serves the buffered HTML as a string (no streaming needed).
  */
-async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, livePath = '') {
+async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, livePath = '', analyticsTag = '') {
   // Serve from in-process page cache when available — skip streaming overhead.
   const cacheKey = buildCacheKey(spec, ctx)
   const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
@@ -1425,8 +1437,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="${faviconPath || 'data:,'}">
   <title>${escHtml(title)}</title>
-${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}  <script defer src="https://quietlytics.app/tracker.js"></script>
-</head>
+${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}${analyticsTag ? '  ' + analyticsTag + '\n' : ''}</head>
 <body${bodyAttr}>
   <div id="pulse-root">`
 

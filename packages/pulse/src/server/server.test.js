@@ -2444,6 +2444,31 @@ await test('ctx.formData() still handles URL-encoded body correctly', async () =
 
 // ---------------------------------------------------------------------------
 
+console.log('\nAnalytics (opt-in)\n')
+
+const TRACKER = 'https://example-analytics.test/tracker.js'
+
+for (const stream of [false, true]) {
+  await test(`no third-party script is injected by default (stream: ${stream})`, async () => {
+    await withServer([helloSpec], { stream }, async (port) => {
+      const { body } = await get(port, '/hello')
+      assert(!body.includes('<script defer'), 'default pages must not carry an analytics script')
+    })
+  })
+
+  await test(`analytics option injects the script and widens CSP (stream: ${stream})`, async () => {
+    await withServer([helloSpec], { stream, analytics: TRACKER }, async (port) => {
+      const res = await get(port, '/hello')
+      assert(res.body.includes(`<script defer src="${TRACKER}"></script>`), 'script tag missing from head')
+      const csp = String(res.headers['content-security-policy'])
+      assert(/script-src[^;]*https:\/\/example-analytics\.test/.test(csp), 'script-src should allow the origin')
+      assert(/connect-src[^;]*https:\/\/example-analytics\.test/.test(csp), 'connect-src should allow the origin')
+    })
+  })
+}
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)

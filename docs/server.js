@@ -39,12 +39,11 @@ await createServer(
     staticDir:    new URL('./public', import.meta.url).pathname,
     root:         new URL('.', import.meta.url),
     defaultCache: true,
+    analytics:    'https://quietlytics.app/tracker.js',  // docs site only — opt-in, off by default
     csp: {
       'img-src':    ['https://picsum.photos', 'https://fastly.picsum.photos', 'https://images.unsplash.com'],
-      'script-src': ['https://quietlytics.app'],
       'style-src':  ['https://fonts.googleapis.com', 'https://unpkg.com'],
       'font-src':   ['https://fonts.gstatic.com'],
-      'connect-src': ['https://quietlytics.app'],
     },
     onRequest(req, res) {
       if (req.url !== '/search-index.json') return
