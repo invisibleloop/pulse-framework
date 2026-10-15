@@ -1,0 +1,2 @@
+# Tests are not part of the published package
+**/*.test.js
