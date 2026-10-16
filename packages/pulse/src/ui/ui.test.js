@@ -1154,4 +1154,9 @@ test('pulse-ui.css: form controls are at least 16px on touch devices (iOS focus-
   assert.match(block, /font-size:\s*max\(1rem, 16px\)/)
 })
 
+test('escHtml escapes less-than', async () => {
+  const { escHtml } = await import('../html.js')
+  assert.equal(escHtml('a<b'), 'a&lt;b')
+})
+
 console.log('✓ All UI component tests passed')
