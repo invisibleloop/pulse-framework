@@ -105,7 +105,7 @@ test('formatPreview says nothing was sent, names the destination and carries the
   const p = buildReport(good, { version: '0.20.39' }).payload
   const out = formatPreview(p)
   assert.match(out, /has NOT been sent/)
-  assert.match(out, /pulse-feedback/)
+  assert.match(out, /feedback\.pulseframework\.dev/)
   assert.ok(out.includes(previewId(p)))
   assert.match(formatPreview(p, { transport: 'gh' }), /your own `gh` login/)
 })

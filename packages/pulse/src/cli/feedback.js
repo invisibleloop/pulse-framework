@@ -17,7 +17,7 @@ import crypto from 'node:crypto'
 import os     from 'node:os'
 import { spawnSync } from 'node:child_process'
 
-export const DEFAULT_ENDPOINT = 'https://pulse-feedback.ink-13f.workers.dev/report'
+export const DEFAULT_ENDPOINT = 'https://feedback.pulseframework.dev/report'
 export const REPO             = 'invisibleloop/pulse-framework'
 
 // Mirrors the Worker's limits — keep in sync with worker/feedback/index.js.
