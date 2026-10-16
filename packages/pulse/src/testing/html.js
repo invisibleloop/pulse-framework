@@ -64,14 +64,15 @@ function parseAttrs(str) {
 }
 
 function decodeEntities(str) {
+  // &amp; must be decoded last: decoding it first turns "&amp;lt;" into "<".
   return str
-    .replace(/&amp;/g,  '&')
     .replace(/&lt;/g,   '<')
     .replace(/&gt;/g,   '>')
     .replace(/&quot;/g, '"')
     .replace(/&#0?39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g,  '&')
 }
 
 /**

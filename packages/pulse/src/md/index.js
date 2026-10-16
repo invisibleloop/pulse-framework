@@ -17,6 +17,20 @@ import { highlight } from './highlight.js'
 // HTML escaping
 // ---------------------------------------------------------------------------
 
+/**
+ * Remove an ATX heading's optional closing sequence ("## Title ##" → "Title").
+ * Done by hand rather than with /\s+#+\s*$/, which backtracks quadratically on
+ * long runs of whitespace.
+ */
+function stripClosingHashes(text) {
+  let end = text.length
+  while (end > 0 && /\s/.test(text[end - 1])) end--
+  let start = end
+  while (start > 0 && text[start - 1] === '#') start--
+  if (start === end || start === 0 || !/\s/.test(text[start - 1])) return text
+  return text.slice(0, start).trimEnd()
+}
+
 function esc(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -147,10 +161,14 @@ function parseBlocks(text) {
       continue
     }
 
-    // ATX heading  (# through ######)
-    const headMatch = line.match(/^(#{1,6})\s+(.*?)(?:\s+#+\s*)?$/)
-    if (headMatch) {
-      blocks.push({ type: 'heading', level: headMatch[1].length, content: headMatch[2] })
+    // ATX heading  (# through ######). This must accept every line the paragraph
+    // loop below treats as "a heading starts here" (/^#{1,6}\s/): if the two
+    // disagree, neither claims the line and the parser never advances.
+    // The marker is matched on its own, with the text taken from what follows, so
+    // there is no overlapping whitespace/content regex to backtrack.
+    const headMarker = line.match(/^#{1,6}(?=\s)/)
+    if (headMarker) {
+      blocks.push({ type: 'heading', level: headMarker[0].length, content: stripClosingHashes(line.slice(headMarker[0].length).trimStart()) })
       i++; continue
     }
 
@@ -219,9 +237,12 @@ function parseBlocks(text) {
       if (/^\d+[.)]\s/.test(l))                       break
       paraLines.push(l); i++
     }
-    if (paraLines.length > 0) {
-      blocks.push({ type: 'paragraph', content: paraLines.join(' ') })
+    if (paraLines.length === 0) {
+      // Nothing above claimed this line and the paragraph loop refused it. Never
+      // loop without consuming input — treat it as text and move on.
+      paraLines.push(lines[i]); i++
     }
+    blocks.push({ type: 'paragraph', content: paraLines.join(' ') })
   }
 
   return blocks
@@ -311,6 +332,8 @@ function markdownToHtml(text) {
  * @returns {{ html: string, frontmatter: Record<string, string> }}
  */
 export function parseMd(source) {
+  // Normalise line endings first: CRLF files otherwise leave a stray "\r" on every line.
+  source = String(source).replace(/\r\n?/g, '\n')
   const { frontmatter, body } = extractFrontmatter(source)
   return { html: markdownToHtml(body), frontmatter }
 }

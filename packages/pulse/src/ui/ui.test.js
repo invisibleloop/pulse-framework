@@ -90,13 +90,13 @@ test('button: fullWidth adds modifier class', () => {
 
 test('button: escapes label to prevent XSS', () => {
   const html = button({ label: '<script>alert(1)</script>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.match(html, /&lt;script&gt;/)
 })
 
 test('button: escapes href to prevent XSS', () => {
   const html = button({ label: 'x', href: '"><script>alert(1)</script>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 test('button: submit type', () => {
@@ -177,7 +177,7 @@ test('card: flush modifier', () => {
 
 test('card: escapes title to prevent XSS', () => {
   const html = card({ title: '<script>', content: '' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 // ─── input ──────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ test('input: pre-filled value', () => {
 
 test('input: escapes value to prevent XSS', () => {
   const html = input({ name: 'x', label: 'X', value: '"><script>alert(1)</script>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 test('input: escapes error message', () => {
@@ -272,7 +272,7 @@ test('select: error triggers aria-invalid and role=alert', () => {
 
 test('select: escapes option values and labels', () => {
   const html = select({ name: 's', label: 'S', options: [{ value: '"><script>', label: '<b>' }] })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(html, /<b>/)
 })
 
@@ -335,7 +335,7 @@ test('alert: unknown variant falls back to info', () => {
 
 test('alert: escapes title', () => {
   const html = alert({ variant: 'info', title: '<script>', content: '' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 // ─── stat ────────────────────────────────────────────────────────────────────
@@ -415,7 +415,7 @@ test('avatar: unknown size falls back to md', () => {
 
 test('avatar: escapes src to prevent XSS', () => {
   const html = avatar({ src: '"><script>alert(1)</script>', alt: 'x' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 // ─── empty ───────────────────────────────────────────────────────────────────
@@ -445,7 +445,7 @@ test('empty: no action rendered when not provided', () => {
 
 test('empty: escapes title and description', () => {
   const html = empty({ title: '<script>', description: '<b>bad</b>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(html, /<b>/)
 })
 
@@ -478,7 +478,7 @@ test('table: scroll wrapper has role=region and tabindex', () => {
 
 test('table: escapes headers', () => {
   const html = table({ headers: ['<script>'], rows: [] })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 test('table: empty rows renders empty tbody', () => {
@@ -510,7 +510,7 @@ test('hero: actions slot passes through raw HTML', () => {
 
 test('hero: escapes title and eyebrow', () => {
   const html = hero({ title: '<script>', eyebrow: '<b>bad</b>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(html, /<b>bad<\/b>/)
 })
 
@@ -530,7 +530,7 @@ test('feature: icon slot passes through raw HTML', () => {
 
 test('feature: escapes title and description', () => {
   const html = feature({ title: '<script>', description: '<b>bad</b>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(html, /<b>bad<\/b>/)
 })
 
@@ -558,7 +558,7 @@ test('accordion: empty items renders empty container', () => {
 
 test('accordion: escapes question and answer', () => {
   const html = accordion({ items: [{ question: '<script>', answer: '<b>x</b>' }] })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(html, /<b>x<\/b>/)
 })
 
@@ -775,7 +775,7 @@ test('divider: has role=separator and aria-label when label provided', () => {
 })
 
 test('divider: escapes label', () => {
-  assert.doesNotMatch(divider({ label: '<script>' }), /<script>/)
+  assert.doesNotMatch(divider({ label: '<script>' }), /<script/i)
 })
 
 // ─── media ───────────────────────────────────────────────────────────────────
@@ -923,7 +923,7 @@ test('radio: no data-event when event not provided', () => {
 
 test('radio: escapes value and label', () => {
   const html = radio({ name: 'x', value: '"><script>', label: '<b>bold</b>' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(html, /<b>bold/)
 })
 
@@ -1100,7 +1100,7 @@ test('modalTrigger: does not use legacy data-modal-open', () => {
 
 test('modalTrigger: escapes target id to prevent XSS', () => {
   const html = modalTrigger({ target: '"><script>', label: 'x' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 // ─── uiImage ────────────────────────────────────────────────────────────────
@@ -1139,7 +1139,7 @@ test('uiImage: wraps in aspect-ratio crop when ratio given', () => {
 
 test('uiImage: escapes src to prevent XSS', () => {
   const html = uiImage({ src: '"><script>alert(1)</script>', alt: '' })
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
 })
 
 test('pulse-ui.css: form controls are at least 16px on touch devices (iOS focus-zoom)', () => {

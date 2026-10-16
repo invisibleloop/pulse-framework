@@ -2469,6 +2469,17 @@ for (const stream of [false, true]) {
 
 // ---------------------------------------------------------------------------
 
+console.log('\nRoute pattern escaping\n')
+
+await test('a "." in a route is literal, not a wildcard', async () => {
+  await withServer([rssSpec], {}, async (port) => {
+    assert((await get(port, '/feed.xml')).status === 200, 'exact route should match')
+    assert((await get(port, '/feedXxml')).status === 404, '"." must not match any character')
+  })
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)

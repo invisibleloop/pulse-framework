@@ -392,7 +392,7 @@ test('pulse_check_contrast extracts variables from [data-theme="light"] blocks',
   // and the checker silently reported nothing for the light theme.
   // Recreate extractVars with the exact pattern strings from server.js source.
   const patterns = [...serverSrc.matchAll(/extractVars\(source,\s*'((?:[^'\\]|\\.)*)'\)/g)].map(m =>
-    m[1].replace(/\\\\/g, '\\').replace(/\\'/g, "'")
+    m[1].replace(/\\(['\\])/g, '$1')  // single pass, so an escaped backslash is not unescaped twice
   )
   assert(patterns.length === 2, `Expected 2 extractVars call patterns in server.js, found ${patterns.length}`)
   const lightPattern = patterns.find(p => p.includes('data-theme'))

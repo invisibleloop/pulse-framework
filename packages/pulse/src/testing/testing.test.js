@@ -504,5 +504,14 @@ await test('descendant selector returns empty for no matches', async () => {
 
 // ---------------------------------------------------------------------------
 
+console.log('\nEntity decoding\n')
+
+test('text() decodes entities once: &amp;lt; becomes &lt;, not <', () => {
+  const r = renderSync({ route: '/x', view: () => '<p>&amp;lt;b&amp;gt; &lt;i&gt; &amp;</p>' })
+  assert(r.text() === '&lt;b&gt; <i> &', `got: ${r.text()}`)
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)
