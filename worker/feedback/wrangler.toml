@@ -10,9 +10,12 @@ preview_urls = false
 
 [vars]
 REPO = "invisibleloop/pulse-framework"
+# Global cap on GitHub writes (new issues + "+1" comments) per UTC day.
+DAILY_CAP = "50"
 
 # Per-IP limit: 5 reports per minute. The binding only supports 10 or 60 second
-# windows; a tighter hourly/daily cap needs a Cloudflare WAF rate-limit rule.
+# windows. The daily cap is DAILY_CAP below; a burst rule can also sit in a
+# Cloudflare WAF rate-limit rule.
 [[unsafe.bindings]]
 name = "RATE_LIMITER"
 type = "ratelimit"

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import worker, { validateReport, fingerprint, renderIssueBody } from './index.js'
+import worker, { validateReport, fingerprint, renderIssueBody, takeDailySlot } from './index.js'
 
 const good = {
   title: 'dropCap misaligned in card',
@@ -110,4 +110,44 @@ test('GitHub failure returns 502 without leaking detail', async () => {
   mockGithub({ createOk: false })
   const res = await worker.fetch(post(good), env)
   assert.equal(res.status, 502)
+})
+
+function memoryKv() {
+  const store = new Map()
+  return {
+    store,
+    get: async k => (store.has(k) ? JSON.parse(store.get(k)) : null),
+    put: async (k, v) => { store.set(k, v) },
+  }
+}
+
+test('daily cap: allows up to DAILY_CAP writes, then 429 without touching GitHub', async () => {
+  const calls = mockGithub()
+  const e = { ...env, FINGERPRINTS: memoryKv(), DAILY_CAP: '2' }
+  const distinct = n => ({ ...good, title: `distinct report number ${n} here` })
+  assert.equal((await worker.fetch(post(distinct(1)), e)).status, 201)
+  assert.equal((await worker.fetch(post(distinct(2)), e)).status, 201)
+  const before = calls.length
+  const over = await worker.fetch(post(distinct(3)), e)
+  assert.equal(over.status, 429)
+  assert.match((await over.json()).error, /Daily report limit/)
+  assert.ok(!calls.slice(before).some(c => c.init.method === 'POST'))
+})
+
+test('daily cap: counts +1 comments too, and resets on a new UTC day', async () => {
+  const kv  = memoryKv()
+  const e   = { ...env, FINGERPRINTS: kv, DAILY_CAP: '1' }
+  const day = new Date('2026-10-16T12:00:00Z')
+  assert.equal(await takeDailySlot(e, day), true)
+  assert.equal(await takeDailySlot(e, day), false)
+  assert.equal(await takeDailySlot(e, new Date('2026-10-17T00:00:01Z')), true)
+})
+
+test('daily cap: defaults to 50 and is skipped without KV', async () => {
+  const kv = memoryKv()
+  kv.store.set(`cap:${new Date().toISOString().slice(0, 10)}`, '49')
+  const e = { ...env, FINGERPRINTS: kv }
+  assert.equal(await takeDailySlot(e), true)
+  assert.equal(await takeDailySlot(e), false)
+  assert.equal(await takeDailySlot(env), true)
 })
