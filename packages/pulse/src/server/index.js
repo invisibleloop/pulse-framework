@@ -17,6 +17,7 @@ import path   from 'path'
 import zlib   from 'zlib'
 import crypto from 'crypto'
 import { promisify }  from 'util'
+import { pipeline }   from 'stream'
 import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
@@ -46,9 +47,22 @@ const SECURITY_HEADERS = {
  * Return Strict-Transport-Security header when the request is over HTTPS.
  * Detects HTTPS via the x-forwarded-proto header (CDN/proxy) or the socket.
  */
+/**
+ * Force a path to a single leading slash before it goes into a Location header.
+ * Dot-segment normalisation can leave a pathname like "//evil.com/x" (from
+ * "/.//evil.com/x"), and "Location: //evil.com/x" is a protocol-relative URL —
+ * an open redirect off the site.
+ */
+function localPath(p) {
+  return '/' + p.replace(/^[/\\]+/, '')
+}
+
+function isHttpsRequest(req) {
+  return req.headers['x-forwarded-proto'] === 'https' || !!req.socket?.encrypted
+}
+
 function httpsHeaders(req) {
-  const isHttps = req.headers['x-forwarded-proto'] === 'https' || req.socket?.encrypted
-  return isHttps ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload' } : {}
+  return isHttpsRequest(req) ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload' } : {}
 }
 
 /**
@@ -202,13 +216,14 @@ function parseMultipart(buf, boundary) {
       ? { filename: fileMatch[1], type: headers['content-type'] || 'application/octet-stream', data: body, size: body.length }
       : body.toString('utf8')
 
-    // Support repeated names (e.g. checkboxes, multi-file inputs)
-    const existing = result[name]
-    if (existing !== undefined) {
-      result[name] = Array.isArray(existing) ? [...existing, value] : [existing, value]
-    } else {
-      result[name] = value
-    }
+    // Support repeated names (e.g. checkboxes, multi-file inputs).
+    // Field names are attacker-chosen: use own data properties only, so a part
+    // named "__proto__" or "toString" cannot replace the prototype or shadow an
+    // inherited method (the urlencoded path gets this from Object.fromEntries).
+    const has      = Object.hasOwn(result, name)
+    const existing = has ? result[name] : undefined
+    const stored   = has ? (Array.isArray(existing) ? [...existing, value] : [existing, value]) : value
+    Object.defineProperty(result, name, { value: stored, enumerable: true, writable: true, configurable: true })
 
     pos = next + delim.length
   }
@@ -304,6 +319,16 @@ export function pushStore(partial) {
 
 const serverDataCache = new TtlCache()
 const pageHtmlCache   = new TtlCache()
+
+// A canonical URL derived from the Host / X-Forwarded-Host headers must never be
+// baked into HTML that is cached and shared: one request with a forged
+// X-Forwarded-Host would then poison <link rel="canonical"> for every visitor
+// until the entry expires. Cached pages hold this (per-process, unguessable)
+// marker instead, and each response fills in its own request's canonical.
+const CANONICAL_MARK = `<!--pulse-canonical-${crypto.randomBytes(8).toString('hex')}-->`
+const canonicalLink  = (url, indent = '') => url ? `${indent}<link rel="canonical" href="${escHtml(url)}">` : ''
+const fillCanonical  = (html, canonicalBase) =>
+  html.includes(CANONICAL_MARK) ? html.split(CANONICAL_MARK).join(canonicalLink(canonicalBase)) : html
 
 serverDataCache.startEviction()
 pageHtmlCache.startEviction()
@@ -789,15 +814,25 @@ export async function createServer(entries, options = {}) {
 
   const server = http.createServer(async (req, res) => {
     const reqStart = Date.now()
+    // The request target is attacker-controlled and `new URL` throws on a
+    // malformed one (e.g. "GET http://[bad HTTP/1.1"). Parse it once, safely —
+    // a throw inside the 'finish' listener below would be an uncaught exception
+    // and kill the process.
+    let reqUrl = null
+    try { reqUrl = new URL(req.url, `http://localhost:${port}`) } catch { /* answered with 400 below */ }
     res.on('finish', () => {
       if (logRequest) {
-        const url = new URL(req.url, `http://localhost:${port}`)
-        logRequest({ method: req.method, pathname: url.pathname, status: res.statusCode, ms: Date.now() - reqStart })
+        logRequest({ method: req.method, pathname: reqUrl ? reqUrl.pathname : '(malformed)', status: res.statusCode, ms: Date.now() - reqStart })
       }
     })
     try {
-      // Parse URL — needed before health check and routing
-      const url      = new URL(req.url, `http://localhost:${port}`)
+      if (!reqUrl) {
+        res.writeHead(400, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS })
+        res.end('Bad Request')
+        return
+      }
+      // Parsed URL — needed before health check and routing
+      const url      = reqUrl
       const pathname = url.pathname
 
       // Health check — before onRequest and routing so load balancers always get a response
@@ -834,12 +869,42 @@ export async function createServer(entries, options = {}) {
       // Not registered in production — a stray POST there just 404s harmlessly,
       // so the client runtime can call it unconditionally with no dev check.
       if (dev && pathname === '/__pulse/error' && req.method === 'POST') {
+        // Anything on the network — or any web page the developer has open, via a
+        // no-preflight cross-origin POST to localhost — could otherwise write text
+        // into the journal the coding agent reads. Browsers label the request;
+        // reject anything not from this origin. (Non-browser clients send no
+        // Sec-Fetch-Site and no Origin, and are still accepted.)
+        const site = req.headers['sec-fetch-site']
+        const originMismatch = () => {
+          try { return new URL(req.headers.origin).host !== req.headers.host } catch { return true }
+        }
+        if ((site && site !== 'same-origin') || (!site && req.headers.origin && originMismatch())) {
+          res.writeHead(403, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS })
+          res.end('Forbidden')
+          return
+        }
+        const MAX_ERROR_BODY = 16 * 1024
         let body = ''
-        req.on('data', chunk => { body += chunk })
+        let tooLarge = false
+        req.on('data', chunk => {
+          if (tooLarge) return
+          body += chunk
+          if (body.length > MAX_ERROR_BODY) {
+            tooLarge = true
+            res.writeHead(413, { 'Content-Type': 'text/plain', 'Connection': 'close', ...SECURITY_HEADERS })
+            res.end('Payload too large')
+            req.destroy()
+          }
+        })
         req.on('end', () => {
+          if (tooLarge) return
           try {
             const { route, phase, message, stack } = JSON.parse(body || '{}')
-            writeErrorEntry(errorJournalPath, { route, phase: phase === 'action' ? 'action' : 'view', message, stack })
+            writeErrorEntry(errorJournalPath, {
+              route:   typeof route === 'string' ? route.slice(0, 300) : null,
+              phase:   phase === 'action' ? 'action' : 'view',
+              message, stack,
+            })
           } catch { /* malformed payload — drop it, this is best-effort */ }
           res.writeHead(204, SECURITY_HEADERS)
           res.end()
@@ -895,13 +960,13 @@ export async function createServer(entries, options = {}) {
       // Trailing slash normalisation — GET/HEAD only (redirects don't apply to POST etc.)
       if ((req.method === 'GET' || req.method === 'HEAD') && pathname !== '/') {
         if (trailingSlash === 'remove' && pathname.endsWith('/')) {
-          const target = pathname.slice(0, -1) + (url.search || '')
+          const target = localPath(pathname.slice(0, -1)) + (url.search || '')
           res.writeHead(301, { Location: target, ...SECURITY_HEADERS, ...httpsHeaders(req) })
           res.end()
           return
         }
         if (trailingSlash === 'add' && !pathname.endsWith('/')) {
-          const target = pathname + '/' + (url.search || '')
+          const target = localPath(pathname + '/') + (url.search || '')
           res.writeHead(301, { Location: target, ...SECURITY_HEADERS, ...httpsHeaders(req) })
           res.end()
           return
@@ -1028,18 +1093,22 @@ export async function createServer(entries, options = {}) {
       // carries HMAC(secret, id) in a hidden _csrf field; POST verifies the pair.
       // Views embed the field inside <form method="POST"> as ${server.csrf}.
       // -----------------------------------------------------------------------
+      // The cookie carries "<id>.<signature>". Only ids this server signed are
+      // accepted: otherwise anyone able to plant a cookie (a sibling subdomain, an
+      // http page) could choose the id, fetch the matching token from a GET, and
+      // replay the pair against the victim.
       if (typeof spec.submit === 'function' && spec.csrf !== false) {
-        let csrfId = ctx.cookies.pulse_csrf
+        let csrfId = readCsrfId(csrfSecret, ctx.cookies.pulse_csrf)
         if (!csrfId) {
           csrfId = crypto.randomBytes(16).toString('base64url')
-          ctx.setCookie('pulse_csrf', csrfId, { httpOnly: true, sameSite: 'Lax', path: '/' })
+          ctx.setCookie('pulse_csrf', signCsrfId(csrfSecret, csrfId), { httpOnly: true, sameSite: 'Lax', path: '/', secure: isHttpsRequest(req) })
         }
         ctx._csrfField = `<input type="hidden" name="_csrf" value="${csrfToken(csrfSecret, csrfId)}">`
 
         if (req.method === 'POST') {
           const form      = await ctx.formData()
           const submitted = typeof form?._csrf === 'string' ? form._csrf : ''
-          const cookieId  = ctx.cookies.pulse_csrf
+          const cookieId  = readCsrfId(csrfSecret, ctx.cookies.pulse_csrf)
           if (!cookieId || !safeEqual(submitted, csrfToken(csrfSecret, cookieId))) {
             res.writeHead(403, mergeCtxHeaders(ctx, {
               'Content-Type': 'text/plain',
@@ -1314,7 +1383,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
 
   const cached = ttl > 0 ? pageHtmlCache.get(cacheKey) : null
   if (cached) {
-    html       = cached.html
+    html       = fillCanonical(cached.html, canonicalBase)
     fromCache  = true
   } else {
     const { html: content, serverState, timing } = await cachedRenderToString(spec, ctx, dev)
@@ -1324,13 +1393,16 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     const canonicalUrl = typeof canonicalRaw === 'function'
       ? (canonicalRaw(ctx, serverState) || canonicalBase)
       : (canonicalRaw || canonicalBase)
-    const canonicalTag      = canonicalUrl ? `<link rel="canonical" href="${escHtml(canonicalUrl)}">` : ''
+    // Host-derived canonicals go into the page cache as a placeholder (see CANONICAL_MARK).
+    const hostDerived       = ttl > 0 && !!canonicalUrl && canonicalUrl === canonicalBase
+    const canonicalTag      = hostDerived ? CANONICAL_MARK : canonicalLink(canonicalUrl)
     const resolvedSpec      = { ...spec, meta: await resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
     const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag + analyticsTag, nonce, runtimeBundle, faviconHref: faviconPath || '', livePath })
     html              = wrapped.html
     serverTimingValue = wrapped.serverTimingValue
     if (ttl > 0) pageHtmlCache.set(cacheKey, { html }, ttl)
+    html              = fillCanonical(html, canonicalBase)
   }
 
   const encoding = negotiateEncoding(req)
@@ -1363,7 +1435,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
 
   if (cached) {
     const encoding = negotiateEncoding(req)
-    const buf      = await compressBuffer(Buffer.from(cached.html, 'utf8'), encoding)
+    const buf      = await compressBuffer(Buffer.from(fillCanonical(cached.html, canonicalBase), 'utf8'), encoding)
     const headers  = mergeCtxHeaders(ctx, {
       'Content-Type':            'text/html; charset=utf-8',
       'Cache-Control':           buildCacheControl(spec, dev, defaultCache),
@@ -1409,8 +1481,9 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     ? `  <link rel="modulepreload" as="script" href="${escHtml(runtimeBundle)}">`
     : ''
 
+  const canonicalTagHtml = canonicalLink(canonicalUrl, '  ')
   const metaTags = [
-    canonicalUrl      ? `  <link rel="canonical" href="${escHtml(canonicalUrl)}">` : '',
+    canonicalTagHtml,
     meta.description  ? `  <meta name="description" content="${escHtml(meta.description)}">` : '',
     meta.ogTitle      ? `  <meta property="og:title" content="${escHtml(meta.ogTitle)}">` : '',
     meta.ogImage      ? `  <meta property="og:image" content="${escHtml(meta.ogImage)}">` : '',
@@ -1481,7 +1554,11 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
   const end   = (chunk) => out.end(chunk)
 
   // Buffer chunks so we can store the full HTML in the page cache after sending
-  const chunks = ttl > 0 ? [docOpen] : null
+  // A host-derived canonical is cached as a placeholder (see CANONICAL_MARK).
+  const cachedDocOpen = ttl > 0 && canonicalUrl && canonicalUrl === canonicalBase
+    ? docOpen.replace(canonicalTagHtml, CANONICAL_MARK)
+    : docOpen
+  const chunks = ttl > 0 ? [cachedDocOpen] : null
 
   write(docOpen)
 
@@ -1914,13 +1991,24 @@ function serveStatic(req, res, staticDir, dev = false, staticCache = null) {
   }
   if (encoding) headers['Content-Encoding'] = encoding
 
-  res.writeHead(200, headers)
+  // Open the file before committing to a 200. A plain .pipe() has no error
+  // handling: an unreadable file (EACCES) or one deleted after the stat above
+  // (a rolling deploy replacing hashed bundles) raised an unhandled 'error' event
+  // and crashed the process. pipeline() also tears everything down — closing the
+  // file descriptor — when the client disconnects mid-download.
   const fileStream = fs.createReadStream(filePath)
-  if (compressor) {
-    fileStream.pipe(compressor).pipe(res)
-  } else {
-    fileStream.pipe(res)
-  }
+  fileStream.once('error', () => {
+    if (!res.headersSent) {
+      res.writeHead(404, { 'Content-Type': 'text/plain', ...SECURITY_HEADERS })
+      res.end('Not found')
+    } else {
+      res.destroy()
+    }
+  })
+  fileStream.once('open', () => {
+    res.writeHead(200, headers)
+    pipeline(...(compressor ? [fileStream, compressor, res] : [fileStream, res]), () => {})
+  })
   return true
 }
 
@@ -1950,10 +2038,14 @@ async function resolveMeta(meta, ctx) {
 
 function parseCookies(cookieHeader) {
   if (!cookieHeader) return {}
+  // decodeURIComponent throws on a malformed escape ("a=%"). Cookies are
+  // client-controlled — and can be planted from a sibling subdomain — so one bad
+  // cookie must not turn every request that reads ctx.cookies into a 500.
+  const decode = v => { try { return decodeURIComponent(v) } catch { return v } }
   return Object.fromEntries(
     cookieHeader.split(';').map(pair => {
       const [key, ...rest] = pair.trim().split('=')
-      return [key.trim(), decodeURIComponent(rest.join('=').trim())]
+      return [key.trim(), decode(rest.join('=').trim())]
     })
   )
 }
@@ -2104,6 +2196,20 @@ function buildSitemapXml(entries, origin) {
  */
 function csrfToken(secret, id) {
   return crypto.createHmac('sha256', secret).update(String(id)).digest('base64url')
+}
+
+/** Sign a CSRF cookie id so the server can tell its own ids from planted ones. */
+function signCsrfId(secret, id) {
+  return `${id}.${crypto.createHmac('sha256', secret).update(`csrf-cookie:${id}`).digest('base64url')}`
+}
+
+/** Return the id inside a signed CSRF cookie value, or null if it is missing or not ours. */
+function readCsrfId(secret, raw) {
+  if (typeof raw !== 'string') return null
+  const dot = raw.lastIndexOf('.')
+  if (dot < 1) return null
+  const id = raw.slice(0, dot)
+  return safeEqual(raw, signCsrfId(secret, id)) ? id : null
 }
 
 /** Constant-time string comparison — length mismatch returns false without throwing. */
