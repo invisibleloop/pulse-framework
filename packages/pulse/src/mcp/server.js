@@ -1632,6 +1632,8 @@ server.registerTool(
   {
     description: `Report a bug in the Pulse framework itself (not in the user's own code). Use only after you have confirmed the problem is Pulse's — e.g. a documented feature misbehaves, a Pulse tool returns a wrong result, or a component renders incorrectly from valid input — and have a minimal repro. Do not report your own mistakes or missing features.
 
+Never use this for a security vulnerability — reports become public issues; tell the user to report it privately at https://github.com/invisibleloop/pulse-framework/security/advisories/new.
+
 Two steps. First call (no confirmed): returns the redacted report for you to show the user verbatim — nothing is sent. If the user agrees, call again with the same fields plus confirmed: true and the previewId from step one. Never set confirmed without the user's explicit approval. Do not put secrets, credentials or private user data in any field.`,
     inputSchema: {
       title:       z.string().min(8).max(120).describe('One-line summary of the bug'),

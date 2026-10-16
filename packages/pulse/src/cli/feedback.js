@@ -108,6 +108,8 @@ export function previewId(payload) {
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 16)
 }
 
+const SECURITY_URL = 'https://github.com/invisibleloop/pulse-framework/security/advisories/new'
+
 export function formatPreview(payload, { transport = 'proxy', endpoint = DEFAULT_ENDPOINT } = {}) {
   const dest = transport === 'gh'
     ? `GitHub issue on ${REPO}, filed with your own \`gh\` login`
@@ -116,6 +118,7 @@ export function formatPreview(payload, { transport = 'proxy', endpoint = DEFAULT
   return [
     `This report has NOT been sent. It will be published as: ${dest}.`,
     `Only the fields below are sent — no project files, paths or environment. Local paths and secret-like strings were redacted.`,
+    `This becomes a PUBLIC issue. If it is a security vulnerability, do NOT send it — tell the user to report it privately at ${SECURITY_URL}.`,
     ``,
     `Title: ${payload.title}`,
     `Pulse version: ${payload.version}`,

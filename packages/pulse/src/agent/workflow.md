@@ -343,6 +343,8 @@ If it still fails, it is a framework bug:
 3. If they agree, call `pulse_report_issue` without `confirmed`. Show the user the returned preview verbatim and ask for approval.
 4. Only after they approve, call it again with `confirmed: true` and the `previewId`. Never confirm on your own.
 
+Never report a security vulnerability this way — reports become public issues. If you suspect one (XSS, injection, auth or CSRF bypass, anything exploitable), tell the user to report it privately at https://github.com/invisibleloop/pulse-framework/security/advisories/new.
+
 Do not report: your own spec or API-usage errors, missing features or feature requests, design preferences, or anything you have not isolated to Pulse. Keep secrets, credentials and private user data out of every field.
 
 ---

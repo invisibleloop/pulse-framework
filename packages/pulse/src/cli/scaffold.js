@@ -488,7 +488,7 @@ Run these steps in order — do not declare work done without them:
 
 ## If Pulse itself is broken
 
-If a documented Pulse feature or tool misbehaves and you have reduced it to a minimal repro that involves only Pulse, tell the user, give them the workaround, and offer to report it with \`pulse_report_issue\`. Preview first, show the user the redacted report verbatim, and send only after they approve. Do not report your own mistakes, spec errors or feature requests.
+If a documented Pulse feature or tool misbehaves and you have reduced it to a minimal repro that involves only Pulse, tell the user, give them the workaround, and offer to report it with \`pulse_report_issue\`. Preview first, show the user the redacted report verbatim, and send only after they approve. Do not report your own mistakes, spec errors or feature requests. Never report a security vulnerability this way (reports are public): tell the user to report it privately at https://github.com/invisibleloop/pulse-framework/security/advisories/new.
 
 ## Writing tests
 
@@ -582,7 +582,7 @@ Run these steps in order — do not declare work done without them:
 
 ## If Pulse itself is broken
 
-If a documented Pulse feature or tool misbehaves and you have reduced it to a minimal repro that involves only Pulse, tell the user, give them the workaround, and offer to report it with \`pulse_report_issue\`. Preview first, show the user the redacted report verbatim, and send only after they approve. Do not report your own mistakes, spec errors or feature requests.
+If a documented Pulse feature or tool misbehaves and you have reduced it to a minimal repro that involves only Pulse, tell the user, give them the workaround, and offer to report it with \`pulse_report_issue\`. Preview first, show the user the redacted report verbatim, and send only after they approve. Do not report your own mistakes, spec errors or feature requests. Never report a security vulnerability this way (reports are public): tell the user to report it privately at https://github.com/invisibleloop/pulse-framework/security/advisories/new.
 
 ## Writing tests
 
