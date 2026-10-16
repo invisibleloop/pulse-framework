@@ -12,7 +12,11 @@
  *   GITHUB_TOKEN  (secret)  fine-grained PAT — Issues: read/write on REPO only
  *   REPO          (var)     "owner/name"
  *   RATE_LIMITER  (binding, optional) Cloudflare Rate Limiting binding
- *   FINGERPRINTS  (KV binding, optional) fingerprint → issue, for burst dedupe
+ *   FINGERPRINTS  (KV binding, optional) fingerprint → issue, for burst dedupe;
+ *                 also holds the daily write counter
+ *   DAILY_CAP     (var, optional) max GitHub writes (new issues + "+1" comments)
+ *                 per UTC day across all callers. Default 50. Soft cap: KV has
+ *                 no atomic increment, so parallel requests can overshoot a little.
  */
 
 const MAX_BODY_BYTES = 16 * 1024
@@ -116,6 +120,22 @@ async function findDuplicate(env, fp) {
   return data.items?.[0] ?? null
 }
 
+const DEFAULT_DAILY_CAP = 50
+
+/**
+ * Take one slot from today's global budget. Returns false once the cap is
+ * reached. Without a KV binding there is nothing to count with, so it allows.
+ */
+export async function takeDailySlot(env, now = new Date()) {
+  if (!env.FINGERPRINTS) return true
+  const cap = Number(env.DAILY_CAP) > 0 ? Number(env.DAILY_CAP) : DEFAULT_DAILY_CAP
+  const key = `cap:${now.toISOString().slice(0, 10)}`
+  const used = Number(await env.FINGERPRINTS.get(key, 'json')) || 0
+  if (used >= cap) return false
+  await env.FINGERPRINTS.put(key, String(used + 1), { expirationTtl: 60 * 60 * 48 })
+  return true
+}
+
 export async function handleReport(request, env) {
   const len = Number(request.headers.get('content-length') ?? 0)
   if (len > MAX_BODY_BYTES) return json({ error: 'Payload too large' }, 413)
@@ -137,6 +157,9 @@ export async function handleReport(request, env) {
   const cached = env.FINGERPRINTS ? await env.FINGERPRINTS.get(fp, 'json') : null
   if (cached) dup = cached
   else dup = await findDuplicate(env, fp)
+  // Everything below writes to GitHub — spend from the daily budget first.
+  if (!(await takeDailySlot(env))) return json({ error: 'Daily report limit reached — try again tomorrow' }, 429)
+
   if (dup) {
     await gh(env, `/repos/${env.REPO}/issues/${dup.number}/comments`, {
       method: 'POST',
