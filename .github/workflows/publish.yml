@@ -51,3 +51,13 @@ jobs:
           git push
           cd packages/pulse
           npm publish --provenance --access public
+
+      # Tag the release commit and publish a GitHub Release with notes generated from
+      # the merged PR titles since the previous tag. Only runs after npm publish
+      # succeeded, so a tag always means "this version shipped".
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./packages/pulse/package.json').version")
+          gh release create "v$VERSION" --target "$(git rev-parse HEAD)" --title "v$VERSION" --generate-notes --latest
