@@ -38,3 +38,16 @@ The issue gets a comment either way: a PR link, or why no fix was produced.
 - The model step runs repo code (`npm test`) with the API key in its environment and has
   network access, so treat the key as exposed to anything the agent can make run.
   Hence: dedicated key, spend limit.
+
+## Fixing locally instead
+
+`/fix-issue [number]` (`.claude/commands/fix-issue.md`) runs the same method in an interactive
+Claude Code session — with the dev server, browser and Lighthouse available — and commits or
+posts nothing until you say so. No label or API key needed.
+
+It is for maintainers only: step 0 runs `.github/fixer/require-write-access.sh`, which requires
+`origin` to be the canonical repo and the git identity to have push access (a dry-run push, so
+nothing is changed), and stops otherwise. That guard governs the agent's workflow; the real
+boundary is GitHub, where nobody without write access can push, label or close issues.
+
+The two routes don't coordinate: if you fix an issue locally, don't also add `approved-to-fix`.
