@@ -8,6 +8,7 @@
 import { test }   from 'node:test'
 import assert     from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { escHtml }     from '../html.js'
 import { button }      from './button.js'
 import { badge }       from './badge.js'
 import { card }        from './card.js'
@@ -1152,6 +1153,10 @@ test('pulse-ui.css: form controls are at least 16px on touch devices (iOS focus-
     assert.ok(block.includes(sel), `${sel} missing from the (pointer: coarse) 16px block`)
   }
   assert.match(block, /font-size:\s*max\(1rem, 16px\)/)
+})
+
+test('escHtml escapes the greater-than character', () => {
+  assert.equal(escHtml('a>b'), 'a&gt;b')
 })
 
 console.log('✓ All UI component tests passed')
