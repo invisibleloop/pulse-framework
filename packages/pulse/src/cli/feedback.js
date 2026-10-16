@@ -48,7 +48,8 @@ const SECRET_PATTERNS = [
   [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,                              '<email>'],
 ]
 
-const SYSTEM_PATH = /\/(?:root|tmp|private|var|opt|srv|mnt|Volumes|etc|usr|Library|System|Applications)(?:\/[^\s"'`:;,)]+)*?\/([^\s/"'`:;,)]+)(?=[\s"'`:;,)]|$)/g
+// Segments exclude "/" so they cannot overlap — keeps matching linear (no ReDoS).
+const SYSTEM_PATH = /\/(?:root|tmp|private|var|opt|srv|mnt|Volumes|etc|usr|Library|System|Applications)(?:\/[^\s/"'`:;,)]+)+/g
 
 const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -64,7 +65,7 @@ export function redact(input, { root, home = os.homedir() } = {}) {
   // System-rooted absolute paths (not app routes like /about): keep only the
   // file name so the report stays readable. Runs before the home-dir rule so
   // /mnt/c/Users/... collapses as a whole.
-  s = s.replace(SYSTEM_PATH, (_m, base) => `<path>/${base}`)
+  s = s.replace(SYSTEM_PATH, m => `<path>/${m.slice(m.lastIndexOf('/') + 1)}`)
   s = s
     .replace(/\/(?:Users|home)\/[^/\s"'`]+/g,     '~')
     .replace(/[A-Za-z]:\\Users\\[^\\\s"'`]+/g,    '~')

@@ -44,6 +44,12 @@ test('redact collapses system-rooted paths to <path>/file but leaves app routes 
   for (const route of ['/about', '/blog/:slug', '/api/users', '/contact']) assert.equal(redact(route, {}), route)
 })
 
+test('redact stays fast on pathological path-like input', () => {
+  const start = Date.now()
+  redact('/tmp/' + '!/'.repeat(50000) + 'x', { root: '/proj' })
+  assert.ok(Date.now() - start < 500)
+})
+
 test('redact strips tokens, bearer headers, keys and emails', () => {
   const txt = [
     'ghp_' + 'a'.repeat(36),
