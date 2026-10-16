@@ -1659,9 +1659,15 @@ function matchRoute(router, pathname) {
  */
 function routeToRegex(route) {
   const params  = []
+  // Split on :params so every literal segment can be regex-escaped ("." in
+  // /feed.xml must not match any character).
   const pattern = route
-    .replace(/:([^/]+)/g, (_, name) => { params.push(name); return '([^/]+)' })
-    .replace(/\//g, '\\/')
+    .split(/(:[^/]+)/)
+    .map(part => {
+      if (part.startsWith(':')) { params.push(part.slice(1)); return '([^/]+)' }
+      return part.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
+    })
+    .join('')
 
   return {
     pattern: new RegExp(`^${pattern}\\/?$`),
@@ -2221,7 +2227,7 @@ function streamErrorScript(err, dev, nonce = '') {
       `</div>`
     : `<div style="padding:2rem;text-align:center;font-family:system-ui,sans-serif;color:#666">Something went wrong.</div>`
 
-  return `<script nonce="${nonce}">(function(){var r=document.getElementById('pulse-root');if(r)r.innerHTML=${JSON.stringify(inner)};})()</script>`
+  return `<script nonce="${nonce}">(function(){var r=document.getElementById('pulse-root');if(r)r.innerHTML=${JSON.stringify(inner).replace(/</g, '\\u003c')};})()</script>`
 }
 
 function errorPage500() {

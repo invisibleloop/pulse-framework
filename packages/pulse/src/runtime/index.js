@@ -869,7 +869,8 @@ function viewErrorFallback(err) {
 }
 
 function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  // 254 is the RFC 5321 maximum; the cap also bounds the regex's worst case.
+  return value.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
 }
 
 // ---------------------------------------------------------------------------

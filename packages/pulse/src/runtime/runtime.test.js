@@ -1065,5 +1065,23 @@ test('pointerdown/pointerup ignore wrong event type on the same element', () => 
 
 // ---------------------------------------------------------------------------
 
+console.log('\nEmail validation bounds\n')
+
+test('email format rule rejects over-long input quickly (no quadratic regex)', () => {
+  const evil = '!@' + '!.'.repeat(50000)
+  const start = Date.now()
+  const errors = validateFields({ fields: { email: evil } }, { 'fields.email': { format: 'email' } })
+  assert(Date.now() - start < 500, 'email check took too long')
+  assert(errors.length === 1 && errors[0].rule === 'format', 'Expected a format error')
+})
+
+test('email format rule still accepts a normal address near the length limit', () => {
+  const local = 'a'.repeat(64)
+  const errors = validateFields({ fields: { email: `${local}@example.com` } }, { 'fields.email': { format: 'email' } })
+  assert(errors.length === 0, 'Expected no errors')
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)

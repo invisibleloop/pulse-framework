@@ -17,6 +17,20 @@ import { highlight } from './highlight.js'
 // HTML escaping
 // ---------------------------------------------------------------------------
 
+/**
+ * Remove an ATX heading's optional closing sequence ("## Title ##" → "Title").
+ * Done by hand rather than with /\s+#+\s*$/, which backtracks quadratically on
+ * long runs of whitespace.
+ */
+function stripClosingHashes(text) {
+  let end = text.length
+  while (end > 0 && /\s/.test(text[end - 1])) end--
+  let start = end
+  while (start > 0 && text[start - 1] === '#') start--
+  if (start === end || start === 0 || !/\s/.test(text[start - 1])) return text
+  return text.slice(0, start).trimEnd()
+}
+
 function esc(s) {
   return String(s)
     .replace(/&/g, '&amp;')
@@ -148,9 +162,9 @@ function parseBlocks(text) {
     }
 
     // ATX heading  (# through ######)
-    const headMatch = line.match(/^(#{1,6})\s+(.*?)(?:\s+#+\s*)?$/)
+    const headMatch = line.match(/^(#{1,6})\s+(.*)$/)
     if (headMatch) {
-      blocks.push({ type: 'heading', level: headMatch[1].length, content: headMatch[2] })
+      blocks.push({ type: 'heading', level: headMatch[1].length, content: stripClosingHashes(headMatch[2]) })
       i++; continue
     }
 

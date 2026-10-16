@@ -213,5 +213,25 @@ test('safe schemes and relative/fragment URLs are preserved', () => {
 
 // ---------------------------------------------------------------------------
 
+console.log('\nHeading parsing\n')
+
+test('ATX heading closing sequence is stripped', () => {
+  assert(parseMd('## Title ##').html.trim() === '<h2 id="title">Title</h2>', 'closing ## not stripped')
+  assert(parseMd('### Title ###   ').html.trim() === '<h3 id="title">Title</h3>', 'closing ### with trailing spaces not stripped')
+})
+
+test('hashes that are not a closing sequence stay in the heading', () => {
+  assert(/>foo #bar</.test(parseMd('# foo #bar').html), '"#bar" must stay')
+  assert(/>#</.test(parseMd('# #').html), 'a lone # must stay')
+})
+
+test('a heading line with a huge run of spaces parses in linear time', () => {
+  const start = Date.now()
+  parseMd('# a' + ' '.repeat(200000) + 'x')
+  assert(Date.now() - start < 500, 'heading parse took too long')
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)

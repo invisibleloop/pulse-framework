@@ -1081,7 +1081,7 @@ The generated file uses @invisibleloop/pulse/testing (renderSync / render). Do N
       : []
 
     const specName = path.basename(file, '.js')
-    const importPath = path.relative(path.dirname(testFile), file).replace(/\.js$/, '.js')
+    const importPath = path.relative(path.dirname(testFile), file)
 
     const lines = []
     lines.push(`import { describe, it } from 'node:test'`)

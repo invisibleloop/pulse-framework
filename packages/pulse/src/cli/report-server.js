@@ -22,6 +22,9 @@ const REPORTS_DIR      = path.join(ROOT, '.pulse', 'reports')
 const LOAD_REPORTS_DIR = path.join(ROOT, '.pulse', 'load-reports')
 const THIRTY_DAYS      = 30 * 24 * 60 * 60 * 1000
 
+// Report data (notably the audited URL) is untrusted when it reaches HTML.
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+
 // ---------------------------------------------------------------------------
 // Data — Lighthouse
 // ---------------------------------------------------------------------------
@@ -349,7 +352,7 @@ function renderPerfTab(slug, reports) {
   ${staleBanner}
   <div class="page-header">
     <div>
-      <h2 class="page-heading">${latest.url || '/' + slug}</h2>
+      <h2 class="page-heading">${esc(latest.url || '/' + slug)}</h2>
       <p class="page-meta">${count} audit${count !== 1 ? 's' : ''} · last run ${when}</p>
     </div>
     <div class="health-badge" style="color:${health[1]};border-color:${health[1]}20;background:${health[1]}10">${health[0]}</div>
@@ -480,7 +483,7 @@ function renderLoadTab(slug, reports) {
   ${localhostBanner}
   <div class="page-header">
     <div>
-      <h2 class="page-heading">${latest.url || '/' + slug}</h2>
+      <h2 class="page-heading">${esc(latest.url || '/' + slug)}</h2>
       <p class="page-meta">${count} test${count !== 1 ? 's' : ''} · last run ${when}</p>
     </div>
   </div>
@@ -517,8 +520,8 @@ function renderIndex(slugs) {
       : ''
 
     return `
-    <a href="/${slug}" class="index-card">
-      <span class="index-url">${latest?.url || latestLd?.url || '/' + slug}</span>
+    <a href="/${esc(slug)}" class="index-card">
+      <span class="index-url">${esc(latest?.url || latestLd?.url || '/' + slug)}</span>
       <span class="index-gauges">${gauges}</span>
       ${loadBadge}
     </a>`
@@ -636,7 +639,7 @@ function renderHTML({ title, content, slugs, activeSlug, activeTab, hasBoth }) {
     const loadRpts = loadLoadReports(slug)
     const ldUrl    = loadRpts[loadRpts.length - 1]?.url
     const display  = url || ldUrl || '/' + slug
-    return `<a href="/${slug}" class="sidebar-link${slug === activeSlug ? ' active' : ''}">${display}</a>`
+    return `<a href="/${esc(slug)}" class="sidebar-link${slug === activeSlug ? ' active' : ''}">${esc(display)}</a>`
   }).join('')
 
   const tabs = activeSlug && hasBoth ? `
@@ -656,7 +659,7 @@ function renderHTML({ title, content, slugs, activeSlug, activeTab, hasBoth }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} — Pulse Reports</title>
+  <title>${esc(title)} — Pulse Reports</title>
   <style>${CSS}</style>
 </head>
 <body>
@@ -718,6 +721,6 @@ http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
   res.end(renderHTML({ title, content, slugs, activeSlug: slug, activeTab, hasBoth }))
 
-}).listen(PORT, () => {
+}).listen(PORT, '127.0.0.1', () => {
   console.log(`\n⚡ Pulse report server running at http://localhost:${PORT}\n`)
 })
