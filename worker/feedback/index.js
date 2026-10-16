@@ -62,6 +62,12 @@ export function validateReport(input) {
   if (!/^\d+\.\d+\.\d+([-+][\w.]+)?$/.test(report.version)) {
     return { ok: false, error: 'version must look like 1.2.3' }
   }
+  // `tool` is rendered in the issue header, outside the code fence: anything beyond
+  // identifier characters would be live markdown (mentions, links, images) in an
+  // issue authored by the maintainer's account.
+  if (report.tool !== undefined && !/^[A-Za-z0-9_.:-]+$/.test(report.tool)) {
+    return { ok: false, error: 'tool must be a plain identifier' }
+  }
   if (report.title.length < 8) return { ok: false, error: 'title too short' }
   report.title = report.title.replace(/[\r\n]+/g, ' ')
   return { ok: true, report }
@@ -117,7 +123,11 @@ async function findDuplicate(env, fp) {
   const res = await gh(env, `/search/issues?q=${q}&per_page=1`)
   if (!res.ok) return null
   const data = await res.json()
-  return data.items?.[0] ?? null
+  // Search matches the string anywhere in a body, including inside another report's
+  // quoted text. Only accept an issue whose body ENDS with the marker the Worker
+  // itself writes — otherwise a crafted report could capture someone else's dedupe.
+  const marker = `<!-- fingerprint:${fp} -->`
+  return data.items?.find(i => typeof i.body === 'string' && i.body.trimEnd().endsWith(marker)) ?? null
 }
 
 const DEFAULT_DAILY_CAP = 50
@@ -136,12 +146,51 @@ export async function takeDailySlot(env, now = new Date()) {
   return true
 }
 
+/** Read a request body, giving up as soon as it exceeds `max` bytes (chunked bodies carry no length). */
+async function readLimited(request, max) {
+  if (!request.body) return ''
+  const reader = request.body.getReader()
+  const chunks = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > max) { await reader.cancel(); return null }
+    chunks.push(value)
+  }
+  const buf = new Uint8Array(size)
+  let off = 0
+  for (const c of chunks) { buf.set(c, off); off += c.byteLength }
+  return new TextDecoder().decode(buf)
+}
+
+const DUP_COMMENTS_PER_DAY = 3
+
+/** Allow at most DUP_COMMENTS_PER_DAY "+1" comments per fingerprint per UTC day. */
+export async function takeDupSlot(env, fp, now = new Date()) {
+  if (!env.FINGERPRINTS) return true
+  const key  = `dup:${fp}:${now.toISOString().slice(0, 10)}`
+  const used = Number(await env.FINGERPRINTS.get(key, 'json')) || 0
+  if (used >= DUP_COMMENTS_PER_DAY) return false
+  await env.FINGERPRINTS.put(key, String(used + 1), { expirationTtl: 60 * 60 * 48 })
+  return true
+}
+
 export async function handleReport(request, env) {
+  // Only JSON. A text/plain (or form) body is a "simple" cross-origin request that
+  // needs no CORS preflight, so any web page could submit reports from its
+  // visitors' browsers and sidestep the per-IP limits. application/json forces a
+  // preflight, which this Worker never answers.
+  if (!/^application\/json\b/i.test(request.headers.get('content-type') ?? '')) {
+    return json({ error: 'Content-Type must be application/json' }, 415)
+  }
+
   const len = Number(request.headers.get('content-length') ?? 0)
   if (len > MAX_BODY_BYTES) return json({ error: 'Payload too large' }, 413)
 
-  const raw = await request.text()
-  if (raw.length > MAX_BODY_BYTES) return json({ error: 'Payload too large' }, 413)
+  const raw = await readLimited(request, MAX_BODY_BYTES)
+  if (raw === null) return json({ error: 'Payload too large' }, 413)
 
   let input
   try { input = JSON.parse(raw) } catch { return json({ error: 'Invalid JSON' }, 400) }
@@ -157,16 +206,21 @@ export async function handleReport(request, env) {
   const cached = env.FINGERPRINTS ? await env.FINGERPRINTS.get(fp, 'json') : null
   if (cached) dup = cached
   else dup = await findDuplicate(env, fp)
-  // Everything below writes to GitHub — spend from the daily budget first.
-  if (!(await takeDailySlot(env))) return json({ error: 'Daily report limit reached — try again tomorrow' }, 429)
-
   if (dup) {
-    await gh(env, `/repos/${env.REPO}/issues/${dup.number}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ body: `+1 — another agent reported this (Pulse \`${v.report.version}\`).` }),
-    })
+    // A repeat report adds at most a few "+1" comments per issue per day. Without this,
+    // one attacker could bury an issue in comments, and (when comments shared the
+    // global budget) burn the whole daily allowance on duplicates.
+    if (await takeDupSlot(env, fp)) {
+      await gh(env, `/repos/${env.REPO}/issues/${dup.number}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ body: `+1 — another agent reported this (Pulse \`${v.report.version}\`).` }),
+      })
+    }
     return json({ url: dup.html_url, number: dup.number, duplicate: true })
   }
+
+  // Only NEW issues spend the global daily budget.
+  if (!(await takeDailySlot(env))) return json({ error: 'Daily report limit reached — try again tomorrow' }, 429)
 
   const res = await gh(env, `/repos/${env.REPO}/issues`, {
     method: 'POST',

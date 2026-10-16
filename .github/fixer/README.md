@@ -29,15 +29,30 @@ agent hits a Pulse bug → pulse_report_issue (user approves) → Worker files i
 Add `approved-to-fix` to the issue, or run the workflow manually with the issue number.
 The issue gets a comment either way: a PR link, or why no fix was produced.
 
+## What protects the repo
+
+The issue text is written by a stranger's AI agent, so it is treated as hostile at every step:
+
+| Risk | Control |
+|---|---|
+| Someone triggers a run | Only a user with write access; the issue must carry `agent-report` **and be authored by the repo owner** (or `FIXER_ALLOWED_AUTHORS`) — an issue author can edit their text after a maintainer approves it, and the Worker files issues as the maintainer's own account |
+| Model leaks the API key | Only the model step has it, and `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1` hides it from every command the agent runs (checked on the pinned CLI: commands see the key without it, not with it). Plus a dedicated key with a spend limit |
+| Model writes a hostile patch | `validate-patch.js` (run twice): `packages/pulse/` only, never `src/cli`, `src/mcp`, `scripts/`, `package.json`, workflows; ≤15 files / 500 lines; a source change **and** a regression test in an existing file; no symlinks, modes, renames, deletes |
+| Reviewer misses something | The PR body lists which added lines touch process spawning, the network, `process.env`, filesystem writes, dynamic code or encoded blobs (categories and `file:line` only) |
+| Model text becomes live markdown | Summaries and logs posted to the PR or issue go inside a code fence longer than any backtick run in them — no mentions, links or images |
+| A malicious fix gets published | A human must approve the PR (code-owner rule); merging releases, so read the diff |
+
 ## Known limits
 
 - PRs opened with `GITHUB_TOKEN` do not trigger `ci.yml`. The fix job has already run the
   full suite, and the release workflow runs it again on merge.
 - Fixes are limited to `packages/pulse/`. A bug whose fix needs the synced copies in
   `docs/`, `examples/` or `.claude/` will end as `needs-human`.
-- The model step runs repo code (`npm test`) with the API key in its environment and has
-  network access, so treat the key as exposed to anything the agent can make run.
-  Hence: dedicated key, spend limit.
+- The model step runs repo code (`npm test`) and has unrestricted network access. The key is
+  hidden from the commands it runs, but it is still in the environment of the Claude Code
+  process itself, so keep it dedicated with a spend limit. Restricting egress to the Anthropic
+  API (e.g. an egress-filtering runner action) would be the next hardening step.
+- The pinned CLI (`CLAUDE_CODE_VERSION`) does not update itself; bump it deliberately.
 
 ## Fixing locally instead
 
