@@ -644,13 +644,13 @@ function renderHTML({ title, content, slugs, activeSlug, activeTab, hasBoth }) {
 
   const tabs = activeSlug && hasBoth ? `
   <div class="tabs">
-    <a href="/${activeSlug}" class="tab${activeTab === 'perf' ? ' active' : ''}">Performance</a>
-    <a href="/${activeSlug}/load" class="tab${activeTab === 'load' ? ' active' : ''}">Load Tests</a>
+    <a href="/${esc(activeSlug)}" class="tab${activeTab === 'perf' ? ' active' : ''}">Performance</a>
+    <a href="/${esc(activeSlug)}/load" class="tab${activeTab === 'load' ? ' active' : ''}">Load Tests</a>
   </div>` : activeSlug ? `
   <div class="tabs">
     ${hasBoth === false && activeTab === 'perf'
-      ? `<a href="/${activeSlug}" class="tab active">Performance</a><a href="/${activeSlug}/load" class="tab" style="opacity:.4">Load Tests</a>`
-      : `<a href="/${activeSlug}" class="tab" style="opacity:.4">Performance</a><a href="/${activeSlug}/load" class="tab active">Load Tests</a>`
+      ? `<a href="/${esc(activeSlug)}" class="tab active">Performance</a><a href="/${esc(activeSlug)}/load" class="tab" style="opacity:.4">Load Tests</a>`
+      : `<a href="/${esc(activeSlug)}" class="tab" style="opacity:.4">Performance</a><a href="/${esc(activeSlug)}/load" class="tab active">Load Tests</a>`
     }
   </div>` : ''
 
@@ -693,7 +693,7 @@ http.createServer((req, res) => {
   const tab     = parts[1] || 'perf'   // 'perf' | 'load'
   const slugs   = allSlugs()
 
-  let title, content, activeTab = tab, hasBoth = false
+  let title, content, activeTab = tab === 'load' ? 'load' : 'perf', hasBoth = false
 
   if (!slug) {
     title   = 'Overview'
