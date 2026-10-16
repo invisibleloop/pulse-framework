@@ -1,0 +1,228 @@
+name: Agent fix
+
+# Turns an agent-submitted bug report (see worker/feedback) into a pull request.
+#
+# Trust model — the issue text is written by a stranger's AI agent and is
+# untrusted. So:
+#   * A maintainer must add the `approved-to-fix` label; nothing runs on filing.
+#   * The job that runs the model has a READ-ONLY token and no repo secrets.
+#     It can only produce a patch.
+#   * The patch is checked by a validator and re-verified independently
+#     (test fails without the fix, suite passes with it).
+#   * A second job with NO model access opens the PR from the validated patch.
+#   * A human reviews and merges. Merging to main releases (see publish.yml).
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number to attempt (must be an agent-report)
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: agent-fix-${{ github.event.issue.number || inputs.issue }}
+  cancel-in-progress: false
+
+env:
+  ISSUE: ${{ github.event.issue.number || inputs.issue }}
+  CLAUDE_CODE_VERSION: 2.1.287
+  FIXER_MODEL: ${{ vars.FIXER_MODEL || 'claude-sonnet-5-5' }}
+
+jobs:
+  fix:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'approved-to-fix'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      outcome: ${{ steps.verify.outputs.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check who asked and what the issue is
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO:     ${{ github.repository }}
+          SENDER:   ${{ github.actor }}
+        run: |
+          perm=$(gh api "repos/$REPO/collaborators/$SENDER/permission" --jq .permission)
+          case "$perm" in admin|maintain|write) ;; *) echo "::error::$SENDER does not have write access"; exit 1 ;; esac
+          labels=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
+          case ",$labels," in *,agent-report,*) ;; *) echo "::error::#$ISSUE is not an agent-report"; exit 1 ;; esac
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The report goes into a file the model reads — never into a command line,
+      # a prompt string, or an expression.
+      - name: Fetch the report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO:     ${{ github.repository }}
+        run: |
+          mkdir -p packages/pulse/.fixer
+          gh issue view "$ISSUE" --repo "$REPO" --json title,body \
+            --jq '"# " + .title + "\n\n" + .body' > packages/pulse/.fixer/issue.md
+
+      # --bare: no hooks, no CLAUDE.md discovery, API-key auth only, file tools confined
+      # to the working directory. It also limits the agent to Read, Edit and Bash;
+      # the allow-list below is everything it can run — anything else is denied.
+      - name: Run the fixer agent
+        working-directory: packages/pulse
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          npx --yes "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" --bare -p \
+            --model "$FIXER_MODEL" \
+            --max-turns 60 \
+            --permission-mode dontAsk \
+            --allowedTools "Read,Edit,Bash(npm test),Bash(npm test *),Bash(node src/*),Bash(node scripts/*),Bash(ls),Bash(ls *),Bash(grep *),Bash(git grep *),Bash(git diff),Bash(git diff *),Bash(git status)" \
+            --output-format json \
+            < ../../.github/fixer/prompt.md > .fixer/claude.json || echo "agent exited non-zero"
+
+      - name: Verify independently
+        id: verify
+        run: bash .github/fixer/verify.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-fix
+          path: ${{ runner.temp }}/fixer/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  pr:
+    needs: fix
+    if: needs.fix.outputs.outcome == 'fixed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO:     ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: agent-fix
+          path: ${{ runner.temp }}/fixer
+
+      # Apply the artifact and validate it again: this job holds write access,
+      # and the artifact came from a job that processed untrusted input.
+      - name: Apply and re-validate
+        run: |
+          WORK="$RUNNER_TEMP/fixer"
+          git apply --index "$WORK/full.patch"
+          node .github/fixer/validate-patch.js
+
+      - name: Commit, push and open the PR
+        run: |
+          WORK="$RUNNER_TEMP/fixer"
+          branch="agent-fix/issue-$ISSUE"
+
+          subject=$(jq -r '.commit_subject // empty' "$WORK/result.json" | tr -d '\r' | head -n 1 | head -c 70)
+          if ! printf '%s' "$subject" | grep -Eq '^[a-z0-9][A-Za-z0-9 ,._:/()-]{4,69}$'; then
+            subject="resolve agent-reported issue #$ISSUE"
+          fi
+
+          # The summary is model output. Defuse release keywords so it can never
+          # drive a major version bump if a squash-merge copies the PR body.
+          jq -r '.summary // ""' "$WORK/result.json" | head -c 3000 \
+            | sed -E 's/BREAKING[ -]CHANGE/breaking change/Ig' > "$WORK/summary.txt"
+
+          {
+            echo "Automated fix for #$ISSUE, generated by an AI agent from an agent-submitted bug report."
+            echo
+            echo "**Review it as you would any untrusted contribution.** The report and this summary are model output."
+            echo
+            echo "### Agent summary"
+            cat "$WORK/summary.txt"
+            echo
+            echo "### Checked automatically"
+            echo "- A regression test added to an existing test file **fails without the fix**"
+            echo "- The full \`npm test\` suite **passes with the fix**"
+            echo "- Only \`packages/pulse/\` changed; no package.json, workflow, or release files"
+            echo
+            echo "Merging this to \`main\` publishes a release."
+            echo
+            echo "Fixes #$ISSUE"
+          } > "$WORK/pr-body.md"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -q -m "fix: $subject" -m "Fixes #$ISSUE"
+          git push --force origin "HEAD:refs/heads/$branch"
+
+          gh label create agent-fix --color 5319e7 --description "Opened by the agent fixer" 2>/dev/null || true
+          existing=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh pr edit "$existing" --title "fix: $subject" --body-file "$WORK/pr-body.md"
+            url=$(gh pr view "$existing" --json url --jq .url)
+          else
+            url=$(gh pr create --base main --head "$branch" --title "fix: $subject" \
+                    --body-file "$WORK/pr-body.md" --label agent-fix)
+          fi
+
+          gh issue comment "$ISSUE" --body "A fix has been opened for review: $url"
+          gh issue edit "$ISSUE" --remove-label approved-to-fix 2>/dev/null || true
+
+  notify:
+    needs: fix
+    if: always() && needs.fix.result != 'skipped' && needs.fix.outputs.outcome != 'fixed'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO:     ${{ github.repository }}
+      OUTCOME:  ${{ needs.fix.outputs.outcome }}
+      RUN_URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: agent-fix
+          path: ${{ runner.temp }}/fixer
+
+      - name: Report back on the issue
+        run: |
+          case "$OUTCOME" in
+            not_reproduced)      label=cannot-reproduce; headline="The fixer could not reproduce this against the current source." ;;
+            not_a_framework_bug) label=not-a-bug;        headline="The fixer concluded this is not a framework defect." ;;
+            blocked)             label=needs-human;      headline="The fixer found a real problem but it needs a human." ;;
+            *)                   label=fix-failed;       headline="The fixer run did not produce a verified fix." ;;
+          esac
+
+          {
+            echo "$headline"
+            echo
+            [ -s "$RUNNER_TEMP/fixer/reason.txt" ] && { echo "**Result:** $(head -c 1500 "$RUNNER_TEMP/fixer/reason.txt")"; echo; }
+            if [ -f "$RUNNER_TEMP/fixer/result.json" ]; then
+              echo "**Agent notes:**"
+              echo
+              jq -r '.summary // ""' "$RUNNER_TEMP/fixer/result.json" | head -c 2000
+              echo
+            fi
+            echo "[Run log]($RUN_URL)"
+          } > "$RUNNER_TEMP/comment.md"
+
+          gh label create "$label" --color d4c5f9 2>/dev/null || true
+          gh issue edit "$ISSUE" --add-label "$label" --remove-label approved-to-fix 2>/dev/null || true
+          gh issue comment "$ISSUE" --body-file "$RUNNER_TEMP/comment.md"
