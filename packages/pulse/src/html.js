@@ -19,7 +19,6 @@ export function escHtml(str) {
     // Matches &<word>; or &#<digits>; or &#x<hex>;
     .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
