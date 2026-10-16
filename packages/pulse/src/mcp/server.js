@@ -26,6 +26,7 @@
  *   pulse_resolve_error  — mark error journal entries resolved
  *   pulse_check_bundles  — inspect production bundle contents (not just sizes)
  *   pulse_check_version  — installed vs static vs npm latest
+ *   pulse_report_issue   — report a bug in Pulse itself (preview first; sends only after user confirms)
  *   pulse_update         — re-copy pulse-ui assets from package → public/
  */
 
@@ -47,6 +48,7 @@ import { writeStamp, formatStampResult } from '../cli/stamp.js'
 import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
 import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
 import { killPulseServerOnPort } from '../cli/process-utils.js'
+import { buildReport, previewId, formatPreview, sendViaProxy, sendViaGh, formatResult, DEFAULT_ENDPOINT } from '../cli/feedback.js'
 
 // ---------------------------------------------------------------------------
 // Crash guards — an uncaught error in any tool handler must not kill the
@@ -1619,6 +1621,51 @@ server.registerTool(
     })
     req.on('timeout', () => { req.destroy() })
   })
+)
+
+// ---------------------------------------------------------------------------
+// pulse_report_issue — report a framework bug (two-step: preview, then confirm)
+// ---------------------------------------------------------------------------
+
+server.registerTool(
+  'pulse_report_issue',
+  {
+    description: `Report a bug in the Pulse framework itself (not in the user's own code). Use only after you have confirmed the problem is Pulse's — e.g. a documented feature misbehaves, a Pulse tool returns a wrong result, or a component renders incorrectly from valid input — and have a minimal repro. Do not report your own mistakes or missing features.
+
+Two steps. First call (no confirmed): returns the redacted report for you to show the user verbatim — nothing is sent. If the user agrees, call again with the same fields plus confirmed: true and the previewId from step one. Never set confirmed without the user's explicit approval. Do not put secrets, credentials or private user data in any field.`,
+    inputSchema: {
+      title:       z.string().min(8).max(120).describe('One-line summary of the bug'),
+      description: z.string().min(1).max(4000).describe('What is wrong, and where in Pulse (tool, component, runtime, SSR…)'),
+      expected:    z.string().max(1000).optional().describe('What should have happened'),
+      actual:      z.string().max(1000).optional().describe('What happened instead (include exact error text)'),
+      repro:       z.string().max(6000).optional().describe('Smallest spec or snippet that reproduces it'),
+      confirmed:   z.boolean().optional().describe('true only after the user has approved the previewed report'),
+      previewId:   z.string().optional().describe('The id returned by the preview step; required when confirmed is true'),
+    },
+  },
+  async (args) => {
+    const config = await readPulseConfig()
+    if (config.reportFeedback === false) {
+      return text('Issue reporting is disabled in this project (reportFeedback: false in pulse.config.js). Tell the user about the problem directly instead.')
+    }
+
+    const built = buildReport(args, { version: PKG_VERSION, root: ROOT })
+    if (!built.ok) return text(`Cannot build report: ${built.error}`)
+
+    const transport = config.reportTransport === 'gh' ? 'gh' : 'proxy'
+    const endpoint  = typeof config.reportEndpoint === 'string' ? config.reportEndpoint : DEFAULT_ENDPOINT
+
+    if (!args.confirmed) return text(formatPreview(built.payload, { transport, endpoint }))
+
+    if (args.previewId !== previewId(built.payload)) {
+      return text('Not sent: the report differs from the one previewed (or no previewId was given). Call without confirmed to preview it again, show the user, and confirm with the new previewId.')
+    }
+
+    const result = transport === 'gh'
+      ? sendViaGh(built.payload)
+      : await sendViaProxy(built.payload, { endpoint })
+    return text(formatResult(result))
+  }
 )
 
 // ---------------------------------------------------------------------------
@@ -3825,6 +3872,7 @@ If you know your context already:
 - \`pulse_restart_server\` — hot-reload specs in the running dev server (~200 ms). Falls back to full kill/restart if the server is not running.
 - \`pulse_build\` — production build + starts prod server on devPort+1 for Lighthouse. Returns the URL. Call \`pulse_restart_server\` after to return to dev. **Slow — takes 30–60 s. Tell the user before calling.**
 - \`pulse_check_bundles\` — inspects what's actually inside the generated \`public/dist/\` bundles after \`pulse_build\`, not just their sizes. Flags a boot bundle that exists for a page with no mutations/actions/persist (should ship zero JS), and a literal Node built-in reference inside a bundle (server-only code that leaked through stripping). Lighthouse checks scores; this checks content — call it as part of the full \`/verify\` pass, right after \`pulse_build\`.
+- \`pulse_report_issue(title, description, expected?, actual?, repro?)\` — **Report a bug in Pulse itself** (not the user's code) once you have a minimal repro. Two steps: the first call returns a redacted preview that you must show the user verbatim; only if they approve, call again with \`confirmed: true\` and the \`previewId\`. Never confirm on your own, and never report your own mistakes or feature requests.
 - \`pulse_check_version\` — check installed package version, static asset version, and latest on npm. Use this instead of running npm commands when the user asks about updates.
 - \`pulse_update\` — install the latest \`@invisibleloop/pulse\` package and re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist into \`public/\`. One command does the full upgrade.
 

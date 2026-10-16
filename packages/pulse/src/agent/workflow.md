@@ -332,6 +332,21 @@ Only declare the task done after all gates still pass.
 
 ---
 
+## When Pulse itself is the problem
+
+If a documented Pulse feature, component, runtime behaviour or MCP tool misbehaves, do not just work around it silently. First rule out your own mistake: re-read the relevant guide, then reduce the failure to the smallest spec or snippet that shows it using Pulse alone.
+
+If it still fails, it is a framework bug:
+
+1. Give the user the workaround so the build can continue.
+2. Offer to report it: "This looks like a bug in Pulse itself — want me to report it?"
+3. If they agree, call `pulse_report_issue` without `confirmed`. Show the user the returned preview verbatim and ask for approval.
+4. Only after they approve, call it again with `confirmed: true` and the `previewId`. Never confirm on your own.
+
+Do not report: your own spec or API-usage errors, missing features or feature requests, design preferences, or anything you have not isolated to Pulse. Keep secrets, credentials and private user data out of every field.
+
+---
+
 ## Summary
 
 ```
