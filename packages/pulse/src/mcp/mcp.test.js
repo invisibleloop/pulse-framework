@@ -439,6 +439,31 @@ test('pulse://start reads design:"freeform" from pulse.config.js and ties it to 
     'comment into each spec file — pulse_review detects Mode B from that comment, not from config')
 })
 
+test('pulse_report_issue is registered and gated behind preview → previewId confirm', () => {
+  assert(/registerTool\(\s*'pulse_report_issue'/.test(serverSrc), 'pulse_report_issue must be registered')
+  assert(/!args\.confirmed\)\s*return text\(formatPreview/.test(serverSrc),
+    'an unconfirmed call must return the preview and send nothing')
+  assert(/args\.previewId !== previewId\(built\.payload\)/.test(serverSrc),
+    'a confirmed call must be rejected unless previewId matches the redacted payload that was previewed')
+  const sendIdx = serverSrc.indexOf('sendViaProxy(built.payload')
+  const gateIdx = serverSrc.indexOf('args.previewId !== previewId')
+  assert(gateIdx !== -1 && sendIdx > gateIdx, 'sending must come after the previewId check')
+})
+
+test('pulse_report_issue honours reportFeedback:false and is documented in the agent tool list', () => {
+  assert(/config\.reportFeedback === false/.test(serverSrc), 'reportFeedback:false must disable reporting')
+  assert(/pulse_report_issue\(title, description/.test(serverSrc), 'pulse_report_issue must be listed in the agent tool docs')
+})
+
+test('agents are told when and how to report Pulse bugs (workflow.md + scaffolded CLAUDE.md files)', () => {
+  const workflow = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  assert(/pulse_report_issue/.test(workflow) && /Never confirm on your own/.test(workflow),
+    'workflow.md must tell the agent to offer pulse_report_issue for framework bugs and never self-confirm')
+  const scaffold = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  assert((scaffold.match(/## If Pulse itself is broken/g) || []).length === 2,
+    'both scaffolded instruction files (claudeMd and copilotInstructionsMd) must include the "If Pulse itself is broken" section')
+})
+
 test('scaffolded pulse.config.js documents the design:"freeform" flag', () => {
   const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
   assert(/design: 'freeform'/.test(scaffoldSrc),

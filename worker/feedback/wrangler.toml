@@ -1,0 +1,22 @@
+name = "pulse-feedback"
+main = "index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+REPO = "invisibleloop/pulse-framework"
+
+# Per-IP limit: 5 reports per hour. period must be 10 or 60 (seconds) for the
+# Rate Limiting binding, so this allows 5 per minute; the global cap lives in
+# a Cloudflare WAF rate-limit rule (see README).
+[[unsafe.bindings]]
+name = "RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }
+
+# Burst dedupe (created with: npx wrangler kv namespace create FINGERPRINTS)
+[[kv_namespaces]]
+binding = "FINGERPRINTS"
+id = "2b568a9baaaf4b989f949982f5e24e32"
+
+# Secret (not stored here):  npx wrangler secret put GITHUB_TOKEN

@@ -55,7 +55,8 @@ export async function scaffold(targetDir, options = {}) {
   // pulse.config.js — write agent if specified, otherwise leave as commented hint
   write(targetDir, 'pulse.config.js',
 `export default {
-${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  agent: '${agent}',\n` : `  // agent: 'copilot',  // uncomment to use GitHub Copilot CLI instead of Claude\n`}  // design: 'freeform',  // uncomment for hand-rolled HTML/CSS on every page — no src/ui/* components, no intake/sketch
+${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  agent: '${agent}',\n` : `  // agent: 'copilot',  // uncomment to use GitHub Copilot CLI instead of Claude\n`}  // reportFeedback: false,  // uncomment to disable pulse_report_issue (agents reporting Pulse bugs, always with your approval)
+  // design: 'freeform',  // uncomment for hand-rolled HTML/CSS on every page — no src/ui/* components, no intake/sketch
 }
 `)
 
@@ -485,6 +486,10 @@ Run these steps in order — do not declare work done without them:
 4. Navigate to the page in the browser and take a screenshot
 5. Run Lighthouse (desktop then mobile) — Accessibility, Best Practices, and SEO must all be 100
 
+## If Pulse itself is broken
+
+If a documented Pulse feature or tool misbehaves and you have reduced it to a minimal repro that involves only Pulse, tell the user, give them the workaround, and offer to report it with \`pulse_report_issue\`. Preview first, show the user the redacted report verbatim, and send only after they approve. Do not report your own mistakes, spec errors or feature requests.
+
 ## Writing tests
 
 Test files live next to the page they test: \`src/pages/foo.test.js\` for \`src/pages/foo.js\`.
@@ -574,6 +579,10 @@ Run these steps in order — do not declare work done without them:
 3. Write tests for every page you created or changed, run \`npm test\` (all pass), then \`npm run test:coverage\` — fix any untested branches
 4. Navigate to the page in the browser and take a screenshot
 5. Run Lighthouse (desktop then mobile) — Accessibility, Best Practices, and SEO must all be 100
+
+## If Pulse itself is broken
+
+If a documented Pulse feature or tool misbehaves and you have reduced it to a minimal repro that involves only Pulse, tell the user, give them the workaround, and offer to report it with \`pulse_report_issue\`. Preview first, show the user the redacted report verbatim, and send only after they approve. Do not report your own mistakes, spec errors or feature requests.
 
 ## Writing tests
 
