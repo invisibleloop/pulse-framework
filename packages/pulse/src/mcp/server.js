@@ -41,7 +41,7 @@ import https                     from 'https'
 import { spawn, spawnSync } from 'child_process'
 
 import { loadPages } from '../cli/discover.js'
-import { resolveInRoot, isLoopbackUrl, assertPublicUrl } from './guards.js'
+import { resolveInRoot, isInsideDir, isLoopbackUrl, assertPublicUrl, requestPublic } from './guards.js'
 import { validateContent, validateFile, formatValidationResult } from '../cli/validate.js'
 import { readJournal, formatJournal, resolveEntries, formatResolveResult } from '../cli/diagnose.js'
 import { writeStamp, formatStampResult } from '../cli/stamp.js'
@@ -864,7 +864,7 @@ Rules for the spec you write:
     const segments = name.replace(/\.js$/, '').split('/')
     const fullPath = path.join(PAGES_DIR, ...segments) + '.js'
 
-    if (!fullPath.startsWith(PAGES_DIR)) {
+    if (!isInsideDir(PAGES_DIR, fullPath)) {
       return text('Error: page name must not escape src/pages/')
     }
 
@@ -911,7 +911,7 @@ Rules for the component you write:
     const safeName = name.replace(/\.js$/, '')
     const fullPath = path.join(COMPONENTS_DIR, `${safeName}.js`)
 
-    if (!fullPath.startsWith(COMPONENTS_DIR)) {
+    if (!isInsideDir(COMPONENTS_DIR, fullPath)) {
       return text('Error: component name must not escape src/components/')
     }
 
@@ -3415,19 +3415,22 @@ Call it with the external URLs you plan to use, before your first Lighthouse run
       let blocked = null
       try {
         for (let hop = 0; hop < MAX_HOPS; hop++) {
-          await assertPublicUrl(url)   // every hop: block internal/metadata addresses
-          const res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(5000) })
-          if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
-            url = new URL(res.headers.get('location'), url)
+          // Every hop: refuse internal/metadata addresses. requestPublic() re-checks the
+          // address the socket actually connects to, so DNS rebinding cannot slip a
+          // private IP in between this check and the request.
+          await assertPublicUrl(url)
+          const res = await requestPublic(url, { method: 'HEAD' })
+          if (res.status >= 300 && res.status < 400 && res.headers.location) {
+            url = new URL(res.headers.location, url)
             await assertPublicUrl(url)
             chain.push(url.origin)
             continue
           }
           if (res.status === 405) {
             // Host rejects HEAD — confirm with a ranged GET so we still see redirects
-            const get = await fetch(url, { method: 'GET', redirect: 'manual', headers: { Range: 'bytes=0-0' }, signal: AbortSignal.timeout(5000) })
-            if (get.status >= 300 && get.status < 400 && get.headers.get('location')) {
-              url = new URL(get.headers.get('location'), url)
+            const get = await requestPublic(url, { method: 'GET', headers: { Range: 'bytes=0-0' } })
+            if (get.status >= 300 && get.status < 400 && get.headers.location) {
+              url = new URL(get.headers.location, url)
               await assertPublicUrl(url)
               chain.push(url.origin)
               continue
