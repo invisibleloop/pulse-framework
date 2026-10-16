@@ -4,6 +4,7 @@
  */
 
 import http from 'http'
+import net  from 'net'
 import fs   from 'fs'
 import os   from 'os'
 import path from 'path'
@@ -2476,6 +2477,149 @@ await test('a "." in a route is literal, not a wildcard', async () => {
     assert((await get(port, '/feed.xml')).status === 200, 'exact route should match')
     assert((await get(port, '/feedXxml')).status === 404, '"." must not match any character')
   })
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nSecurity hardening\n')
+
+/** GET with arbitrary headers (the shared get() helper sends none). */
+function getWith(port, urlPath, headers = {}) {
+  return new Promise((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port, path: urlPath, headers }, (res) => {
+      let body = ''
+      res.on('data', c => { body += c })
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body }))
+    }).on('error', reject)
+  })
+}
+
+/** Send a hand-written request line, so malformed targets reach the server untouched. */
+function rawRequest(port, requestLine, extraHeaders = '') {
+  return new Promise((resolve) => {
+    const sock = net.connect(port, '127.0.0.1', () => sock.write(`${requestLine}\r\nHost: x\r\n${extraHeaders}Connection: close\r\n\r\n`))
+    let data = ''
+    sock.on('data', c => { data += c })
+    sock.on('close', () => resolve(data))
+    sock.on('error', () => resolve(data))
+  })
+}
+
+const hardenPage = {
+  route: '/x',
+  meta:  { title: 'X', description: 'x', theme: 'dark' },
+  view:  () => '<main id="main-content">x</main>',
+}
+
+await test('a malformed request target gets a 400 and does not crash the server (logging on)', async () => {
+  await withServer([hardenPage], {}, async (port) => {   // quiet is off by default
+    const res = await rawRequest(port, 'GET http://[bad HTTP/1.1')
+    assert(res.startsWith('HTTP/1.1 400'), `Expected 400, got: ${res.split('\r\n')[0]}`)
+    await new Promise(r => setTimeout(r, 100))
+    assert((await get(port, '/x')).status === 200, 'server should still be serving')
+  })
+})
+
+await test('trailing-slash redirect never produces a protocol-relative Location (open redirect)', async () => {
+  for (const mode of ['remove', 'add']) {
+    await withServer([hardenPage], { trailingSlash: mode, quiet: true }, async (port) => {
+      for (const target of ['/.//evil.com/', '/.//evil.com/a', '/a/..//evil.com/b/']) {
+        const res = await rawRequest(port, `GET ${target} HTTP/1.1`)
+        const loc = (res.match(/^Location: (.*)$/mi) || [])[1] || ''
+        assert(!loc.startsWith('//'), `${mode} ${target} redirected to protocol-relative ${loc}`)
+      }
+    })
+  }
+})
+
+await test('an unreadable static file returns 404 instead of crashing the server', async () => {
+  if (process.getuid?.() === 0) return   // root can read mode-000 files
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-static-'))
+  fs.writeFileSync(path.join(dir, 'ok.txt'), 'ok')
+  fs.writeFileSync(path.join(dir, 'locked.txt'), 'secret')
+  fs.chmodSync(path.join(dir, 'locked.txt'), 0o000)
+  try {
+    await withServer([hardenPage], { staticDir: dir, quiet: true }, async (port) => {
+      assert((await get(port, '/locked.txt')).status === 404, 'unreadable file should be 404')
+      assert((await get(port, '/ok.txt')).body === 'ok', 'server should still serve other files')
+    })
+  } finally {
+    fs.chmodSync(path.join(dir, 'locked.txt'), 0o644)
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+await test('a forged X-Forwarded-Host cannot poison the cached canonical URL for other visitors', async () => {
+  await withServer([hardenPage], { defaultCache: 3600, quiet: true }, async (port) => {
+    const canon = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
+    const attacker = await getWith(port, '/x', { Host: 'www.mysite.com', 'X-Forwarded-Host': 'evil.example', 'X-Forwarded-Proto': 'https' })
+    assert(canon(attacker.body) === 'https://evil.example/x', 'the requester still sees their own headers')
+    const visitor = await getWith(port, '/x', { Host: 'www.mysite.com' })
+    assert(canon(visitor.body) === 'http://www.mysite.com/x', `cached canonical was poisoned: ${canon(visitor.body)}`)
+    assert(!visitor.body.includes('pulse-canonical'), 'placeholder must never reach the client')
+    const again = await getWith(port, '/x', { Host: 'other.example' })   // served from cache
+    assert(canon(again.body) === 'http://other.example/x', 'cache hit should fill in this request\'s canonical')
+  })
+})
+
+await test('multipart field names cannot replace the prototype or spoof inherited fields', async () => {
+  let seen
+  const spec = { route: '/mp', csrf: false, meta: { title: 'm', description: 'm', theme: 'dark' },
+    submit: async (ctx) => { const f = await ctx.formData(); seen = { proto: Object.getPrototypeOf(f) === Object.prototype, spoofed: f.type ?? f.size ?? f.filename, own: Object.keys(f) }; return {} },
+    view: () => '<main id="main-content">m</main>' }
+  await withServer([spec], { quiet: true }, async (port) => {
+    const b = 'BND'
+    const part = (name, file, val) => `--${b}\r\nContent-Disposition: form-data; name="${name}"${file ? '; filename="a.txt"' : ''}\r\n${file ? 'Content-Type: text/evil\r\n' : ''}\r\n${val}\r\n`
+    const body = part('__proto__', true, 'PWN') + part('toString', false, 'x') + part('ok', false, 'fine') + `--${b}--\r\n`
+    await requestWithBody(port, 'POST', '/mp', body, `multipart/form-data; boundary=${b}`)
+    assert(seen.proto, 'prototype must be untouched')
+    assert(seen.spoofed === undefined, `a __proto__ part leaked inherited fields: ${seen.spoofed}`)
+    // Like the urlencoded parser, every field is just an own property.
+    assert(['__proto__', 'toString', 'ok'].every(k => seen.own.includes(k)), `own fields missing: ${seen.own}`)
+  })
+})
+
+await test('a malformed percent-escape in a cookie does not break the request', async () => {
+  await withServer([formSpec], { quiet: true }, async (port) => {
+    const res = await getWith(port, '/signup', { Cookie: 'junk=%; pulse_csrf=%E0%A4%A' })
+    assert(res.status === 200, `expected 200, got ${res.status}`)
+  })
+})
+
+await test('a CSRF cookie the server did not issue is ignored, so a planted id cannot be used', async () => {
+  await withServer([formSpec], { quiet: true }, async (port) => {
+    const planted = await getWith(port, '/signup', { Cookie: 'pulse_csrf=attacker-chosen-id' })
+    const issued  = [].concat(planted.headers['set-cookie'] || []).find(c => c.startsWith('pulse_csrf='))
+    assert(issued, 'server must issue its own cookie instead of trusting the planted one')
+    assert(!issued.startsWith('pulse_csrf=attacker-chosen-id'), 'planted id must not be reused')
+    // And a fresh, server-issued pair still works end to end.
+    const { cookie, token } = await getCsrfPair(port, '/signup')
+    const ok = await postForm(port, '/signup', { email: 'a@b.com', _csrf: token }, cookie)
+    assert(ok.status === 303 || ok.status === 200, `valid pair should be accepted, got ${ok.status}`)
+  })
+})
+
+await test('dev error endpoint rejects cross-site posts and oversized bodies, accepts same-origin', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-dev-'))
+  const postErr = (port, headers, body) => new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port, path: '/__pulse/error', method: 'POST', headers }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode)) })
+    req.on('error', (e) => resolve(e.code))
+    req.end(body)
+  })
+  try {
+    await withServer([hardenPage], { dev: true, root, quiet: true }, async (port) => {
+      const body = JSON.stringify({ route: '/x', phase: 'view', message: 'boom', stack: '' })
+      assert(await postErr(port, { 'Sec-Fetch-Site': 'cross-site', Origin: 'https://evil.example' }, body) === 403, 'cross-site must be 403')
+      assert(await postErr(port, { Origin: 'https://evil.example' }, body) === 403, 'foreign Origin without Fetch-Metadata must be 403')
+      assert(await postErr(port, { 'Sec-Fetch-Site': 'same-origin' }, body) === 204, 'same-origin must be accepted')
+      const big = await postErr(port, { 'Sec-Fetch-Site': 'same-origin' }, 'x'.repeat(64 * 1024))
+      assert(big === 413 || big === 'ECONNRESET', `oversized body should be refused, got ${big}`)
+      const journal = JSON.parse(fs.readFileSync(path.join(root, '.pulse', 'errors.json'), 'utf8'))
+      assert(journal.length === 1 && journal[0].message === 'boom', 'only the same-origin entry should be recorded')
+    })
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })
 
 // ---------------------------------------------------------------------------
