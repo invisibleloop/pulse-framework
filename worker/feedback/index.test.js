@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import worker, { validateReport, fingerprint, renderIssueBody, takeDailySlot } from './index.js'
+import worker, { validateReport, fingerprint, renderIssueBody, takeDailySlot, takeDupSlot } from './index.js'
 
 const good = {
   title: 'dropCap misaligned in card',
@@ -29,7 +29,7 @@ function mockGithub({ duplicate = null, createOk = true } = {}) {
 }
 
 const env = { GITHUB_TOKEN: 't', REPO: 'o/r' }
-const post = body => new Request('https://x/report', { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) })
+const post = body => new Request('https://x/report', { method: 'POST', headers: { 'content-type': 'application/json' }, body: typeof body === 'string' ? body : JSON.stringify(body) })
 
 test('validateReport accepts a good report', () => {
   assert.equal(validateReport(good).ok, true)
@@ -67,7 +67,8 @@ test('POST /report creates an issue with agent labels', async () => {
 })
 
 test('duplicate report comments +1 instead of creating', async () => {
-  const calls = mockGithub({ duplicate: { number: 3, html_url: 'https://github.com/o/r/issues/3' } })
+  const fp = await fingerprint(validateReport(good).report)
+  const calls = mockGithub({ duplicate: { number: 3, html_url: 'https://github.com/o/r/issues/3', body: `...\n<!-- fingerprint:${fp} -->` } })
   const res = await worker.fetch(post(good), env)
   const data = await res.json()
   assert.equal(data.duplicate, true)
@@ -150,4 +151,64 @@ test('daily cap: defaults to 50 and is skipped without KV', async () => {
   assert.equal(await takeDailySlot(e), true)
   assert.equal(await takeDailySlot(e), false)
   assert.equal(await takeDailySlot(env), true)
+})
+
+// ── Hardening (found in a threat-model review of the Worker) ─────────────────
+
+const writes = calls => calls.filter(c => c.init.method === 'POST')
+
+test('tool is limited to identifier characters (it renders outside the code fence)', () => {
+  for (const tool of ['x`\n\n@octocat [log in](https://e.co)', 'a b', 'x\ny', '<img src=x>', '@everyone'])
+    assert.equal(validateReport({ ...good, tool }).ok, false, JSON.stringify(tool))
+  assert.equal(validateReport({ ...good, tool: 'pulse_validate' }).ok, true)
+  assert.equal(validateReport({ ...good, tool: 'ui.card:v2-beta' }).ok, true)
+})
+
+test('only application/json is accepted, so a web page cannot submit cross-site without a preflight', async () => {
+  mockGithub()
+  for (const ct of ['text/plain', 'application/x-www-form-urlencoded', 'multipart/form-data; boundary=x', '']) {
+    const req = new Request('https://x/report', { method: 'POST', headers: ct ? { 'content-type': ct } : {}, body: JSON.stringify(good) })
+    assert.equal((await worker.fetch(req, env)).status, 415, `content-type "${ct}"`)
+  }
+  const ok = new Request('https://x/report', { method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8' }, body: JSON.stringify(good) })
+  assert.equal((await worker.fetch(ok, env)).status, 201)
+})
+
+test('a chunked body with no content-length is cut off at the size limit', async () => {
+  mockGithub()
+  const big = new ReadableStream({ start(c) { for (let i = 0; i < 40; i++) c.enqueue(new TextEncoder().encode('x'.repeat(1024))); c.close() } })
+  const req = new Request('https://x/report', { method: 'POST', headers: { 'content-type': 'application/json' }, body: big, duplex: 'half' })
+  assert.equal((await worker.fetch(req, env)).status, 413)
+})
+
+test('a search hit that merely quotes a fingerprint does not capture a new report', async () => {
+  const calls = mockGithub({ duplicate: { number: 666, html_url: 'https://github.com/o/r/issues/666', body: 'quoted text mentioning <!-- fingerprint:abc --> in the middle\n\nand more text after' } })
+  const res = await worker.fetch(post(good), env)
+  const data = await res.json()
+  assert.equal(data.duplicate, false, 'must create its own issue, not join issue 666')
+  assert.equal(res.status, 201)
+  assert.ok(writes(calls).some(c => c.url.endsWith('/issues')))
+})
+
+test('repeat reports add at most 3 comments per fingerprint per day and never spend the global budget', async () => {
+  const calls = mockGithub()
+  const kv = memoryKv()
+  const e = { ...env, FINGERPRINTS: kv, DAILY_CAP: '5' }
+  for (let i = 0; i < 40; i++) await worker.fetch(post(good), e)           // one attacker, one report, 40 times
+  const issueCreates = writes(calls).filter(c => c.url.endsWith('/issues')).length
+  const comments     = writes(calls).filter(c => c.url.endsWith('/comments')).length
+  assert.equal(issueCreates, 1)
+  assert.equal(comments, 3, 'comment spam must be capped')
+  // The daily allowance is untouched by duplicates: 4 more distinct reports still fit (cap 5, 1 used).
+  for (let n = 0; n < 4; n++) assert.equal((await worker.fetch(post({ ...good, title: `another genuinely different bug ${n}` }), e)).status, 201)
+  assert.equal((await worker.fetch(post({ ...good, title: 'one distinct report too many today' }), e)).status, 429)
+})
+
+test('takeDupSlot resets on a new UTC day', async () => {
+  const e = { FINGERPRINTS: memoryKv() }
+  const day = new Date('2026-10-16T12:00:00Z')
+  for (let i = 0; i < 3; i++) assert.equal(await takeDupSlot(e, 'abc', day), true)
+  assert.equal(await takeDupSlot(e, 'abc', day), false)
+  assert.equal(await takeDupSlot(e, 'def', day), true)
+  assert.equal(await takeDupSlot(e, 'abc', new Date('2026-10-17T00:00:01Z')), true)
 })

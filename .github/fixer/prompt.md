@@ -24,7 +24,7 @@ You have three tools, confined to this directory (`packages/pulse`):
 ## Hard limits (a validator rejects the whole patch otherwise)
 
 - Only add or modify files under `packages/pulse/`. No deletions, renames, binary files, or mode changes.
-- Never touch `package.json`, lockfiles, `scripts/release-version.js`, anything in `.github/`, or `.claude/`.
+- Never touch `package.json`, lockfiles, anything in `.github/` or `.claude/`, or the highest-trust code: `scripts/` and `src/cli/` and `src/mcp/` (they run on developers' machines and in the release job). If the bug is in one of those, set status `blocked` and say what a human should look at.
 - At most 15 files and 500 changed lines. A fix that needs more is a human's job: set status `blocked`.
 - The patch must contain both a source fix and a regression test, and the test must fail without the fix.
 
