@@ -4,6 +4,21 @@
   "type": "module",
   "description": "AI-first frontend framework. The spec is the source of truth.",
   "license": "MIT",
+  "homepage": "https://pulseframework.dev",
+  "bugs": {
+    "url": "https://github.com/invisibleloop/pulse-framework/issues"
+  },
+  "keywords": [
+    "framework",
+    "frontend",
+    "ssr",
+    "streaming",
+    "spec",
+    "mcp",
+    "ai",
+    "agent",
+    "zero-dependency"
+  ],
   "bin": {
     "pulse": "./src/cli/index.js"
   },

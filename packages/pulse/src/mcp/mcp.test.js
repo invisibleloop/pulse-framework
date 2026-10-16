@@ -150,6 +150,19 @@ for (const [a, b] of SYNC_PAIRS) {
   })
 }
 
+// npm only renders a README that sits in the package directory, so the repo's
+// root README is copied there. The root file is canonical.
+test('packages/pulse/README.md is in sync with the root README.md', () => {
+  const root = path.join(REPO_ROOT, 'README.md')
+  const copy = path.join(ROOT, 'README.md')
+  assert(fs.existsSync(root), 'README.md does not exist at the repo root')
+  assert(fs.existsSync(copy), 'packages/pulse/README.md does not exist — npm would show no readme')
+  assert(
+    fs.readFileSync(root, 'utf8') === fs.readFileSync(copy, 'utf8'),
+    'packages/pulse/README.md has drifted from the root README.md. Edit the root file and run: cp README.md packages/pulse/README.md'
+  )
+})
+
 // ── Agent doc consistency guards ─────────────────────────────────────────────
 // Contradictions between agent docs leave the agent unable to know what it can
 // and cannot do. These guards pin the resolved decisions:
