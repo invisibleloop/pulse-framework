@@ -164,3 +164,10 @@ test('formatResult distinguishes new, duplicate and failed', () => {
   assert.match(formatResult({ ok: true, url: ghUrl, duplicate: true }), /Already reported/)
   assert.match(formatResult({ ok: false, error: 'x' }), /not sent.*issues\/new/s)
 })
+
+test('preview tells the agent to report security vulnerabilities privately, not here', () => {
+  const out = formatPreview({ title: 'something broke here', description: 'd', version: '1.2.3' })
+  assert.match(out, /PUBLIC issue/)
+  assert.match(out, /security vulnerability/)
+  assert.match(out, /security\/advisories\/new/)
+})
