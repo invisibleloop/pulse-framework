@@ -2,6 +2,7 @@
  * Markdown parser tests — run with: node src/md/md.test.js
  */
 import { parseMd } from './index.js'
+import { execFileSync } from 'node:child_process'
 
 let passed = 0
 let failed = 0
@@ -229,6 +230,31 @@ test('a heading line with a huge run of spaces parses in linear time', () => {
   const start = Date.now()
   parseMd('# a' + ' '.repeat(200000) + 'x')
   assert(Date.now() - start < 500, 'heading parse took too long')
+})
+
+// A heading line the heading branch rejected but the paragraph loop still treated as
+// "a heading starts here" consumed no input, so the parser spun forever (CRLF files,
+// or any heading containing U+2028/U+2029). Run in a child process with a timeout so
+// a regression fails the test instead of hanging the whole run.
+function parseFullInChild(input) {
+  const code = `import('./src/md/index.js').then(({ parseMd }) => process.stdout.write(JSON.stringify(parseMd(${JSON.stringify(input)}))))`
+  return JSON.parse(execFileSync(process.execPath, ['-e', code], { timeout: 5000, encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname }))
+}
+const parseInChild = (input) => parseFullInChild(input).html
+
+test('markdown with CRLF line endings parses (used to hang forever)', () => {
+  assert(/<h1[^>]*>Title<\/h1>\s*<p>body<\/p>/.test(parseInChild('# Title\r\n\r\nbody\r\n')), 'CRLF heading + paragraph')
+  assert(/<h2[^>]*>T<\/h2>/.test(parseInChild('## T ##\r\n')), 'CRLF closing hashes')
+})
+
+test('CRLF frontmatter values have no stray carriage return', () => {
+  const { frontmatter } = parseFullInChild('---\r\ntitle: Hi\r\n---\r\n# H\r\n')
+  assert(frontmatter.title === 'Hi', `got ${JSON.stringify(frontmatter.title)}`)
+})
+
+test('a heading containing U+2028 / U+2029 parses (used to hang forever)', () => {
+  assert(/<h1[^>]*>a[\s\S]b<\/h1>\s*<p>text<\/p>/.test(parseInChild('# a\u2028b\n\ntext')), 'U+2028 heading')
+  assert(/<h1[^>]*>a[\s\S]b<\/h1>/.test(parseInChild('# a\u2029b')), 'U+2029 heading')
 })
 
 // ---------------------------------------------------------------------------
