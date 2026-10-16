@@ -273,5 +273,7 @@ jobs:
 
           # No checkout in this job, so gh needs the repo spelled out.
           gh label create "$label" --repo "$REPO" --color d4c5f9 2>/dev/null || true
-          gh issue edit "$ISSUE" --repo "$REPO" --add-label "$label" --remove-label approved-to-fix 2>/dev/null || true
+          # Clear the other outcome labels so a re-run does not leave contradictory ones behind.
+          stale=$(printf '%s\n' cannot-reproduce not-a-bug needs-human fix-failed | grep -vx "$label" | paste -sd, -)
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "$label" --remove-label "approved-to-fix,$stale" 2>/dev/null || true
           gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"
