@@ -2,12 +2,17 @@ name = "pulse-feedback"
 main = "index.js"
 compatibility_date = "2026-10-01"
 
+# Production is served from feedback.pulseframework.dev (custom domain, set in the
+# Cloudflare dashboard). Turn the public workers.dev URL off so it cannot be used
+# to bypass rules on the custom domain.
+workers_dev = false
+preview_urls = false
+
 [vars]
 REPO = "invisibleloop/pulse-framework"
 
-# Per-IP limit: 5 reports per hour. period must be 10 or 60 (seconds) for the
-# Rate Limiting binding, so this allows 5 per minute; the global cap lives in
-# a Cloudflare WAF rate-limit rule (see README).
+# Per-IP limit: 5 reports per minute. The binding only supports 10 or 60 second
+# windows; a tighter hourly/daily cap needs a Cloudflare WAF rate-limit rule.
 [[unsafe.bindings]]
 name = "RATE_LIMITER"
 type = "ratelimit"
