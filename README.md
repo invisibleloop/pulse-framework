@@ -66,6 +66,7 @@ pulse              # scaffold a new project or start AI session
 pulse dev          # dev server (default port 3000)
 pulse build        # production build → public/dist/
 pulse start        # production server
+pulse update       # upgrade Pulse to the latest version and refresh copied assets
 ```
 
 ## Docs
@@ -85,6 +86,12 @@ Full reference at [pulseframework.dev](https://pulseframework.dev):
 - **Markdown** — built-in parser for blog posts and docs pages, zero browser JS
 - **Performance** — how the framework hits Lighthouse 100
 - **UI components** — 50+ built-in components
+
+## Reporting framework bugs
+
+If your coding agent hits what looks like a bug in Pulse itself, it can file a report through the `pulse_report_issue` MCP tool. It is always a two-step process: the tool first returns a redacted preview (local paths, tokens, secrets and emails stripped), and nothing is sent until the agent confirms that exact payload. Reports become GitHub issues on [invisibleloop/pulse-framework](https://github.com/invisibleloop/pulse-framework).
+
+To turn it off, set `reportFeedback: false` in `pulse.config.js`.
 
 ## Status
 
