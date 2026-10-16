@@ -237,8 +237,9 @@ test('a heading line with a huge run of spaces parses in linear time', () => {
 // or any heading containing U+2028/U+2029). Run in a child process with a timeout so
 // a regression fails the test instead of hanging the whole run.
 function parseFullInChild(input) {
-  const code = `import('./src/md/index.js').then(({ parseMd }) => process.stdout.write(JSON.stringify(parseMd(${JSON.stringify(input)}))))`
-  return JSON.parse(execFileSync(process.execPath, ['-e', code], { timeout: 5000, encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname }))
+  // The input goes in as an argument, never spliced into the code string.
+  const code = `import('./src/md/index.js').then(({ parseMd }) => process.stdout.write(JSON.stringify(parseMd(process.argv[1]))))`
+  return JSON.parse(execFileSync(process.execPath, ['-e', code, '--', input], { timeout: 5000, encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname }))
 }
 const parseInChild = (input) => parseFullInChild(input).html
 
