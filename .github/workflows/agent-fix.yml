@@ -58,6 +58,12 @@ jobs:
           labels=$(gh issue view "$ISSUE" --repo "$REPO" --json labels --jq '[.labels[].name] | join(",")')
           case ",$labels," in *,agent-report,*) ;; *) echo "::error::#$ISSUE is not an agent-report"; exit 1 ;; esac
 
+      - name: Check the API key is set
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          [ -n "$ANTHROPIC_API_KEY" ] || { echo "::error::ANTHROPIC_API_KEY is empty or not set. Set it in repo secrets."; exit 1; }
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -90,7 +96,8 @@ jobs:
             --permission-mode dontAsk \
             --allowedTools "Read,Edit,Bash(npm test),Bash(npm test *),Bash(node src/*),Bash(node scripts/*),Bash(ls),Bash(ls *),Bash(grep *),Bash(git grep *),Bash(git diff),Bash(git diff *),Bash(git status)" \
             --output-format json \
-            < ../../.github/fixer/prompt.md > .fixer/claude.json || echo "agent exited non-zero"
+            < ../../.github/fixer/prompt.md > .fixer/claude.json \
+            || { echo "agent exited non-zero"; head -c 600 .fixer/claude.json; echo; }
 
       - name: Verify independently
         id: verify
@@ -223,6 +230,7 @@ jobs:
             echo "[Run log]($RUN_URL)"
           } > "$RUNNER_TEMP/comment.md"
 
-          gh label create "$label" --color d4c5f9 2>/dev/null || true
-          gh issue edit "$ISSUE" --add-label "$label" --remove-label approved-to-fix 2>/dev/null || true
-          gh issue comment "$ISSUE" --body-file "$RUNNER_TEMP/comment.md"
+          # No checkout in this job, so gh needs the repo spelled out.
+          gh label create "$label" --repo "$REPO" --color d4c5f9 2>/dev/null || true
+          gh issue edit "$ISSUE" --repo "$REPO" --add-label "$label" --remove-label approved-to-fix 2>/dev/null || true
+          gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"
