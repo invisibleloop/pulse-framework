@@ -13,7 +13,8 @@
  *   pulse stamp [--route </path>] [--full|--quick]          write .pulse-verified — same check pulse_stamp (MCP) runs
  *   pulse check-bundles                                     inspect public/dist/ bundle contents (requires prior build)
  *   pulse review <file> [--quick]                           run the mechanized review checklist — same check pulse_review (MCP) runs
- *   pulse update       re-copy pulse-ui.css/js from installed package → public/
+ *   pulse update       upgrade @invisibleloop/pulse to latest, then re-copy its assets → public/
+ *                      (--no-install skips the upgrade and only re-copies)
  *   pulse --version    print installed version and exit
  *   pulse -v           alias for --version
  *   pulse --help       show usage and exit
@@ -25,6 +26,7 @@ import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
+import { isInstalledInProject, installCommand, PACKAGE } from './update.js'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -485,6 +487,24 @@ async function runUpdate(root) {
     process.exit(1)
   }
 
+  // Upgrade first, when this CLI is the copy installed in the project. The
+  // running process still holds the old code, so hand the copy step to the
+  // freshly installed binary. A global install or a dev `npm link` is left
+  // alone and just re-copies, as before.
+  const pkgDir = new URL('../..', import.meta.url).pathname.replace(/\/$/, '')
+  if (!args.includes('--no-install') && isInstalledInProject(pkgDir, root)) {
+    const { spawnSync } = await import('child_process')
+    const [cmd, cmdArgs] = installCommand(root)
+    console.log(`\n  Upgrading ${PACKAGE} (${cmd} ${cmdArgs.join(' ')})…\n`)
+    const install = spawnSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
+    if (install.status !== 0) {
+      console.error(`\n  Upgrade failed — nothing changed. Fix the error above, or run \`pulse update --no-install\` to only re-copy assets.\n`)
+      process.exit(install.status || 1)
+    }
+    const next = spawnSync(process.execPath, [path.join(pkgDir, 'src', 'cli', 'index.js'), 'update', '--no-install'], { cwd: root, stdio: 'inherit' })
+    process.exit(next.status ?? 1)
+  }
+
   // Copy assets from the package this CLI binary lives in (import.meta.url).
   // When globally npm-linked to the dev repo, this resolves to dev source.
   // When installed normally, this resolves to the installed version.
@@ -619,7 +639,7 @@ switch (command) {
     ${c.cyan('stamp')}            write .pulse-verified ${c.dim('[--route </path>] [--full|--quick]')}
     ${c.cyan('check-bundles')}    inspect public/dist/ bundle contents ${c.dim('(requires prior build)')}
     ${c.cyan('review')} ${c.dim('<file>')}     run the mechanized review checklist ${c.dim('[--quick]')}
-    ${c.cyan('update')}           re-copy pulse-ui assets from installed package
+    ${c.cyan('update')}           upgrade to the latest version, then re-copy pulse-ui assets ${c.dim('[--no-install]')}
 
   ${c.bold('Options:')}
     ${c.cyan('--agent')} ${c.dim('<name>')}     use specific agent ${c.dim('(claude | copilot)')}
