@@ -203,6 +203,7 @@ fly deploy`, 'bash'))}
 
       ${section('https', 'HTTPS and reverse proxy')}
       <p>Pulse detects TLS automatically. When a request arrives with an <code>x-forwarded-proto: https</code> header or over a direct TLS socket, <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code> is added to the response. All four platforms above forward this header — no Pulse config is needed.</p>
+      <p>Behind a proxy or CDN, also <strong>pin your public origin</strong> with <code>origin: 'https://myapp.com'</code> in <code>pulse.config.js</code>. Without it, canonical links, <code>sitemap.xml</code> and <code>robots.txt</code> are built from the <code>Host</code> and <code>X-Forwarded-*</code> headers, which a client can forge — and a CDN may then cache the forged result for every visitor.</p>
       <p>If running behind nginx for TLS termination:</p>
       ${codeBlock(highlight(`# nginx — TLS termination, proxy to Pulse
 server {
