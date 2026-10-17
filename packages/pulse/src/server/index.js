@@ -614,6 +614,11 @@ export async function createServer(entries, options = {}) {
     staticDir     = null,
     manifest      = null,          // path to manifest.json or plain object
     trailingSlash = 'remove',      // 'remove' | 'add' | 'allow'
+    origin: pinOrigin = null,      // pin the public origin, e.g. 'https://example.com': used for
+                                   // <link rel="canonical">, sitemap.xml and robots.txt INSTEAD of the
+                                   // Host / X-Forwarded-* headers, which a client (or a CDN that ignores
+                                   // Vary) can forge. Recommended in production.
+    host: listenHost = null,       // interface to listen on (default: all). `pulse dev` uses 127.0.0.1.
     extraBody     = '',            // extra HTML injected before </body> on every page
     dev           = false,         // dev mode — show detailed error pages
     store         = null,          // global store definition (pulse.store.js default export)
@@ -652,6 +657,17 @@ export async function createServer(entries, options = {}) {
     agentMode      = false,        // show agent-active indicator in banner
     quiet          = false,        // suppress request logging
   } = options
+
+  // A pinned origin must be a bare http(s) origin; normalise it ("https://example.com/x" -> "https://example.com").
+  let pinnedOrigin = null
+  if (pinOrigin != null) {
+    let u = null
+    try { u = new URL(String(pinOrigin)) } catch { /* rejected below */ }
+    if (!u || (u.protocol !== 'http:' && u.protocol !== 'https:')) {
+      throw new Error(`createServer: origin must be an absolute http(s) URL such as "https://example.com" (got ${JSON.stringify(pinOrigin)})`)
+    }
+    pinnedOrigin = u.origin
+  }
 
   // Resolve URL entries → spec objects, auto-setting hydrate where needed
   const specs = await resolveSpecEntries(entries, root)
@@ -794,7 +810,7 @@ export async function createServer(entries, options = {}) {
   // Sitemap — track the live spec list (updated on hot reload) and surface a
   // startup hint for dynamic routes that can't be enumerated automatically.
   const sitemapEnabled = !!sitemap
-  const sitemapOrigin  = (typeof sitemap === 'object' && sitemap?.origin) ? String(sitemap.origin).replace(/\/$/, '') : null
+  const sitemapOrigin  = ((typeof sitemap === 'object' && sitemap?.origin) ? String(sitemap.origin).replace(/\/$/, '') : null) || pinnedOrigin
   let   allSpecs       = specs
   if (sitemapEnabled && !quiet) {
     const unenumerated = specs.filter(s =>
@@ -1157,7 +1173,7 @@ export async function createServer(entries, options = {}) {
       const canonicalPath = trailingSlash === 'add' && pathname !== '/'
         ? (pathname.endsWith('/') ? pathname : pathname + '/')
         : (pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname)
-      const canonicalBase = `${proto}://${host}${canonicalPath}`
+      const canonicalBase = pinnedOrigin ? `${pinnedOrigin}${canonicalPath}` : `${proto}://${host}${canonicalPath}`
 
       // Raw content spec (RSS, sitemap, JSON API, webhooks) — bypass HTML pipeline
       if (spec.contentType) {
@@ -1261,7 +1277,7 @@ export async function createServer(entries, options = {}) {
   process.on('SIGTERM', shutdown)
   process.on('SIGINT',  shutdown)
 
-  server.listen(port, () => {
+  const onListening = () => {
     import('../cli/logger.js').then(({ banner }) => {
       banner({
         url:       `http://localhost:${port}`,
@@ -1272,7 +1288,9 @@ export async function createServer(entries, options = {}) {
     }).catch(() => {
       console.log(`⚡ Pulse running at http://localhost:${port}`)
     })
-  })
+  }
+  if (listenHost) server.listen(port, listenHost, onListening)
+  else            server.listen(port, onListening)
 
   return {
     server,

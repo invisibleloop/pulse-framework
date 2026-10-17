@@ -2624,6 +2624,65 @@ await test('dev error endpoint rejects cross-site posts and oversized bodies, ac
 
 // ---------------------------------------------------------------------------
 
+console.log('\nPinned origin and listen host\n')
+
+const originPage = { route: '/x', meta: { title: 'X', description: 'x', theme: 'dark' }, view: () => '<main id="main-content">x</main>' }
+const canonOf = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
+// Compare parsed values, not substrings: a substring match cannot tell "https://b.example/x" from "https://evil/?u=https://b.example/x".
+const locsOf   = xml => [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => m[1])
+const linesOf  = txt => txt.split('\n').map(l => l.trim()).filter(Boolean)
+
+await test('origin pins canonical, sitemap and robots.txt, ignoring Host and X-Forwarded-*', async () => {
+  await withServer([originPage], { origin: 'https://www.example.com/ignored/path', sitemap: true, defaultCache: 3600, quiet: true }, async (port) => {
+    const forged = { Host: 'evil.example', 'X-Forwarded-Host': 'evil.example', 'X-Forwarded-Proto': 'http' }
+    const page = await getWith(port, '/x', forged)
+    assert(canonOf(page.body) === 'https://www.example.com/x', `canonical was ${canonOf(page.body)}`)
+    const again = await getWith(port, '/x', { Host: 'other.example' })   // cached
+    assert(canonOf(again.body) === 'https://www.example.com/x', 'cached response must also use the pinned origin')
+    const sitemap = await getWith(port, '/sitemap.xml', forged)
+    assert(JSON.stringify(locsOf(sitemap.body)) === JSON.stringify(['https://www.example.com/x']), `sitemap: ${sitemap.body.slice(0, 200)}`)
+    const robots = await getWith(port, '/robots.txt', forged)
+    assert(linesOf(robots.body).includes('Sitemap: https://www.example.com/sitemap.xml'), `robots: ${robots.body}`)
+    assert(linesOf(robots.body).every(l => !/evil\.example/.test(l)), 'robots must not mention the forged host')
+  })
+})
+
+await test('an explicit sitemap.origin still wins over origin', async () => {
+  await withServer([originPage], { origin: 'https://a.example', sitemap: { origin: 'https://b.example' }, quiet: true }, async (port) => {
+    const sitemap = await getWith(port, '/sitemap.xml')
+    assert(JSON.stringify(locsOf(sitemap.body)) === JSON.stringify(['https://b.example/x']), sitemap.body.slice(0, 200))
+  })
+})
+
+await test('without origin, behaviour is unchanged (headers are used)', async () => {
+  await withServer([originPage], { quiet: true }, async (port) => {
+    const page = await getWith(port, '/x', { Host: 'www.mysite.com' })
+    assert(canonOf(page.body) === 'http://www.mysite.com/x', canonOf(page.body))
+  })
+})
+
+await test('an invalid origin is rejected at startup, not at request time', async () => {
+  for (const bad of ['example.com', 'ftp://example.com', 'javascript:alert(1)', '']) {
+    let threw = null
+    try { const { server } = await createServer([originPage], { port: nextPort++, origin: bad, quiet: true }); server.close() } catch (e) { threw = e }
+    // '' is "not set" semantics only for null/undefined — an empty string is invalid
+    assert(threw && /origin must be an absolute http\(s\) URL/.test(threw.message), `"${bad}" should be rejected`)
+  }
+})
+
+await test('host: "127.0.0.1" listens on loopback only', async () => {
+  await withServer([originPage], { host: '127.0.0.1', quiet: true }, async (port) => {
+    assert((await get(port, '/x')).status === 200)
+  })
+  const port = nextPort++
+  const { server } = await createServer([originPage], { port, host: '127.0.0.1', quiet: true })
+  await new Promise(r => server.once('listening', r))
+  try { assert(server.address().address === '127.0.0.1', `bound to ${server.address().address}`) }
+  finally { server.closeAllConnections?.(); await new Promise(r => server.close(r)) }
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)

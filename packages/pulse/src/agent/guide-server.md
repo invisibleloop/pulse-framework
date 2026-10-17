@@ -371,6 +371,19 @@ export default {
 }
 ```
 
+## Production behind a proxy — pin the public origin
+
+By default Pulse builds `<link rel="canonical">`, `sitemap.xml` and `robots.txt` from the request's `Host`, `X-Forwarded-Host` and `X-Forwarded-Proto` headers. Anyone can send those headers, and a CDN that ignores `Vary` will cache the result for everyone — one forged request can point every visitor's canonical URL at another domain. For a real deployment, pin the origin:
+
+```js
+// pulse.config.js
+export default {
+  origin: 'https://example.com',   // canonical + sitemap + robots use this; headers are ignored
+}
+```
+
+It must be an absolute http(s) URL (a bad value fails at startup). `sitemap: { origin }` still wins for the sitemap if you set both. Also set `host: '127.0.0.1'` in `pulse.config.js` if a reverse proxy on the same machine is the only thing that should reach the server. `pulse dev` already listens on `127.0.0.1`; use `pulse dev --host 0.0.0.0` for phone testing or a container.
+
 ## Health check endpoint
 
 Pulse exposes a built-in health check at `/healthz` by default. It responds **before** `onRequest`, static files, and route matching — so load balancers always get a response.

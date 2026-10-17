@@ -36,6 +36,21 @@ export interface ServerOptions {
    */
   trailingSlash?: 'remove' | 'add' | 'allow'
 
+  /**
+   * Pin the site's public origin, e.g. `'https://example.com'`. Used for `<link rel="canonical">`,
+   * `sitemap.xml` and `robots.txt` INSTEAD of the `Host` / `X-Forwarded-Host` / `X-Forwarded-Proto`
+   * headers, which a client — or a CDN that ignores `Vary` — can forge to poison those URLs.
+   * Recommended in production. An explicit `sitemap.origin` still takes precedence for the sitemap.
+   * Must be an absolute http(s) URL; anything after the origin is dropped.
+   */
+  origin?: string
+
+  /**
+   * Network interface to listen on. Default: all interfaces (what a server behind a proxy or in
+   * a container needs). `pulse dev` passes `'127.0.0.1'` unless told otherwise.
+   */
+  host?: string
+
   /** Maximum request body size in bytes. Default 1 MB. Requests exceeding this receive a 413. */
   maxBody?: number
 

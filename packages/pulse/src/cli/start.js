@@ -48,7 +48,7 @@ let csp          = null
 let passthrough  = {}
 
 // Server options forwarded verbatim from pulse.config.js — keep in sync with dev.js
-const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody']
+const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'host']
 
 const configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(configPath)) {

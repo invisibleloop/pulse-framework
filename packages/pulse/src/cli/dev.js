@@ -21,6 +21,7 @@ import * as log         from './logger.js'
 const args     = process.argv.slice(2)
 const rootArg  = args.indexOf('--root')
 const portArg  = args.indexOf('--port')
+const hostArg  = args.indexOf('--host')
 
 const ROOT = rootArg !== -1
   ? path.resolve(args[rootArg + 1])
@@ -295,6 +296,10 @@ const reloadScript = (nonce) => `<script nonce="${nonce}">
 
 const { updateSpecs, updateStore } = await createServer(specs, {
   port:      PORT,
+  // Loopback by default: the dev server has dev-only endpoints and stack-trace error
+  // pages, and should not be reachable from the LAN. `--host 0.0.0.0` (or `host` in
+  // pulse.config.js) opts in — e.g. for testing on a phone, or inside a container.
+  host:      (hostArg !== -1 && args[hostArg + 1]) || _config.host || '127.0.0.1',
   stream:    true,
   staticDir: fs.existsSync(PUBLIC_DIR) ? PUBLIC_DIR : null,
   manifest:  {},        // never use a build manifest in dev — always serve source files
@@ -305,7 +310,7 @@ const { updateSpecs, updateStore } = await createServer(specs, {
   ...(_config.csp ? { csp: _config.csp } : {}),
   // Server options forwarded verbatim from pulse.config.js so dev behaves like
   // production — keep in sync with start.js PASSTHROUGH_OPTIONS
-  ...(['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody'].reduce(
+  ...(['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin'].reduce(
     (acc, k) => (_config[k] !== undefined ? { ...acc, [k]: _config[k] } : acc), {})),
 
   onRequest(req, res) {
