@@ -27,10 +27,11 @@ jobs:
 
       - run: npm test
 
-  # Pushes the version bump and publishes. It pushes to main with this job's own
-  # short-lived GITHUB_TOKEN (the github-actions app is a bypass actor on the `main`
-  # ruleset), so there is no long-lived admin token. It installs no dependencies and
-  # runs no test code; the only repo code it runs is scripts/release-version.js.
+  # Bumps the version, pushes it to main and publishes. Pushing to main needs the
+  # ruleset's admin bypass, which a personal repo can only grant to a person, so
+  # RELEASE_PAT is a fine-grained token (this repo only, Contents: read/write, short
+  # expiry). It is exposed to ONE step, a bare `git push`; no repo code, tests or
+  # install scripts run while it is set. npm publish uses OIDC, not a token.
   release:
     needs: test
     runs-on: ubuntu-latest
@@ -43,6 +44,8 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -53,10 +56,7 @@ jobs:
       - name: Install an npm that supports trusted publishing
         run: npm install -g npm@11
 
-      # No npm token here on purpose: `npm publish` authenticates with the OIDC
-      # identity of this workflow (permissions.id-token), configured as a trusted
-      # publisher for @invisibleloop/pulse on npmjs.com.
-      - name: Bump version from conventional commits, then publish
+      - name: Bump the version from conventional commits and commit it
         run: |
           cd packages/pulse
           VERSION=$(node scripts/release-version.js)
@@ -72,7 +72,19 @@ jobs:
           git add packages/pulse/package.json package-lock.json packages/pulse/public/.pulse-ui-version
           git commit -m "chore: release $VERSION [skip ci]" || true
           git pull --rebase
-          git push
+
+      # The only step that sees the token, and it runs nothing but git.
+      - name: Push the release commit to main
+        env:
+          RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
+          REPO:        ${{ github.repository }}
+        run: git push "https://x-access-token:${RELEASE_PAT}@github.com/${REPO}.git" HEAD:main
+
+      # No npm token here on purpose: `npm publish` authenticates with the OIDC
+      # identity of this workflow (permissions.id-token), configured as a trusted
+      # publisher for @invisibleloop/pulse on npmjs.com.
+      - name: Publish to npm
+        run: |
           cd packages/pulse
           npm publish --provenance --access public
 
