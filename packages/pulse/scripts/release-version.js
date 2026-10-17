@@ -11,7 +11,7 @@
  *   feat:                                       →  minor
  *   anything else (fix, perf, chore, docs…)    →  patch
  *
- * Scoped to `-- packages/pulse`: this repo is a monorepo where sibling
+ * Scoped to this package's directory (root-anchored): this repo is a monorepo where sibling
  * packages could share the same git history — without the path filter, a
  * commit that only touches a sibling package would incorrectly drive a
  * version bump for the @invisibleloop/pulse framework package.
@@ -19,7 +19,7 @@
  * Usage: node scripts/release-version.js (run from packages/pulse/)
  */
 
-import { execSync } from 'child_process'
+import { execFileSync } from 'child_process'
 import { readFileSync } from 'fs'
 import path from 'path'
 
@@ -28,12 +28,19 @@ const pkg     = JSON.parse(readFileSync(path.join(PKG_DIR, 'package.json'), 'utf
 const [major, minor, patch] = pkg.version.split('.').map(Number)
 
 // Collect commit subjects since the last release commit that touched this
-// package. git log outputs newest-first; we stop at the first release
-// commit we see. Must be run with cwd inside the repo (any subdirectory) —
-// `-- packages/pulse` is resolved relative to the repo root by git itself.
+// package. git log outputs newest-first; we stop at the first release commit we
+// see.
+//
+// The path filter is anchored at the repository root (":(top)…"). A plain
+// `-- packages/pulse` is resolved relative to the CURRENT DIRECTORY, and the release
+// workflow runs this from packages/pulse — so it matched nothing, the log was always
+// empty, and every release was a patch: feat: and breaking commits never bumped the
+// minor/major version.
 let commits = []
 try {
-  const log = execSync('git log --pretty=format:%s -- packages/pulse', { encoding: 'utf8' }).trim()
+  const top = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: PKG_DIR, encoding: 'utf8' }).trim()
+  const rel = path.relative(top, PKG_DIR) || '.'
+  const log = execFileSync('git', ['log', '--pretty=format:%s', '--', `:(top)${rel}`], { cwd: PKG_DIR, encoding: 'utf8' }).trim()
   for (const line of log.split('\n')) {
     if (/^chore: release \d+\.\d+\.\d+/.test(line)) break
     if (line) commits.push(line)
