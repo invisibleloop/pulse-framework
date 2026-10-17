@@ -8,3 +8,6 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22
+      # Pins canonical links to the real domain instead of trusting forwarded headers.
+      - key: SITE_ORIGIN
+        value: https://pulseframework.dev
