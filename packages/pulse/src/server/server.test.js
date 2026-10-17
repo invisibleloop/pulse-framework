@@ -2628,6 +2628,9 @@ console.log('\nPinned origin and listen host\n')
 
 const originPage = { route: '/x', meta: { title: 'X', description: 'x', theme: 'dark' }, view: () => '<main id="main-content">x</main>' }
 const canonOf = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
+// Compare parsed values, not substrings: a substring match cannot tell "https://b.example/x" from "https://evil/?u=https://b.example/x".
+const locsOf   = xml => [...xml.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => m[1])
+const linesOf  = txt => txt.split('\n').map(l => l.trim()).filter(Boolean)
 
 await test('origin pins canonical, sitemap and robots.txt, ignoring Host and X-Forwarded-*', async () => {
   await withServer([originPage], { origin: 'https://www.example.com/ignored/path', sitemap: true, defaultCache: 3600, quiet: true }, async (port) => {
@@ -2637,16 +2640,17 @@ await test('origin pins canonical, sitemap and robots.txt, ignoring Host and X-F
     const again = await getWith(port, '/x', { Host: 'other.example' })   // cached
     assert(canonOf(again.body) === 'https://www.example.com/x', 'cached response must also use the pinned origin')
     const sitemap = await getWith(port, '/sitemap.xml', forged)
-    assert(sitemap.body.includes('<loc>https://www.example.com/x</loc>') && !sitemap.body.includes('evil.example'), `sitemap: ${sitemap.body.slice(0, 200)}`)
+    assert(JSON.stringify(locsOf(sitemap.body)) === JSON.stringify(['https://www.example.com/x']), `sitemap: ${sitemap.body.slice(0, 200)}`)
     const robots = await getWith(port, '/robots.txt', forged)
-    assert(robots.body.includes('Sitemap: https://www.example.com/sitemap.xml') && !robots.body.includes('evil.example'), `robots: ${robots.body}`)
+    assert(linesOf(robots.body).includes('Sitemap: https://www.example.com/sitemap.xml'), `robots: ${robots.body}`)
+    assert(linesOf(robots.body).every(l => !/evil\.example/.test(l)), 'robots must not mention the forged host')
   })
 })
 
 await test('an explicit sitemap.origin still wins over origin', async () => {
   await withServer([originPage], { origin: 'https://a.example', sitemap: { origin: 'https://b.example' }, quiet: true }, async (port) => {
     const sitemap = await getWith(port, '/sitemap.xml')
-    assert(sitemap.body.includes('https://b.example/x'), sitemap.body.slice(0, 200))
+    assert(JSON.stringify(locsOf(sitemap.body)) === JSON.stringify(['https://b.example/x']), sitemap.body.slice(0, 200))
   })
 })
 
