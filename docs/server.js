@@ -39,6 +39,10 @@ await createServer(
     staticDir:    new URL('./public', import.meta.url).pathname,
     root:         new URL('.', import.meta.url),
     defaultCache: true,
+    // Pin the public origin so canonical links never come from the Host / X-Forwarded-Host
+    // headers (a client or CDN can forge them). Set SITE_ORIGIN on the host; unset in local
+    // dev, where the request's own host is what you want.
+    ...(process.env.SITE_ORIGIN ? { origin: process.env.SITE_ORIGIN } : {}),
     analytics:    'https://quietlytics.app/tracker.js',  // docs site only — opt-in, off by default
     csp: {
       'img-src':    ['https://picsum.photos', 'https://fastly.picsum.photos', 'https://images.unsplash.com'],
