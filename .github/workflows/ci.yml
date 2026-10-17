@@ -26,4 +26,4 @@ jobs:
 
       # Feedback Worker and the agent-fix patch validator live outside the
       # npm workspace, so npm test does not cover them.
-      - run: node --test worker/feedback/index.test.js .github/fixer/validate-patch.test.js
+      - run: node --test worker/feedback/index.test.js .github/fixer/validate-patch.test.js .github/fixer/key-proxy.test.js

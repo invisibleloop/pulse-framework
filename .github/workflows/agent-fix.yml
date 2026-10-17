@@ -80,6 +80,27 @@ jobs:
 
       - run: npm ci
 
+      # The real key lives only in this proxy, which runs as a different OS user and reads
+      # the key from stdin. The agent below gets a placeholder and talks to the proxy, so
+      # nothing it runs (including `npm test` on code it wrote) can read the key.
+      - name: Start the key proxy
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PROXY_PORT: "8787"
+        run: |
+          sudo install -m 0755 .github/fixer/key-proxy.js /usr/local/lib/key-proxy.mjs
+          # A here-string, not `printf | sudo`: the shell forks straight into sudo, so no
+          # lingering process of this user keeps the key in its environment.
+          sudo --preserve-env=PROXY_PORT -u nobody -H \
+            setsid "$(command -v node)" /usr/local/lib/key-proxy.mjs \
+            <<< "$ANTHROPIC_API_KEY" > "$RUNNER_TEMP/key-proxy.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PROXY_PORT/" || true)
+            [ "$code" = 404 ] && exit 0
+            sleep 0.5
+          done
+          echo "::error::key proxy did not start"; cat "$RUNNER_TEMP/key-proxy.log" || true; exit 1
+
       # The report goes into a file the model reads — never into a command line,
       # a prompt string, or an expression.
       - name: Fetch the report
@@ -97,12 +118,9 @@ jobs:
       - name: Run the fixer agent
         working-directory: packages/pulse
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          # NOTE: commands the agent runs inherit this key. CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
-          # hides it locally, but on Linux it needs Claude Code's sandbox (bubblewrap + socat
-          # + a relaxed AppArmor userns setting) and that failed on the hosted runner
-          # (`bwrap: Can't mkdir /home/node_modules`), which made every run end fix-failed.
-          # Do not re-add it without running the whole fixer on a runner first.
+          # Placeholder: the real key is held by the proxy started above, as another user.
+          ANTHROPIC_API_KEY: sk-ant-api03-placeholder-the-real-key-is-in-the-proxy
+          ANTHROPIC_BASE_URL: http://127.0.0.1:8787
         run: |
           npx --yes "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" --bare -p \
             --model "$FIXER_MODEL" \
