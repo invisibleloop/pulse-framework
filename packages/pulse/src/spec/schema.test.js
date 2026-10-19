@@ -40,6 +40,13 @@ function assertValid(spec) {
 
 console.log('\nSpec validation\n')
 
+test('every result carries a warnings array, including the early returns (raw-response and non-object specs)', () => {
+  const raw = validateSpec({ route: '/hook', contentType: 'text/plain', state: {}, render: () => 'ok' })
+  assert(raw.valid === true, 'a valid raw-response spec should be valid')
+  assert(Array.isArray(raw.warnings), 'raw-response result must include warnings: []')
+  assert(Array.isArray(validateSpec(null).warnings), 'non-object result must include warnings: []')
+})
+
 test('rejects non-object', () => {
   assertErrors(null, 'must be a plain object')
   assertErrors('string', 'must be a plain object')
