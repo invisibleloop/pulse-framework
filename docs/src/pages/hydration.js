@@ -21,6 +21,21 @@ export default {
       ${h1('Hydration')}
       ${lead('Hydration in Pulse is automatic. Specs with <code>mutations</code>, <code>actions</code>, or <code>persist</code> are hydrated automatically — Pulse binds events to the server-rendered HTML without re-rendering it. Purely server-rendered specs get zero JavaScript sent to the browser.')}
 
+      ${section('what-it-means', 'What "hydration" means in Pulse')}
+      <p>Pulse uses the word in its general sense: making server-rendered HTML interactive. It works differently from hydration in React-based frameworks such as Next.js:</p>
+      ${table(
+        ['', 'Pulse', 'React / Next.js'],
+        [
+          ['On load', 'Binds event listeners to the HTML the server sent. Nothing is rebuilt.', 'Rebuilds the component tree in the browser and reconciles it with the server HTML.'],
+          ['Mismatches', 'None possible at load: the initial render is skipped, so the server HTML is never compared with anything.', 'The client render is compared with the server HTML; differences produce warnings and can force a re-render.'],
+          ['What updates the page', 'After a state change, <code>view()</code> runs and the result is morphed into the existing DOM. There is no virtual DOM.', 'Re-rendering a virtual tree and reconciling it.'],
+          ['What ships', 'Per page: a spec with <code>mutations</code>, <code>actions</code>, <code>persist</code> or <code>store</code> gets one bundle; every other page ships no JavaScript.', 'Per client component; server components ship none.'],
+          ['Granularity', 'The whole page hydrates, with one set of delegated listeners on the root.', 'Each client component hydrates, and can be deferred (Suspense, lazy loading).'],
+        ]
+      )}
+      <p>One case differs: if a page restores <a href="/persist">persisted state</a> on load, Pulse renders once straight away so the restored values appear, instead of waiting for the first mutation.</p>
+      ${callout('note', 'Pulse does not use resumability or islands. The page\'s own bundle loads and <code>view()</code> runs in the browser for later updates. What stays small is the work done on load: nothing is rebuilt, and pages without client behaviour ship no JavaScript.')}
+
       ${section('enabling', 'How hydration works')}
       <p>Pass spec files as <code>URL</code> objects to <code>createServer</code>. Pulse detects whether each spec needs client-side interactivity and, if so, derives the browser-importable path automatically — no <code>hydrate</code> field needed in the spec:</p>
       ${codeBlock(highlight(`// server.js
