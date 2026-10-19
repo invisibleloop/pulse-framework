@@ -28,8 +28,10 @@ function write(dir, rel, text) {
   fs.writeFileSync(path.join(dir, rel), text)
 }
 
-function project() {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-dev-reload-'))
+function project(...below) {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-dev-reload-'))
+  const dir  = path.join(base, ...below)
+  fs.mkdirSync(dir, { recursive: true })
   write(dir, 'src/lib/word.js', "import { suffix } from './deep.js'\nexport const word = 'one' + suffix\n")
   write(dir, 'src/lib/deep.js', "export const suffix = '-a'\n")
   write(dir, 'src/components/tag.js', "export const tag = () => 'tag-1'\n")
@@ -43,7 +45,7 @@ function project() {
     "export default { route: '/', meta: { title: 'T', description: 'd', theme: 'dark' },",
     "  view: () => `<main id=\"main-content\"><h1>${word}</h1><p id=\"tag\">${tag()}</p><i id=\"loads\">${loads()}</i></main>` }",
   ].join('\n'))
-  return dir
+  return { dir, base }
 }
 
 async function get(port) {
@@ -58,8 +60,8 @@ async function until(fn, what) {
   assert.fail(`timed out waiting for ${what}; last: ${JSON.stringify(last?.value)}`)
 }
 
-test('editing a module a page imports (direct, nested, component) shows up without a restart', async () => {
-  const dir  = project()
+async function scenario(...below) {
+  const { dir, base } = project(...below)
   const port = await freePort()
   const proc = spawn(process.execPath, [DEV, '--root', dir, '--port', String(port)], { stdio: 'ignore' })
   try {
@@ -80,6 +82,11 @@ test('editing a module a page imports (direct, nested, component) shows up witho
     assert.equal(afterComponent.loads, first.loads, 'a node_modules package was re-evaluated on reload')
   } finally {
     proc.kill('SIGKILL')
-    fs.rmSync(dir, { recursive: true, force: true })
+    fs.rmSync(base, { recursive: true, force: true })
   }
-})
+}
+
+test('editing a module a page imports (direct, nested, component) shows up without a restart', () => scenario())
+
+// A path with a space (URLs are percent-encoded) and one under a node_modules folder.
+test('hot reload also works when the project path has a space or sits under node_modules', () => scenario('my app', 'node_modules', 'site'))

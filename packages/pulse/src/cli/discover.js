@@ -14,6 +14,7 @@
 
 import fs   from 'fs'
 import path from 'path'
+import { pathToFileURL } from 'url'
 
 /**
  * Derive a route from a file path relative to the pages directory.
@@ -136,7 +137,7 @@ export async function loadStore(projectRoot, cacheBust = null) {
   const storePath = path.join(projectRoot, 'pulse.store.js')
   if (!fs.existsSync(storePath)) return null
 
-  const url = 'file://' + storePath + (cacheBust ? `?t=${cacheBust}` : '')
+  const url = pathToFileURL(storePath).href + (cacheBust ? `?t=${cacheBust}` : '')
   const mod = await import(url)
   const def = mod.default
   if (!def || typeof def !== 'object') {
