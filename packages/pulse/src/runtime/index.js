@@ -598,6 +598,9 @@ function morphKeyed(cur, nxtEls) {
 }
 
 function morphAttrs(cur, nxt) {
+  // What the previous render said this form control's value/checkedness was — read before the
+  // attributes below overwrite it. data-preserve compares against it (see syncFormProperty).
+  const prevRendered = renderedFormState(cur)
   for (const { name, value } of Array.from(nxt.attributes)) {
     if (cur.getAttribute(name) !== value) {
       // Trusted Types: script[src] is a TrustedScriptURL sink
@@ -612,7 +615,7 @@ function morphAttrs(cur, nxt) {
     if (cur.tagName === 'DIALOG' && name === 'open') continue
     if (!nxt.hasAttribute(name)) cur.removeAttribute(name)
   }
-  syncFormProperty(cur, nxt)
+  syncFormProperty(cur, nxt, prevRendered)
 }
 
 /**
@@ -631,17 +634,31 @@ function morphAttrs(cur, nxt) {
  * has its own guidance (use FormData, not a controlled value) but this
  * covers every other legitimate re-render source.
  */
-function syncFormProperty(cur, nxt) {
+function renderedFormState(el) {
+  const tag = el.tagName
+  if (tag === 'TEXTAREA') return el.textContent
+  if (tag === 'INPUT') return (el.type === 'checkbox' || el.type === 'radio') ? el.hasAttribute('checked') : (el.getAttribute('value') ?? '')
+  return null
+}
+
+function syncFormProperty(cur, nxt, prevRendered = null) {
   const tag = cur.tagName
+  // data-preserve: the view only changes this control when the value it *renders* changes. A re-render
+  // that renders the same value as last time (a button elsewhere on the page, a counter) leaves what
+  // the user typed or ticked alone. Without it every re-render resets a non-focused control to the
+  // rendered value — fine for forms that clear on submit, destructive for a long-form editor.
+  const preserve = nxt.hasAttribute('data-preserve')
   if (tag === 'INPUT' || tag === 'TEXTAREA') {
     const type = cur.type
     if (type === 'checkbox' || type === 'radio') {
       const next = nxt.hasAttribute('checked')
+      if (preserve && next === prevRendered) return
       if (cur.checked !== next) cur.checked = next
     } else if (document.activeElement !== cur) {
       // A textarea has no value attribute: its default value is its child text, which
       // nxt.value reads (and which the HTML parser has already normalised).
       const next = tag === 'TEXTAREA' ? nxt.value : (nxt.getAttribute('value') ?? '')
+      if (preserve && next === prevRendered) return
       if (cur.value !== next) cur.value = next
     }
   } else if (tag === 'SELECT' && document.activeElement !== cur) {

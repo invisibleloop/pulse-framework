@@ -40,6 +40,8 @@ class FakeElement {
   // input's is its value attribute; assigning makes the live value independent of both.
   get value()       { return this._value ?? (this.nodeName === 'TEXTAREA' ? this.textContent : (this._attrs.value ?? '')) }
   set value(v)      { this._value = String(v) }
+  get checked()     { return this._checked ?? ('checked' in this._attrs) }
+  set checked(v)    { this._checked = !!v }
 
   // ---- child access ----
   get childNodes() { return this._children }
@@ -364,6 +366,64 @@ test('an input still follows its value attribute', () => {
   inputOf(el).value = 'typed'
   instance.dispatch('inc')
   assert(inputOf(el).value === 'abc', `got: ${JSON.stringify(inputOf(el).value)}`)
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\ndata-preserve keeps what the user typed\n')
+
+const editorSpec = {
+  route: '/editor',
+  state: { n: 0, text: 'draft', title: 'T', done: false },
+  view:  (s) => `<main><button data-event="inc">saves ${s.n}</button>`
+              + `<textarea data-preserve="" aria-label="body">${s.text}</textarea>`
+              + `<input data-preserve="" name="title" value="${s.title}"></input>`
+              + `<input data-preserve="" type="checkbox" name="done"${s.done ? ' checked' : ''}></input></main>`,
+  mutations: {
+    inc:      (s) => ({ n: s.n + 1 }),
+    setText:  (_, text)  => ({ text }),
+    setTitle: (_, title) => ({ title }),
+    setDone:  (_, done)  => ({ done }),
+  },
+}
+const field = (el, i) => el.childNodes[0].childNodes[i]
+
+test('data-preserve: an unrelated re-render leaves typed text, a typed title and a ticked box alone', () => {
+  const el = new FakeElement('div')
+  const instance = mount(editorSpec, el)
+  field(el, 1).value = 'a long paragraph the user wrote'
+  field(el, 2).value = 'My title'
+  field(el, 3).checked = true
+  instance.dispatch('inc')
+  assert(field(el, 1).value === 'a long paragraph the user wrote', `textarea: ${JSON.stringify(field(el, 1).value)}`)
+  assert(field(el, 2).value === 'My title', `input: ${JSON.stringify(field(el, 2).value)}`)
+  assert(field(el, 3).checked === true, 'checkbox was unticked')
+})
+
+test('data-preserve: when the rendered value itself changes, the control follows it', () => {
+  const el = new FakeElement('div')
+  const instance = mount(editorSpec, el)
+  field(el, 1).value = 'typed'; field(el, 2).value = 'typed'
+  instance.dispatch('setText', 'from state')
+  instance.dispatch('setTitle', 'new title')
+  instance.dispatch('setDone', true)     // rendered unchecked -> checked
+  field(el, 3).checked = false           // the user unticks it
+  instance.dispatch('setDone', false)    // rendered checked -> unchecked
+  assert(field(el, 1).value === 'from state', `textarea: ${JSON.stringify(field(el, 1).value)}`)
+  assert(field(el, 2).value === 'new title', `input: ${JSON.stringify(field(el, 2).value)}`)
+  assert(field(el, 3).checked === false, 'checkbox should follow the rendered checked state')
+  field(el, 3).checked = true            // ticked again by the user; the rendered state (false) is unchanged
+  instance.dispatch('inc')
+  assert(field(el, 3).checked === true, 'an unchanged rendered state must not untick it')
+})
+
+test('without data-preserve a re-render still resets a non-focused control (existing behaviour)', () => {
+  const el = new FakeElement('div')
+  const instance = mount(notesSpec, el)
+  textareaOf(el).value = 'typed'
+  inputOf(el).value    = 'typed'
+  instance.dispatch('inc')
+  assert(textareaOf(el).value === 'hello world' && inputOf(el).value === 'abc', 'unmarked controls must keep resetting')
 })
 
 // ---------------------------------------------------------------------------

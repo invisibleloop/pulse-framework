@@ -120,6 +120,7 @@ mutations: {
   <input name="email" type="email">
   <button>Submit</button>
 </form>`, 'html'))}
+      ${callout('note', 'A re-render resets every non-focused form control to the value the view renders, so a mutation triggered by a button elsewhere on the page can wipe text the user has typed. Add <code>data-preserve</code> to a <code>&lt;textarea&gt;</code>, <code>&lt;input&gt;</code> or checkbox to keep what the user entered whenever the value the view renders has not changed — use it for long-form editors. The control still follows the view if the rendered value changes. Leave it off forms that should clear after submitting.')}
       ${callout('tip', 'Mutations are the right tool for binary UI state (toggles, step counters, tab selections) and controls where a re-render on each change is acceptable — such as live character counters or filtered lists. For form submission, use actions.')}
     `,
   }),
