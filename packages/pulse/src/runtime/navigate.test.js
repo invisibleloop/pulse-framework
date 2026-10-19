@@ -240,6 +240,43 @@ await test('the same, for a streamed navigation response', async () => {
   assert.equal(root.innerHTML, '<p>static</p>')
 })
 
+await test('a streamed response cut off after the metadata leaves the old page working (nothing destroyed before the HTML arrives)', async () => {
+  const calls = []
+  const { click, nav, root } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  root.innerHTML = '<p>old page</p>'
+  nav.setMount({ destroy: (opts) => calls.push(opts) })
+  global.fetch = async () => streamResponse([{ type: 'meta', hydrate: null, title: 'Static', styles: [], scripts: [] }])
+  click(clickEvent({ href: '/static' }))
+  await sleep(60)
+  assert.deepEqual(calls, [], 'the old instance must survive a response that never delivers a page')
+  assert.equal(root.innerHTML, '<p>old page</p>')
+})
+
+await test('the previous mount is destroyed immediately before the new HTML is swapped in, while the old DOM is still there', async () => {
+  let seenDuringDestroy = null
+  const { click, nav, root } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  root.innerHTML = '<p>old page</p>'
+  nav.setMount({ destroy: () => { seenDuringDestroy = root.innerHTML } })
+  global.fetch = async () => staticStream()
+  click(clickEvent({ href: '/static' }))
+  await sleep(60)
+  assert.equal(seenDuringDestroy, '<p>old page</p>')
+  assert.equal(root.innerHTML, '<p>static</p>')
+})
+
+await test('a destroy() that throws still clears the stale reference, so it is not called twice', async () => {
+  let calls = 0
+  const { click, nav } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  nav.setMount({ destroy: () => { calls++; throw new Error('boom') } })
+  const prevLocation = global.location
+  global.fetch = async () => jsonResponse({ html: '<p>static</p>', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/one' })); await sleep(60)   // throws inside navigate -> falls back to a full load
+  global.fetch = async () => jsonResponse({ html: '<p>static 2</p>', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/two' })); await sleep(60)
+  assert.equal(calls, 1, 'the failed destroy must not be retried on the next navigation')
+  global.location = prevLocation
+})
+
 await test('after a static page nothing is left to destroy, and the next hydrated page mounts normally', async () => {
   const events = []
   const { click, nav } = setup({ mountFn: () => { events.push('mount'); return { destroy: () => events.push('destroy next') } } })
