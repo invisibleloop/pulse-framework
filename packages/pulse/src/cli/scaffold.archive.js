@@ -605,7 +605,7 @@ Rules:
 Every page must be fully navigable by keyboard alone.
 
 **Structure**
-- Wrap page content in \`<main id="main-content">\` — the skip link injected by the framework targets this id
+- Wrap page content in \`<main id="main-content">\` — a skip link targets this id (add your own to the layout; the framework only injects a fallback on 404s and form re-renders)
 - Use semantic elements: \`<nav>\`, \`<main>\`, \`<header>\`, \`<footer>\`, \`<section>\`, \`<article>\`, \`<aside>\`
 - One \`<h1>\` per page — the primary heading that describes the current page
 
@@ -896,7 +896,7 @@ Threshold merge order: **global config → environment override → per-route ov
 - **Redirect loops** — if \`/dashboard\` guards redirect to \`/login\`, and \`/login\` guards redirect authenticated users to \`/dashboard\`, test both directions to confirm there is no loop.
 
 ### Performance & Lighthouse
-- **Missing \`<main id="main-content">\`** — the framework injects a skip link targeting \`#main-content\` on every page. A missing element breaks the skip link and fails Lighthouse Accessibility.
+- **Missing \`<main id="main-content">\`** — skip links target \`#main-content\`. A missing element breaks the skip link and fails Lighthouse Accessibility.
 - **Multiple \`<h1>\` elements** — one \`<h1>\` per page. Multiple at the same level fail Lighthouse Accessibility.
 - **Images without \`width\` and \`height\`** — omitting dimensions prevents the browser from reserving space, causing layout shift and a non-zero CLS. Always provide both.
 - **Colour contrast** — \`#888\` on \`#111\` is the practical minimum for muted text that passes WCAG AA. Lighter greys will fail. Check new colour tokens before committing.
@@ -909,7 +909,7 @@ Threshold merge order: **global config → environment override → per-route ov
 ## Rules the agent must follow
 
 - **Never set \`hydrate\`** — the framework sets it automatically.
-- **Always wrap page content in \`<main id="main-content">\`** — the framework injects a skip link targeting this id on every page.
+- **Always wrap page content in \`<main id="main-content">\`** — skip links target this id.
 - **Never use \`data-event\` on text inputs** to mirror value into state. It destroys focus on every keystroke. Use uncontrolled inputs and read values from \`FormData\` in \`action.onStart\` instead. For client-side filtering/search, render all items in the HTML and use an inline \`<script>\` to show/hide elements — no state or re-render needed.
 - **Never add \`<script>\` tags manually** — hydration is handled by the framework.
 - **Never add external npm packages** for client-side behaviour — express it in the spec.

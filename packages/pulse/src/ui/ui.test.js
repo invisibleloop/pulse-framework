@@ -1155,3 +1155,19 @@ test('pulse-ui.css: form controls are at least 16px on touch devices (iOS focus-
 })
 
 console.log('✓ All UI component tests passed')
+
+// The server injects <a class="pulse-skip-link"> on buffered responses (404, POST re-render).
+// Pages load pulse-ui.css, so it must hide the link until focus or it shows as a plain link (#161).
+test('pulse-ui.css hides the injected .pulse-skip-link until it is focused', () => {
+  const css = readFileSync(new URL('../../public/pulse-ui.css', import.meta.url), 'utf8')
+  const base  = css.match(/\.pulse-skip-link\s*\{([^}]*)\}/)?.[1] ?? ''
+  const focus = css.match(/\.pulse-skip-link:focus\s*\{([^}]*)\}/)?.[1] ?? ''
+  assert.match(base, /position:\s*absolute/)
+  assert.match(base, /left:\s*-9999px/)
+  assert.match(focus, /position:\s*fixed/)
+  assert.match(focus, /left:\s*1rem/)
+  // Hidden for sighted users but still focusable and in the accessibility tree:
+  // display:none / visibility:hidden would make it unreachable by keyboard.
+  assert.doesNotMatch(base, /display:\s*none|visibility:\s*hidden/)
+  assert.doesNotMatch(focus, /display:\s*none|visibility:\s*hidden|left:\s*-/)
+})
