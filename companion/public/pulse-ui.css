@@ -3026,3 +3026,9 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   line-height: 0;
 }
 
+/* ─── Framework skip link ───────────────────────────────────────────────────
+ * Injected by the server's buffered render path (404s, POST re-renders, stream: false).
+ * Hidden until keyboard focus, like the one in pulse.css — pages that load only
+ * pulse-ui.css must not see it as a plain link at the top of the page. */
+.pulse-skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.pulse-skip-link:focus{position:fixed;left:1rem;top:1rem;width:auto;height:auto;padding:.5rem 1rem;background:#000;color:#fff;font-size:1rem;font-weight:600;border-radius:4px;text-decoration:none;z-index:9999;outline:3px solid #fff;outline-offset:2px}
