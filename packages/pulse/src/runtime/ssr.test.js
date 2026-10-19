@@ -3,7 +3,8 @@
  * run: node src/runtime/ssr.test.js
  */
 
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, withTimeout, safeJson } from './ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, withTimeout, safeJson, buildHydrateScript } from './ssr.js'
+import { readFileSync } from 'node:fs'
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -399,6 +400,34 @@ await test('does not add a second skip link when the page already links to #main
 await test('a link to a different anchor does not count as a skip link', async () => {
   const { html } = wrapDocument({ content: '<a href="#main-content-2">x</a><main id="main-content">x</main>' })
   assert(html.includes('pulse-skip-link'), 'Fallback link should still be injected')
+})
+
+// The first page's mount() instance must be handed to initNavigation, or the first client navigation
+// has nothing to destroy and the first page's listeners keep running beside the next page's (#168).
+function runBootstrap(spec, storeDef) {
+  const script = buildHydrateScript(spec, storeDef, 'n0nce')
+  const body   = script.replace(/<\/?script[^>]*>/g, '').split('\n').filter(l => !/^\s*import /.test(l)).join('\n')
+  const events   = []
+  const instance = { destroy() {} }
+  const mount          = (...args) => { events.push('mount'); return instance }
+  const initNavigation = () => { events.push('initNavigation'); return { setMount: m => events.push(['setMount', m]) } }
+  const document = { getElementById: () => ({}) }
+  new Function('spec', 'mount', 'initNavigation', 'store', 'document', 'window', body)({}, mount, initNavigation, undefined, document, {})
+  return { events, instance }
+}
+
+await test('dev bootstrap registers the first mount with initNavigation so the first navigation destroys it', async () => {
+  const { events, instance } = runBootstrap({ hydrate: '/src/pages/a.js' })
+  const reg = events.find(e => Array.isArray(e) && e[0] === 'setMount')
+  assert(reg, `setMount was never called; events: ${JSON.stringify(events.map(e => Array.isArray(e) ? e[0] : e))}`)
+  assert(reg[1] === instance, 'setMount must receive the instance mount() returned')
+  assert(events.indexOf('mount') < events.indexOf(reg), 'mount() runs before it is registered')
+})
+
+await test('production boot bundle (scripts/build.js) registers the first mount the same way', async () => {
+  const src = readFileSync(new URL('../../scripts/build.js', import.meta.url), 'utf8')
+  assert(/const instance = mount\(spec, root, window\.__PULSE_SERVER__ \|\| \{\}, \$\{mountOpts\}\)/.test(src), 'boot bundle must keep the mount() instance')
+  assert(/initNavigation\(root, mount\)\.setMount\(instance\)/.test(src), 'boot bundle must register it with initNavigation')
 })
 
 await test('sets title from spec.meta', async () => {

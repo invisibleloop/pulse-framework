@@ -298,8 +298,9 @@ export function buildHydrateScript(spec, storeDef, nonce) {
   import { mount } from '/@pulse/runtime/index.js'
   import { initNavigation } from '/@pulse/runtime/navigate.js'${storeImport}
   const root = document.getElementById('pulse-root')
-  mount(spec, root, window.__PULSE_SERVER__ || {}${storeArg})
-  initNavigation(root, mount)
+  const instance = mount(spec, root, window.__PULSE_SERVER__ || {}${storeArg})
+  // Register the first page's instance so the first client navigation destroys it
+  initNavigation(root, mount).setMount(instance)
 </script>`
 }
 

@@ -507,8 +507,9 @@ import { initNavigation } from '${relNavigate}'${storeImport}
 const root = document.getElementById('pulse-root')
 if (root && !root.dataset.pulseMounted) {
   root.dataset.pulseMounted = '1'
-  mount(spec, root, window.__PULSE_SERVER__ || {}, ${mountOpts})
-  initNavigation(root, mount)
+  const instance = mount(spec, root, window.__PULSE_SERVER__ || {}, ${mountOpts})
+  // Register the first page's instance so the first client navigation destroys it
+  initNavigation(root, mount).setMount(instance)
 }
 
 export default spec
