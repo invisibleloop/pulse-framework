@@ -580,6 +580,22 @@ test('persist restores state from localStorage on mount', () => {
   assert(instance.getState().count === 7, `Expected restored count 7, got ${instance.getState().count}`)
 })
 
+test('a destroyed mount no longer persists, so it cannot overwrite the next page on the same route (#172)', () => {
+  localStorage.removeItem('pulse:/persist-test')
+  const old = mount(persistSpec, new FakeElement())
+  old.dispatch('increment')
+  old.destroy()
+  // The next page on the same route restores and keeps persisting its own state.
+  const next = mount(persistSpec, new FakeElement())
+  next.dispatch('increment'); next.dispatch('increment')
+  assert(JSON.parse(localStorage.getItem('pulse:/persist-test')).count === 3, 'next page persisted count 3')
+  // Late work from the old page arrives afterwards.
+  old.dispatch('increment')
+  const saved = JSON.parse(localStorage.getItem('pulse:/persist-test'))
+  assert(saved.count === 3, `the destroyed mount overwrote the next page's saved state: ${saved.count}`)
+  assert(old.getState().count === 2, 'its own state still updates')
+})
+
 test('persist only saves declared keys, not full state', () => {
   localStorage.removeItem('pulse:/persist-test')
   const el = new FakeElement()

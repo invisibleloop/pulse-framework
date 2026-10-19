@@ -193,6 +193,18 @@ function test(label, fn) {
   }
 }
 
+// For tests that await something: the sync test() above would pass them without ever looking
+// at the promise, so these are collected and the summary at the bottom waits for all of them.
+const pendingAsync = []
+function testAsync(label, fn) {
+  pendingAsync.push(
+    Promise.resolve().then(fn).then(
+      () => { console.log(`  ✓ ${label}`); passed++ },
+      (e) => { console.log(`  ✗ ${label}`); console.log(`    ${e.message}`); failed++ },
+    )
+  )
+}
+
 function assert(cond, msg) {
   if (!cond) throw new Error(msg || 'Assertion failed')
 }
@@ -463,6 +475,54 @@ test('data-preserve: inside data-key containers a reorder keeps the typed text o
 })
 
 // ---------------------------------------------------------------------------
+
+console.log('\nA destroyed mount never touches the DOM again\n')
+
+function deferred() { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
+
+testAsync('an action that resolves after destroy() does not render the old view into the element (#172)', async () => {
+  const gate = deferred()
+  const spec = {
+    route: '/late', state: { label: 'old' },
+    view:  (s) => `<p id="v">${s.label}</p>`,
+    actions: { save: { run: () => gate.promise, onSuccess: () => ({ label: 'saved' }), onError: () => ({}) } },
+  }
+  const el = new FakeElement('div')
+  const instance = mount(spec, el)
+  instance.dispatch('save')
+  instance.destroy()
+  // The next page now owns the element.
+  el.innerHTML = '<main>next page</main>'
+  gate.resolve('ok')
+  await new Promise(r => setTimeout(r, 10))
+  assert(el.innerHTML === '<main>next page</main>', `the element was overwritten: ${el.innerHTML}`)
+  assert(instance.getState().label === 'saved', 'state still updates, so late work is not lost')
+})
+
+test('a mutation dispatched after destroy() (a debounce timer firing late) does not render', () => {
+  const spec = { route: '/t', state: { n: 0 }, view: (s) => `<p>${s.n}</p>`, mutations: { inc: (s) => ({ n: s.n + 1 }) } }
+  const el = new FakeElement('div')
+  const instance = mount(spec, el)
+  instance.destroy()
+  el.innerHTML = '<main>next page</main>'
+  instance.dispatch('inc')
+  instance.refresh()
+  assert(el.innerHTML === '<main>next page</main>', `the element was overwritten: ${el.innerHTML}`)
+})
+
+test('a live instance still renders after another instance was destroyed', () => {
+  const spec = { route: '/t', state: { n: 0 }, view: (s) => `<p>${s.n}</p>`, mutations: { inc: (s) => ({ n: s.n + 1 }) } }
+  const a = mount(spec, new FakeElement('div'))
+  a.destroy()
+  const el = new FakeElement('div')
+  const b = mount(spec, el)
+  b.dispatch('inc')
+  assert(el.childNodes[0].innerHTML === '1', `got: ${el.innerHTML}`)
+})
+
+// ---------------------------------------------------------------------------
+
+await Promise.all(pendingAsync)
 
 console.log()
 if (failed > 0) {
