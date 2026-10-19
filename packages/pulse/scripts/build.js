@@ -21,6 +21,7 @@ import { discoverPages } from '../src/cli/discover.js'
 import { renderToString } from '../src/runtime/ssr.js'
 import { c, header, table, ok, fail, info, warn, elapsed, icon } from '../src/cli/fmt.js'
 import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
+import { buildBootstrapSource } from './bootstrap.js'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -499,21 +500,7 @@ const bootstrapFiles = pages.flatMap(({ filePath }) => {
   const storeImport = STORE_PATH ? `\nimport store from '${path.relative(TMP_DIR, STORE_PATH)}'` : ''
   const mountOpts   = STORE_PATH ? `{ ssr: true, store }` : `{ ssr: true }`
 
-  fs.writeFileSync(bootstrapPath, `\
-import spec from '${relSpec}'
-import { mount } from '${relRuntime}'
-import { initNavigation } from '${relNavigate}'${storeImport}
-
-const root = document.getElementById('pulse-root')
-if (root && !root.dataset.pulseMounted) {
-  root.dataset.pulseMounted = '1'
-  const instance = mount(spec, root, window.__PULSE_SERVER__ || {}, ${mountOpts})
-  // Register the first page's instance so the first client navigation destroys it
-  initNavigation(root, mount).setMount(instance)
-}
-
-export default spec
-`)
+  fs.writeFileSync(bootstrapPath, buildBootstrapSource({ relSpec, relRuntime, relNavigate, storeImport, mountOpts }))
 
   return [{ filePath, bootstrapPath, name }]
 })

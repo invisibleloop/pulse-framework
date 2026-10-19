@@ -38,8 +38,9 @@ export default {
       ${codeBlock(highlight(`import { mount } from '@invisibleloop/pulse/runtime'
 import { initNavigation } from '@invisibleloop/pulse/navigate'
 
-mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
-initNavigation(root, mount)`, 'js'))}
+const instance = mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
+initNavigation(root, mount).setMount(instance)`, 'js'))}
+      ${callout('warning', 'Pass the first mount to <code>setMount</code>. <code>initNavigation</code> destroys the previous page\'s mount on each navigation, but it only knows about mounts it created itself. Without <code>setMount(instance)</code> the first page\'s event listeners stay alive after you navigate away, and every mutation or action that exists on both pages runs twice.')}
 
       ${section('json-response', 'Response shape')}
       <p>When Pulse receives a request with <code>X-Pulse-Navigate: true</code>, it renders the page and responds one of two ways, depending on whether the page has deferred streaming segments (<code>spec.stream.deferred</code>).</p>

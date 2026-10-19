@@ -55,8 +55,8 @@ export default {
   import spec from '/src/pages/counter.js'
   import { mount } from '/src/runtime/index.js'
   import { initNavigation } from '/src/runtime/navigate.js'
-  mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
-  initNavigation(root, mount)
+  const instance = mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
+  initNavigation(root, mount).setMount(instance)  // so the first navigation destroys this page's mount
 </script>`, 'html'))}
       <p>This imports the spec and runtime source files directly — no build step required for development.</p>
 

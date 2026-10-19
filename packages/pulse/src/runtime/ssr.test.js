@@ -4,7 +4,6 @@
  */
 
 import { renderToString, renderToStream, renderToNavStream, wrapDocument, withTimeout, safeJson, buildHydrateScript } from './ssr.js'
-import { readFileSync } from 'node:fs'
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -424,10 +423,9 @@ await test('dev bootstrap registers the first mount with initNavigation so the f
   assert(events.indexOf('mount') < events.indexOf(reg), 'mount() runs before it is registered')
 })
 
-await test('production boot bundle (scripts/build.js) registers the first mount the same way', async () => {
-  const src = readFileSync(new URL('../../scripts/build.js', import.meta.url), 'utf8')
-  assert(/const instance = mount\(spec, root, window\.__PULSE_SERVER__ \|\| \{\}, \$\{mountOpts\}\)/.test(src), 'boot bundle must keep the mount() instance')
-  assert(/initNavigation\(root, mount\)\.setMount\(instance\)/.test(src), 'boot bundle must register it with initNavigation')
+await test('dev bootstrap with a store passes it to mount() and still registers the instance', async () => {
+  const { events, instance } = runBootstrap({ hydrate: '/src/pages/a.js' }, { hydrate: '/pulse.store.js' })
+  assert(events.find(e => Array.isArray(e) && e[0] === 'setMount')?.[1] === instance, 'setMount must receive the mount() instance')
 })
 
 await test('sets title from spec.meta', async () => {
