@@ -1079,6 +1079,25 @@ await test('dev mode always returns no-store regardless of cache config', async 
   })
 })
 
+// Dev import map: every public subpath that view/spec code may import must resolve in the
+// browser, or the page module fails to load and hydration silently never happens.
+await test('dev import map covers @invisibleloop/pulse/html and every target exists', async () => {
+  await withServer([canonicalSpec], { stream: false, dev: true }, async (port) => {
+    const { body } = await request(port, 'GET', '/about')
+    const json = body.match(/<script type="importmap"[^>]*>([\s\S]*?)<\/script>/)?.[1]
+    assert(json, 'dev HTML has an import map')
+    const imports = JSON.parse(json).imports
+    for (const spec of ['image', 'html', 'ui', 'md']) {
+      assert(imports[`@invisibleloop/pulse/${spec}`], `import map is missing @invisibleloop/pulse/${spec}`)
+    }
+    const srcDir = path.join(path.dirname(new URL(import.meta.url).pathname), '..')
+    for (const [name, url] of Object.entries(imports)) {
+      assert(url.startsWith('/@pulse/'), `${name} maps outside /@pulse/: ${url}`)
+      assert(fs.existsSync(path.join(srcDir, url.slice('/@pulse/'.length))), `${name} -> ${url} does not exist`)
+    }
+  })
+})
+
 // HSTS
 await test('HSTS header absent on plain HTTP', async () => {
   await withServer([canonicalSpec], { stream: false }, async (port) => {

@@ -462,6 +462,7 @@ function devImportMap(nonce) {
   return `<script type="importmap" nonce="${nonce}">
 {
   "imports": {
+    "@invisibleloop/pulse/html": "/@pulse/html.js",
     "@invisibleloop/pulse/image": "/@pulse/runtime/image.js",
     "@invisibleloop/pulse/ui": "/@pulse/ui/index.js",
     "@invisibleloop/pulse/md": "/@pulse/md/browser-stub.js"
