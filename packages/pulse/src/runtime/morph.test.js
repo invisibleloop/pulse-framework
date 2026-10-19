@@ -32,6 +32,15 @@ class FakeElement {
     this.nextSibling = null
   }
 
+  // ---- form-control surface (just enough of the real DOM for syncFormProperty) ----
+  get tagName()     { return this.nodeName }
+  get textContent() { return this._children.map(c => c.nodeType === 3 ? c.nodeValue : c.textContent).join('') }
+  get type()        { return this.nodeName === 'TEXTAREA' ? 'textarea' : (this._attrs.type ?? 'text') }
+  // Like the browser: until .value is assigned, a textarea's value is its child text and an
+  // input's is its value attribute; assigning makes the live value independent of both.
+  get value()       { return this._value ?? (this.nodeName === 'TEXTAREA' ? this.textContent : (this._attrs.value ?? '')) }
+  set value(v)      { this._value = String(v) }
+
   // ---- child access ----
   get childNodes() { return this._children }
   get lastChild()  { return this._children[this._children.length - 1] ?? null }
@@ -304,6 +313,57 @@ test('unkeyed content falls back to position-based morphing', () => {
   instance.dispatch('setLabel', 'world')
 
   assert(el.childNodes[0].innerHTML === 'world', `expected 'world', got: ${el.childNodes[0].innerHTML}`)
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nForm controls survive a re-render\n')
+
+const notesSpec = {
+  route: '/notes',
+  state: { n: 0, text: 'hello world' },
+  view:  (s) => `<main><button data-event="inc">clicks ${s.n}</button><textarea aria-label="notes">${s.text}</textarea><input name="q" value="abc"></input></main>`,
+  mutations: {
+    inc:     (s) => ({ n: s.n + 1 }),
+    setText: (_, text) => ({ text }),
+  },
+}
+const textareaOf = el => el.childNodes[0].childNodes[1]
+const inputOf    = el => el.childNodes[0].childNodes[2]
+
+test('a textarea keeps its text when an unrelated state change re-renders (was emptied: #163)', () => {
+  const el = new FakeElement('div')
+  const instance = mount(notesSpec, el)
+  assert(textareaOf(el).value === 'hello world', `initial value: ${textareaOf(el).value}`)
+  instance.dispatch('inc')
+  assert(textareaOf(el).value === 'hello world', `textarea value after re-render: ${JSON.stringify(textareaOf(el).value)}`)
+})
+
+test("a textarea's rendered text still drives its live value when the state changes it", () => {
+  const el = new FakeElement('div')
+  const instance = mount(notesSpec, el)
+  textareaOf(el).value = 'edited by the user'       // live value diverges from the child text
+  instance.dispatch('setText', 'server says hi')
+  assert(textareaOf(el).value === 'server says hi', `got: ${JSON.stringify(textareaOf(el).value)}`)
+})
+
+test('a focused textarea is never overwritten mid-edit', () => {
+  const el = new FakeElement('div')
+  const instance = mount(notesSpec, el)
+  textareaOf(el).value = 'half-typed'
+  global.document.activeElement = textareaOf(el)
+  try {
+    instance.dispatch('inc')
+  } finally { global.document.activeElement = null }
+  assert(textareaOf(el).value === 'half-typed', `got: ${JSON.stringify(textareaOf(el).value)}`)
+})
+
+test('an input still follows its value attribute', () => {
+  const el = new FakeElement('div')
+  const instance = mount(notesSpec, el)
+  inputOf(el).value = 'typed'
+  instance.dispatch('inc')
+  assert(inputOf(el).value === 'abc', `got: ${JSON.stringify(inputOf(el).value)}`)
 })
 
 // ---------------------------------------------------------------------------
