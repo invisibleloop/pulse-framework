@@ -26,6 +26,16 @@ export function initNavigation(root, mountFn) {
   let currentMount = null
   let currentNavController = null
 
+  // The target page has no client bundle (a purely server-rendered page), so nothing will mount
+  // over the previous page's instance. Release it now, or its listeners keep firing on the new
+  // DOM and a store change re-renders the old view into it (#171). keepDom: the new page's HTML
+  // is (or is about to be) in the root; destroy() must not wipe it.
+  function releaseCurrentMount() {
+    if (!currentMount) return
+    currentMount.destroy({ keepDom: true })
+    currentMount = null
+  }
+
   async function navigate(path, push) {
     // Cancel any in-flight navigation before starting a new one
     currentNavController?.abort()
@@ -58,6 +68,7 @@ export function initNavigation(root, mountFn) {
 
           if (msg.type === 'meta') {
             hydratePath    = msg.hydrate
+            if (!hydratePath) releaseCurrentMount()
             document.title = msg.title || document.title
             applyStyles(msg.styles)
             await applyScripts(msg.scripts)
@@ -126,6 +137,7 @@ export function initNavigation(root, mountFn) {
           window.__updatePulseStore__(storeState)
         }
 
+        if (!hydrate) releaseCurrentMount()
         root.innerHTML = trustedHTML(html)
         document.title = title || document.title
         applyStyles(styles)

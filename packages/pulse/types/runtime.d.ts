@@ -28,7 +28,9 @@ export interface MountOptions {
 
 export interface MountResult {
   /** Destroy this mount, remove event listeners, and unsubscribe from the store. */
-  destroy(): void
+  /** Remove listeners and unsubscribe from the store, then clear the element.
+   *  Pass `{ keepDom: true }` to leave the element's content in place. */
+  destroy(options?: { keepDom?: boolean }): void
 }
 
 /**
