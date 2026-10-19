@@ -169,7 +169,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
   // ---------------------------------------------------------------------------
 
   function persist() {
-    if (!persistKey) return
+    // The key is per route, not per instance: once destroyed, a late write (an action resolving
+    // after navigation) could overwrite what the next page, on the same route, has persisted.
+    if (!persistKey || _destroyed) return
     try {
       const snapshot = {}
       spec.persist.forEach(k => { snapshot[k] = state[k] })
@@ -187,7 +189,7 @@ export function mount(spec, el, serverState = {}, options = {}) {
     // A destroyed instance never touches the DOM again. el now belongs to the page that replaced
     // it, and an action that resolves late or a debounce timer that fires late would otherwise
     // morph this page's view into that one (#172). State updates, toasts and store pushes from
-    // late work still go through: only the render is dropped.
+    // late work still go through; only the render (and persist(), below) is dropped.
     if (_destroyed) return
     let html
     try {
