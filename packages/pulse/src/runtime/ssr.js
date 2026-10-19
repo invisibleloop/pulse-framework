@@ -343,6 +343,10 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   const meta  = spec.meta  || {}
   const title = meta.title || 'Pulse'
 
+  // The fallback skip link is only for pages that have none: a page (or its layout) that
+  // already links to #main-content supplies its own, and two would be a redundant tab stop.
+  const ownSkipLink = /href=["']#main-content["']/.test(content)
+
   const bodyAttr = [
     meta.theme ? `data-theme="${esc(meta.theme)}"` : '',
     meta.vibe  ? `data-vibe="${esc(meta.vibe)}"` : '',
@@ -419,7 +423,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   ${schemaScript}
 </head>
 <body${bodyAttr}>
-  <a href="#main-content" class="pulse-skip-link">Skip to main content</a>
+  ${ownSkipLink ? '' : '<a href="#main-content" class="pulse-skip-link">Skip to main content</a>'}
   <div id="pulse-root">
     ${content}
   </div>

@@ -380,6 +380,27 @@ await test('wraps content in full HTML document', async () => {
   assert(html.includes('</html>'), 'Missing closing tag')
 })
 
+await test('injects the fallback skip link when the page has none', async () => {
+  const { html } = wrapDocument({ content: '<main id="main-content">Hello</main>' })
+  assert((html.match(/class="pulse-skip-link"/g) || []).length === 1, `Expected one fallback link, got: ${html}`)
+})
+
+await test('does not add a second skip link when the page already links to #main-content', async () => {
+  for (const own of [
+    '<a href="#main-content" class="skip-link">Skip</a><main id="main-content">x</main>',
+    "<a class='skip' href='#main-content'>Skip</a><main id=\"main-content\">x</main>",
+  ]) {
+    const { html } = wrapDocument({ content: own })
+    assert(!html.includes('pulse-skip-link'), `Fallback link must be omitted, got: ${html}`)
+    assert((html.match(/#main-content/g) || []).length === 1, `Page's own link must remain exactly once, got: ${html}`)
+  }
+})
+
+await test('a link to a different anchor does not count as a skip link', async () => {
+  const { html } = wrapDocument({ content: '<a href="#main-content-2">x</a><main id="main-content">x</main>' })
+  assert(html.includes('pulse-skip-link'), 'Fallback link should still be injected')
+})
+
 await test('sets title from spec.meta', async () => {
   const { html } = wrapDocument({ content: '', spec: metaSpec })
   assert(html.includes('<title>About Us</title>'), `Got: ${html}`)
