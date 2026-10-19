@@ -59,6 +59,8 @@ export default {
       ${section('lib', 'src/lib/')}
       <p>Shared helpers used across multiple pages — database clients, API wrappers, utility functions. Imported directly into specs. Plain JavaScript modules with no framework coupling — they work identically in tests, scripts, or other contexts.</p>
 
+      ${callout('note', 'In <code>pulse dev</code>, saving any file under <code>src/</code> re-evaluates your project\'s modules, so edits to <code>src/lib</code> and <code>src/components</code> show up without a restart. That also re-runs module-level code: a database client, connection pool, timer or in-memory cache created at the top of a module is created again on every save and the old one is not closed. Keep long-lived resources behind <code>globalThis.__db ??= createClient()</code>, or in <code>pulse.store.js</code>. Two limits: CommonJS (<code>.cjs</code>) files and modules outside the project root are not refreshed, and code that parses <code>import.meta.url</code> by hand should use <code>fileURLToPath</code> (the URL gains a <code>?t=</code> suffix after a reload).')}
+
       ${section('components', 'src/components/ (optional)')}
       <p>Reusable view fragments. Since views are just functions that return HTML strings, a component is simply a function:</p>
 
