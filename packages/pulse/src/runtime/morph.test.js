@@ -426,6 +426,42 @@ test('without data-preserve a re-render still resets a non-focused control (exis
   assert(textareaOf(el).value === 'hello world' && inputOf(el).value === 'abc', 'unmarked controls must keep resetting')
 })
 
+test('data-preserve: a control that keeps its position survives; one pushed down by a new sibling is replaced (documented limit)', () => {
+  const spec = {
+    route: '/banner',
+    state: { err: false },
+    view:  (s) => `<main>${s.err ? '<p>error</p>' : ''}<textarea data-preserve="">draft</textarea></main>`,
+    mutations: { fail: () => ({ err: true }) },
+  }
+  const el = new FakeElement('div')
+  const instance = mount(spec, el)
+  const before = el.childNodes[0].childNodes[0]
+  before.value = 'typed'
+  instance.dispatch('fail')
+  const after = el.childNodes[0].childNodes[1]
+  // Position-based morphing pairs children by index: the <p> lands where the textarea was, so the
+  // textarea is rebuilt from the rendered text. Authors keep a placeholder (or data-key) in the slot.
+  assert(after !== before && after.value === 'draft', 'the textarea is a new node showing the rendered text')
+})
+
+test('data-preserve: inside data-key containers a reorder keeps the typed text on the same node', () => {
+  const spec = {
+    route: '/keyed',
+    state: { order: ['a', 'b'] },
+    view:  (s) => `<main>${s.order.map(k => `<div data-key="${k}"><textarea data-preserve="">${k}</textarea></div>`).join('')}</main>`,
+    mutations: { setOrder: (_, order) => ({ order }) },
+  }
+  const el = new FakeElement('div')
+  const instance = mount(spec, el)
+  const main = el.childNodes[0]
+  const nodeA = main.childNodes[0].childNodes[0]
+  nodeA.value = 'typed in a'
+  instance.dispatch('setOrder', ['b', 'a'])
+  const a = main.childNodes.find(d => d.getAttribute('data-key') === 'a').childNodes[0]
+  assert(a === nodeA, 'the keyed textarea node must be reused')
+  assert(a.value === 'typed in a', `got: ${JSON.stringify(a.value)}`)
+})
+
 // ---------------------------------------------------------------------------
 
 console.log()
