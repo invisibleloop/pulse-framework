@@ -18,18 +18,18 @@ export default {
     next,
     content: `
       ${h1('Accessibility')}
-      ${lead('Pulse enforces a 100 Lighthouse Accessibility score as the baseline. The foundations — skip link, focus styles, and focus management on navigation — are provided by the framework on every page. There is nothing to configure and nothing to forget.')}
+      ${lead('Pulse enforces a 100 Lighthouse Accessibility score as the baseline. Focus styles and focus management on navigation are provided by the framework on every page. The skip link is yours to add to your layout (see below), because a page that already has one would otherwise end up with two.')}
 
       ${section('built-in', 'What the framework provides')}
       ${table(
         ['Feature', 'How'],
         [
-          ['Skip link', 'Injected on every page as the first focusable element. Targets <code>#main-content</code>. Visible only on focus.'],
+          ['Skip link (fallback only)', 'Not added to normal pages. The server injects one only on buffered responses — a custom 404, a form page re-rendered after a POST, or any page when <code>stream: false</code> — as the first focusable element, hidden until focused by <code>pulse-ui.css</code>. Add your own to your layout so every page has one.'],
           ['Focus styles', '<code>:focus-visible</code> outline applied globally — purple, 3px, offset 2px. Suppressed for mouse users via <code>:focus:not(:focus-visible)</code>.'],
           ['Navigation focus', 'After client-side navigation, focus moves to <code>#main-content</code>, <code>&lt;main&gt;</code>, or <code>&lt;h1&gt;</code> — whichever is found first. Screen reader users hear the new page heading without a full reload.'],
         ]
       )}
-      ${callout('note', 'The skip link targets <code>#main-content</code>. Pages use <code>&lt;main id="main-content"&gt;</code> as the content wrapper so the link resolves correctly.')}
+      ${callout('note', 'Add <code>&lt;a href="#main-content" class="skip-link"&gt;Skip to main content&lt;/a&gt;</code> before your navigation in the layout every page shares, styled to hide until focused. It targets <code>#main-content</code>, so pages use <code>&lt;main id="main-content"&gt;</code> as the content wrapper. On the buffered responses listed above the framework\'s fallback link is present as well, so those pages carry two.')}
 
       ${section('structure', 'Page structure')}
       <p>Each page view is wrapped in <code>&lt;main id="main-content"&gt;</code> with a single <code>&lt;h1&gt;</code> that describes the current page. Landmark elements communicate structure to assistive technology:</p>
