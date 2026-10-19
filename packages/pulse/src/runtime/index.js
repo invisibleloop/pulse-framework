@@ -639,7 +639,9 @@ function syncFormProperty(cur, nxt) {
       const next = nxt.hasAttribute('checked')
       if (cur.checked !== next) cur.checked = next
     } else if (document.activeElement !== cur) {
-      const next = nxt.getAttribute('value') ?? ''
+      // A textarea has no value attribute: its default value is its child text, which
+      // nxt.value reads (and which the HTML parser has already normalised).
+      const next = tag === 'TEXTAREA' ? nxt.value : (nxt.getAttribute('value') ?? '')
       if (cur.value !== next) cur.value = next
     }
   } else if (tag === 'SELECT' && document.activeElement !== cur) {
