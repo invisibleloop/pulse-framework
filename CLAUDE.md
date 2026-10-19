@@ -210,6 +210,7 @@ Pulse binds to DOM attributes — no JSX, no templates.
 <input  data-event="input:setQuery">               <!-- input → mutation -->
 <input  data-event="input:search" data-debounce="300">  <!-- debounced input (300ms) -->
 <input  data-event="input:filter" data-throttle="100">  <!-- throttled input (100ms) -->
+<textarea data-preserve>…</textarea>                  <!-- keep typed text across re-renders that render the same value -->
 <form   data-action="submit">...</form>             <!-- submit → action, passes FormData -->
 <button data-store-event="toggleTheme">Toggle</button>   <!-- click → store mutation -->
 <select data-store-event="change:setLang">...</select>   <!-- change → store mutation -->
