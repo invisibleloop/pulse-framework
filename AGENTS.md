@@ -239,8 +239,8 @@ All sibling elements in the container must have `data-key` to activate key mode 
   import spec from '/examples/counter.js'
   import { mount } from '/src/runtime/index.js'
   import { initNavigation } from '/src/runtime/navigate.js'
-  mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
-  initNavigation(root, mount)
+  const instance = mount(spec, root, window.__PULSE_SERVER__ || {}, { ssr: true })
+  initNavigation(root, mount).setMount(instance)  // first navigation destroys this mount
 </script>
 ```
 
@@ -505,7 +505,9 @@ meta: {
 1. Fetches the new page with `X-Pulse-Navigate: true`
 2. Swaps `root.innerHTML` + updates `document.title`
 3. Dynamically imports the new spec bundle (`import(hydrate)`)
-4. Calls `mount(spec, root, serverState)` to re-attach interactivity
+4. Destroys the previous page's mount, then calls `mount(spec, root, serverState)` to re-attach interactivity
+
+The bootstrap must pass the first page's mount to `initNavigation(...).setMount(instance)`; otherwise that page's listeners survive the first navigation and handlers present on both pages run twice.
 
 Falls back to `location.href` on any error.
 
