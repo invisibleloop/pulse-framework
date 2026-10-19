@@ -10,6 +10,8 @@
 
 import path    from 'path'
 import fs      from 'fs'
+import { register } from 'node:module'
+import { pathToFileURL } from 'node:url'
 import { createServer } from '../server/index.js'
 import { loadPages, loadStore } from './discover.js'
 import * as log         from './logger.js'
@@ -30,6 +32,14 @@ const ROOT = rootArg !== -1
 // Ensure process.cwd() === ROOT so relative paths in specs (e.g. md('src/content/foo.md'))
 // resolve to the project root, not wherever the parent process was launched from.
 if (process.cwd() !== ROOT) process.chdir(ROOT)
+
+// Hot reload re-imports each page with a cache-busting stamp; this hook passes the stamp on
+// to the project modules the page imports, so editing src/lib or src/components takes
+// effect too (see reload-hooks.js). realpath: Node reports resolved URLs without symlinks.
+register('./reload-hooks.js', {
+  parentURL: import.meta.url,
+  data: { rootUrl: pathToFileURL(fs.realpathSync(ROOT)).href + '/' },
+})
 
 let _config = {}
 const configPath = path.join(ROOT, 'pulse.config.js')
