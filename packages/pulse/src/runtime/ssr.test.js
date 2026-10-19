@@ -405,7 +405,10 @@ await test('a link to a different anchor does not count as a skip link', async (
 // has nothing to destroy and the first page's listeners keep running beside the next page's (#168).
 function runBootstrap(spec, storeDef) {
   const script = buildHydrateScript(spec, storeDef, 'n0nce')
-  const body   = script.replace(/<\/?script[^>]*>/g, '').split('\n').filter(l => !/^\s*import /.test(l)).join('\n')
+  // The body sits between the opening tag's '>' and the closing tag: slice it out rather than
+  // pattern-stripping tags, and drop the import lines (the stubs below stand in for them).
+  assert(script.startsWith('<script') && script.endsWith('</script>'), 'expected one inline <script> block')
+  const body   = script.slice(script.indexOf('>') + 1, script.lastIndexOf('</script>')).split('\n').filter(l => !l.trimStart().startsWith('import ')).join('\n')
   const events   = []
   const instance = { destroy() {} }
   const mount          = (...args) => { events.push('mount'); return instance }
