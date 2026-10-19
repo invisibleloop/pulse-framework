@@ -184,6 +184,11 @@ export function mount(spec, el, serverState = {}, options = {}) {
   let lastHtml = null
 
   function render() {
+    // A destroyed instance never touches the DOM again. el now belongs to the page that replaced
+    // it, and an action that resolves late or a debounce timer that fires late would otherwise
+    // morph this page's view into that one (#172). State updates, toasts and store pushes from
+    // late work still go through: only the render is dropped.
+    if (_destroyed) return
     let html
     try {
       html = resolveView(spec, state, getEffectiveServerState())
