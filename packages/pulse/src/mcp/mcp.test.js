@@ -588,6 +588,18 @@ test('validate-worker.js still gives the file-not-found message for a missing ab
   assert(output.includes('file not found'), `Expected a file-not-found message, got: ${output}`)
 })
 
+// Regression (#167): validateSpec returned no `warnings` for raw-response specs, so the worker's
+// `[...schemaWarnings]` threw and every valid JSON API / webhook spec "failed to parse".
+test('validate-worker.js reports a valid raw-response spec as valid instead of crashing', () => {
+  const dir  = fs.mkdtempSync(path.join(fs.realpathSync(process.env.TMPDIR || '/tmp'), 'pulse-raw-spec-'))
+  const file = path.join(dir, 'hook.mjs')
+  fs.writeFileSync(file, "export default { route: '/hook', contentType: 'text/plain', state: {}, render: () => 'ok' }\n")
+  try {
+    const { output } = runValidateWorker(file)
+    assert(/Valid/.test(output) && !/TypeError|could not parse|not iterable/.test(output), `Expected "Valid", got: ${output}`)
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
 // ── pulse_intent dashboard-aware inspiration question ───────────────────────
 // Regression: found via dogfooding — the mandatory design-inspiration question
 // ("a site you love, a screenshot, a mood board") has no branch for internal/

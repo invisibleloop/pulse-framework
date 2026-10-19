@@ -124,17 +124,18 @@
 
 /**
  * Validate a spec object against the schema.
- * Returns { valid: true } or { valid: false, errors: string[] }
+ * Returns { valid, errors, warnings } — `warnings` is always an array, including on the early
+ * returns (non-object spec, raw-response spec), because callers spread it.
  *
  * @param {unknown} spec
- * @returns {{ valid: boolean, errors: string[] }}
+ * @returns {{ valid: boolean, errors: string[], warnings: string[] }}
  */
 export function validateSpec(spec) {
   const errors   = []
   const warnings = []
 
   if (!spec || typeof spec !== 'object') {
-    return { valid: false, errors: ['Spec must be a plain object'] }
+    return { valid: false, errors: ['Spec must be a plain object'], warnings }
   }
 
   // route — '*' is the custom not-found page, rendered with status 404 when no route matches
@@ -191,7 +192,7 @@ export function validateSpec(spec) {
       errors.push('spec.render is required when spec.contentType is set — (ctx, server) => string')
     }
     // Raw specs don't need state or view — skip those checks
-    return { valid: errors.length === 0, errors }
+    return { valid: errors.length === 0, errors, warnings }
   }
 
   // state
