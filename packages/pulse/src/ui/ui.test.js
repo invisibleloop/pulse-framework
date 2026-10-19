@@ -1166,4 +1166,8 @@ test('pulse-ui.css hides the injected .pulse-skip-link until it is focused', () 
   assert.match(base, /left:\s*-9999px/)
   assert.match(focus, /position:\s*fixed/)
   assert.match(focus, /left:\s*1rem/)
+  // Hidden for sighted users but still focusable and in the accessibility tree:
+  // display:none / visibility:hidden would make it unreachable by keyboard.
+  assert.doesNotMatch(base, /display:\s*none|visibility:\s*hidden/)
+  assert.doesNotMatch(focus, /display:\s*none|visibility:\s*hidden|left:\s*-/)
 })

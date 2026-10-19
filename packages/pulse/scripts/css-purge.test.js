@@ -10,6 +10,7 @@
 import { test } from 'node:test'
 import assert   from 'node:assert/strict'
 import { parseCssBlocks, purgeCss, minifyCss, extractUsedClasses, selectorUsed } from './css-purge.js'
+import fs from 'node:fs'
 
 const FONT_IMPORT = `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');`
 
@@ -144,4 +145,12 @@ test('runtime-toggled compound rule survives the purge', () => {
   const out = purgeCss(css, used)
   assert.ok(out.includes('.docs-sidebar.open'), `Compound state rule was purged: ${out}`)
   assert.ok(!out.includes('.unused'), 'Unused rule should still be purged')
+})
+
+test('classes the framework injects outside any view survive the purge (skip link, #161)', () => {
+  const css = fs.readFileSync(new URL('../public/pulse-ui.css', import.meta.url), 'utf8')
+  // Nothing the build scans mentions pulse-skip-link: it is written by ssr.js wrapDocument.
+  const out = minifyCss(purgeCss(css, extractUsedClasses(['<main class="ui-hero">x</main>'], [], [])))
+  assert.match(out, /\.pulse-skip-link\{[^}]*left:-9999px/, 'hidden state purged')
+  assert.match(out, /\.pulse-skip-link:focus\{[^}]*position:fixed/, 'focus state purged')
 })

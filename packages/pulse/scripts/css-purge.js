@@ -9,8 +9,13 @@
 // CSS class extractor
 // ---------------------------------------------------------------------------
 
+// Classes the framework itself writes into the document (src/runtime/ssr.js wrapDocument),
+// outside any page's view, so nothing the build scans ever contains them. Always kept:
+// without this a built app loses the rules that hide the injected skip link (#161).
+export const FRAMEWORK_INJECTED_CLASSES = ['pulse-skip-link']
+
 export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
-  const used = new Set()
+  const used = new Set(FRAMEWORK_INJECTED_CLASSES)
 
   // Extract from class="..." in rendered HTML (no template expressions to worry about)
   for (const content of htmlContents) {

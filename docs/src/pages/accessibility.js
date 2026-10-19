@@ -24,7 +24,7 @@ export default {
       ${table(
         ['Feature', 'How'],
         [
-          ['Skip link (fallback only)', 'Not added to normal pages. The server injects one only on buffered responses — a custom 404, a form page re-rendered after a POST, or any page when <code>stream: false</code> — as the first focusable element, hidden until focused by <code>pulse-ui.css</code>. Add your own to your layout so every page has one.'],
+          ['Skip link (fallback only)', 'Not added to normal pages. The server injects one only on buffered responses — a custom 404, a form page re-rendered after a POST, or any page when <code>createServer</code> is given <code>stream: false</code> — as the first focusable element. <code>pulse-ui.css</code> hides it until focused; a page that loads neither <code>pulse-ui.css</code> nor <code>pulse.css</code> would show it as a plain link. Add your own to your layout so every page has one.'],
           ['Focus styles', '<code>:focus-visible</code> outline applied globally — purple, 3px, offset 2px. Suppressed for mouse users via <code>:focus:not(:focus-visible)</code>.'],
           ['Navigation focus', 'After client-side navigation, focus moves to <code>#main-content</code>, <code>&lt;main&gt;</code>, or <code>&lt;h1&gt;</code> — whichever is found first. Screen reader users hear the new page heading without a full reload.'],
         ]
