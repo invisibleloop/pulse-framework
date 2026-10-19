@@ -17,15 +17,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let passed = 0
 let failed = 0
 
+// Tests whose callback is async return a promise. A bare try { fn() } would print ✓ at once and
+// never look at it (#175), so those are collected and the summary waits for every one.
+const pending = []
+
 function test(label, fn) {
+  const ok   = () => { console.log(`  ✓ ${label}`); passed++ }
+  const fail = (e) => { console.log(`  ✗ ${label}`); console.log(`    ${e?.message ?? e}`); failed++ }
   try {
-    fn()
-    console.log(`  ✓ ${label}`)
-    passed++
+    const result = fn()
+    if (result && typeof result.then === 'function') pending.push(result.then(ok, fail))
+    else ok()
   } catch (e) {
-    console.log(`  ✗ ${label}`)
-    console.log(`    ${e.message}`)
-    failed++
+    fail(e)
   }
 }
 
@@ -336,6 +340,8 @@ console.log('\nCoverage-check exemptions\n')
     fsMod.rmSync(dir, { recursive: true, force: true })
   }
 }
+
+await Promise.all(pending)
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)
