@@ -14,7 +14,9 @@ import type { PulseSpec } from './schema.js'
  * swaps #pulse-root, and re-mounts the new spec without a full page reload.
  * Falls back to location.href on any fetch or import error.
  *
- * Call once after the initial mount().
+ * Call once after the initial mount(), and pass that instance to the returned
+ * `setMount` so the first navigation destroys it. Without it the first page's
+ * listeners stay alive and every handler present on both pages runs twice.
  *
  * @param root    The #pulse-root element
  * @param mountFn The mount() function from @invisibleloop/pulse/runtime
@@ -24,8 +26,8 @@ import type { PulseSpec } from './schema.js'
  * import { initNavigation } from '@invisibleloop/pulse/navigate'
  *
  * const root = document.getElementById('pulse-root')
- * const m = mount(spec, root, window.__PULSE_SERVER__ ?? {}, { ssr: true })
- * initNavigation(root, mount)
+ * const instance = mount(spec, root, window.__PULSE_SERVER__ ?? {}, { ssr: true })
+ * initNavigation(root, mount).setMount(instance)
  */
 export function initNavigation(
   root:    HTMLElement,
@@ -35,4 +37,7 @@ export function initNavigation(
     serverState?: Record<string, unknown>,
     options?:    { ssr?: boolean; store?: unknown }
   ) => MountResult
-): void
+): {
+  /** Register the first page's mount so the first navigation destroys it. */
+  setMount(instance: MountResult | null | undefined): void
+}

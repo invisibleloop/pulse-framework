@@ -71,10 +71,11 @@ function setup({ mountFn = null } = {}) {
   global.CustomEvent = class { constructor(n) { this.type = n } }
 
   const root = makeRoot()
-  initNavigation(root, mountFn)
+  const nav  = initNavigation(root, mountFn)
 
   return {
     root,
+    nav,
     click: (ev) => clickHandler(ev),
     pop:   (ev) => popHandler(ev),
   }
@@ -168,6 +169,53 @@ await test('intercepts same-origin links', async () => {
   global.fetch = async () => { called = true; return new Promise(() => {}) }
   click(clickEvent({ href: '/same-origin' }))
   assert(called, 'fetch should be called for same-origin link')
+})
+
+// ── Navigation — tearing down the previous page's mount ──────────────────────
+
+console.log('\nNavigation — previous mount is destroyed\n')
+
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+const jsonResponse = body => ({ ok: true, headers: { get: () => 'application/json' }, json: async () => body })
+const HYDRATED = 'data:text/javascript,export default { route: "/next" }'
+
+/** Known bug: documented with a test that must keep failing until it is fixed. */
+async function knownBug(label, issue, fn) {
+  try { await fn() } catch { console.log(`  ~ known bug ${issue}: ${label}`); return }
+  console.log(`  ✗ known bug ${issue} appears fixed — turn "${label}" into a normal test`)
+  failed++
+}
+
+await test("the first page's mount, registered with setMount, is destroyed before the next page mounts (#168)", async () => {
+  const events = []
+  const first  = { destroy: () => events.push('destroy first') }
+  const { click, nav } = setup({ mountFn: () => { events.push('mount next'); return { destroy: () => events.push('destroy next') } } })
+  nav.setMount(first)
+  global.fetch = async () => jsonResponse({ html: '<p>next</p>', title: 'Next', hydrate: HYDRATED, serverState: {} })
+  click(clickEvent({ href: '/next' }))
+  await sleep(60)
+  assert.deepEqual(events, ['destroy first', 'mount next'])
+})
+
+await test('later navigations destroy the previous navigated page too', async () => {
+  const events = []
+  let n = 0
+  const { click, nav } = setup({ mountFn: () => { const id = ++n; events.push(`mount ${id}`); return { destroy: () => events.push(`destroy ${id}`) } } })
+  nav.setMount({ destroy: () => events.push('destroy first') })
+  global.fetch = async () => jsonResponse({ html: '<p>x</p>', hydrate: HYDRATED, serverState: {} })
+  click(clickEvent({ href: '/one' })); await sleep(60)
+  click(clickEvent({ href: '/two' })); await sleep(60)
+  assert.deepEqual(events, ['destroy first', 'mount 1', 'destroy 1', 'mount 2'])
+})
+
+await knownBug('navigating to a page with no hydrate bundle leaves the old instance alive', '#171', async () => {
+  const events = []
+  const { click, nav } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  nav.setMount({ destroy: () => events.push('destroy first') })
+  global.fetch = async () => jsonResponse({ html: '<p>static</p>', title: 'Static', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/static' }))
+  await sleep(60)
+  assert.deepEqual(events, ['destroy first'])
 })
 
 // ── Navigation — fetch abort and cancellation ────────────────────────────────
