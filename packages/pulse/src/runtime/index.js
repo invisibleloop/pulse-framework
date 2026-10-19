@@ -310,8 +310,9 @@ export function mount(spec, el, serverState = {}, options = {}) {
     /** Force a re-render — useful after external state changes */
     refresh: render,
 
-    /** Tear down — remove event listeners, unsubscribe from store, clear element */
-    destroy: () => { _destroyed = true; _unsubStore?.(); _eventAbort.abort(); el.innerHTML = trustedHTML('') }
+    /** Tear down — remove event listeners, unsubscribe from store, clear element
+     *  (pass { keepDom: true } to leave the element's content in place) */
+    destroy: (opts) => { _destroyed = true; _unsubStore?.(); _eventAbort.abort(); if (!opts?.keepDom) el.innerHTML = trustedHTML('') }
   }
 }
 

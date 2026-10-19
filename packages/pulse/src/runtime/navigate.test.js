@@ -179,12 +179,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 const jsonResponse = body => ({ ok: true, headers: { get: () => 'application/json' }, json: async () => body })
 const HYDRATED = 'data:text/javascript,export default { route: "/next" }'
 
-/** Known bug: documented with a test that must keep failing until it is fixed. */
-async function knownBug(label, issue, fn) {
-  try { await fn() } catch { console.log(`  ~ known bug ${issue}: ${label}`); return }
-  console.log(`  ✗ known bug ${issue} appears fixed — turn "${label}" into a normal test`)
-  failed++
+/** An NDJSON streaming navigation response made of the given messages. */
+function streamResponse(messages) {
+  const bytes = new TextEncoder().encode(messages.map(m => JSON.stringify(m)).join('\n') + '\n')
+  let sent = false
+  return {
+    ok: true,
+    headers: { get: () => 'application/x-ndjson' },
+    body: { getReader: () => ({ read: async () => (sent ? { done: true } : (sent = true, { done: false, value: bytes })), cancel: () => {} }) },
+  }
 }
+const staticStream = () => streamResponse([
+  { type: 'meta', hydrate: null, title: 'Static', styles: [], scripts: [] },
+  { type: 'html', html: '<p>static</p>', deferred: [] },
+  { type: 'done', serverState: {} },
+])
 
 await test("the first page's mount, registered with setMount, is destroyed before the next page mounts (#168)", async () => {
   const events = []
@@ -208,14 +217,76 @@ await test('later navigations destroy the previous navigated page too', async ()
   assert.deepEqual(events, ['destroy first', 'mount 1', 'destroy 1', 'mount 2'])
 })
 
-await knownBug('navigating to a page with no hydrate bundle leaves the old instance alive', '#171', async () => {
-  const events = []
-  const { click, nav } = setup({ mountFn: () => ({ destroy: () => {} }) })
-  nav.setMount({ destroy: () => events.push('destroy first') })
+await test('navigating to a page with no hydrate bundle destroys the previous mount, keeping the new HTML (#171)', async () => {
+  const calls = []
+  const { click, nav, root } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  nav.setMount({ destroy: (opts) => calls.push(opts) })
   global.fetch = async () => jsonResponse({ html: '<p>static</p>', title: 'Static', hydrate: null, serverState: {} })
   click(clickEvent({ href: '/static' }))
   await sleep(60)
-  assert.deepEqual(events, ['destroy first'])
+  assert.equal(calls.length, 1, 'the previous instance must be destroyed once')
+  assert.deepEqual(calls[0], { keepDom: true }, 'destroy must not wipe the new page that is already in the root')
+  assert.equal(root.innerHTML, '<p>static</p>')
+})
+
+await test('the same, for a streamed navigation response', async () => {
+  const calls = []
+  const { click, nav, root } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  nav.setMount({ destroy: (opts) => calls.push(opts) })
+  global.fetch = async () => staticStream()
+  click(clickEvent({ href: '/static' }))
+  await sleep(60)
+  assert.deepEqual(calls, [{ keepDom: true }])
+  assert.equal(root.innerHTML, '<p>static</p>')
+})
+
+await test('a streamed response cut off after the metadata leaves the old page working (nothing destroyed before the HTML arrives)', async () => {
+  const calls = []
+  const { click, nav, root } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  root.innerHTML = '<p>old page</p>'
+  nav.setMount({ destroy: (opts) => calls.push(opts) })
+  global.fetch = async () => streamResponse([{ type: 'meta', hydrate: null, title: 'Static', styles: [], scripts: [] }])
+  click(clickEvent({ href: '/static' }))
+  await sleep(60)
+  assert.deepEqual(calls, [], 'the old instance must survive a response that never delivers a page')
+  assert.equal(root.innerHTML, '<p>old page</p>')
+})
+
+await test('the previous mount is destroyed immediately before the new HTML is swapped in, while the old DOM is still there', async () => {
+  let seenDuringDestroy = null
+  const { click, nav, root } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  root.innerHTML = '<p>old page</p>'
+  nav.setMount({ destroy: () => { seenDuringDestroy = root.innerHTML } })
+  global.fetch = async () => staticStream()
+  click(clickEvent({ href: '/static' }))
+  await sleep(60)
+  assert.equal(seenDuringDestroy, '<p>old page</p>')
+  assert.equal(root.innerHTML, '<p>static</p>')
+})
+
+await test('a destroy() that throws still clears the stale reference, so it is not called twice', async () => {
+  let calls = 0
+  const { click, nav } = setup({ mountFn: () => ({ destroy: () => {} }) })
+  nav.setMount({ destroy: () => { calls++; throw new Error('boom') } })
+  const prevLocation = global.location
+  global.fetch = async () => jsonResponse({ html: '<p>static</p>', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/one' })); await sleep(60)   // throws inside navigate -> falls back to a full load
+  global.fetch = async () => jsonResponse({ html: '<p>static 2</p>', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/two' })); await sleep(60)
+  assert.equal(calls, 1, 'the failed destroy must not be retried on the next navigation')
+  global.location = prevLocation
+})
+
+await test('after a static page nothing is left to destroy, and the next hydrated page mounts normally', async () => {
+  const events = []
+  const { click, nav } = setup({ mountFn: () => { events.push('mount'); return { destroy: () => events.push('destroy next') } } })
+  nav.setMount({ destroy: () => events.push('destroy first') })
+  global.fetch = async () => jsonResponse({ html: '<p>static</p>', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/static' })); await sleep(60)
+  click(clickEvent({ href: '/static-2' })); await sleep(60)   // a second static page: still nothing to destroy
+  global.fetch = async () => jsonResponse({ html: '<p>app</p>', hydrate: HYDRATED, serverState: {} })
+  click(clickEvent({ href: '/app' })); await sleep(60)
+  assert.deepEqual(events, ['destroy first', 'mount'])
 })
 
 // ── Navigation — fetch abort and cancellation ────────────────────────────────

@@ -26,6 +26,17 @@ export function initNavigation(root, mountFn) {
   let currentMount = null
   let currentNavController = null
 
+  // The target page has no client bundle (a purely server-rendered page), so nothing will mount
+  // over the previous page's instance. Release it, or its listeners keep firing on the new DOM
+  // and a store change re-renders the old view into it (#171). Call it immediately before the
+  // new HTML replaces the old (never earlier: if the response is cut off first, the visitor
+  // keeps a working page). keepDom: the caller swaps the root's content itself.
+  function releaseCurrentMount() {
+    const mount = currentMount
+    currentMount = null            // cleared first, so a throwing destroy() cannot leave a stale reference
+    mount?.destroy({ keepDom: true })
+  }
+
   async function navigate(path, push) {
     // Cancel any in-flight navigation before starting a new one
     currentNavController?.abort()
@@ -63,6 +74,10 @@ export function initNavigation(root, mountFn) {
             await applyScripts(msg.scripts)
 
           } else if (msg.type === 'html') {
+            if (!hydratePath) {
+              if (controller.signal.aborted) return   // superseded: leave the old page alone
+              releaseCurrentMount()
+            }
             root.innerHTML = trustedHTML(msg.html)
             // Index <pulse-deferred> placeholders so deferred chunks land in the right spot
             for (const id of (msg.deferred || [])) {
@@ -126,6 +141,7 @@ export function initNavigation(root, mountFn) {
           window.__updatePulseStore__(storeState)
         }
 
+        if (!hydrate) releaseCurrentMount()
         root.innerHTML = trustedHTML(html)
         document.title = title || document.title
         applyStyles(styles)
