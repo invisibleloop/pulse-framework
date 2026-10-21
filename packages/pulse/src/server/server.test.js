@@ -1289,6 +1289,41 @@ await test('body exceeding maxBody returns 413', async () => {
   })
 })
 
+await test('spec.maxBody overrides the global limit for that route only', async () => {
+  const big = {
+    route: '/big', maxBody: 1000, contentType: 'application/json',
+    render: async (ctx) => JSON.stringify({ n: (await ctx.text()).length }),
+  }
+  const small = {
+    route: '/small', contentType: 'application/json',
+    render: async (ctx) => JSON.stringify({ n: (await ctx.text()).length }),
+  }
+  await withServer([big, small], { stream: false, maxBody: 10 }, async (port) => {
+    const ok = await requestWithBody(port, 'POST', '/big', 'x'.repeat(500), 'text/plain')
+    assert(ok.status === 200 && JSON.parse(ok.body).n === 500, `route override should allow 500 bytes, got ${ok.status}`)
+    const tooBig = await requestWithBody(port, 'POST', '/big', 'x'.repeat(2000), 'text/plain')
+    assert(tooBig.status === 413, `over the route limit should be 413, got ${tooBig.status}`)
+    const global = await requestWithBody(port, 'POST', '/small', 'x'.repeat(500), 'text/plain')
+    assert(global.status === 413, `other routes keep the global limit, got ${global.status}`)
+  })
+})
+
+await test('an oversized Content-Length is refused before the body is read', async () => {
+  let read = false
+  const spec = {
+    route: '/cl', contentType: 'application/json',
+    render: async (ctx) => { try { await ctx.text() } catch (e) { read = true; throw e } return '{}' },
+  }
+  await withServer([spec], { stream: false, maxBody: 10 }, async (port) => {
+    const status = await new Promise((resolve) => {
+      const req = http.request({ host: '127.0.0.1', port, path: '/cl', method: 'POST', headers: { 'Content-Type': 'text/plain', 'Content-Length': '5000' } }, (res) => { res.resume(); resolve(res.statusCode) })
+      req.on('error', (e) => resolve(e.code))
+      req.write('x') // far less than declared; a read-first server would hang waiting for the rest
+    })
+    assert(status === 413, `declared-oversize body should be 413 without waiting for it, got ${status}`)
+  })
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nHealth check\n')

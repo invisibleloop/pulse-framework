@@ -253,6 +253,9 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
   /** Timeout in ms for all server fetchers on this page. Overrides createServer fetcherTimeout. */
   serverTimeout?: number
 
+  /** Request body limit in bytes for this route. Overrides createServer maxBody (default 1 MB), up or down. */
+  maxBody?: number
+
   /**
    * Fallback renderer called when view() throws at runtime.
    * Return an HTML string to display instead of the default error message.

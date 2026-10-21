@@ -47,6 +47,11 @@ test('every result carries a warnings array, including the early returns (raw-re
   assert(Array.isArray(validateSpec(null).warnings), 'non-object result must include warnings: []')
 })
 
+test('spec.maxBody must be a positive number of bytes', () => {
+  assert(validateSpec({ route: '/u', view: () => '', maxBody: 6 * 1024 * 1024 }).valid, 'a positive number is accepted')
+  for (const bad of [0, -1, '6mb', NaN, Infinity]) assertErrors({ route: '/u', view: () => '', maxBody: bad }, 'spec.maxBody')
+})
+
 test('rejects non-object', () => {
   assertErrors(null, 'must be a plain object')
   assertErrors('string', 'must be a plain object')
