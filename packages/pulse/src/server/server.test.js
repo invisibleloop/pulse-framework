@@ -1289,6 +1289,59 @@ await test('body exceeding maxBody returns 413', async () => {
   })
 })
 
+await test('spec.maxBody overrides the global limit for that route only', async () => {
+  const big = {
+    route: '/big', maxBody: 1000, contentType: 'application/json',
+    render: async (ctx) => JSON.stringify({ n: (await ctx.text()).length }),
+  }
+  const small = {
+    route: '/small', contentType: 'application/json',
+    render: async (ctx) => JSON.stringify({ n: (await ctx.text()).length }),
+  }
+  await withServer([big, small], { stream: false, maxBody: 10 }, async (port) => {
+    const ok = await requestWithBody(port, 'POST', '/big', 'x'.repeat(500), 'text/plain')
+    assert(ok.status === 200 && JSON.parse(ok.body).n === 500, `route override should allow 500 bytes, got ${ok.status}`)
+    const tooBig = await requestWithBody(port, 'POST', '/big', 'x'.repeat(2000), 'text/plain')
+    assert(tooBig.status === 413, `over the route limit should be 413, got ${tooBig.status}`)
+    const global = await requestWithBody(port, 'POST', '/small', 'x'.repeat(500), 'text/plain')
+    assert(global.status === 413, `other routes keep the global limit, got ${global.status}`)
+  })
+})
+
+await test('an oversized Content-Length is refused before the body is read', async () => {
+  const spec = {
+    route: '/cl', contentType: 'application/json',
+    render: async (ctx) => { await ctx.text(); return '{}' },
+  }
+  await withServer([spec], { stream: false, maxBody: 10 }, async (port) => {
+    const status = await new Promise((resolve) => {
+      // A read-first server would wait for the declared 5000 bytes; fail instead of hanging.
+      const timer = setTimeout(() => { req.destroy(); resolve('timeout') }, 3000)
+      const req = http.request({ host: '127.0.0.1', port, path: '/cl', method: 'POST', headers: { 'Content-Type': 'text/plain', 'Content-Length': '5000' } }, (res) => {
+        clearTimeout(timer); res.resume(); resolve(res.statusCode); req.destroy()
+      })
+      req.on('error', (e) => { clearTimeout(timer); resolve(e.code) })
+      req.write('x') // far less than declared, and the request is never ended
+    })
+    assert(status === 413, `declared-oversize body should be 413 without waiting for it, got ${status}`)
+  })
+})
+
+await test('spec.maxBody applies to a CSRF submit route', async () => {
+  const form = {
+    route: '/form', maxBody: 1000,
+    submit: async (ctx) => { const d = await ctx.formData(); return { redirect: `/form?n=${d.note.length}` } },
+    view: (state, server) => `<main id="main-content"><form method="POST">${server.csrf ?? ''}</form></main>`,
+  }
+  await withServer([form], { stream: false, maxBody: 10 }, async (port) => {
+    const { cookie, token } = await getCsrfPair(port, '/form')
+    const ok = await postForm(port, '/form', { note: 'x'.repeat(400), _csrf: token }, cookie)
+    assert(ok.status === 303, `submit within the route limit should succeed, got ${ok.status}`)
+    const big = await postForm(port, '/form', { note: 'x'.repeat(2000), _csrf: token }, cookie)
+    assert(big.status === 413, `submit over the route limit should be 413, got ${big.status}`)
+  })
+})
+
 // ---------------------------------------------------------------------------
 
 console.log('\nHealth check\n')

@@ -384,6 +384,13 @@ export function validateSpec(spec) {
     }
   }
 
+  // maxBody — per-route request body limit in bytes
+  if (spec.maxBody !== undefined) {
+    if (!Number.isFinite(spec.maxBody) || spec.maxBody <= 0) {
+      errors.push('spec.maxBody must be a positive number (bytes)')
+    }
+  }
+
   // guard — per-route authorization check
   if (spec.guard !== undefined) {
     if (typeof spec.guard !== 'function') {

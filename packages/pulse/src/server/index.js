@@ -1054,7 +1054,7 @@ export async function createServer(entries, options = {}) {
       const nonce = crypto.randomBytes(16).toString('base64url')
 
       // Build request context passed to guard, server data fetchers, and render
-      const ctx  = buildContext(req, url, match.params, nonce, maxBody)
+      const ctx  = buildContext(req, url, match.params, nonce, match.spec.maxBody ?? maxBody)
 
       // Brand resolution — attach ctx.brand before guard or server data runs
       if (resolveBrand) {
@@ -1793,13 +1793,14 @@ function buildContext(req, url, params, nonce = '', maxBody = 1024 * 1024) {
   function _readBody() {
     if (_bodyPromise) return _bodyPromise
     _bodyPromise = new Promise((resolve, reject) => {
+      const tooLarge = () => reject(Object.assign(new Error(`Request body exceeds ${maxBody} bytes`), { status: 413 }))
+      // An honest Content-Length over the limit is refused without reading the body.
+      if (Number(req.headers['content-length']) > maxBody) return tooLarge()
       const chunks = []
       let size = 0
       req.on('data', chunk => {
         size += chunk.length
-        if (size > maxBody) {
-          return reject(Object.assign(new Error(`Request body exceeds ${maxBody} bytes`), { status: 413 }))
-        }
+        if (size > maxBody) { chunks.length = 0; return tooLarge() }
         chunks.push(chunk)
       })
       req.on('end',   () => resolve(Buffer.concat(chunks)))
