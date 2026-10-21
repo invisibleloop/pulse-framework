@@ -1309,18 +1309,36 @@ await test('spec.maxBody overrides the global limit for that route only', async 
 })
 
 await test('an oversized Content-Length is refused before the body is read', async () => {
-  let read = false
   const spec = {
     route: '/cl', contentType: 'application/json',
-    render: async (ctx) => { try { await ctx.text() } catch (e) { read = true; throw e } return '{}' },
+    render: async (ctx) => { await ctx.text(); return '{}' },
   }
   await withServer([spec], { stream: false, maxBody: 10 }, async (port) => {
     const status = await new Promise((resolve) => {
-      const req = http.request({ host: '127.0.0.1', port, path: '/cl', method: 'POST', headers: { 'Content-Type': 'text/plain', 'Content-Length': '5000' } }, (res) => { res.resume(); resolve(res.statusCode) })
-      req.on('error', (e) => resolve(e.code))
-      req.write('x') // far less than declared; a read-first server would hang waiting for the rest
+      // A read-first server would wait for the declared 5000 bytes; fail instead of hanging.
+      const timer = setTimeout(() => { req.destroy(); resolve('timeout') }, 3000)
+      const req = http.request({ host: '127.0.0.1', port, path: '/cl', method: 'POST', headers: { 'Content-Type': 'text/plain', 'Content-Length': '5000' } }, (res) => {
+        clearTimeout(timer); res.resume(); resolve(res.statusCode); req.destroy()
+      })
+      req.on('error', (e) => { clearTimeout(timer); resolve(e.code) })
+      req.write('x') // far less than declared, and the request is never ended
     })
     assert(status === 413, `declared-oversize body should be 413 without waiting for it, got ${status}`)
+  })
+})
+
+await test('spec.maxBody applies to a CSRF submit route', async () => {
+  const form = {
+    route: '/form', maxBody: 1000,
+    submit: async (ctx) => { const d = await ctx.formData(); return { redirect: `/form?n=${d.note.length}` } },
+    view: (state, server) => `<main id="main-content"><form method="POST">${server.csrf ?? ''}</form></main>`,
+  }
+  await withServer([form], { stream: false, maxBody: 10 }, async (port) => {
+    const { cookie, token } = await getCsrfPair(port, '/form')
+    const ok = await postForm(port, '/form', { note: 'x'.repeat(400), _csrf: token }, cookie)
+    assert(ok.status === 303, `submit within the route limit should succeed, got ${ok.status}`)
+    const big = await postForm(port, '/form', { note: 'x'.repeat(2000), _csrf: token }, cookie)
+    assert(big.status === 413, `submit over the route limit should be 413, got ${big.status}`)
   })
 })
 
