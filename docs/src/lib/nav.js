@@ -10,6 +10,7 @@ export const NAV = [
       { label: 'Project Structure', href: '/project-structure' },
       { label: 'Spec Reference',    href: '/spec'              },
       { label: 'Configuration',     href: '/config'            },
+      { label: 'Stability',         href: '/stability'         },
     ],
   },
   {

@@ -3696,10 +3696,12 @@ Run this immediately after writing a theme file — before production build and 
 server.registerTool(
   'pulse_update',
   {
-    description: 'Install the latest @invisibleloop/pulse package (skipped if npm-linked), then re-copy pulse-ui.css, pulse-ui.js, and the agent checklist into public/. One command does the full upgrade.',
-    inputSchema: {},
+    description: 'Install the latest @invisibleloop/pulse package (skipped if npm-linked), then re-copy pulse-ui.css, pulse-ui.js, and the agent checklist into public/. Installing can change behaviour (before 1.0 a minor release may break), so the first call only reports the installed and latest versions: show that to the user, and only if they agree call again with confirmed: true. Never confirm on your own.',
+    inputSchema: {
+      confirmed: z.boolean().optional().describe('true only after the user has approved upgrading to the latest version'),
+    },
   },
-  async () => {
+  async ({ confirmed } = {}) => {
     // 1. npm install latest — but only if the package is NOT npm-linked.
     //    An npm link is a symlink in node_modules. Installing @latest over a
     //    link downgrades the project to the published version even when the
@@ -3707,6 +3709,19 @@ server.registerTool(
     const { execSync } = await import('child_process')
     const pkgDir = path.join(ROOT, 'node_modules', '@invisibleloop', 'pulse')
     const isLinked = fs.existsSync(pkgDir) && fs.lstatSync(pkgDir).isSymbolicLink()
+
+    if (!isLinked && !confirmed) {
+      let installed = '?'
+      let latest    = '?'
+      try { installed = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8')).version } catch { /* not installed */ }
+      try { latest = execSync('npm view @invisibleloop/pulse version', { cwd: ROOT, stdio: 'pipe', timeout: 15_000 }).toString().trim() } catch { /* offline */ }
+      return text([
+        `Not updated yet. Installed: v${installed}. Latest on npm: v${latest}.`,
+        '',
+        'Upgrading may change behaviour (before 1.0 a minor release can include breaking changes). Release notes: https://github.com/invisibleloop/pulse-framework/releases',
+        'Show this to the user. If they approve, call pulse_update again with confirmed: true.',
+      ].join('\n'))
+    }
 
     if (!isLinked) {
       try {
@@ -3879,7 +3894,7 @@ If you know your context already:
 - \`pulse_check_bundles\` — inspects what's actually inside the generated \`public/dist/\` bundles after \`pulse_build\`, not just their sizes. Flags a boot bundle that exists for a page with no mutations/actions/persist (should ship zero JS), and a literal Node built-in reference inside a bundle (server-only code that leaked through stripping). Lighthouse checks scores; this checks content — call it as part of the full \`/verify\` pass, right after \`pulse_build\`.
 - \`pulse_report_issue(title, description, expected?, actual?, repro?)\` — **Report a bug in Pulse itself** (not the user's code) once you have a minimal repro. Two steps: the first call returns a redacted preview that you must show the user verbatim; only if they approve, call again with \`confirmed: true\` and the \`previewId\`. Never confirm on your own, and never report your own mistakes or feature requests.
 - \`pulse_check_version\` — check installed package version, static asset version, and latest on npm. Use this instead of running npm commands when the user asks about updates.
-- \`pulse_update\` — install the latest \`@invisibleloop/pulse\` package and re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist into \`public/\`. One command does the full upgrade.
+- \`pulse_update\` — install the latest \`@invisibleloop/pulse\` package and re-copy \`pulse-ui.css\`, \`pulse-ui.js\`, and the agent checklist into \`public/\`. The first call only reports installed vs latest version: show the user, and call again with \`confirmed: true\` only if they approve. One command does the full upgrade.
 
 **Chrome DevTools MCP tools** (globally available):
 - \`mcp__chrome-devtools__take_screenshot\` — visual screenshot of the page.

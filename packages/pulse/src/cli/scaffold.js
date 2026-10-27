@@ -12,6 +12,17 @@ import { execSync } from 'child_process'
 const PULSE_PKG = '@invisibleloop/pulse'
 
 /**
+ * The version range a new project depends on: a caret on the version that scaffolded it.
+ * Before 1.0 a caret allows patch releases only (^0.22.2 means 0.22.x), so a fresh install
+ * cannot jump to a release with breaking changes. "latest" resolved to whatever was newest
+ * at install time. Upgrade deliberately with `pulse update`.
+ */
+export function pulseDependencyRange() {
+  const { version } = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  return `^${version}`
+}
+
+/**
  * Scaffold a new Pulse project.
  *
  * @param {string} targetDir - Absolute path to the project directory
@@ -48,7 +59,7 @@ export async function scaffold(targetDir, options = {}) {
       node: '>=22',
     },
     dependencies: {
-      [PULSE_PKG]: 'latest',
+      [PULSE_PKG]: pulseDependencyRange(),
     }
   }, null, 2))
 

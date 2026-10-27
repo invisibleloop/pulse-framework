@@ -250,7 +250,7 @@ export default {
         <dd>Reports the installed Pulse version and whether an update is available.</dd>
 
         <dt><code>pulse_update</code></dt>
-        <dd>Updates the Pulse package to the latest version and copies the latest UI assets and agent files into the project.</dd>
+        <dd>Updates the Pulse package to the latest version and copies the latest UI assets and agent files into the project. The first call only reports the installed and latest versions; the agent asks you, then calls again with <code>confirmed: true</code>.</dd>
       </dl>
 
       ${section('flow', 'What happens when you ask for something')}
