@@ -28,7 +28,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 ### Components first — or creative override
 
-- **Before writing any HTML by hand, check `src/ui/index.js`.** There are 50+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
+- **Before writing any HTML by hand, check `src/ui/index.js`.** There are 40+ components. Use `button`, `card`, `alert`, `input`, `spinner`, `badge`, `modal`, `nav`, `pagination`, `table`, etc. before writing equivalent HTML from scratch.
 - **Do not reinvent component patterns.** These patterns have dedicated components — never write custom HTML for them unless a creative override applies (see below):
   - Hero sections → `hero({ title, subtitle, actions, image, ... })`
   - Product/service cards → `card({ title, body, image, footer, ... })`
