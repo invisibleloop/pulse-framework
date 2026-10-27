@@ -14,3 +14,11 @@ docs/.pulse/errors.json
 /tmp/pulse-lhr*.json
 .claude/commands/
 .claude/coverage-check.js
+
+# browser smoke suite (packages/e2e)
+packages/e2e/fixture/public/
+packages/e2e/fixture/.claude/
+packages/e2e/fixture/.pulse/
+packages/e2e/fixture/.pulse-build/
+packages/e2e/test-results/
+packages/e2e/playwright-report/
