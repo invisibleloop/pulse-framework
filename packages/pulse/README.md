@@ -35,7 +35,7 @@ export default {
 
 ## Requirements
 
-Node.js 22 or later.
+Node.js 22 or later (tested on 22 and 24). Browsers: pages with no client JavaScript work anywhere; interactive pages need Chrome/Edge 98, Firefox 94 or Safari 15.4 (March 2022) or later — see [browser support](https://pulseframework.dev/performance#browser-support).
 
 ## Getting started
 
@@ -95,8 +95,8 @@ To turn it off, set `reportFeedback: false` in `pulse.config.js`.
 
 ## Status
 
-This is an early-access release. The core architecture is stable and production-quality, but the API may evolve before v1. Feedback and issues welcome on [GitHub](https://github.com/invisibleloop/pulse-framework).
+This is an early-access release. The core architecture is stable and production-quality, but the API may evolve before v1: a minor release (0.x.0) can contain breaking changes, patch releases will not. See [Stability & Versioning](https://pulseframework.dev/stability). Feedback and issues welcome on [GitHub](https://github.com/invisibleloop/pulse-framework).
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE). Contributions: see [CONTRIBUTING.md](https://github.com/invisibleloop/pulse-framework/blob/main/CONTRIBUTING.md).
