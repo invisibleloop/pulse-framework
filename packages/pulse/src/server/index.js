@@ -2026,6 +2026,10 @@ function serveStatic(req, res, staticDir, dev = false, staticCache = null) {
     }
   })
   fileStream.once('open', () => {
+    // The client may have gone away between the request and the file opening.
+    // Newer Node versions throw ERR_STREAM_UNABLE_TO_PIPE from pipeline() on a
+    // destroyed response, and nothing catches it inside an event listener.
+    if (res.destroyed || res.writableEnded) { fileStream.destroy(); compressor?.destroy(); return }
     res.writeHead(200, headers)
     pipeline(...(compressor ? [fileStream, compressor, res] : [fileStream, res]), () => {})
   })

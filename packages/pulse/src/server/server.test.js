@@ -2621,6 +2621,35 @@ await test('an unreadable static file returns 404 instead of crashing the server
   }
 })
 
+await test('a client that disconnects before the static file opens does not crash the server', async () => {
+  // On Node 24+, pipeline() throws ERR_STREAM_UNABLE_TO_PIPE for a destroyed response,
+  // from inside an event listener, so it surfaced as an uncaught exception.
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-static-'))
+  fs.writeFileSync(path.join(dir, 'app.css'), 'body{color:red}')
+  const uncaught = []
+  const onUncaught = (e) => uncaught.push(e)
+  process.on('uncaughtException', onUncaught)
+  try {
+    await withServer([hardenPage], { staticDir: dir, quiet: true }, async (port) => {
+      const abort = () => new Promise((done) => {
+        const sock = net.connect(port, '127.0.0.1', () => {
+          sock.write('GET /app.css HTTP/1.1\r\nHost: localhost\r\nAccept-Encoding: gzip\r\nConnection: close\r\n\r\n')
+          sock.destroy()
+          done()
+        })
+        sock.on('error', done)
+      })
+      for (let i = 0; i < 300; i++) await abort()
+      await new Promise(r => setTimeout(r, 200))
+      assert(uncaught.length === 0, `server threw ${uncaught[0]?.code ?? uncaught[0]}`)
+      assert((await get(port, '/app.css')).body === 'body{color:red}', 'server should still serve the file')
+    })
+  } finally {
+    process.off('uncaughtException', onUncaught)
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 await test('a forged X-Forwarded-Host cannot poison the cached canonical URL for other visitors', async () => {
   await withServer([hardenPage], { defaultCache: 3600, quiet: true }, async (port) => {
     const canon = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
