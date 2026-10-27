@@ -283,7 +283,9 @@ await createServer(
     staticDir:    'public',      // serve static files + auto-load manifest
     root:         new URL('.', import.meta.url),  // project root for deriving browser paths
     manifest:     null,          // explicit manifest path or object (overrides auto-detect)
-    defaultCache: 3600,          // default HTML cache TTL in seconds for all pages (prod only)
+    defaultCache: 3600,          // default HTML cache TTL in seconds for all pages (prod only);
+                                 // the in-process copy applies only to pages with no server/store/hydrate/submit/deferred
+                                 // stream (the rest render per request); keyed per host when resolveBrand is set
                                  // also accepts true (3600s + swr 86400s) or { public, maxAge, staleWhileRevalidate }
                                  // spec.cache overrides per-page; in-process + Cache-Control headers both set
     fetcherTimeout:  5000,        // ms before any server fetcher times out (null = no limit)
