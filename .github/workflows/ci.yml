@@ -36,6 +36,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run typecheck
+
       - run: npm test
 
       # Feedback Worker and the agent-fix patch validator live outside the

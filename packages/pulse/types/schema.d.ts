@@ -247,6 +247,12 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
   /** HTTP Cache-Control header config for the page response. */
   cache?: CacheConfig
 
+  /**
+   * Query-string keys that change this page's output. The in-process page cache ignores the
+   * query string by default; list a key here so distinct values get distinct cache entries.
+   */
+  cacheVary?: string[]
+
   /** Seconds to cache server.data() result in-process. */
   serverTtl?: number
 

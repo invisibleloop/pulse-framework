@@ -1,7 +1,8 @@
 /**
  * Spec schema tests — run with: node src/spec/schema.test.js
  */
-import { validateSpec, assertValidSpec, getStreamOrder, getViewSegments } from './schema.js'
+import { validateSpec, assertValidSpec, getStreamOrder, getViewSegments, KNOWN_SPEC_KEYS } from './schema.js'
+import fs from 'node:fs'
 
 let passed = 0
 let failed = 0
@@ -50,6 +51,25 @@ test('every result carries a warnings array, including the early returns (raw-re
 test('spec.maxBody must be a positive number of bytes', () => {
   assert(validateSpec({ route: '/u', view: () => '', maxBody: 6 * 1024 * 1024 }).valid, 'a positive number is accepted')
   for (const bad of [0, -1, '6mb', NaN, Infinity]) assertErrors({ route: '/u', view: () => '', maxBody: bad }, 'spec.maxBody')
+})
+
+test('an unknown top-level key warns, with a suggestion for a near miss', () => {
+  const { valid, warnings } = validateSpec({ route: '/x', view: () => '', mutatoins: {}, cachVary: ['q'], helperData: 1, _internal: 2 })
+  assert(valid, 'a typo is a warning, not an error')
+  const msg = warnings.join('\n')
+  assert(msg.includes('Did you mean "mutations"?'), msg)
+  assert(msg.includes('Did you mean "cacheVary"?'), msg)
+  assert(msg.includes('spec.helperData is not a Pulse spec key') && !msg.includes('Did you mean "helperData"'), 'far-off key lists the known keys')
+  assert(!msg.includes('_internal'), 'underscore-prefixed keys belong to the project')
+})
+
+test('every key the validator knows is typed in PulseSpec, and the reverse (types do not drift)', () => {
+  const dts = fs.readFileSync(new URL('../../types/schema.d.ts', import.meta.url), 'utf8')
+  const block = dts.slice(dts.indexOf('export interface PulseSpec'), dts.indexOf('export interface ValidationResult'))
+  const typed = new Set([...block.matchAll(/^  ([a-zA-Z]+)\??:/gm)].map(m => m[1]))
+  const known = [...KNOWN_SPEC_KEYS]
+  assert(known.every(k => typed.has(k)), `not in types/schema.d.ts: ${known.filter(k => !typed.has(k)).join(', ')}`)
+  assert([...typed].every(k => KNOWN_SPEC_KEYS.has(k)), `typed but unknown to the validator: ${[...typed].filter(k => !KNOWN_SPEC_KEYS.has(k)).join(', ')}`)
 })
 
 test('rejects non-object', () => {
