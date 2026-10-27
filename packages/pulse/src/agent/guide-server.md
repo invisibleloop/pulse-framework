@@ -281,7 +281,7 @@ guard: async (ctx) => {
 ```
 
 ### Setting cookies and headers
-`ctx.setCookie(name, value, opts)` — queues a `Set-Cookie` header. Options: `httpOnly`, `secure`, `path`, `maxAge`, `sameSite`, `domain`. Defaults: `Path=/`, `SameSite=Lax`.
+`ctx.setCookie(name, value, opts)` — queues a `Set-Cookie` header. Options: `httpOnly`, `secure`, `path`, `maxAge`, `sameSite`, `domain`. Defaults: `Path=/`, `SameSite=Lax`. `path`, `domain`, `maxAge` (integer seconds) and `sameSite` (`Strict`/`Lax`/`None`) are validated and a bad value throws, so never build them from user input.
 `ctx.setHeader(name, value)` — queues any arbitrary response header.
 
 ### Reading the request body
@@ -296,6 +296,8 @@ await ctx.buffer()    // raw Buffer
 ```
 
 Bodies larger than the limit are rejected with a 413 when the handler reads them. The limit is `maxBody` in `createServer` (default 1 MB); set `maxBody` on a spec to override it for that route only, e.g. `maxBody: 6 * 1024 * 1024` on an image-upload route. Prefer a per-route limit to raising the global one, and authenticate in `guard` first: the framework reads the body only after the guard runs (unless your guard reads it itself), so an unauthenticated caller never gets the larger buffer. A `submit` route with CSRF is the exception to rely on: the body is read before the CSRF check, so give a public form only the limit it needs.
+
+**A field name that appears more than once (a checkbox group, a multi-select) comes back as an array** of its values; a field that appears once is a string. Normalise with `[].concat(data.tag ?? [])` when a field may be either.
 
 **`ctx.formData()` returns a plain object, not a browser `FormData`.** Read fields directly — `data?.email`, not `data.get('email')` — the latter throws `TypeError: data.get is not a function`. This trips people up because client-side action code (`actions.*.run(state, serverState, formData)`) receives a real `FormData` object with a `.get()` method — same method name, different context, different shape. If you're writing `spec.submit` and reach for `.get()`, that's the tell you've copied the client-side pattern by mistake.
 
