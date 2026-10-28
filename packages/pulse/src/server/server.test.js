@@ -2737,6 +2737,76 @@ await test('a repeated urlencoded field becomes an array (checkbox groups), like
   })
 })
 
+await test('ctx.setCookie accepts what RFC 6265 allows: numeric-string maxAge, ASCII paths with : , + =, underscored domains; still refuses injection and non-ASCII', async () => {
+  const spec = {
+    route: '/c2', contentType: 'application/json',
+    render: async (ctx) => {
+      const out = {}
+      const attempt = (k, opts) => { try { ctx.setCookie('s' + k, 'v', opts); out[k] = 'ok' } catch (e) { out[k] = e.name } }
+      attempt('numeric-string', { maxAge: '3600' })
+      attempt('colon-path',     { path: '/a:b' })
+      attempt('comma-path',     { path: '/a,b' })
+      attempt('sym-path',       { path: '/x/y+z=1' })
+      attempt('underscore-dom', { domain: 'a_b.example.com' })
+      attempt('float',          { maxAge: 3600.5 })
+      attempt('non-ascii-path', { path: '/é' })
+      attempt('newline-path',   { path: '/a\r\nSet-Cookie: x=y' })
+      attempt('semicolon-path', { path: '/a;Secure' })
+      return JSON.stringify(out)
+    },
+  }
+  await withServer([spec], { stream: false, quiet: true }, async (port) => {
+    const res = await requestFull(port, 'GET', '/c2')
+    strictAssert.deepEqual(JSON.parse(res.body), {
+      'numeric-string': 'ok', 'colon-path': 'ok', 'comma-path': 'ok', 'sym-path': 'ok', 'underscore-dom': 'ok',
+      'float': 'TypeError', 'non-ascii-path': 'TypeError', 'newline-path': 'TypeError', 'semicolon-path': 'TypeError',
+    })
+    const cookies = [].concat(res.headers['set-cookie'] || [])
+    assert(cookies.some(c => c.startsWith('snumeric-string=v') && c.includes('Max-Age=3600')), `a numeric-string maxAge is written as a number: ${cookies}`)
+  })
+})
+
+await test('HSTS is on every HTTPS response: static files, the default 404 and 500 pages, health check, sitemap, navigation JSON', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-hsts-static-'))
+  fs.writeFileSync(path.join(dir, 'a.txt'), 'hello')
+  const home = { route: '/', state: {}, meta: { title: 'h' }, view: () => '<main id="main-content">h</main>' }
+  const boom = { route: '/boom', state: {}, meta: { title: 'b' }, view: () => { throw new Error('x') } }
+  const realError = console.error; console.error = () => {}
+  try {
+    await withServer([home, boom], { stream: false, staticDir: dir, sitemap: true, quiet: true }, async (port) => {
+      const h = { 'x-forwarded-proto': 'https' }
+      for (const [label, p, extra] of [
+        ['static file', '/a.txt', {}], ['default 404', '/nope', {}], ['default 500', '/boom', {}],
+        ['health check', '/healthz', {}], ['sitemap', '/sitemap.xml', {}], ['navigation JSON', '/', { 'x-pulse-navigate': 'true' }],
+      ]) {
+        const r = await request(port, 'GET', p, { ...h, ...extra })
+        strictAssert.equal(r.headers['strict-transport-security'], 'max-age=31536000', `${label} (${r.status}) must carry HSTS over HTTPS`)
+        const plain = await request(port, 'GET', p, extra)
+        assert(!plain.headers['strict-transport-security'], `${label} must not carry HSTS over plain HTTP`)
+      }
+    })
+  } finally { console.error = realError; fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
+await test('a project in a folder with a space or unicode gets the right hydrate path, not an absolute filesystem path (default root)', async () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-root-'))
+  const proj = path.join(base, 'my proj é#1')
+  fs.mkdirSync(path.join(proj, 'src'), { recursive: true })
+  fs.writeFileSync(path.join(proj, 'src', 'p.js'), "export default { route: '/', state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, meta: { title: 't', description: 'd', theme: 'light' }, view: s => `<main id=\"main-content\"><button data-event=\"inc\">${s.n}</button></main>` }\n")
+  const port = nextPort++
+  const script = `import { createServer } from ${JSON.stringify(new URL('./index.js', import.meta.url).href)}
+    import { pathToFileURL } from 'node:url'
+    const { server } = await createServer([pathToFileURL(process.cwd() + '/src/p.js')], { port: ${port}, dev: true, quiet: true })
+    await new Promise(r => server.once('listening', r))
+    const html = await (await fetch('http://127.0.0.1:${port}/')).text()
+    console.log(JSON.stringify(html.match(/import spec from '([^']+)'/)?.[1] ?? null))
+    process.exit(0)`
+  try {
+    const r = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: proj, encoding: 'utf8', timeout: 30000 })
+    strictAssert.equal(r.stdout.trim().split('\n').pop(), JSON.stringify('/src/p.js'), `hydrate path leaked or wrong. stdout: ${r.stdout} stderr: ${r.stderr.slice(0, 300)}`)
+  } finally { fs.rmSync(base, { recursive: true, force: true }) }
+})
+
 await test('ctx.setCookie refuses values that would add cookie attributes', async () => {
   const spec = {
     route: '/c', contentType: 'application/json',

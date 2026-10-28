@@ -9,6 +9,17 @@
 // Request context
 // ---------------------------------------------------------------------------
 
+/** One uploaded file part of a multipart body. */
+export interface FormFile {
+  filename: string
+  type:     string
+  data:     Buffer
+  size:     number
+}
+
+/** A form field: a string, a file, or (for a repeated name) an array of them. */
+export type FormValue = string | FormFile | Array<string | FormFile>
+
 export interface RequestContext {
   /** Route params extracted from the URL pattern, e.g. { id: '42' } */
   params:   Record<string, string>
@@ -35,8 +46,12 @@ export interface RequestContext {
   json():     Promise<Record<string, unknown> | null>
   /** Read the body as a plain string. */
   text():     Promise<string>
-  /** Parse a URL-encoded body into a plain object. Returns null for empty. */
-  formData(): Promise<Record<string, string> | null>
+  /**
+   * Parse a URL-encoded or multipart body into a plain object. Returns null for empty.
+   * A name that appears more than once (a checkbox group, a multi-select) is an array, so check
+   * with Array.isArray before treating a value as a string. Multipart file parts are FormFile.
+   */
+  formData(): Promise<Record<string, FormValue> | null>
   /** Read the raw body as a Node.js Buffer. */
   buffer():   Promise<Buffer>
 

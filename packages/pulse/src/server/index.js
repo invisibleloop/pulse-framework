@@ -25,6 +25,7 @@ export const version = _require('../../package.json').version
 import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript, buildStylePreconnects, safeJson } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
+import { pathToFileURL } from 'url'
 
 const gzipAsync   = promisify(zlib.gzip)
 const brotliAsync = promisify(zlib.brotliCompress)
@@ -671,8 +672,11 @@ async function resolveSpecEntries(entries, root) {
   } else if (typeof root === 'string' && root.startsWith('file://')) {
     rootHref = root.endsWith('/') ? root : root + '/'
   } else {
-    // Default: process.cwd() converted to a file URL
-    rootHref = 'file://' + process.cwd().replace(/\\/g, '/') + '/'
+    // Default: process.cwd() as a file URL. pathToFileURL percent-encodes it the way the entry URLs
+    // are (spaces, unicode, '#', '%') and gives the right form on Windows; a hand-built
+    // 'file://' + path matched neither, which leaked an absolute filesystem path into the page's
+    // hydrate import for any project in a folder with such a character.
+    rootHref = pathToFileURL(process.cwd()).href.replace(/\/?$/, '/')
   }
 
   const resolved = []
@@ -931,6 +935,10 @@ export async function createServer(entries, options = {}) {
 
   const server = http.createServer(async (req, res) => {
     req[HSTS_VALUE] = hstsValue
+    // On every HTTPS response, whichever code path writes it (static files, errors, sitemap, SSE,
+    // health check, ...): setHeader values are merged into the writeHead that follows. The
+    // per-handler httpsHeaders() spreads set the same value again, harmlessly.
+    if (hstsValue && isHttpsRequest(req)) res.setHeader('Strict-Transport-Security', hstsValue)
     const reqStart = Date.now()
     // The request target is attacker-controlled and `new URL` throws on a
     // malformed one (e.g. "GET http://[bad HTTP/1.1"). Parse it once, safely —
@@ -2006,15 +2014,21 @@ function buildContext(req, url, params, nonce = '', maxBody = 1024 * 1024) {
     setCookie(name, value, opts = {}) {
       // Attribute values are written into the header as given, so a ';' in a path or domain
       // would add attributes of its own. Refuse anything that is not a plain value.
-      if (opts.path !== undefined && !/^\/[\w\-./~%]*$/.test(opts.path)) throw new TypeError(`setCookie: invalid path ${JSON.stringify(opts.path)}`)
-      if (opts.domain !== undefined && !/^\.?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i.test(opts.domain)) throw new TypeError(`setCookie: invalid domain ${JSON.stringify(opts.domain)}`)
-      if (opts.maxAge !== undefined && !Number.isInteger(opts.maxAge)) throw new TypeError(`setCookie: maxAge must be an integer number of seconds, got ${JSON.stringify(opts.maxAge)}`)
+      // Path: RFC 6265 path-value, any printable US-ASCII character except ';' (percent-encode
+      // anything else). An earlier, stricter pattern refused valid paths such as "/a:b". Domain: letters, digits,
+      // hyphens and underscores in dot-separated labels; underscores are not valid in public
+      // hostnames but are common on internal ones.
+      if (opts.path !== undefined && !/^\/[\x20-\x3a\x3c-\x7e]*$/.test(opts.path)) throw new TypeError(`setCookie: invalid path ${JSON.stringify(opts.path)}`)
+      if (opts.domain !== undefined && !/^\.?[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?(\.[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?)*$/i.test(opts.domain)) throw new TypeError(`setCookie: invalid domain ${JSON.stringify(opts.domain)}`)
+      // maxAge: whole seconds. A numeric string such as "3600" (from an env var or a query) is accepted.
+      const maxAge = typeof opts.maxAge === 'string' && /^-?\d+$/.test(opts.maxAge) ? Number(opts.maxAge) : opts.maxAge
+      if (maxAge !== undefined && !Number.isInteger(maxAge)) throw new TypeError(`setCookie: maxAge must be an integer number of seconds, got ${JSON.stringify(opts.maxAge)}`)
       const sameSite = opts.sameSite === undefined ? 'Lax' : ['strict', 'lax', 'none'].find(v => v === String(opts.sameSite).toLowerCase())
       if (!sameSite) throw new TypeError(`setCookie: sameSite must be Strict, Lax or None, got ${JSON.stringify(opts.sameSite)}`)
       let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`
       if (opts.path     !== undefined) cookie += `; Path=${opts.path}`
       else                             cookie += `; Path=/`
-      if (opts.maxAge   !== undefined) cookie += `; Max-Age=${opts.maxAge}`
+      if (maxAge        !== undefined) cookie += `; Max-Age=${maxAge}`
       if (opts.domain   !== undefined) cookie += `; Domain=${opts.domain}`
       cookie += `; SameSite=${sameSite[0].toUpperCase()}${sameSite.slice(1)}`
       if (opts.httpOnly)               cookie += `; HttpOnly`
