@@ -126,6 +126,7 @@ export default {
 - onSuccess AND onError are both required in every action (missing either will cause a runtime error)
 - **`_toast`** — return `_toast: { message, variant, duration }` from any action hook (`onStart`, `onSuccess`, `onError`) or mutation to show a toast notification. It is stripped from spec state automatically — never stored. `variant`: `success` | `error` | `warning` | `info` (default). `duration`: ms before auto-dismiss (default 4000, 0 = sticky). The toast container is injected into `document.body` once and survives page navigations. Works from mutations too: `inc: (state) => ({ count: state.count + 1, _toast: { message: 'Done!' } })`.
 - **`onViewError(err, state, serverState) → string`** — optional spec field. Called client-side when `view()` throws; return an HTML string to display instead of crashing. Without it the runtime renders a default inline error message. On the server, a throwing view propagates to the server error handler (500) unless `onViewError` is defined, in which case it returns a 200 with the fallback HTML.
+- **Everything a `server` fetcher returns on a hydrated page is written into the HTML** (`window.__PULSE_SERVER__`) and is readable by anyone who views source. Return only the fields the view needs — never a whole user/account record, tokens or internal ids. Purely server-rendered pages (no mutations, actions or persist) do not serialise it.
 - Always export default spec
 
 ## Form layout pattern

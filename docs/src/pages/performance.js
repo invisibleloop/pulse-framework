@@ -122,15 +122,18 @@ export default {
       <p>These headers are applied automatically — no configuration needed.</p>
 
       ${section('browser-support', 'Browser support')}
-      <p>Pulse ships modern JavaScript and CSS without transpilation or polyfills. The effective minimum is set by two features:</p>
+      <p>Pulse ships modern JavaScript and CSS without transpilation or polyfills. Pages that use no client JavaScript render in any browser that can display HTML and CSS. The floor for <strong>hydrated pages</strong> is set by the runtime's use of <code>structuredClone</code>, and a few components use newer CSS that degrades visually rather than breaking:</p>
       ${table(
-        ['Constraint', 'Chrome', 'Firefox', 'Safari', 'Edge', 'Since'],
+        ['Feature', 'Used by', 'Chrome / Edge', 'Firefox', 'Safari'],
         [
-          ['<code>?.</code> optional chaining (JS)', '80', '74', '13.1', '80', 'Feb – Mar 2020'],
-          ['<code>gap</code> on flexbox (CSS)', '84', '63', '14.1', '84', 'Aug 2020 – Apr 2021'],
+          ['<code>structuredClone</code> (JS)', 'Client runtime (state cloning) — required for hydration', '98', '94', '15.4'],
+          ['<code>?.</code> optional chaining (JS)', 'Runtime and bundles', '80', '74', '13.1'],
+          ['<code>&lt;dialog&gt;</code> <code>showModal()</code>', '<code>data-dialog-open</code>, modal', '37', '98', '15.4'],
+          ['<code>:has()</code> (CSS)', 'Rating component', '105', '121', '15.4'],
+          ['<code>color-mix()</code> (CSS)', 'Spinner and tinted surfaces (falls back to no tint)', '111', '113', '16.2'],
         ]
       )}
-      <p>In practice, <strong>Safari 14.1 (April 2021) is the combined floor</strong> — browsers released after that date support everything Pulse uses. This covers roughly 95%+ of global traffic.</p>
+      <p>In practice, <strong>Chrome/Edge 98, Firefox 94 and Safari 15.4 (March 2022) are the floor for interactive pages</strong>; the CSS-only features above need the later versions shown. This list is checked by hand against the source, so treat it as a guide, not a guarantee.</p>
       ${callout('note', 'No explicit <code>target</code> is set in the esbuild config, so syntax ships as written. If you need to support older browsers, set <code>target</code> in <code>scripts/build.js</code> and esbuild will downcompile optional chaining and other modern syntax automatically.')}
 
       ${section('cls', 'Preventing layout shift (CLS)')}
