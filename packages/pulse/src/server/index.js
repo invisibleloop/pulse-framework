@@ -436,10 +436,15 @@ function resolveCache(value) {
  * touches the network at all. No risk of stale dynamic content on a normal
  * page load; this only affects the back/forward navigation path.
  */
-function buildCacheControl(spec, dev, defaultCache = null) {
+function buildCacheControl(spec, dev, defaultCache = null, status = 200, method = 'GET') {
   if (dev) return 'no-store'
 
-  const cfg = resolveCache(spec?.cache) ?? resolveCache(defaultCache)
+  // The server-wide default applies to ordinary page responses only. A custom 404 (or any other
+  // non-200 render) or a POST re-render is not the page a CDN should keep for the default TTL: a
+  // cached 404 would go on being served after the page is created. A spec that sets its own
+  // `cache` still decides for itself.
+  const defaultApplies = status === 200 && method !== 'POST'
+  const cfg = resolveCache(spec?.cache) ?? (defaultApplies ? resolveCache(defaultCache) : null)
   if (!cfg) return 'no-cache'
 
   return buildCacheControlFromConfig(cfg)
@@ -1278,7 +1283,7 @@ export async function createServer(entries, options = {}) {
       if (responseStatus !== 200 || req.method === 'POST') {
         await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, responseStatus, livePath, analyticsTag)
       } else if (stream) {
-        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, livePath, analyticsTag)
+        await handleStreamResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, livePath, analyticsTag, errorJournalPath)
       } else {
         await handleStringResponse(spec, ctx, req, res, extraBody, dev, canonicalBase, nonce, runtimeBundle, defaultCache, storeDef, csp, faviconPath, 200, livePath, analyticsTag)
       }
@@ -1513,7 +1518,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
 
   const headers = mergeCtxHeaders(ctx, {
     'Content-Type':              'text/html; charset=utf-8',
-    'Cache-Control':             buildCacheControl(spec, dev, defaultCache),
+    'Cache-Control':             buildCacheControl(spec, dev, defaultCache, status, ctx.method),
     'Content-Security-Policy':   fromCache ? buildCachedCsp(csp) : buildCsp(nonce, csp),
     'Vary':                      'Accept-Encoding',
     ...SECURITY_HEADERS,
@@ -1530,7 +1535,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
  * Stream the response — shell first, deferred segments follow.
  * On a page-cache hit, serves the buffered HTML as a string (no streaming needed).
  */
-async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, livePath = '', analyticsTag = '') {
+async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, livePath = '', analyticsTag = '', errorJournalPath = null) {
   // Serve from in-process page cache when available — skip streaming overhead.
   const cacheKey = buildCacheKey(spec, ctx)
   const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
@@ -1691,7 +1696,14 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
     // Store assembled HTML in page cache for subsequent requests
     if (chunks) pageHtmlCache.set(cacheKey, { html: chunks.join('') }, ttl)
   } catch (err) {
-    // Headers already sent — inject an error script that replaces pulse-root content.
+    // The 200 and the document head are already on the wire, so the status cannot change and a
+    // custom onError (which writes a whole response) cannot run. Do what the default error handler
+    // does for a response that has already started: log it, and in dev record it in the error
+    // journal. Without this a failing page was invisible: status 200, nothing in the log, nothing
+    // for `pulse diagnose` to find.
+    console.error('[Pulse] Error while streaming', req.url, err)
+    if (dev && errorJournalPath) writeErrorEntry(errorJournalPath, { route: req.url || null, phase: 'server', message: err?.message, stack: err?.stack })
+    // Inject an error script that replaces pulse-root content.
     // JSON.stringify safely encodes the HTML for insertion into a script context.
     try {
       write(streamErrorScript(err, dev, nonce))

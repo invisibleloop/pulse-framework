@@ -104,8 +104,11 @@ export const mySpec = {
 
   // Optional — called client-side when view() throws. Return an HTML string.
   // Without this, the runtime shows an inline error message and logs to console.
-  // On the server, a throwing view always propagates to the server error handler
-  // unless onViewError is defined, in which case it returns the fallback HTML with 200.
+  // On the server, a throwing view propagates to the server error handler (500) when the
+  // response is buffered (stream: false, POST re-renders, a custom 404), unless onViewError is
+  // defined, in which case it returns the fallback HTML with 200. With streaming (the default) the
+  // 200 and the page head are already sent, so onError cannot run: the error is logged (and
+  // journaled in dev) and the page shows an error message. Use onViewError for a designed fallback.
   onViewError: (err, state, serverState) => `<p>Something went wrong</p>`,
 
   // Synchronous state changes — return partial state to merge
