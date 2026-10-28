@@ -52,6 +52,13 @@ modules.forEach((result, i) => {
   })
 })
 
+test('a scaffolded project pins a caret range on the scaffolding version, not "latest"', () => {
+  const { pulseDependencyRange } = modules[0].value
+  const { version } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  if (pulseDependencyRange() !== `^${version}`) throw new Error(`got ${pulseDependencyRange()}`)
+  if (!/^\^\d+\.\d+\.\d+$/.test(pulseDependencyRange())) throw new Error('not a caret range')
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {
