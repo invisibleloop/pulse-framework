@@ -286,6 +286,17 @@ test('a spec that fails validation at startup is reported with its route and fil
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('the published package stays small: no images or media, no tests, no archived files, under a size budget (it shipped 10 MB of demo photos)', async () => {
+  const { spawnCommandSync } = await import('./spawn.js')
+  const r = spawnCommandSync('npm', ['pack', '--dry-run', '--json'], { cwd: path.join(__dirname, '..', '..'), encoding: 'utf8', timeout: 60000 })
+  if (r.status !== 0) throw new Error(`npm pack failed: ${r.stderr}`)
+  const pack = JSON.parse(r.stdout)[0]
+  const bad = pack.files.map(f => f.path).filter(f => /\.(jpe?g|png|gif|webp|avif|svg|mp4|mov|woff2?|ttf)$/i.test(f) || /\.test\.js$/.test(f) || /\.archive\./.test(f) || /^types\/checks\//.test(f))
+  if (bad.length) throw new Error(`these must not ship in the package: ${bad.join(', ')}`)
+  const MB = 1024 * 1024
+  if (pack.unpackedSize > 3 * MB) throw new Error(`the package unpacks to ${(pack.unpackedSize / MB).toFixed(1)} MB; the budget is 3 MB (it is about 1.5 MB). If this growth is intended, raise the budget on purpose.`)
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {
