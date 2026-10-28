@@ -119,6 +119,47 @@
  */
 
 // ---------------------------------------------------------------------------
+// Known spec keys
+// ---------------------------------------------------------------------------
+
+/**
+ * Every top-level key the framework reads from a spec. Anything else is ignored at runtime,
+ * so a typo ("mutatoins", "cachVary") would otherwise fail silently. Keys starting with "_"
+ * are the project's own and never warned about.
+ */
+export const KNOWN_SPEC_KEYS = new Set([
+  'route', 'meta', 'server', 'serverTimeout', 'serverTtl', 'cache', 'cacheVary', 'sitemap',
+  'store', 'state', 'constraints', 'validation', 'view', 'onViewError', 'mutations', 'actions',
+  'submit', 'csrf', 'stream', 'persist', 'guard', 'methods', 'contentType', 'render', 'hydrate',
+  'maxBody',
+])
+
+/** Edit distance, for "did you mean" suggestions on unknown keys. */
+function editDistance(a, b) {
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    let prev = row[0]
+    row[0] = i
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = row[j]
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1))
+      prev = tmp
+    }
+  }
+  return row[b.length]
+}
+
+function unknownKeyWarning(key) {
+  let best = null
+  for (const known of KNOWN_SPEC_KEYS) {
+    const d = editDistance(key.toLowerCase(), known.toLowerCase())
+    if (d <= 2 && (!best || d < best.d)) best = { known, d }
+  }
+  return `spec.${key} is not a Pulse spec key — it is silently ignored.` +
+    (best ? ` Did you mean "${best.known}"?` : ` Known keys: ${[...KNOWN_SPEC_KEYS].join(', ')}. Prefix project-specific keys with "_".`)
+}
+
+// ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
@@ -136,6 +177,10 @@ export function validateSpec(spec) {
 
   if (!spec || typeof spec !== 'object') {
     return { valid: false, errors: ['Spec must be a plain object'], warnings }
+  }
+
+  for (const key of Object.keys(spec)) {
+    if (!KNOWN_SPEC_KEYS.has(key) && !key.startsWith('_')) warnings.push(unknownKeyWarning(key))
   }
 
   // route — '*' is the custom not-found page, rendered with status 404 when no route matches
