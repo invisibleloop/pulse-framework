@@ -22,7 +22,7 @@ import { renderToString } from '../src/runtime/ssr.js'
 import { c, header, table, ok, fail, info, warn, elapsed, icon } from '../src/cli/fmt.js'
 import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
 import { buildBootstrapSource } from './bootstrap.js'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -416,7 +416,7 @@ const TMP_DIR = path.join(ROOT, '.pulse-build')
 let _projectConfig = {}
 const _configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(_configPath)) {
-  try { _projectConfig = (await import(_configPath)).default ?? {} } catch { /* ignore */ }
+  try { _projectConfig = (await import(pathToFileURL(_configPath).href)).default ?? {} } catch { /* ignore */ }
 }
 
 // css.safelist — array of class name strings or RegExp patterns to always keep
@@ -719,7 +719,7 @@ async function purgeCssStep(pages, manifest, root, outDir) {
 
   for (const { filePath } of pages) {
     try {
-      const mod  = await import(filePath)
+      const mod  = await import(pathToFileURL(filePath).href)
       const spec = mod.default
       if (!spec || typeof spec !== 'object') continue
 

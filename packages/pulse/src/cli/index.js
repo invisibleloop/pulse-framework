@@ -27,7 +27,7 @@ import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
 import { isInstalledInProject, installCommand, PACKAGE } from './update.js'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -283,7 +283,7 @@ async function launchSession(root, agentOverride = null) {
   let agent = agentOverride || 'claude'
   if (!agentOverride && fs.existsSync(configPath)) {
     try {
-      const mod = await import(configPath)
+      const mod = await import(pathToFileURL(configPath).href)
       agent = mod.default?.agent || 'claude'
     } catch { /* use default */ }
   }
@@ -393,7 +393,7 @@ async function runStop(root) {
   const configPath = path.join(root, 'pulse.config.js')
   if (fs.existsSync(configPath)) {
     try {
-      const mod = await import(configPath)
+      const mod = await import(pathToFileURL(configPath).href)
       if (mod.default?.port) port = mod.default.port
     } catch { /* use default */ }
   }
@@ -428,7 +428,7 @@ async function runReportServer(root) {
   let reportPort = null
   if (fs.existsSync(configPath)) {
     try {
-      const mod = await import(configPath)
+      const mod = await import(pathToFileURL(configPath).href)
       if (mod.default?.port)       devPort    = mod.default.port
       if (mod.default?.reportPort) reportPort = mod.default.reportPort
     } catch { /* use defaults */ }

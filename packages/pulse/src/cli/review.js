@@ -14,7 +14,7 @@ import fs   from 'fs'
 import path from 'path'
 import os   from 'os'
 import { execFileSync } from 'child_process'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // ---------------------------------------------------------------------------
 // Quick mode — lightweight structural checks, no validator subprocess, no
@@ -33,7 +33,7 @@ export async function runQuickReview(source, file) {
   let renderedHtml = ''
   if (file) {
     try {
-      const mod  = await import(`${file}?quick=${Date.now()}`)
+      const mod  = await import(`${pathToFileURL(file).href}?quick=${Date.now()}`)
       const spec = mod.default
       if (spec && typeof spec.view === 'function') {
         renderedHtml = spec.view(spec.state || {}, {})
@@ -184,7 +184,7 @@ export async function runFullReview(source, file) {
   let renderedHtml = ''
   let renderNote = ''
   try {
-    const mod  = await import(`${file}?review=${Date.now()}`)
+    const mod  = await import(`${pathToFileURL(file).href}?review=${Date.now()}`)
     const spec = mod.default
     if (spec && typeof spec.view === 'function') {
       renderedHtml = spec.view(spec.state || {}, {})

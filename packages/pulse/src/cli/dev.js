@@ -45,7 +45,7 @@ register('./reload-hooks.js', {
 let _config = {}
 const configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(configPath)) {
-  try { _config = (await import(configPath)).default ?? {} } catch { /* ignore */ }
+  try { _config = (await import(pathToFileURL(configPath).href)).default ?? {} } catch { /* ignore */ }
 }
 
 async function resolvePort() {

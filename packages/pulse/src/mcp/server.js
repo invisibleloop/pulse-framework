@@ -49,7 +49,7 @@ import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
 import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
 import { killPulseServerOnPort } from '../cli/process-utils.js'
 import { buildReport, previewId, formatPreview, sendViaProxy, sendViaGh, formatResult, DEFAULT_ENDPOINT } from '../cli/feedback.js'
-import { fileURLToPath } from 'url'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // ---------------------------------------------------------------------------
 // Crash guards — an uncaught error in any tool handler must not kill the
@@ -101,7 +101,7 @@ async function readPulseConfig() {
   const configPath = path.join(ROOT, 'pulse.config.js')
   if (!fs.existsSync(configPath)) return {}
   try {
-    const mod = await import(`${configPath}?t=${Date.now()}`)
+    const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
     return mod.default ?? {}
   } catch {
     return {}
@@ -705,7 +705,7 @@ server.registerTool(
     const configPath = path.join(ROOT, 'pulse.config.js')
     if (fs.existsSync(configPath)) {
       try {
-        const mod = await import(`${configPath}?t=${Date.now()}`)
+        const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
         if (mod.default?.port) port = mod.default.port
       } catch { /* use default */ }
     }
@@ -1251,7 +1251,7 @@ server.registerTool(
     const configPath = path.join(ROOT, 'pulse.config.js')
     if (fs.existsSync(configPath)) {
       try {
-        const mod = await import(`${configPath}?t=${Date.now()}`)
+        const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
         if (mod.default?.port) port = mod.default.port
       } catch { /* use default */ }
     }

@@ -12,6 +12,7 @@ import path from 'path'
 import fs   from 'fs'
 import { createServer } from '../server/index.js'
 import { loadPages, loadStore } from './discover.js'
+import { pathToFileURL } from 'url'
 
 const args    = process.argv.slice(2)
 const rootArg = args.indexOf('--root')
@@ -53,7 +54,7 @@ const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live',
 const configPath = path.join(ROOT, 'pulse.config.js')
 if (fs.existsSync(configPath)) {
   try {
-    const mod    = await import(configPath)
+    const mod    = await import(pathToFileURL(configPath).href)
     port         = port || mod.default?.port || null
     defaultCache = mod.default?.defaultCache ?? null
     staticCache  = mod.default?.staticCache ?? null
