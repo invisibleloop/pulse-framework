@@ -76,6 +76,19 @@ test('a scaffolded project lists the agent tools\' dependencies as devDependenci
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('a scaffolded .gitignore ignores the dev error journal, and nothing else under .pulse/', async () => {
+  const { scaffold } = modules[0].value
+  const { mkdtempSync, rmSync } = await import('fs')
+  const os = await import('os')
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-scaffold-ignore-'))
+  try {
+    await scaffold(dir, { name: 'demo' })
+    const lines = readFileSync(path.join(dir, '.gitignore'), 'utf8').split('\n').map(l => l.trim())
+    if (!lines.includes('.pulse/errors.json')) throw new Error('.pulse/errors.json must be ignored')
+    if (lines.includes('.pulse') || lines.includes('.pulse/')) throw new Error('.pulse/ as a whole must not be ignored: design reports live there')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {
