@@ -110,11 +110,15 @@ export async function loadPages(projectRoot, bust = 0) {
           )))
         : null
 
-      return {
+      const result = {
         ...spec,
         route:   spec.route || derivedRoute,
         ...(hydrateUrl ? { hydrate: hydrateUrl } : {}),
       }
+      // Where the spec came from, for error messages. Non-enumerable, so it is not a spec key and
+      // never shows up in validation, serialisation or a spread.
+      Object.defineProperty(result, '_file', { value: filePath, enumerable: false })
+      return result
     })
   )
 

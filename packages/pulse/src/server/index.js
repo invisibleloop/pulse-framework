@@ -840,10 +840,12 @@ export async function createServer(entries, options = {}) {
     }
     const allErrors = [...errors, ...routeErrors]
     if (!valid || routeErrors.length > 0) {
-      throw new Error(
-        `Invalid spec for route "${spec?.route}":\n` +
+      const where = spec?._file ? ` in ${path.relative(process.cwd(), spec._file) || spec._file}` : ''
+      // code: lets the CLI print this as a message, without a stack trace
+      throw Object.assign(new Error(
+        `Invalid spec for route "${spec?.route}"${where}:\n` +
         allErrors.map(e => `  — ${e}`).join('\n')
-      )
+      ), { code: 'PULSE_INVALID_SPEC' })
     }
   }
 

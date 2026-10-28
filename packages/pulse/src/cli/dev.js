@@ -17,6 +17,7 @@ import { loadPages, loadStore } from './discover.js'
 import * as log         from './logger.js'
 import { fileURLToPath } from 'url'
 import { definedClasses, undefinedClasses } from './class-check.js'
+import { loadConfigOrExit, failStartup } from './config.js'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -43,11 +44,7 @@ register('./reload-hooks.js', {
   data: { rootUrl: pathToFileURL(fs.realpathSync(ROOT)).href + '/' },
 })
 
-let _config = {}
-const configPath = path.join(ROOT, 'pulse.config.js')
-if (fs.existsSync(configPath)) {
-  try { _config = (await import(pathToFileURL(configPath).href)).default ?? {} } catch { /* ignore */ }
-}
+const _config = await loadConfigOrExit(ROOT)
 
 async function resolvePort() {
   if (portArg !== -1) return parseInt(args[portArg + 1], 10)
@@ -383,4 +380,4 @@ const { updateSpecs, updateStore } = await createServer(specs, {
     // Framework runtime — /@pulse/runtime/index.js → FRAMEWORK_ROOT/src/runtime/index.js
     if (serveDir('/@pulse/', path.join(FRAMEWORK_ROOT, 'src'))) return false
   }
-})
+}).catch(failStartup)

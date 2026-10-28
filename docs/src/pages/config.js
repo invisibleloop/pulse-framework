@@ -20,6 +20,8 @@ export default {
       ${h1('Configuration')}
       ${lead('<code>pulse.config.js</code> sets the performance and load thresholds that Pulse enforces across your application. All fields are optional — the defaults match Google\'s Core Web Vitals "good" band. Configuration here is not about enabling features; it is about deciding where, if anywhere, you need to lower a guaranteed baseline.')}
 
+      ${callout('note', 'A <code>pulse.config.js</code> that cannot be loaded (a syntax error, say) or has an invalid value stops <code>pulse dev</code>, <code>build</code>, <code>start</code> and <code>stop</code> with a message that names the problem. It is never silently ignored: falling back to the defaults would start the server on a different port, without your <code>csp</code> or <code>redirects</code>. <code>port</code> must be a whole number from 1 to 65535, and <code>agent</code> must be <code>\'claude\'</code> or <code>\'copilot\'</code>.')}
+
       ${section('schema', 'Full schema')}
       ${codeBlock(highlight(`// pulse.config.js
 export default {

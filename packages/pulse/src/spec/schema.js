@@ -444,9 +444,15 @@ export function validateSpec(spec) {
   }
 
   // cache — HTTP cache-control for HTML responses
+  // Accepts what the server's resolveCache accepts: true (a default TTL with stale-while-revalidate),
+  // a number of seconds (public, max-age=N), or { public, maxAge, staleWhileRevalidate }.
   if (spec.cache !== undefined) {
-    if (typeof spec.cache !== 'object' || Array.isArray(spec.cache)) {
-      errors.push('spec.cache must be a plain object')
+    if (spec.cache === true || spec.cache === false) {
+      // ok: true = the default TTL, false = no caching
+    } else if (typeof spec.cache === 'number') {
+      if (!Number.isFinite(spec.cache) || spec.cache < 0) errors.push('spec.cache as a number is a count of seconds and must be zero or more')
+    } else if (spec.cache === null || typeof spec.cache !== 'object' || Array.isArray(spec.cache)) {
+      errors.push('spec.cache must be true, a number of seconds, or an object like { public: true, maxAge: 300 }')
     } else {
       if (spec.cache.maxAge !== undefined && typeof spec.cache.maxAge !== 'number') {
         errors.push('spec.cache.maxAge must be a number (seconds)')
@@ -506,6 +512,10 @@ export function validateSpec(spec) {
     }
     // If meta.theme is not set (and not a function), Pulse defaults to dark — warn so agents
     // don't accidentally ship a dark-themed page when they intended light.
+    if (typeof spec.meta.theme === 'string' && spec.meta.theme !== 'light' && spec.meta.theme !== 'dark') {
+      // Not an error: a project may ship a [data-theme="..."] of its own. But Pulse's styles only know two.
+      warnings.push(`spec.meta.theme is '${spec.meta.theme}', and Pulse's own styles define only 'light' and 'dark'. Unless your CSS defines [data-theme="${spec.meta.theme}"], the page gets neither.`)
+    }
     if (typeof spec.meta.theme !== 'string' && typeof spec.meta.theme !== 'function') {
       warnings.push('spec.meta.theme is not set — Pulse defaults to dark. Add meta.theme: \'dark\' (or \'light\') to make the intent explicit and suppress this warning.')
     }

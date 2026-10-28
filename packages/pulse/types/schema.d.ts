@@ -260,7 +260,8 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
   guard?: (ctx: RequestContext) => Promise<GuardResult | void> | GuardResult | void
 
   /** HTTP Cache-Control header config for the page response. */
-  cache?: CacheConfig
+  /** true = default TTL, a number = seconds (public, max-age=N), or an explicit CacheConfig. */
+  cache?: boolean | number | CacheConfig
 
   /**
    * Query-string keys that change this page's output. The in-process page cache ignores the
