@@ -82,8 +82,10 @@ async function scenario(...below) {
     assert.equal(afterDirect.loads, first.loads, 'a node_modules package was re-evaluated on reload')
     assert.equal(afterComponent.loads, first.loads, 'a node_modules package was re-evaluated on reload')
   } finally {
+    const exited = new Promise(resolve => proc.once('exit', resolve))
     proc.kill('SIGKILL')
-    fs.rmSync(base, { recursive: true, force: true })
+    await exited   // Windows refuses to delete a directory a live process still has open
+    fs.rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
   }
 }
 

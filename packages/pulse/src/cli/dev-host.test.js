@@ -52,8 +52,10 @@ async function withDev(extraArgs, fn) {
     assert(await canConnect('127.0.0.1', port), 'dev server did not start')
     await fn(port)
   } finally {
+    const exited = new Promise(resolve => proc.once('exit', resolve))
     proc.kill('SIGKILL')
-    fs.rmSync(dir, { recursive: true, force: true })
+    await exited   // Windows refuses to delete a directory a live process still has open
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
   }
 }
 
