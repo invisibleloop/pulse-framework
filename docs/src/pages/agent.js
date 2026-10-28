@@ -95,20 +95,20 @@ const decisionTree = {
       verdict: 'EXCELLENT FIT',
       score: 0.95,
       reason: 'Pulse is built exactly for this use case',
-      next_steps: 'GET /docs/examples?complexity=medium'
+      next_steps: 'Read /getting-started, then /spec'
     },
     'good-fit': {
       verdict: 'GOOD FIT',
       score: 0.8,
       reason: 'Pulse works well, validation is optional',
-      next_steps: 'GET /docs/spec'
+      next_steps: 'Read /spec'
     },
     'static-page-perfect': {
       verdict: 'PERFECT FOR STATIC',
       score: 0.9,
       reason: 'Pulse ships zero JavaScript for static pages',
       gotcha: 'No client-side interactivity, but that\'s the point',
-      next_steps: 'GET /docs/examples?type=static-page'
+      next_steps: 'Read /getting-started'
     },
     'still-works-but-suboptimal': {
       verdict: 'WORKS, NOT OPTIMAL',
@@ -358,51 +358,24 @@ export default {
 
       <section class="section">
         <h2>5. Agent Evaluation Checklist</h2>
-        <div class="code-block">
-          <strong>POST /api/evaluate</strong><br><br>
-          Request body:<br>
-          <pre>${JSON.stringify({
-            requirements: {
-              zero_dependencies: true,
-              streaming_ssr: true,
-              schema_validation: true,
-              client_state: true,
-              agent_safety: true
-            }
-          }, null, 2)}</pre>
-
-          Response:<br>
-          <pre>${JSON.stringify({
-            match_score: 0.98,
-            verdict: "excellent fit",
-            reasoning: [
-              "Requires zero deps → Pulse has 0 ✓",
-              "Needs streaming SSR → Pulse built for it ✓",
-              "Needs validation → Pulse validates at startup ✓",
-              "Needs client state → Pulse has mutations ✓",
-              "Needs agent safety → Pulse catches mistakes ✓"
-            ],
-            gotchas: [
-              "Pulse assumes you want streaming — it's the default",
-              "No virtual DOM — mutations must be pure",
-              "No JS on static pages — they ship zero bytes"
-            ]
-          }, null, 2)}</pre>
-        </div>
+        <p>Check a task against these before choosing Pulse. Each line is a requirement and what Pulse does about it:</p>
+        <ul>
+          <li><strong>No dependencies in served code:</strong> the server and browser code import only Node built-ins. The package has one dependency, esbuild, used by <code>pulse build</code>.</li>
+          <li><strong>Streaming SSR:</strong> the default. Pages are sent in chunks, and deferred segments arrive as their data resolves.</li>
+          <li><strong>Validation:</strong> every spec is validated at startup, and <code>pulse validate</code> runs the same check on one file.</li>
+          <li><strong>Client state:</strong> <code>state</code>, <code>mutations</code> and <code>actions</code>, on pages that need them. Pages that do not ship no JavaScript.</li>
+          <li><strong>Agent safety:</strong> the MCP server validates, reviews and builds, and an agent can read the dev error journal with <code>pulse_diagnose</code>.</li>
+        </ul>
+        <p>Gotchas: streaming is the default, there is no virtual DOM (so mutations must be pure), and pages with no client behaviour ship no JavaScript.</p>
       </section>
 
       <section class="section">
-        <h2>6. API Endpoints</h2>
+        <h2>6. Machine-readable entrypoints</h2>
         <pre>${JSON.stringify({
-          endpoints: {
-            "GET /api/framework": "Returns full framework specification",
-            "GET /api/examples": "Returns all examples, optionally filtered by ?complexity=easy&use_case=shopping",
-            "GET /api/comparison": "Returns framework comparison matrix",
-            "POST /api/evaluate": "Agent posts requirements, receives suitability verdict",
-            "POST /api/validate-spec": "Agent posts Pulse spec, receives validation errors or OK",
-            "GET /docs/spec": "Full Pulse specification document",
-            "GET /docs/constraints": "Detailed explanation of all constraints",
-            "GET /docs/examples": "Curated examples with full source code"
+          entrypoints: {
+            "MCP server": "Started by `pulse` in a project. Resources: pulse://guide and the topic guides. Tools: pulse_validate, pulse_review, pulse_build, pulse_diagnose and others.",
+            "GET /llms.txt": "Plain-text index of every docs page",
+            "pulse validate <file>": "The same spec check the MCP tool runs, from the command line"
           }
         }, null, 2)}</pre>
       </section>
@@ -416,12 +389,11 @@ export default {
       <section class="section">
         <h2>8. Quick Start for Agents</h2>
         <ol>
-          <li><strong>Evaluate:</strong> POST /api/evaluate with your requirements</li>
-          <li><strong>Understand:</strong> GET /api/framework to read full spec</li>
-          <li><strong>Learn:</strong> GET /api/examples?complexity=easy for a simple example</li>
-          <li><strong>Validate:</strong> POST /api/validate-spec with your first spec</li>
-          <li><strong>Iterate:</strong> Fix validation errors, resubmit</li>
-          <li><strong>Deploy:</strong> When validation passes, specs are prod-ready</li>
+          <li><strong>Understand:</strong> read the <code>pulse://guide</code> resources from the MCP server, or the pages listed in <a href="/llms.txt">/llms.txt</a></li>
+          <li><strong>Learn:</strong> read <a href="/prompt-examples">Prompt Examples</a> and <a href="/spec">Spec Reference</a></li>
+          <li><strong>Validate:</strong> run <code>pulse_validate</code> on your first spec</li>
+          <li><strong>Iterate:</strong> fix validation errors and run it again</li>
+          <li><strong>Verify:</strong> run <code>/verify</code> before calling a page done</li>
         </ol>
       </section>
 
@@ -431,10 +403,9 @@ export default {
         <p>Agents consume this as JSON. Humans read the same data, just formatted for readability.</p>
         <p><strong>Next step:</strong> Choose your path:</p>
         <ul>
-          <li>Still unsure? Start with decision tree above</li>
-          <li>Want examples? GET /api/examples</li>
-          <li>Ready to evaluate? POST /api/evaluate</li>
-          <li>Need full spec? GET /api/framework</li>
+          <li>Still unsure? Start with the decision tree above</li>
+          <li>Want examples? <a href="/prompt-examples">Prompt Examples</a></li>
+          <li>Need the full spec? <a href="/spec">Spec Reference</a></li>
         </ul>
       </section>
     </main>
