@@ -49,6 +49,7 @@ await createServer(entries, options)`, 'js'))}
           ['<code>fetcherTimeout</code>', '<code>number</code>', '<code>null</code>', 'Global timeout in milliseconds for all server fetchers. A fetcher that does not resolve within this limit rejects with a timeout error (→ 500). Override per page with <code>spec.serverTimeout</code>.'],
           ['<code>shutdownTimeout</code>', '<code>number</code>', '<code>30000</code>', 'Milliseconds to wait for in-flight requests to finish during graceful shutdown before force-exiting. See <a href="#graceful-shutdown">Graceful shutdown</a>.'],
           ['<code>healthCheck</code>', '<code>string | false</code>', '<code>"/healthz"</code>', 'Path for the built-in health check endpoint. Returns <code>{ status: "ok", uptime }</code>. Set to <code>false</code> to disable. The endpoint bypasses <code>onRequest</code> so load balancers always get a response.'],
+          ['<code>hsts</code>', '<code>false | string | object</code>', '<code>max-age=31536000</code>', 'Strict-Transport-Security on HTTPS responses. <code>false</code> sends none; a string is sent verbatim; <code>{ maxAge, includeSubDomains, preload }</code> composes it. See <a href="#hsts">HSTS</a>.'],
           ['<code>resolveBrand</code>', '<code>async (host) => any</code>', '<code>undefined</code>', 'Multi-brand support. Called once per host (cached 60s). Result is attached to <code>ctx.brand</code> and available in <code>guard</code>, <code>server</code>, and <code>meta</code> functions.'],
           ['<code>secret</code>', '<code>string</code>', 'random per boot', 'HMAC secret for CSRF tokens (<a href="/forms">Forms</a>). Set a stable value when running multiple instances so tokens issued by one validate on another.'],
           ['<code>sitemap</code>', '<code>boolean | { origin }</code>', '<code>false</code>', 'Auto-serve <code>/sitemap.xml</code> + <code>robots.txt</code> from the registered routes. Dynamic <code>:param</code> routes contribute via <code>spec.sitemap</code> enumerators. See <a href="/meta#sitemap">Metadata &amp; SEO</a>.'],
@@ -241,8 +242,17 @@ Cross-Origin-Resource-Policy: same-origin`, 'bash'))}
 
       ${section('hsts', 'HSTS')}
       <p>When a request arrives with <code>x-forwarded-proto: https</code> (or over a TLS socket), Pulse adds:</p>
-      ${codeBlock(highlight(`Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`, 'bash'))}
-      <p>This is automatic — no configuration required. On plain HTTP the header is omitted. The <code>preload</code> directive means you can submit the domain to <a href="https://hstspreload.org" target="_blank" rel="noopener" aria-label="hstspreload.org (opens in new tab)">hstspreload.org</a> so browsers enforce HTTPS before the first connection — this is a separate manual step, not automatic.</p>
+      ${codeBlock(highlight(`Strict-Transport-Security: max-age=31536000`, 'bash'))}
+      <p>On plain HTTP the header is omitted. The default is one year for this exact host. It deliberately leaves out <code>includeSubDomains</code> and <code>preload</code>, because both are commitments about the whole domain, not about this app: <code>includeSubDomains</code> forces HTTPS on every sibling subdomain (including ones this server does not run), and <code>preload</code> is a declaration browsers act on once the domain is on the preload list, which takes months to undo. Opt in with the <code>hsts</code> option when you mean it:</p>
+      ${codeBlock(highlight(`// pulse.config.js (or createServer options)
+export default {
+  hsts: { includeSubDomains: true, preload: true },  // eligible for hstspreload.org
+  // hsts: { maxAge: 300 },                          // short while rolling out
+  // hsts: false,                                    // the proxy or CDN in front sets its own
+  // hsts: 'max-age=63072000; includeSubDomains',    // any header value, verbatim
+}`, 'js'))}
+      <p><code>preload</code> requires <code>includeSubDomains: true</code> and a <code>maxAge</code> of at least 31536000 (the preload list rejects less), and Pulse refuses to start with an invalid combination. Setting the option only makes the header eligible: submitting the domain at <a href="https://hstspreload.org" target="_blank" rel="noopener" aria-label="hstspreload.org (opens in new tab)">hstspreload.org</a> is a separate manual step.</p>
+      ${callout('note', 'Earlier versions sent <code>includeSubDomains; preload</code> by default. If you submitted a domain to the preload list on that basis, set <code>hsts: { includeSubDomains: true, preload: true }</code> to keep sending it.')}
 
       ${section('cookies', 'Cookie defaults')}
       <p>Cookies set via <code>ctx.setCookie()</code> default to <code>SameSite=Lax</code>. This is separate from CSRF protection, which is a distinct mechanism scoped to <code>spec.submit</code> pages (an HMAC double-submit token, enforced automatically — see <code>pulse://guide/server</code>) — it is not derived from cookie <code>sameSite</code> settings, and setting a cookie on a non-<code>submit</code> route gets no CSRF coverage from that alone.</p>

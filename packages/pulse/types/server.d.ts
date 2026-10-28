@@ -78,6 +78,15 @@ export interface ServerOptions {
   shutdownTimeout?: number
 
   /**
+   * Strict-Transport-Security on HTTPS responses (HTTPS is detected from the socket or
+   * `x-forwarded-proto`). Default: `max-age=31536000` — one year, this exact host only.
+   * `false` sends none (the proxy or CDN in front sets its own). A string is sent verbatim.
+   * `includeSubDomains` and `preload` are commitments about the whole domain, so they are opt-in;
+   * `preload` requires `includeSubDomains: true` and `maxAge >= 31536000`.
+   */
+  hsts?: false | string | { maxAge?: number; includeSubDomains?: boolean; preload?: boolean }
+
+  /**
    * Path for the built-in health check endpoint. Default '/healthz'.
    * Returns { status: 'ok', uptime: number } — bypasses onRequest so load
    * balancers always get a response. Set to false to disable.
