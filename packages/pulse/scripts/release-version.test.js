@@ -28,9 +28,9 @@ function repo(startVersion = '0.20.5') {
   fs.writeFileSync(path.join(dir, 'packages/pulse/scripts/release-version.js'), SCRIPT)
   fs.writeFileSync(path.join(dir, 'packages/pulse/package.json'), JSON.stringify({ name: 'x', version: startVersion }))
   let n = 0
-  const commit = (subject, where = 'packages/pulse') => {
+  const commit = (subject, where = 'packages/pulse', body = '') => {
     fs.writeFileSync(path.join(dir, where, `f${n++}.txt`), String(n))
-    git('add', '-A'); git('commit', '-q', '-m', subject)
+    git('add', '-A'); git('commit', '-q', '-m', body ? `${subject}\n\n${body}` : subject)
   }
   const next = (cwd = 'packages/pulse') =>
     execFileSync(process.execPath, [path.join(dir, 'packages/pulse/scripts/release-version.js')], { cwd: path.join(dir, cwd), encoding: 'utf8' }).trim()
@@ -46,10 +46,37 @@ test('a feat: since the last release is a MINOR bump (this was always a patch be
   const r = repo(); try { r.commit('fix: a'); r.commit('feat(server): new option (#1)'); assert.equal(r.next(), '0.21.0') } finally { r.cleanup() }
 })
 
-test('a breaking commit is a MAJOR bump, by "!" or by BREAKING CHANGE', () => {
-  for (const subject of ['feat!: drop a thing', 'refactor(api)!: rename', 'fix: x BREAKING CHANGE removes y']) {
-    const r = repo(); try { r.commit(subject); assert.equal(r.next(), '1.0.0', subject) } finally { r.cleanup() }
+test('before 1.0 a breaking commit is a MINOR bump (1.0.0 is a deliberate step, per the stability page)', () => {
+  for (const subject of ['feat!: drop a thing', 'refactor(api)!: rename', 'fix: x BREAKING CHANGE removes y', 'Fix!: capitalised type']) {
+    const r = repo(); try { r.commit(subject); assert.equal(r.next(), '0.21.0', subject) } finally { r.cleanup() }
   }
+})
+
+test('from 1.0 a breaking commit is a MAJOR bump, by "!", by the subject, or by a BREAKING CHANGE footer in the body', () => {
+  for (const [subject, body] of [['feat!: drop a thing', ''], ['refactor(api)!: rename', ''], ['fix: x BREAKING CHANGE removes y', ''],
+                                 ['feat: new thing', 'Some detail.\n\nBREAKING CHANGE: the old option is gone'], ['fix: y', 'BREAKING-CHANGE: also a footer']]) {
+    const r = repo('1.4.2'); try { r.commit(subject, 'packages/pulse', body); assert.equal(r.next(), '2.0.0', `${subject} / ${body}`) } finally { r.cleanup() }
+  }
+})
+
+test('a BREAKING CHANGE footer is read from the commit body, before 1.0 as a minor bump', () => {
+  const r = repo(); try { r.commit('fix: tidy', 'packages/pulse', 'Detail line.\n\nBREAKING CHANGE: setCookie now throws'); assert.equal(r.next(), '0.21.0') } finally { r.cleanup() }
+})
+
+test('types are matched case-insensitively: "Feat:" is a minor bump', () => {
+  const r = repo(); try { r.commit('Feat(server): new option'); assert.equal(r.next(), '0.21.0') } finally { r.cleanup() }
+})
+
+test('a multi-line body does not leak into the next commit (a "feat:" inside a body is not a feature)', () => {
+  const r = repo(); try { r.commit('fix: a', 'packages/pulse', 'the old text said\nfeat: this is only prose'); assert.equal(r.next(), '0.20.6') } finally { r.cleanup() }
+})
+
+test('with no commit touching the package since the last release there is nothing to release: no version, exit 0', () => {
+  const r = repo(); try {
+    r.commit('docs: only docs', 'docs')
+    r.commit('chore: only root', '.')
+    assert.equal(r.next(), '', 'no output means skip')
+  } finally { r.cleanup() }
 })
 
 test('it gives the same answer run from the repo root or from the package directory', () => {
@@ -57,7 +84,8 @@ test('it gives the same answer run from the repo root or from the package direct
 })
 
 test('only commits that touched the package count: a feat: elsewhere does not bump', () => {
-  const r = repo(); try { r.commit('feat: docs-only thing', 'docs'); assert.equal(r.next(), '0.20.6') } finally { r.cleanup() }
+  // the feat: touched only docs/, so it must not make this release a minor one
+  const r = repo(); try { r.commit('feat: docs-only thing', 'docs'); r.commit('fix: a package fix'); assert.equal(r.next(), '0.20.6') } finally { r.cleanup() }
 })
 
 test('commits before the last release do not count', () => {
