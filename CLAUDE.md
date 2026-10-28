@@ -357,7 +357,7 @@ When you own the server entry, `createServer` also returns the handle directly: 
 
 ## Multi-brand Sites
 
-Pass `resolveBrand: async (host) => brandConfig` to `createServer`. The result is cached per host for 60 seconds and attached to `ctx.brand`. It is available in `guard`, `server` fetchers, and any `meta` field that is a function.
+Pass `resolveBrand: async (host) => brandConfig` to `createServer`. `host` arrives lower-cased, with any trailing dot removed. The result is cached per host for 60 seconds and attached to `ctx.brand`; return `null` for a host that is not one of your brands (all such hosts share one page-cache entry). It is available in `guard`, `server` fetchers, and any `meta` field that is a function.
 
 Any `meta` field can be a function `(ctx) => value` — called per request, not at startup. Meta functions can also be **async**, so you can fetch data for `title`, `description`, `ogImage` etc.:
 

@@ -2761,6 +2761,54 @@ await test('with resolveBrand, the page cache is per host (no cross-brand leak)'
   })
 })
 
+await test('with resolveBrand, the host is normalised once: a differently-cased Host cannot poison the cache for the real one', async () => {
+  const spec = {
+    route: '/', state: {},
+    meta:  { title: (ctx) => `T-${ctx.brand?.name ?? 'nobrand'}` },
+    view:  () => '<main id="main-content">x</main>',
+  }
+  // a case-sensitive lookup, as in the CLAUDE.md example (host.split('.')[0])
+  const brands = { acme: { name: 'acme' } }
+  const resolveBrand = async (host) => brands[host.split('.')[0]] ?? null
+  await withServer([spec], { stream: false, defaultCache: 60, resolveBrand, quiet: true }, async (port) => {
+    const title = async (host) => (await requestFull(port, 'GET', '/', { headers: { Host: host } })).body.match(/<title>([^<]*)<\/title>/)?.[1]
+    assert(await title('ACME.example.com') === 'T-acme', 'the upper-case spelling resolves to the same brand')
+    assert(await title('acme.example.com') === 'T-acme', 'and the real host is not served a poisoned page')
+    assert(await title('acme.example.com.') === 'T-acme', 'a trailing dot is the same host')
+  })
+})
+
+await test('with resolveBrand, hosts that resolve to no brand share one page-cache entry (cycling Host values cannot flush real pages)', async () => {
+  let renders = 0
+  const spec = {
+    route: '/', state: {},
+    meta:  { title: (ctx) => { renders++; return `T-${ctx.brand?.name ?? 'nobrand'}` } },
+    view:  () => '<main id="main-content">x</main>',
+  }
+  const resolveBrand = async (host) => host === 'real.example.com' ? { name: 'real' } : null
+  await withServer([spec], { stream: false, defaultCache: 60, resolveBrand, quiet: true }, async (port) => {
+    for (let i = 0; i < 20; i++) await requestFull(port, 'GET', '/', { headers: { Host: `junk-${i}.example.net` } })
+    assert(renders === 1, `20 unknown hosts must render once and share the entry, rendered ${renders} times`)
+    await requestFull(port, 'GET', '/', { headers: { Host: 'real.example.com' } })
+    assert(renders === 2, 'a real brand still gets its own entry')
+  })
+})
+
+await test('urlencoded and multipart parsing are linear: a body of 120,000 repeated fields parses in well under a second', async () => {
+  const spec = {
+    route: '/f', contentType: 'application/json',
+    render: async (ctx) => { const d = await ctx.formData(); return JSON.stringify({ n: Array.isArray(d.a) ? d.a.length : -1, first: d.a?.[0], last: d.a?.[d.a.length - 1] }) },
+  }
+  await withServer([spec], { stream: false, maxBody: 2 * 1024 * 1024, quiet: true }, async (port) => {
+    const body = Array.from({ length: 120000 }, (_, i) => `a=${i}`).join('&')
+    const started = Date.now()
+    const r = await requestFull(port, 'POST', '/f', { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body })
+    const took = Date.now() - started
+    strictAssert.deepEqual(JSON.parse(r.body), { n: 120000, first: '0', last: '119999' })
+    assert(took < 3000, `parsing 120k fields took ${took} ms (quadratic parsing takes many seconds)`)
+  })
+})
+
 await test('a forged X-Forwarded-Host cannot poison the cached canonical URL for other visitors', async () => {
   await withServer([hardenPage], { defaultCache: 3600, quiet: true }, async (port) => {
     const canon = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
