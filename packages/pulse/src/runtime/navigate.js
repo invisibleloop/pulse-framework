@@ -69,6 +69,8 @@ export function initNavigation(root, mountFn) {
         let hydratePath      = null
         let finalServerState = {}
         const deferredSlots  = new Map()
+        let awaitingHash     = ''      // a #fragment whose target is in a deferred segment still to arrive
+        let scrolledTo       = 0       // scroll position after the initial jump
 
         const processLine = async (line) => {
           if (!line.trim()) return
@@ -94,6 +96,10 @@ export function initNavigation(root, mountFn) {
             if (push) history.pushState({ pulse: true, path }, '', path)
             shownPath = withoutHash(path)
             scrollAndFocus(root, hashOf(path))
+            // A fragment whose target lives in a deferred segment is not in the page yet: remember
+            // to scroll to it when it arrives (the browser does the same for a late anchor).
+            awaitingHash = hashTargetMissing(hashOf(path)) ? hashOf(path) : ''
+            scrolledTo   = window.scrollY
 
           } else if (msg.type === 'deferred') {
             const slot = deferredSlots.get(msg.id)
@@ -102,6 +108,11 @@ export function initNavigation(root, mountFn) {
               tmp.innerHTML = trustedHTML(msg.html)
               slot.replaceWith(...tmp.childNodes)
               deferredSlots.delete(msg.id)
+              // Only if the visitor has not scrolled meanwhile: never pull them back
+              if (awaitingHash && !hashTargetMissing(awaitingHash)) {
+                if (window.scrollY === scrolledTo) scrollAndFocus(root, awaitingHash)
+                awaitingHash = ''
+              }
             }
 
           } else if (msg.type === 'done') {
@@ -287,6 +298,14 @@ function applyScripts(scripts) {
 }
 
 const withoutHash = (path) => path.split('#')[0]
+/** True when the fragment names an element that is not in the document (yet). */
+const hashTargetMissing = (hash) => {
+  if (!hash) return false
+  let id = hash.slice(1)
+  try { id = decodeURIComponent(id) } catch { /* keep the raw fragment */ }
+  return !!id && !document.getElementById?.(id)
+}
+
 const hashOf = (path) => (path.includes('#') ? path.slice(path.indexOf('#')) : '')
 
 /**

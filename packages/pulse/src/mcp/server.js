@@ -1656,7 +1656,7 @@ Two steps. First call (no confirmed): returns the redacted report for you to sho
     }
 
     const built = buildReport(args, { version: PKG_VERSION, root: ROOT })
-    if (!built.ok) return text(`Cannot build report: ${built.error}`)
+    if (!built.ok) return text(`Error: cannot build report: ${built.error}`)
 
     const transport = config.reportTransport === 'gh' ? 'gh' : 'proxy'
     const endpoint  = typeof config.reportEndpoint === 'string' ? config.reportEndpoint : DEFAULT_ENDPOINT
@@ -3800,7 +3800,10 @@ function derivedRouteFromName(name) {
 }
 
 function text(str) {
-  return { content: [{ type: 'text', text: str }] }
+  // A message that starts "Error:" is a failed call: say so in the protocol too (isError), not
+  // only in the prose, so a client or agent can tell a failure from a result without parsing text.
+  const failed = /^Error[: ]/.test(str)
+  return { content: [{ type: 'text', text: str }], ...(failed ? { isError: true } : {}) }
 }
 
 // ---------------------------------------------------------------------------

@@ -795,6 +795,28 @@ test('docs raw-response examples use render, not view', () => {
   }
 })
 
+test('a failed tool call sets isError over the real protocol; a successful one does not', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-iserror-'))
+  try {
+    const call = (name, args) => {
+      const input = [
+        { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 't', version: '1' } } },
+        { jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name, arguments: args } },
+      ].map(m => JSON.stringify(m)).join('\n') + '\n'
+      const r = spawnSync(process.execPath, [path.join(__dirname, 'server.js'), '--root', dir], { input, encoding: 'utf8', timeout: 30000 })
+      const line = r.stdout.split('\n').find(l => l.includes('"id":2'))
+      assert(line, `no response to ${name}: ${r.stdout} ${r.stderr}`)
+      return JSON.parse(line).result
+    }
+    const failed = call('pulse_validate', {})                                   // neither content nor file
+    assert(failed.isError === true && /^Error:/.test(failed.content[0].text), `a failure must set isError: ${JSON.stringify(failed)}`)
+    const escaped = call('pulse_validate', { file: '/etc/passwd' })           // outside the project
+    assert(escaped.isError === true, `a path outside the project is a failure: ${JSON.stringify(escaped)}`)
+    const fine = call('pulse_validate', { content: "export default { route: '/', state: {}, meta: { title: 't', description: 'd', theme: 'light' }, view: () => '<main id=\"main-content\">x</main>' }" })
+    assert(!fine.isError, `a validation RESULT (even "invalid") is not a tool failure: ${JSON.stringify(fine)}`)
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('the MCP server reports the package version, not a stale constant', () => {
   const { version } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
   assert(/new McpServer\(\{ name: 'pulse', version: PKG_VERSION \}\)/.test(serverSrc), 'serverInfo.version must come from package.json')
