@@ -1,2 +1,5 @@
 # Tests are not part of the published package
 **/*.test.js
+
+# Type tests: compiled by `npm run typecheck`, not part of the package
+types/checks/

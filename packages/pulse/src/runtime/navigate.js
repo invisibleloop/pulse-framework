@@ -192,8 +192,11 @@ export function initNavigation(root, mountFn) {
     const href = a.getAttribute('href')
     if (!href) return
 
+    // Resolve against the document's base (the current URL, or <base href>), as the browser does:
+    // on /blog/post, href="comments" is /blog/comments and href="?tab=2" is /blog/post?tab=2.
+    // (Resolving against the origin alone sent both to the site root.)
     let url
-    try { url = new URL(href, location.origin) } catch { return }
+    try { url = new URL(href, document.baseURI || location.href || location.origin) } catch { return }
 
     if (url.origin !== location.origin) return
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return

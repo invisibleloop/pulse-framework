@@ -176,6 +176,30 @@ await test('intercepts same-origin links', async () => {
   assert(called, 'fetch should be called for same-origin link')
 })
 
+await test('relative links resolve against the current URL (or <base href>), not the site root', async () => {
+  const { click } = setup()
+  const fetched = []
+  global.fetch = async (p) => { fetched.push(p); return new Promise(() => {}) }
+  const go = (baseURI, href) => { global.document.baseURI = baseURI; click(clickEvent({ href })) }
+  go('http://localhost/blog/post',       'comments')
+  go('http://localhost/blog/post',       '../about')
+  go('http://localhost/blog/post',       '?tab=2')
+  go('http://localhost/docs/',           'intro')   // <base href="/docs/">
+  go('http://localhost/blog/post?x=1',   '/abs')
+  assert.deepEqual(fetched, ['/blog/comments', '/about', '/blog/post?tab=2', '/docs/intro', '/abs'])
+})
+
+await test('a relative fragment-only link to the page already shown is still left to the browser', async () => {
+  const { click } = setup()
+  let called = false
+  global.fetch = async () => { called = true; return new Promise(() => {}) }
+  global.location.pathname = '/a'; global.location.search = '?x=1'
+  global.document.baseURI = 'http://localhost/a?x=1'
+  const ev = clickEvent({ href: '?x=1#frag' })
+  click(ev)
+  assert(!called && !ev.prevented, '"?x=1#frag" on /a?x=1 is the same page: no fetch, no preventDefault')
+})
+
 await test('leaves clicks alone that are already handled, non-primary, or download links', async () => {
   const { click } = setup()
   let called = false
