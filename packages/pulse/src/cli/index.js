@@ -26,7 +26,8 @@ import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
-import { isInstalledInProject, installCommand, PACKAGE } from './update.js'
+import { isInstalledInProject, installCommand, devInstallCommand, PACKAGE } from './update.js'
+import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, MCP_PACKAGES } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
@@ -278,6 +279,14 @@ async function launchSession(root, agentOverride = null) {
   const { spawn } = await import('child_process')
   const os        = await import('os')
 
+  // The agent tools run on the MCP SDK, which is a development dependency. Say so here, before an
+  // agent session starts and fails to reach its tools.
+  const missingMcp = mcpDepsMissingFor(root)
+  if (missingMcp.length) {
+    console.error('\n  ' + mcpMissingMessage(missingMcp, { withPulse: !mcpServerLaunch(root).viaProject }).split('\n').join('\n  ') + '\n')
+    process.exit(1)
+  }
+
   // Load project config for agent preference — CLI flag takes priority
   const configPath = path.join(root, 'pulse.config.js')
   let agent = agentOverride || 'claude'
@@ -289,12 +298,12 @@ async function launchSession(root, agentOverride = null) {
   }
 
   // Write MCP config so the agent has access to Pulse tools
-  const mcpServerPath = fileURLToPath(new URL('../mcp/server.js', import.meta.url))
+  const { serverPath: mcpServerPath, nodeArgs: mcpNodeArgs } = mcpServerLaunch(root)
   const mcpConfig = {
     mcpServers: {
       pulse: {
         command: process.execPath,
-        args:    [mcpServerPath, '--root', root],
+        args:    [...mcpNodeArgs, mcpServerPath, '--root', root],
       }
     }
   }
@@ -304,7 +313,7 @@ async function launchSession(root, agentOverride = null) {
 
   if (agent === 'copilot') {
     process.env.PULSE_AGENT_MODE = '1'
-    await launchCopilotSession(root, mcpServerPath, spawn, os.default)
+    await launchCopilotSession(root, [...mcpNodeArgs, mcpServerPath], spawn, os.default)
   } else {
     process.env.PULSE_AGENT_MODE = '1'
     await launchClaudeSession(root, mcpConfig, spawn, os.default)
@@ -337,7 +346,7 @@ async function launchClaudeSession(root, mcpConfig, spawn, os) {
 // Copilot session — pulse entry injected into ~/.copilot/mcp-config.json
 // ---------------------------------------------------------------------------
 
-async function launchCopilotSession(root, mcpServerPath, spawn, os) {
+async function launchCopilotSession(root, mcpServerArgv, spawn, os) {
   const mcpConfigPath = path.join(os.homedir(), '.copilot', 'mcp-config.json')
 
   // Read existing Copilot MCP config (or start fresh)
@@ -354,7 +363,7 @@ async function launchCopilotSession(root, mcpServerPath, spawn, os) {
   config.mcpServers.pulse = {
     type:    'local',
     command: process.execPath,
-    args:    [mcpServerPath, '--root', root],
+    args:    [...mcpServerArgv, '--root', root],
     tools:   ['*'],
   }
   fs.mkdirSync(path.dirname(mcpConfigPath), { recursive: true })
@@ -482,6 +491,37 @@ async function runSaveLoadReport(root) {
 // pulse update
 // ---------------------------------------------------------------------------
 
+/**
+ * The agent tools' dependencies (MCP SDK, zod) used to install with Pulse and are now development
+ * dependencies of the project. A project made before that has neither, so offer to add them. Asks
+ * first; non-interactive runs just print the command.
+ */
+async function offerMcpDevDeps(root) {
+  if (!mcpServerLaunch(root).viaProject) return   // no copy of Pulse in the project to give them to
+  const missing = mcpDepsMissingFor(root)
+  if (missing.length === 0) return
+
+  const [cmd, cmdArgs] = devInstallCommand(root, MCP_PACKAGES)
+  const line = `${cmd} ${cmdArgs.join(' ')}`
+  console.log(`\n  Pulse's agent tools now need ${missing.join(' and ')} as development dependencies of your project.`)
+
+  if (!process.stdin.isTTY) {
+    console.log(`  Install them with:  ${line}\n`)
+    return
+  }
+  const readline = await import('readline/promises')
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  const answer = (await rl.question(`  Run \`${line}\` now? [Y/n] `)).trim().toLowerCase()
+  rl.close()
+  if (answer && answer !== 'y' && answer !== 'yes') {
+    console.log(`  Skipped. Run it when you want the agent tools:  ${line}\n`)
+    return
+  }
+  const { spawnSync } = await import('child_process')
+  const result = spawnSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
+  if (result.status !== 0) console.error(`\n  That install failed. Run it yourself:  ${line}\n`)
+}
+
 async function runUpdate(root) {
   if (!isPulseProject(root)) {
     console.error('\n  Not a Pulse project. Run from your project root.\n')
@@ -523,6 +563,8 @@ async function runUpdate(root) {
     fs.copyFileSync(src, dst)
     updated.push(`public/${asset}`)
   }
+
+  await offerMcpDevDeps(root)
 
   // Sync agent files into .claude/
   const agentFiles = [

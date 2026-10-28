@@ -24,6 +24,15 @@ export function pulseDependencyRange() {
 }
 
 /**
+ * The agent tools' dependencies as development dependencies for a new project, with the version
+ * ranges this package declares as optional peers (so they stay in step with what it was tested on).
+ */
+export function mcpDevDependencies() {
+  const { peerDependencies } = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  return Object.fromEntries(['@modelcontextprotocol/sdk', 'zod'].map(name => [name, peerDependencies[name]]))
+}
+
+/**
  * Scaffold a new Pulse project.
  *
  * @param {string} targetDir - Absolute path to the project directory
@@ -61,7 +70,9 @@ export async function scaffold(targetDir, options = {}) {
     },
     dependencies: {
       [PULSE_PKG]: pulseDependencyRange(),
-    }
+    },
+    // Agent tooling only: a served app never loads these, so a production install omits them.
+    devDependencies: mcpDevDependencies(),
   }, null, 2))
 
   // pulse.config.js — write agent if specified, otherwise leave as commented hint

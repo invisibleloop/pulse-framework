@@ -16,8 +16,7 @@
     "spec",
     "mcp",
     "ai",
-    "agent",
-    "zero-dependency"
+    "agent"
   ],
   "bin": {
     "pulse": "./src/cli/index.js"
@@ -85,7 +84,6 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.32.2",
     "esbuild": "^0.28.2"
   },
   "repository": {
@@ -97,7 +95,21 @@
     "access": "public"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@types/node": "^26.6.5",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25 || ^4.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    },
+    "zod": {
+      "optional": true
+    }
   }
 }

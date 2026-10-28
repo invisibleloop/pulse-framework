@@ -1,6 +1,6 @@
 # Pulse — AI Agent Guide
 
-Pulse is a spec-first frontend framework. The spec is the source of truth. No codegen, no virtual DOM, and no runtime dependencies in the server or browser code (it imports only Node built-ins). esbuild (for `pulse build`) and the MCP SDK (for the agent tools) are installed with the package but are not used when serving a site.
+Pulse is a spec-first frontend framework. The spec is the source of truth. No codegen, no virtual DOM, and no runtime dependencies in the server or browser code (it imports only Node built-ins). The package's one dependency is esbuild (for `pulse build`), which is not used when serving a site. The MCP SDK and zod (for the agent tools) are development dependencies of your project, not of the package, so a production install omits them.
 
 ## Commands
 

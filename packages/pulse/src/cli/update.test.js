@@ -8,7 +8,7 @@ import assert   from 'node:assert/strict'
 import fs       from 'node:fs'
 import os       from 'node:os'
 import path     from 'node:path'
-import { isInstalledInProject, installCommand, PACKAGE } from './update.js'
+import { isInstalledInProject, installCommand, devInstallCommand, PACKAGE } from './update.js'
 
 function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-update-')) }
 
@@ -45,4 +45,14 @@ test('installCommand follows the project lockfile', () => {
   assert.deepEqual(installCommand(root), ['yarn', ['add', `${PACKAGE}@latest`]])
   fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '')
   assert.deepEqual(installCommand(root), ['pnpm', ['add', `${PACKAGE}@latest`]])
+})
+
+test('devInstallCommand adds development dependencies with the project\'s package manager', () => {
+  const root = tmp()
+  const pkgs = ['@modelcontextprotocol/sdk', 'zod']
+  assert.deepEqual(devInstallCommand(root, pkgs), ['npm', ['install', '-D', ...pkgs]])
+  fs.writeFileSync(path.join(root, 'yarn.lock'), '')
+  assert.deepEqual(devInstallCommand(root, pkgs), ['yarn', ['add', '-D', ...pkgs]])
+  fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '')
+  assert.deepEqual(devInstallCommand(root, pkgs), ['pnpm', ['add', '-D', ...pkgs]])
 })

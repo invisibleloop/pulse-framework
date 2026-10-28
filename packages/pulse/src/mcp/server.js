@@ -30,9 +30,7 @@
  *   pulse_update         — re-copy pulse-ui assets from package → public/
  */
 
-import { McpServer }           from '@modelcontextprotocol/sdk/server/mcp.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
-import { z }                   from 'zod'
+import { loadMcpDeps } from './deps.js'
 
 import path                      from 'path'
 import fs                        from 'fs'
@@ -50,6 +48,10 @@ import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } fr
 import { killPulseServerOnPort } from '../cli/process-utils.js'
 import { buildReport, previewId, formatPreview, sendViaProxy, sendViaGh, formatResult, DEFAULT_ENDPOINT } from '../cli/feedback.js'
 import { fileURLToPath, pathToFileURL } from 'url'
+
+// The SDK and zod are optional peer dependencies (dev tooling): load them here, with a clear message
+// instead of a raw module-not-found error when they are absent.
+const { McpServer, StdioServerTransport, z } = await loadMcpDeps()
 
 // ---------------------------------------------------------------------------
 // Crash guards — an uncaught error in any tool handler must not kill the
