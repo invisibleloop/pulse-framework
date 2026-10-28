@@ -12,6 +12,7 @@
 import fs   from 'fs'
 import path from 'path'
 import { discoverPages } from './discover.js'
+import { toPosix } from './paths.js'
 
 const NODE_BUILTINS = ['node:fs', 'node:path', 'node:crypto', 'node:os', 'node:child_process', 'node:http', 'node:https', 'node:net', 'node:dns']
 
@@ -57,7 +58,7 @@ export function checkBundles(root) {
     const source = fs.readFileSync(filePath, 'utf8')
     const needsHydration = /\b(mutations|actions|persist)\s*:/.test(source) || /\bhydrate\s*:/.test(source)
     if (needsHydration) continue // genuinely needs hydration — nothing to flag
-    const manifestKey = '/src/pages/' + path.relative(path.join(root, 'src', 'pages'), filePath)
+    const manifestKey = '/src/pages/' + toPosix(path.relative(path.join(root, 'src', 'pages'), filePath))
     const bundled = manifest[manifestKey]
     if (bundled) {
       // discoverPages' derivedRoute is a filename-based fallback (spec.route
