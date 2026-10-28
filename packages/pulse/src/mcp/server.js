@@ -31,6 +31,7 @@
  */
 
 import { loadMcpDeps } from './deps.js'
+import { spawnCommandSync } from '../cli/spawn.js'
 
 import path                      from 'path'
 import fs                        from 'fs'
@@ -1553,7 +1554,7 @@ server.registerTool(
     inputSchema: {},
   },
   () => new Promise(resolve => {
-    const result = spawnSync('npm', ['test'], {
+    const result = spawnCommandSync('npm', ['test'], {
       cwd:      ROOT,
       encoding: 'utf8',
       timeout:  120_000,

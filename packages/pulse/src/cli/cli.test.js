@@ -221,6 +221,24 @@ test('every path.relative that feeds generated JS, a manifest key or a URL goes 
   if (offenders.length) throw new Error(`path.relative result used without toPosix:\n${offenders.join('\n')}`)
 })
 
+test('spawnCommand: arguments arrive intact (spaces, ||, &, quotes, a trailing backslash), and npm can be started on every platform', async () => {
+  const { spawnCommandSync, quoteWindowsArg } = await import('./spawn.js')
+  // pure: the cmd.exe quoting
+  if (quoteWindowsArg('zod@^3.25 || ^4.0') !== '"zod@^3.25 || ^4.0"') throw new Error('a range with spaces and || must be quoted')
+  if (quoteWindowsArg('plain') !== 'plain') throw new Error('plain words stay unquoted')
+  if (quoteWindowsArg('') !== '""') throw new Error('an empty argument must survive')
+  if (quoteWindowsArg('say "hi"') !== '"say \\"hi\\""') throw new Error(`embedded quotes are escaped, got ${quoteWindowsArg('say "hi"')}`)
+  if (quoteWindowsArg('C:\\a b\\') !== '"C:\\a b\\\\"') throw new Error(`a trailing backslash is doubled, got ${quoteWindowsArg('C:\\a b\\')}`)
+  // end to end through a real child: on Windows this goes through cmd.exe (the case that broke), elsewhere through no shell
+  const args = ['a b', 'zod@^3.25 || ^4.0', 'x&y', 'say "hi"', 'C:\\dir with space\\', '', '@modelcontextprotocol/sdk@^1.32.2']
+  const r = spawnCommandSync(process.execPath, ['-e', 'console.log(JSON.stringify(process.argv.slice(1)))', ...args], { encoding: 'utf8' })
+  if (r.status !== 0) throw new Error(`child failed: ${r.stderr}`)
+  if (r.stdout.trim() !== JSON.stringify(args)) throw new Error(`arguments changed in transit:\n  sent ${JSON.stringify(args)}\n  got  ${r.stdout.trim()}`)
+  // npm is a .cmd shim on Windows: it must start
+  const npm = spawnCommandSync('npm', ['--version'], { encoding: 'utf8' })
+  if (npm.status !== 0 || !/^\d+\.\d+\.\d+/.test(npm.stdout.trim())) throw new Error(`npm --version: status ${npm.status}, ${npm.stdout} ${npm.stderr} ${npm.error ?? ''}`)
+})
+
 test('a pulse.config.js that cannot be loaded, or has a bad port, stops the CLI with a clear message (it used to be ignored silently)', async () => {
   const { spawnSync } = await import('child_process')
   const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import('fs')
