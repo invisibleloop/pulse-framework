@@ -3,3 +3,6 @@
 
 # Type tests: compiled by `npm run typecheck`, not part of the package
 types/checks/
+
+# Archived, unreferenced scaffold kept in the repo for reference
+src/cli/scaffold.archive.js
