@@ -42,6 +42,8 @@ Describe a breaking change in the PR body: the release notes are generated from 
 
 `main` needs a pull request and a code-owner review. Merging publishes a release, so please do not merge your own PR before it has been reviewed.
 
+The same checks (Linux on Node 22 and 24, Windows, the real-browser suite, typecheck) run on every pull request and again on `main`; the release is published only if they pass there too.
+
 ## Reporting problems
 
 - **Bugs:** open an issue with the Pulse version, what you expected, what happened and the smallest spec that reproduces it. AI agents using the framework can file these through the `pulse_report_issue` tool.
