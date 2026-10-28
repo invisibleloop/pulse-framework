@@ -16,6 +16,7 @@ import { createServer } from '../server/index.js'
 import { loadPages, loadStore } from './discover.js'
 import * as log         from './logger.js'
 import { fileURLToPath } from 'url'
+import { definedClasses, undefinedClasses } from './class-check.js'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -166,24 +167,19 @@ let reloadTimer = null
 let lastReload = 0
 
 /**
- * Check rendered HTML class names against CSS files in public/ and warn about
- * any classes that are used in templates but not defined in any stylesheet.
- * Only checks project-owned CSS (not pulse-ui.css) to avoid noise.
+ * Check rendered HTML class names against the CSS files in public/ and warn about any classes
+ * that are used in templates but not defined in any stylesheet (see class-check.js).
  */
 async function checkUndefinedClasses(specs) {
   try {
-    // Collect all class names defined in project CSS files
     const cssDir = path.join(ROOT, 'public')
-    const definedClasses = new Set()
+    const defined = new Set()
     if (fs.existsSync(cssDir)) {
-      for (const file of fs.readdirSync(cssDir).filter(f => f.endsWith('.css') && f !== 'pulse-ui.css')) {
-        const css = fs.readFileSync(path.join(cssDir, file), 'utf8')
-        for (const [, cls] of css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)\s*[{,:\[]/g)) {
-          definedClasses.add(cls)
-        }
+      for (const file of fs.readdirSync(cssDir).filter(f => f.endsWith('.css'))) {
+        for (const cls of definedClasses(fs.readFileSync(path.join(cssDir, file), 'utf8'))) defined.add(cls)
       }
     }
-    if (definedClasses.size === 0) return
+    if (defined.size === 0) return
 
     // Render each spec and collect used class names from the HTML output
     const { renderToString } = await import('../runtime/ssr.js')
@@ -191,13 +187,7 @@ async function checkUndefinedClasses(specs) {
       if (!spec.view) continue
       try {
         const { html } = await renderToString(spec, {})
-        const usedInSpec = new Set()
-        for (const [, classes] of html.matchAll(/class="([^"]+)"/g)) {
-          for (const cls of classes.trim().split(/\s+/)) {
-            if (cls && !cls.startsWith('ui-')) usedInSpec.add(cls)
-          }
-        }
-        const undefined_ = [...usedInSpec].filter(cls => !definedClasses.has(cls))
+        const undefined_ = undefinedClasses(html, defined)
         if (undefined_.length > 0) {
           const route = spec.route ?? spec.filePath ?? '(unknown)'
           log.warn(`${route}: class${undefined_.length === 1 ? '' : 'es'} used but not defined in any CSS: ${undefined_.slice(0, 5).map(c => `.${c}`).join(', ')}${undefined_.length > 5 ? ` … +${undefined_.length - 5} more` : ''}`)

@@ -8,7 +8,7 @@ import assert   from 'node:assert/strict'
 import fs       from 'node:fs'
 import os       from 'node:os'
 import path     from 'node:path'
-import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, PACKAGE } from './update.js'
+import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, confirm, PACKAGE } from './update.js'
 
 function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-update-')) }
 
@@ -105,4 +105,20 @@ test('projectCopyDir: the project\'s own copy is found whichever CLI is running;
   fs.mkdirSync(path.join(pnpm, 'node_modules', '@invisibleloop'), { recursive: true })
   fs.symlinkSync(store, path.join(pnpm, 'node_modules', PACKAGE), 'junction')
   assert.equal(projectCopyDir(pnpm), fs.realpathSync(store), 'pnpm\'s link into node_modules/.pnpm is a real install')
+})
+
+test('confirm: y/n/default answer, and end of input is null, never consent (Ctrl-D used to abandon pulse update)', async () => {
+  const { PassThrough } = await import('node:stream')
+  const ask = async (feed, opts = {}) => {
+    const input = new PassThrough(), output = new PassThrough()
+    const p = confirm('ok? ', { input, output, ...opts })
+    feed(input)
+    return p
+  }
+  assert.equal(await ask(i => i.write('y\n')), true)
+  assert.equal(await ask(i => i.write('YES\n')), true)
+  assert.equal(await ask(i => i.write('n\n')), false)
+  assert.equal(await ask(i => i.write('\n')), true, 'an empty answer takes the default (Y)')
+  assert.equal(await ask(i => i.write('\n'), { defaultYes: false }), false)
+  assert.equal(await ask(i => i.end()), null, 'EOF with no answer settles, as null')
 })

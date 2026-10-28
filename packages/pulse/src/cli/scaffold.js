@@ -24,6 +24,15 @@ export function pulseDependencyRange() {
 }
 
 /**
+ * True when this CLI is an installed copy of the package (it lives under a node_modules directory,
+ * as a global install or an npx cache does) and false for a dev checkout or an `npm link` to one.
+ * The real path is used, so a link resolves to where the code actually is.
+ */
+export function isInstalledCopy(pkgDir = fs.realpathSync(fileURLToPath(new URL('../..', import.meta.url)))) {
+  return pkgDir.split(path.sep).includes('node_modules')
+}
+
+/**
  * The agent tools' dependencies as development dependencies for a new project, with the version
  * ranges this package declares as optional peers (so they stay in step with what it was tested on).
  */
@@ -276,11 +285,18 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
 
   // Install dependencies
   console.log('  ✓ Installing dependencies...\n')
-  try {
-    // Use the globally linked package if available (local dev), otherwise npm install
-    execSync(`npm link ${PULSE_PKG}`, { cwd: targetDir, stdio: 'inherit' })
-  } catch {
+  if (isInstalledCopy()) {
+    // A normal install (global, or npx): give the project its own copy at the version in its
+    // package.json. `npm link` here would link to the GLOBAL install instead, leaving the project
+    // without a copy of its own, so `pulse update` could not upgrade it.
     execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
+  } else {
+    // Running from a dev checkout: link it, so the project exercises the code being worked on.
+    try {
+      execSync(`npm link ${PULSE_PKG}`, { cwd: targetDir, stdio: 'inherit' })
+    } catch {
+      execSync('npm install', { cwd: targetDir, stdio: 'inherit' })
+    }
   }
 
   // Initialise git so the Stop hook can use `git status` to track only changed files.
@@ -308,6 +324,7 @@ export default {
     title:       '${appName}',
     description: '${appName} — built with Pulse.',
     styles:      ['/pulse-ui.css', '/theme.css', '/app.css'],
+    theme:       'dark',   // 'light' | 'dark': Pulse defaults to dark when this is unset, so say which you mean
   },
 
   state: {

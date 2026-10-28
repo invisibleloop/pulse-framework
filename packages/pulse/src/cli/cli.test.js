@@ -89,6 +89,65 @@ test('a scaffolded .gitignore ignores the dev error journal, and nothing else un
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('pulse help prints usage; an unknown command is an error, not an AI session', async () => {
+  const { spawnSync } = await import('child_process')
+  const os = await import('os')
+  const cli = path.join(__dirname, 'index.js')
+  const run = (...a) => spawnSync(process.execPath, [cli, ...a], { cwd: os.tmpdir(), encoding: 'utf8', timeout: 20000 })
+  const help = run('help')
+  if (help.status !== 0 || !/Usage:/.test(help.stdout)) throw new Error(`pulse help: exit ${help.status}, ${help.stdout.slice(0, 80)}`)
+  if (!/\bstop\b/.test(help.stdout)) throw new Error('--help must list the stop command')
+  const bogus = run('bogus')
+  if (bogus.status !== 1) throw new Error(`pulse bogus must exit 1, got ${bogus.status}`)
+  if (!/Unknown command "bogus"/.test(bogus.stderr)) throw new Error(`expected an unknown-command message, got: ${bogus.stderr}`)
+  if (/agent starting/i.test(bogus.stdout + bogus.stderr)) throw new Error('an unknown command must not start an AI session')
+})
+
+test('pulse stop honours --port, validates it, and says which ports it looked at', async () => {
+  const { spawnSync } = await import('child_process')
+  const os = await import('os')
+  const cli = path.join(__dirname, 'index.js')
+  const run = (...a) => spawnSync(process.execPath, [cli, 'stop', ...a], { cwd: os.tmpdir(), encoding: 'utf8', timeout: 20000 })
+  const ok = run('--port', '47311')
+  if (ok.status !== 0 || !/47311 and 47312/.test(ok.stdout)) throw new Error(`expected the --port ports in the output, got: ${ok.stdout} ${ok.stderr}`)
+  for (const bad of ['abc', '0', '70000', '']) {
+    const r = run('--port', bad)
+    if (r.status !== 1 || !/--port needs a port number/.test(r.stderr)) throw new Error(`--port "${bad}" must be rejected, got exit ${r.status}: ${r.stderr}`)
+  }
+})
+
+test('class check: pulse-ui.css utilities count as defined, genuinely undefined classes are still reported', async () => {
+  const { definedClasses, undefinedClasses } = await import('./class-check.js')
+  const defined = new Set([...definedClasses('.u-mt-2 { margin-top: .5rem }\n.u-text-muted, .hero:hover { color: gray }'), ...definedClasses('.page { }')])
+  const missing = undefinedClasses('<main class="page u-mt-2 u-text-muted hero ui-card typo-class">', defined)
+  if (JSON.stringify(missing) !== '["typo-class"]') throw new Error(`expected only the typo, got ${JSON.stringify(missing)}`)
+})
+
+test('scaffold: the home page states its theme, and isInstalledCopy tells a node_modules install from a checkout', async () => {
+  const { scaffold, isInstalledCopy } = modules[0].value
+  const { mkdtempSync, rmSync } = await import('fs')
+  const os = await import('os')
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-scaffold-theme-'))
+  try {
+    await scaffold(dir, { name: 'demo' })
+    if (!/theme:\s+'dark'/.test(readFileSync(path.join(dir, 'src/pages/home.js'), 'utf8'))) throw new Error('home.js must set meta.theme, or every new project starts with a "theme is not set" warning')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+  const sep = path.sep
+  if (!isInstalledCopy(['', 'usr', 'lib', 'node_modules', '@invisibleloop', 'pulse'].join(sep))) throw new Error('a global install is an installed copy')
+  if (!isInstalledCopy(['', 'home', 'u', '.npm', '_npx', 'abc', 'node_modules', '@invisibleloop', 'pulse'].join(sep))) throw new Error('an npx cache is an installed copy')
+  if (isInstalledCopy(['', 'home', 'u', 'src', 'pulse', 'packages', 'pulse'].join(sep))) throw new Error('a dev checkout is not an installed copy')
+})
+
+test('the install command for the agent tools pins the ranges this package declares', async () => {
+  const { mcpInstallSpecs, shellQuote } = await import('../mcp/deps.js')
+  const { peerDependencies } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  const specs = mcpInstallSpecs()
+  if (specs[0] !== `@modelcontextprotocol/sdk@${peerDependencies['@modelcontextprotocol/sdk']}`) throw new Error(`got ${specs[0]}`)
+  if (specs[1] !== `zod@${peerDependencies.zod}`) throw new Error(`got ${specs[1]}`)
+  if (shellQuote('zod@^3.25 || ^4.0') !== "'zod@^3.25 || ^4.0'") throw new Error('a range with spaces and pipes must be quoted for display')
+  if (shellQuote('npm') !== 'npm') throw new Error('plain words stay unquoted')
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {
