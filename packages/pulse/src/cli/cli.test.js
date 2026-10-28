@@ -239,6 +239,53 @@ test('spawnCommand: arguments arrive intact (spaces, ||, &, quotes, a trailing b
   if (npm.status !== 0 || !/^\d+\.\d+\.\d+/.test(npm.stdout.trim())) throw new Error(`npm --version: status ${npm.status}, ${npm.stdout} ${npm.stderr} ${npm.error ?? ''}`)
 })
 
+test('a pulse.config.js that cannot be loaded, or has a bad port, stops the CLI with a clear message (it used to be ignored silently)', async () => {
+  const { spawnSync } = await import('child_process')
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import('fs')
+  const os = await import('os')
+  const cli = path.join(__dirname, 'index.js')
+  const project = (config) => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-badcfg-'))
+    mkdirSync(path.join(dir, 'src', 'pages'), { recursive: true })
+    writeFileSync(path.join(dir, 'pulse.config.js'), config)
+    return dir
+  }
+  const run = (dir, ...a) => spawnSync(process.execPath, [cli, ...a], { cwd: dir, encoding: 'utf8', timeout: 30000, env: { ...process.env, PORT: '' } })
+  for (const [label, config, expected] of [
+    ['a syntax error',  'export default { port: 3001, ',                  /pulse\.config\.js could not be loaded/],
+    ['a string port',   "export default { port: 'abc' }",                 /port must be a whole number from 1 to 65535 \(got "abc"\)/],
+    ['a huge port',     'export default { port: 70000 }',                 /port must be a whole number/],
+    ['not an object',   'export default 42',                              /must export an object/],
+    ['an unknown agent', "export default { agent: 'gpt' }",               /agent must be 'claude' or 'copilot'/],
+  ]) {
+    const dir = project(config)
+    try {
+      for (const command of [['stop'], ['dev']]) {
+        const r = run(dir, ...command)
+        if (r.status !== 1) throw new Error(`${label} / pulse ${command[0]}: expected exit 1, got ${r.status}\n${r.stdout}${r.stderr}`)
+        if (!expected.test(r.stderr)) throw new Error(`${label} / pulse ${command[0]}: expected ${expected}, got: ${r.stderr}`)
+        if (/\n\s+at /.test(r.stderr)) throw new Error(`${label}: no stack trace expected, got: ${r.stderr}`)
+      }
+    } finally { rmSync(dir, { recursive: true, force: true }) }
+  }
+})
+
+test('a spec that fails validation at startup is reported with its route and file, and no stack trace', async () => {
+  const { spawnSync } = await import('child_process')
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import('fs')
+  const os = await import('os')
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-badspec-'))
+  try {
+    mkdirSync(path.join(dir, 'src', 'pages'), { recursive: true })
+    writeFileSync(path.join(dir, 'src', 'pages', 'broken.js'), "export default { route: '/broken', meta: { title: 't', description: 'd', theme: 'light' } }\n")
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'index.js'), 'dev', '--port', '47321'], { cwd: dir, encoding: 'utf8', timeout: 30000, env: { ...process.env, PORT: '' } })
+    if (r.status !== 1) throw new Error(`expected exit 1, got ${r.status}\n${r.stdout}${r.stderr}`)
+    if (!new RegExp('Invalid spec for route "/broken" in src[\\\\/]pages[\\\\/]broken\\.js').test(r.stderr)) throw new Error(`the route and the file must be named: ${r.stderr}`)
+    if (!/spec\.view is required/.test(r.stderr)) throw new Error(`the reason must be given: ${r.stderr}`)
+    if (/\n\s+at /.test(r.stderr)) throw new Error(`no stack trace expected: ${r.stderr}`)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {

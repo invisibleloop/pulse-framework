@@ -493,6 +493,27 @@ test('sitemap rejects invalid types and malformed array entries', () => {
   assert(!v2 && errors.some(e => e.includes('sitemap')), 'Expected malformed array entry to be invalid')
 })
 
+test('spec.cache accepts true, a number of seconds, or an object, as the server does; anything else is an error', () => {
+  const ok = c => validateSpec({ route: '/x', view: () => '', meta: { theme: 'light' }, cache: c })
+  for (const good of [true, false, 0, 60, 3600, { public: true, maxAge: 300 }]) {
+    assert(ok(good).valid, `cache: ${JSON.stringify(good)} must be valid, got ${JSON.stringify(ok(good).errors)}`)
+  }
+  for (const bad of [-1, NaN, Infinity, 'soon', null, [60]]) {
+    const r = ok(bad)
+    assert(!r.valid && r.errors.some(e => e.includes('spec.cache')), `cache: ${String(bad)} must be rejected`)
+  }
+  assert(ok('soon').errors.some(e => e.includes('true, a number of seconds, or an object')), 'the message says what is accepted')
+})
+
+test('meta.theme other than light or dark warns (it is not an error: a project may define its own data-theme)', () => {
+  const warn = theme => validateSpec({ route: '/x', view: () => '', meta: { theme } }).warnings.filter(w => w.includes('meta.theme'))
+  assert(warn('light').length === 0 && warn('dark').length === 0, 'light and dark are fine')
+  assert(warn(() => 'dark').length === 0, 'a function is fine')
+  const purple = warn('purple')
+  assert(purple.length === 1 && purple[0].includes("'purple'") && purple[0].includes("'light' and 'dark'"), `got ${JSON.stringify(purple)}`)
+  assert(validateSpec({ route: '/x', view: () => '', meta: { theme: 'purple' } }).valid, 'still valid')
+})
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)

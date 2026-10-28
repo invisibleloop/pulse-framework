@@ -13,6 +13,7 @@ import fs   from 'fs'
 import { createServer } from '../server/index.js'
 import { loadPages, loadStore } from './discover.js'
 import { pathToFileURL } from 'url'
+import { loadConfigOrExit, failStartup } from './config.js'
 
 const args    = process.argv.slice(2)
 const rootArg = args.indexOf('--root')
@@ -51,18 +52,15 @@ let passthrough  = {}
 // Server options forwarded verbatim from pulse.config.js — keep in sync with dev.js
 const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'host', 'hsts']
 
-const configPath = path.join(ROOT, 'pulse.config.js')
-if (fs.existsSync(configPath)) {
-  try {
-    const mod    = await import(pathToFileURL(configPath).href)
-    port         = port || mod.default?.port || null
-    defaultCache = mod.default?.defaultCache ?? null
-    staticCache  = mod.default?.staticCache ?? null
-    csp          = mod.default?.csp ?? null
-    for (const key of PASSTHROUGH_OPTIONS) {
-      if (mod.default?.[key] !== undefined) passthrough[key] = mod.default[key]
-    }
-  } catch { /* ignore */ }
+{
+  const config = await loadConfigOrExit(ROOT)
+  port         = port || config.port || null
+  defaultCache = config.defaultCache ?? null
+  staticCache  = config.staticCache ?? null
+  csp          = config.csp ?? null
+  for (const key of PASSTHROUGH_OPTIONS) {
+    if (config[key] !== undefined) passthrough[key] = config[key]
+  }
 }
 
 // Render (and other PaaS platforms) inject PORT — always takes precedence, even
@@ -101,4 +99,4 @@ createServer(specs, {
   ...(store ? { store } : {}),
   ...(csp ? { csp } : {}),
   ...passthrough,
-})
+}).catch(failStartup)

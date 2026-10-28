@@ -27,6 +27,7 @@ import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
 import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, confirm, PACKAGE } from './update.js'
+import { loadConfigOrExit } from './config.js'
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, mcpInstallSpecs, shellQuote } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { commandsToSync, addCommand, optionalCommandNames } from './commands.js'
@@ -290,14 +291,8 @@ async function launchSession(root, agentOverride = null) {
   }
 
   // Load project config for agent preference — CLI flag takes priority
-  const configPath = path.join(root, 'pulse.config.js')
   let agent = agentOverride || 'claude'
-  if (!agentOverride && fs.existsSync(configPath)) {
-    try {
-      const mod = await import(pathToFileURL(configPath).href)
-      agent = mod.default?.agent || 'claude'
-    } catch { /* use default */ }
-  }
+  if (!agentOverride) agent = (await loadConfigOrExit(root)).agent || 'claude'
 
   // Write MCP config so the agent has access to Pulse tools
   const { serverPath: mcpServerPath, nodeArgs: mcpNodeArgs } = mcpServerLaunch(root)
@@ -401,13 +396,8 @@ async function launchCopilotSession(root, mcpServerArgv, spawn, os) {
 
 async function runStop(root) {
   let port = 3000
-  const configPath = path.join(root, 'pulse.config.js')
-  if (fs.existsSync(configPath)) {
-    try {
-      const mod = await import(pathToFileURL(configPath).href)
-      if (mod.default?.port) port = mod.default.port
-    } catch { /* use default */ }
-  }
+  const config = await loadConfigOrExit(root)
+  if (config.port) port = config.port
   // --port wins over pulse.config.js, as it does for `pulse dev` and `pulse start`
   const portFlag = args.indexOf('--port')
   if (portFlag !== -1) {

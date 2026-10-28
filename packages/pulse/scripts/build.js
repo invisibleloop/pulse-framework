@@ -24,6 +24,7 @@ import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
 import { buildBootstrapSource } from './bootstrap.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { toPosix } from '../src/cli/paths.js'
+import { loadConfigOrExit } from '../src/cli/config.js'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -414,11 +415,7 @@ const TMP_DIR = path.join(ROOT, '.pulse-build')
 // Load pulse.config.js (optional)
 // ---------------------------------------------------------------------------
 
-let _projectConfig = {}
-const _configPath = path.join(ROOT, 'pulse.config.js')
-if (fs.existsSync(_configPath)) {
-  try { _projectConfig = (await import(pathToFileURL(_configPath).href)).default ?? {} } catch { /* ignore */ }
-}
+const _projectConfig = await loadConfigOrExit(ROOT)
 
 // css.safelist — array of class name strings or RegExp patterns to always keep
 // even if the purger would otherwise remove them.
