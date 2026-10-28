@@ -30,7 +30,11 @@ Releases are cut from commit titles on `main` (conventional commits), so the tit
 |---|---|
 | `fix:`, `docs:`, `chore:`, `test:`, `perf:` | patch |
 | `feat:` | minor |
-| `type!:` or a `BREAKING CHANGE` note | major |
+| `type!:` or a `BREAKING CHANGE:` footer in the commit body | minor before 1.0 (1.0.0 is a deliberate step), major from 1.0 |
+
+A change that is a bug fix but can break code that worked, such as making an input that used to be accepted throw, or changing what a function returns, is a breaking change: mark it with `!`. The stability page promises that patch releases are safe to take, and new projects take every patch.
+
+A merge that touches nothing under `packages/pulse` (docs, CI, root files) publishes nothing.
 
 Describe a breaking change in the PR body: the release notes are generated from PR titles.
 

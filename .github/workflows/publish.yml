@@ -25,6 +25,9 @@ jobs:
 
       - run: npm ci
 
+      # The same typecheck CI runs: a release must not go out with broken type declarations.
+      - run: npm run typecheck
+
       - run: npm test
 
   # Bumps the version, pushes it to main and publishes. Pushing to main needs the
@@ -46,6 +49,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # Full history: release-version.js reads every commit since the last release, and filters
+          # them by path. In a shallow clone the oldest commit looks like it added every file, so
+          # the filter matched always and docs-only merges still published a release.
+          fetch-depth: 0
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -57,9 +64,17 @@ jobs:
         run: npm install -g npm@11
 
       - name: Bump the version from conventional commits and commit it
+        id: bump
         run: |
           cd packages/pulse
           VERSION=$(node scripts/release-version.js)
+          # No version means no commit touched the package since the last release (docs-only,
+          # CI-only or root-only merge): skip the rest of the job instead of republishing it.
+          if [ -z "$VERSION" ]; then
+            echo "Nothing to release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # Fallback: if this exact version is somehow already on npm, bump patch
           while npm view @invisibleloop/pulse@$VERSION version 2>/dev/null | grep -q .; do
             VERSION=$(node -e "const [a,b,c]='$VERSION'.split('.').map(Number);console.log(a+'.'+b+'.'+(c+1))")
@@ -75,6 +90,7 @@ jobs:
 
       # The only step that sees the token, and it runs nothing but git.
       - name: Push the release commit to main
+        if: steps.bump.outputs.skip != 'true'
         env:
           RELEASE_PAT: ${{ secrets.RELEASE_PAT }}
           REPO:        ${{ github.repository }}
@@ -84,6 +100,7 @@ jobs:
       # identity of this workflow (permissions.id-token), configured as a trusted
       # publisher for @invisibleloop/pulse on npmjs.com.
       - name: Publish to npm
+        if: steps.bump.outputs.skip != 'true'
         run: |
           cd packages/pulse
           npm publish --provenance --access public
@@ -92,6 +109,7 @@ jobs:
       # the merged PR titles since the previous tag. Only runs after npm publish
       # succeeded, so a tag always means "this version shipped".
       - name: Create the GitHub Release
+        if: steps.bump.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
