@@ -96,7 +96,7 @@ await createServer(
 )`, 'js'))}
 
       ${section('multi-brand', 'Multi-brand sites')}
-      <p>One Pulse server can serve multiple brands, using the request domain as the key. Pass <code>resolveBrand</code> to <code>createServer</code> — it receives the <code>host</code> header and returns a brand config object of any shape you choose. The result is cached per host for 60 seconds and attached to <code>ctx.brand</code>.</p>
+      <p>One Pulse server can serve multiple brands, using the request domain as the key. Pass <code>resolveBrand</code> to <code>createServer</code> — it receives the <code>host</code> header, lower-cased and without any trailing dot, and returns a brand config object of any shape you choose. The result is cached per host for 60 seconds and attached to <code>ctx.brand</code>. Return <code>null</code> for a host that is not one of your brands: every such host shares a single page-cache entry, so a client cycling made-up <code>Host</code> values cannot push your real pages out of the cache.</p>
       ${codeBlock(highlight(`// server.js
 await createServer(specs, {
   resolveBrand: async (host) => {

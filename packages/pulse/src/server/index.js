@@ -57,6 +57,11 @@ function localPath(p) {
   return '/' + p.replace(/^[/\\]+/, '')
 }
 
+/** Lower-case, with a trailing dot ("example.com.") removed, keeping any port. */
+function normaliseHost(raw) {
+  return String(raw || '').toLowerCase().replace(/\.(?=(:\d+)?$)/, '')
+}
+
 function isHttpsRequest(req) {
   return req.headers['x-forwarded-proto'] === 'https' || !!req.socket?.encrypted
 }
@@ -216,13 +221,34 @@ function createCompressor(encoding) {
  * "__proto__" or "toString" cannot touch the prototype.
  */
 function parseUrlencoded(str) {
-  const result = {}
-  for (const [name, value] of new URLSearchParams(str)) {
-    const has = Object.hasOwn(result, name)
-    const stored = has ? (Array.isArray(result[name]) ? [...result[name], value] : [result[name], value]) : value
-    Object.defineProperty(result, name, { value: stored, enumerable: true, writable: true, configurable: true })
+  const fields = createFieldCollector()
+  for (const [name, value] of new URLSearchParams(str)) fields.add(name, value)
+  return fields.result()
+}
+
+/**
+ * Collects form fields in linear time: a name seen once keeps its value, a name seen more than
+ * once becomes an array. (Copying the array on every repeat, as an earlier version did, is
+ * quadratic: a 240 KB body of "a=&a=&..." blocked the event loop for seconds, before the CSRF
+ * check could reject it.) Own data properties only, so a name like "__proto__" or "toString"
+ * cannot replace the prototype or shadow an inherited method.
+ */
+function createFieldCollector() {
+  const groups = new Map()
+  return {
+    add(name, value) {
+      const group = groups.get(name)
+      if (group) group.push(value)
+      else groups.set(name, [value])
+    },
+    result() {
+      const out = {}
+      for (const [name, values] of groups) {
+        Object.defineProperty(out, name, { value: values.length === 1 ? values[0] : values, enumerable: true, writable: true, configurable: true })
+      }
+      return out
+    },
   }
-  return result
 }
 
 /**
@@ -238,6 +264,7 @@ function parseUrlencoded(str) {
  */
 function parseMultipart(buf, boundary) {
   const result  = {}
+  const fields  = createFieldCollector()
   const delim   = Buffer.from(`\r\n--${boundary}`)
   const first   = Buffer.from(`--${boundary}`)
   const CRLFX2  = Buffer.from('\r\n\r\n')
@@ -281,19 +308,13 @@ function parseMultipart(buf, boundary) {
       ? { filename: fileMatch[1], type: headers['content-type'] || 'application/octet-stream', data: body, size: body.length }
       : body.toString('utf8')
 
-    // Support repeated names (e.g. checkboxes, multi-file inputs).
-    // Field names are attacker-chosen: use own data properties only, so a part
-    // named "__proto__" or "toString" cannot replace the prototype or shadow an
-    // inherited method (the urlencoded path gets this from Object.fromEntries).
-    const has      = Object.hasOwn(result, name)
-    const existing = has ? result[name] : undefined
-    const stored   = has ? (Array.isArray(existing) ? [...existing, value] : [existing, value]) : value
-    Object.defineProperty(result, name, { value: stored, enumerable: true, writable: true, configurable: true })
+    // Repeated names (checkboxes, multi-file inputs) become arrays; see createFieldCollector.
+    fields.add(name, value)
 
     pos = next + delim.length
   }
 
-  return result
+  return fields.result()
 }
 
 // ---------------------------------------------------------------------------
@@ -489,9 +510,9 @@ function buildCacheKey(spec, ctx) {
     }
     varied = JSON.stringify(picked)
   }
-  // With resolveBrand, the same route renders differently per host (ctx.brand reaches
-  // meta, guard and server fetchers), so each host gets its own entry. The key is
-  // bounded by the caches' size caps, not by what a client sends.
+  // With resolveBrand, the same route renders differently per brand (ctx.brand reaches
+  // meta, guard and server fetchers), so each host that resolves to a brand gets its own entry
+  // (_brandHost is '' for a host with no brand, so those share one).
   return spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + varied + '\0' + (ctx._brandHost ?? '')
 }
 
@@ -1133,8 +1154,11 @@ export async function createServer(entries, options = {}) {
 
       // Brand resolution — attach ctx.brand before guard or server data runs
       if (resolveBrand) {
-        const host = req.headers.host || ''
-        ctx._brandHost = host.toLowerCase()
+        // One normalised spelling of the host for the brand lookup, the brand cache and the page
+        // cache key. Hostnames are case-insensitive; if these used different spellings, a request
+        // for "ACME.example.com" could cache the page it resolved for that spelling under the key
+        // that "acme.example.com" reads.
+        const host = normaliseHost(req.headers.host)
         const cached = brandCache.get(host)
         if (cached !== undefined) {
           ctx.brand = cached
@@ -1142,6 +1166,10 @@ export async function createServer(entries, options = {}) {
           ctx.brand = await resolveBrand(host)
           brandCache.set(host, ctx.brand, 60)
         }
+        // Only a host that resolved to a brand gets its own page-cache entries. Every unknown host
+        // shares one, so a client cycling made-up Host values cannot fill the shared page cache
+        // with entries that push real pages out.
+        ctx._brandHost = ctx.brand ? host : ''
       }
 
       // Global store — resolve once per request, attach to ctx before guard/server fetchers.
