@@ -15,8 +15,9 @@ import fs   from 'node:fs'
 import net  from 'node:net'
 import os   from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'url'
 
-const DEV = new URL('./dev.js', import.meta.url).pathname
+const DEV = fileURLToPath(new URL('./dev.js', import.meta.url))
 
 const freePort = () => new Promise(resolve => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)) })

@@ -13,6 +13,7 @@
 
 import fs   from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
 
@@ -90,7 +91,7 @@ function pruneOldReports(dir) {
 // CLI entry point
 // ---------------------------------------------------------------------------
 
-if (process.argv[1] === new URL(import.meta.url).pathname) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args    = process.argv.slice(2)
   const rootArg = args.indexOf('--root')
   const urlArg  = args.indexOf('--url')

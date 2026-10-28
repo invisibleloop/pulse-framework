@@ -14,6 +14,7 @@ import fs   from 'fs'
 import path from 'path'
 import os   from 'os'
 import { execFileSync } from 'child_process'
+import { fileURLToPath } from 'url'
 
 // ---------------------------------------------------------------------------
 // Quick mode — lightweight structural checks, no validator subprocess, no
@@ -154,7 +155,7 @@ export function formatQuickReview(result, { agentFacing = false } = {}) {
 export async function runFullReview(source, file) {
   // Run the validator in a child process (same as pulse_validate/pulse validate)
   let validationResult = '(could not run validator)'
-  const validatorScript = new URL('../mcp/validate-worker.js', import.meta.url).pathname
+  const validatorScript = fileURLToPath(new URL('../mcp/validate-worker.js', import.meta.url))
   if (file) {
     try {
       validationResult = execFileSync(process.execPath, [validatorScript, file], {

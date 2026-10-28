@@ -15,6 +15,7 @@ import { pathToFileURL } from 'node:url'
 import { createServer } from '../server/index.js'
 import { loadPages, loadStore } from './discover.js'
 import * as log         from './logger.js'
+import { fileURLToPath } from 'url'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -54,7 +55,7 @@ async function resolvePort() {
 
 const PORT = await resolvePort()
 
-const FRAMEWORK_ROOT = new URL('../../', import.meta.url).pathname
+const FRAMEWORK_ROOT = fileURLToPath(new URL('../../', import.meta.url))
 const PUBLIC_DIR     = path.join(ROOT, 'public')
 
 // ---------------------------------------------------------------------------
@@ -63,8 +64,8 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
 // ---------------------------------------------------------------------------
 
 ;(function syncAssets() {
-  const pkgPublic  = new URL('../../public', import.meta.url).pathname
-  const pkgJson    = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf8'))
+  const pkgPublic  = fileURLToPath(new URL('../../public', import.meta.url))
+  const pkgJson    = JSON.parse(fs.readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'))
   const pkgVersion = pkgJson.version
   const stampPath  = path.join(PUBLIC_DIR, '.pulse-ui-version')
   const stamp      = fs.existsSync(stampPath) ? fs.readFileSync(stampPath, 'utf8').trim() : null
@@ -93,7 +94,7 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
     ['../agent/coverage-check.js', 'coverage-check.js'],
   ]
   for (const [rel, dst] of agentFiles) {
-    const src = new URL(rel, import.meta.url).pathname
+    const src = fileURLToPath(new URL(rel, import.meta.url))
     if (fs.existsSync(src)) {
       const dstPath = path.join(ROOT, '.claude', dst)
       fs.mkdirSync(path.dirname(dstPath), { recursive: true })
@@ -102,7 +103,7 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
   }
 
   // Sync slash commands into .claude/commands/ so /pulse-dev etc. always exist
-  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsSrc = fileURLToPath(new URL('../agent/commands', import.meta.url))
   const commandsDst = path.join(ROOT, '.claude', 'commands')
   if (fs.existsSync(commandsSrc)) {
     fs.mkdirSync(commandsDst, { recursive: true })

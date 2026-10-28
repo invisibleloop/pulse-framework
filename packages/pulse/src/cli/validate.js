@@ -17,6 +17,7 @@
 import fs   from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
+import { fileURLToPath } from 'url'
 
 const PROP_ALIASES = [
   { component: 'nav()',    wrong: 'brand',       correct: 'logo',    note: 'The nav logo is set with the `logo` prop, not `brand`.' },
@@ -117,7 +118,7 @@ export async function validateContent(content, root, tmpDir = null) {
   try {
     fs.writeFileSync(tmpFile, content, 'utf8')
 
-    const validatorScript = new URL('../mcp/validate-worker.js', import.meta.url).pathname
+    const validatorScript = fileURLToPath(new URL('../mcp/validate-worker.js', import.meta.url))
     let schemaOutput
     let timedOut = false
     try {

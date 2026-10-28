@@ -22,6 +22,7 @@ import { renderToString } from '../src/runtime/ssr.js'
 import { c, header, table, ok, fail, info, warn, elapsed, icon } from '../src/cli/fmt.js'
 import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
 import { buildBootstrapSource } from './bootstrap.js'
+import { fileURLToPath } from 'url'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -457,8 +458,8 @@ console.log(header(`Building ${pages.length} page${pages.length === 1 ? '' : 's'
 // Generate bootstrap entry points
 // ---------------------------------------------------------------------------
 
-const RUNTIME_PATH = new URL('../src/runtime/index.js', import.meta.url).pathname
-const NAVIGATE_PATH = new URL('../src/runtime/navigate.js', import.meta.url).pathname
+const RUNTIME_PATH = fileURLToPath(new URL('../src/runtime/index.js', import.meta.url))
+const NAVIGATE_PATH = fileURLToPath(new URL('../src/runtime/navigate.js', import.meta.url))
 
 const PAGES_DIR = path.join(ROOT, 'src', 'pages')
 
