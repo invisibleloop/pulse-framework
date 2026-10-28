@@ -85,7 +85,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "esbuild": "^0.28.2"
   },
   "repository": {
