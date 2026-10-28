@@ -10,6 +10,7 @@ import os   from 'os'
 import path from 'path'
 import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
+import strictAssert from 'node:assert/strict'
 import { createServer, TtlCache } from './index.js'
 
 // ---------------------------------------------------------------------------
@@ -1117,6 +1118,42 @@ await test('HSTS header present when x-forwarded-proto is https', async () => {
     assert(headers['strict-transport-security'].includes('max-age=31536000'),
       `Expected max-age=31536000 in HSTS: ${headers['strict-transport-security']}`)
   })
+})
+
+await test('HSTS defaults to one year for this host only: no includeSubDomains, no preload', async () => {
+  await withServer([canonicalSpec], { stream: false }, async (port) => {
+    const { headers } = await request(port, 'GET', '/about', { 'x-forwarded-proto': 'https' })
+    strictAssert.equal(headers['strict-transport-security'], 'max-age=31536000')
+  })
+})
+
+await test('the hsts option: false sends none, a string is verbatim, an object composes the value', async () => {
+  const hsts = async (option) => {
+    let value
+    await withServer([canonicalSpec], { stream: false, hsts: option }, async (port) => {
+      value = (await request(port, 'GET', '/about', { 'x-forwarded-proto': 'https' })).headers['strict-transport-security']
+    })
+    return value
+  }
+  strictAssert.equal(await hsts(false), undefined, 'hsts: false must send no header')
+  strictAssert.equal(await hsts('max-age=60'), 'max-age=60')
+  strictAssert.equal(await hsts({ maxAge: 600 }), 'max-age=600')
+  strictAssert.equal(await hsts({ includeSubDomains: true }), 'max-age=31536000; includeSubDomains')
+  strictAssert.equal(await hsts({ includeSubDomains: true, preload: true }), 'max-age=31536000; includeSubDomains; preload')
+})
+
+await test('the hsts option is validated before the server starts', async () => {
+  const { resolveHsts } = await import('./index.js')
+  strictAssert.throws(() => resolveHsts({ preload: true }), /includeSubDomains/, 'preload without includeSubDomains is rejected')
+  strictAssert.throws(() => resolveHsts({ includeSubDomains: true, preload: true, maxAge: 60 }), /31536000/, 'preload with a short max-age is rejected')
+  strictAssert.throws(() => resolveHsts({ maxAge: -1 }), /maxAge/)
+  strictAssert.throws(() => resolveHsts({ maxAge: 1.5 }), /maxAge/)
+  strictAssert.throws(() => resolveHsts({ includeSubdomains: true }), /unknown hsts option/, 'a misspelt key is not silently ignored')
+  strictAssert.throws(() => resolveHsts('includeSubDomains'), /max-age/)
+  strictAssert.throws(() => resolveHsts(['max-age=1']), /hsts must be/)
+  strictAssert.equal(resolveHsts(undefined), 'max-age=31536000')
+  strictAssert.equal(resolveHsts(true), 'max-age=31536000')
+  await strictAssert.rejects(createServer([canonicalSpec], { port: 0, quiet: true, hsts: { preload: true } }), /includeSubDomains/)
 })
 
 // SameSite default

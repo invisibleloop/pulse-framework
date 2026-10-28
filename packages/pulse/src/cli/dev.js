@@ -321,7 +321,7 @@ const { updateSpecs, updateStore } = await createServer(specs, {
   ...(_config.csp ? { csp: _config.csp } : {}),
   // Server options forwarded verbatim from pulse.config.js so dev behaves like
   // production — keep in sync with start.js PASSTHROUGH_OPTIONS
-  ...(['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin'].reduce(
+  ...(['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts'].reduce(
     (acc, k) => (_config[k] !== undefined ? { ...acc, [k]: _config[k] } : acc), {})),
 
   onRequest(req, res) {

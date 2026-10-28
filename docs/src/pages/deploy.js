@@ -49,7 +49,7 @@ export default {
       ${table(
         ['Variable', 'Default', 'Description'],
         [
-          ['<code>NODE_ENV</code>', '<code>development</code>', 'Set to <code>production</code> to enable HSTS headers and production cache behaviour.'],
+          ['<code>NODE_ENV</code>', '<code>development</code>', 'Set to <code>production</code> for production cache behaviour.'],
           ['<code>PORT</code>',     'Value in <code>pulse.config.js</code> (default <code>3000</code>)', 'Override the listening port. Most PaaS platforms set this automatically.'],
         ]
       )}
@@ -202,7 +202,7 @@ fly deploy`, 'bash'))}
       ${callout('tip', 'The recommended pattern for edge performance: deploy Pulse to <strong>Fly.io</strong> (which runs real VMs in many regions) and put <strong>Cloudflare as a CDN/proxy</strong> in front of it. Static assets and cached HTML are served from Cloudflare\'s edge; dynamic requests are proxied to the nearest Fly VM.')}
 
       ${section('https', 'HTTPS and reverse proxy')}
-      <p>Pulse detects TLS automatically. When a request arrives with an <code>x-forwarded-proto: https</code> header or over a direct TLS socket, <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code> is added to the response. All four platforms above forward this header — no Pulse config is needed.</p>
+      <p>Pulse detects TLS automatically. When a request arrives with an <code>x-forwarded-proto: https</code> header or over a direct TLS socket, <code>Strict-Transport-Security: max-age=31536000</code> is added to the response (see the <a href="/server-api#hsts">HSTS</a> section for <code>includeSubDomains</code>, <code>preload</code> and turning it off if your proxy sets its own). All four platforms above forward this header — no Pulse config is needed.</p>
       <p>Behind a proxy or CDN, also <strong>pin your public origin</strong> with <code>origin: 'https://myapp.com'</code> in <code>pulse.config.js</code>. Without it, canonical links, <code>sitemap.xml</code> and <code>robots.txt</code> are built from the <code>Host</code> and <code>X-Forwarded-*</code> headers, which a client can forge — and a CDN may then cache the forged result for every visitor.</p>
       <p>If running behind nginx for TLS termination:</p>
       ${codeBlock(highlight(`# nginx — TLS termination, proxy to Pulse

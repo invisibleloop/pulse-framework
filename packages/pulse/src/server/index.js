@@ -61,8 +61,57 @@ function isHttpsRequest(req) {
   return req.headers['x-forwarded-proto'] === 'https' || !!req.socket?.encrypted
 }
 
+// The Strict-Transport-Security value for this request's server, set on `req` when the request
+// arrives (a symbol, so nothing user-visible) so that every response path can read it without
+// threading an option through each helper.
+const HSTS_VALUE = Symbol('pulse.hsts')
+const DEFAULT_HSTS = 'max-age=31536000'
+
 function httpsHeaders(req) {
-  return isHttpsRequest(req) ? { 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload' } : {}
+  if (!isHttpsRequest(req)) return {}
+  const value = req[HSTS_VALUE] === undefined ? DEFAULT_HSTS : req[HSTS_VALUE]
+  return value ? { 'Strict-Transport-Security': value } : {}
+}
+
+/**
+ * Turn the `hsts` option into a header value, or null for "send none".
+ *   undefined / true   max-age=31536000 (one year, this exact host only)
+ *   false              no header (the proxy or CDN in front sets its own)
+ *   string             sent verbatim
+ *   { maxAge, includeSubDomains, preload }
+ *
+ * The default deliberately omits includeSubDomains and preload. Both are commitments about the
+ * whole domain, not about this app: includeSubDomains forces HTTPS on every sibling subdomain
+ * (including ones this server does not run), and preload is a declaration browsers act on once the
+ * domain is submitted to the preload list, which takes months to undo. Opt in when you mean it.
+ */
+export function resolveHsts(option) {
+  if (option === undefined || option === true) return DEFAULT_HSTS
+  if (option === false) return null
+  if (typeof option === 'string') {
+    if (!/^\s*max-age=\d+/i.test(option)) {
+      throw new Error(`createServer: hsts string must start with "max-age=<seconds>" (got ${JSON.stringify(option)})`)
+    }
+    return option.trim()
+  }
+  if (option === null || typeof option !== 'object' || Array.isArray(option)) {
+    throw new Error('createServer: hsts must be false, a header string, or { maxAge, includeSubDomains, preload }')
+  }
+  const known = new Set(['maxAge', 'includeSubDomains', 'preload'])
+  for (const key of Object.keys(option)) {
+    if (!known.has(key)) throw new Error(`createServer: unknown hsts option "${key}" (expected maxAge, includeSubDomains, preload)`)
+  }
+  const maxAge = option.maxAge ?? 31536000
+  if (!Number.isInteger(maxAge) || maxAge < 0) {
+    throw new Error(`createServer: hsts.maxAge must be a non-negative whole number of seconds (got ${JSON.stringify(option.maxAge)})`)
+  }
+  if (option.preload && (!option.includeSubDomains || maxAge < 31536000)) {
+    throw new Error('createServer: hsts.preload needs includeSubDomains: true and maxAge of at least 31536000 (hstspreload.org rejects anything less)')
+  }
+  let value = `max-age=${maxAge}`
+  if (option.includeSubDomains) value += '; includeSubDomains'
+  if (option.preload) value += '; preload'
+  return value
 }
 
 /**
@@ -653,6 +702,9 @@ export async function createServer(entries, options = {}) {
     maxBody         = 1024 * 1024,  // max request body size in bytes (default 1 MB)
     shutdownTimeout = 30000,        // ms to wait for in-flight requests before force-exit
     healthCheck    = '/healthz',    // path for health check endpoint, or false to disable
+    hsts           = undefined,     // Strict-Transport-Security on HTTPS responses: default max-age=31536000;
+                                    // false = send none; string = verbatim;
+                                    // { maxAge, includeSubDomains, preload } — see resolveHsts
     csp: cspOption = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
     analytics      = null,          // opt-in analytics script URL, e.g. 'https://quietlytics.app/tracker.js'.
                                     // Injected as <script defer> in every page head; its origin is added
@@ -678,6 +730,8 @@ export async function createServer(entries, options = {}) {
     agentMode      = false,        // show agent-active indicator in banner
     quiet          = false,        // suppress request logging
   } = options
+
+  const hstsValue = resolveHsts(hsts)   // throws on a bad option, before the server accepts connections
 
   // A pinned origin must be a bare http(s) origin; normalise it ("https://example.com/x" -> "https://example.com").
   let pinnedOrigin = null
@@ -850,6 +904,7 @@ export async function createServer(entries, options = {}) {
   }
 
   const server = http.createServer(async (req, res) => {
+    req[HSTS_VALUE] = hstsValue
     const reqStart = Date.now()
     // The request target is attacker-controlled and `new URL` throws on a
     // malformed one (e.g. "GET http://[bad HTTP/1.1"). Parse it once, safely —

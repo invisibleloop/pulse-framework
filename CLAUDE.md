@@ -292,6 +292,9 @@ await createServer(
                                   // spec.serverTimeout overrides per-page
     shutdownTimeout: 30000,       // ms to wait for in-flight requests before force-exit on SIGTERM/SIGINT
     healthCheck:     '/healthz',  // built-in health endpoint path, or false to disable
+    hsts:         undefined,      // Strict-Transport-Security on HTTPS responses; default max-age=31536000
+                                  // (this host only). false = none, string = verbatim, or
+                                  // { maxAge, includeSubDomains, preload } (opt-in: domain-wide commitments)
     secret:       process.env.PULSE_SECRET,  // HMAC secret for CSRF tokens — set a stable value
                                   // when running multiple instances (default: random per boot)
     sitemap:      true,           // auto-serve /sitemap.xml + robots.txt from registered routes
