@@ -27,6 +27,22 @@ export function isInstalledInProject(pkgDir, root) {
   }
 }
 
+/**
+ * The project's own installed copy of the package (a real install, or pnpm's link into
+ * node_modules/.pnpm), or null when there is none or it is a link to somewhere else (a dev
+ * `npm link`, which must never be "upgraded" through the project's package.json). Independent of
+ * which CLI is running: a stale global `pulse` can still upgrade the copy the project actually uses.
+ */
+export function projectCopyDir(root) {
+  try {
+    const installed = fs.realpathSync(path.join(root, 'node_modules', PACKAGE))
+    const modules   = fs.realpathSync(path.join(root, 'node_modules'))
+    return installed.startsWith(modules + path.sep) ? installed : null
+  } catch {
+    return null
+  }
+}
+
 /** [command, args] that upgrades the package with the project's package manager. */
 export function installCommand(root) {
   const has = f => fs.existsSync(path.join(root, f))

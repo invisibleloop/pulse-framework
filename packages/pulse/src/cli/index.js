@@ -26,7 +26,7 @@ import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
-import { isInstalledInProject, installCommand, devInstallCommand, notInProjectNotice, latestPublished, PACKAGE } from './update.js'
+import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, PACKAGE } from './update.js'
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, MCP_PACKAGES } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 
@@ -528,12 +528,13 @@ async function runUpdate(root) {
     process.exit(1)
   }
 
-  // Upgrade first, when this CLI is the copy installed in the project. The
-  // running process still holds the old code, so hand the copy step to the
-  // freshly installed binary. A global install or a dev `npm link` is left
-  // alone and just re-copies, as before.
+  // Upgrade first, whenever the project has its own installed copy of Pulse, whichever `pulse` is
+  // running (a stale global one included, which used to just re-copy its own old assets and call
+  // that an update). The running process still holds the old code, so the copy step is handed to
+  // the freshly installed binary. A dev `npm link` has no copy of its own to upgrade and is left
+  // alone: it just re-copies, as before.
   const pkgDir = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]$/, '')
-  if (!args.includes('--no-install') && isInstalledInProject(pkgDir, root)) {
+  if (!args.includes('--no-install') && projectCopyDir(root)) {
     const { spawnSync } = await import('child_process')
     const [cmd, cmdArgs] = installCommand(root)
     console.log(`\n  Upgrading ${PACKAGE} (${cmd} ${cmdArgs.join(' ')})…\n`)
@@ -542,7 +543,16 @@ async function runUpdate(root) {
       console.error(`\n  Upgrade failed — nothing changed. Fix the error above, or run \`pulse update --no-install\` to only re-copy assets.\n`)
       process.exit(install.status || 1)
     }
-    const next = spawnSync(process.execPath, [path.join(pkgDir, 'src', 'cli', 'index.js'), 'update', '--no-install'], { cwd: root, stdio: 'inherit' })
+    const copy = projectCopyDir(root) ?? pkgDir
+    const next = spawnSync(process.execPath, [path.join(copy, 'src', 'cli', 'index.js'), 'update', '--no-install'], { cwd: root, stdio: 'inherit' })
+    // This CLI may itself be the stale one (a global install); the project is up to date now, but say so.
+    if (next.status === 0 && fs.realpathSync(pkgDir) !== fs.realpathSync(copy)) {
+      const { version: cliVersion } = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
+      const latest = await latestPublished()
+      if (latest && compareVersions(cliVersion, latest) < 0) {
+        console.log(`  Your \`pulse\` command itself is v${cliVersion} (latest v${latest}). Update it with:  npm install -g ${PACKAGE}@latest\n`)
+      }
+    }
     process.exit(next.status ?? 1)
   }
 

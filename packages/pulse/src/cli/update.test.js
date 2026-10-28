@@ -8,7 +8,7 @@ import assert   from 'node:assert/strict'
 import fs       from 'node:fs'
 import os       from 'node:os'
 import path     from 'node:path'
-import { isInstalledInProject, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, PACKAGE } from './update.js'
+import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, PACKAGE } from './update.js'
 
 function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-update-')) }
 
@@ -85,4 +85,24 @@ test('the global/linked notice says it did not upgrade, names the latest version
   assert.match(behind, /npm install @invisibleloop\/pulse@latest/)
   assert.doesNotMatch(notInProjectNotice('0.25.0', '0.25.0'), /latest published version/, 'no "latest is" line when already current')
   assert.doesNotMatch(notInProjectNotice('0.22.1', null), /latest published version/, 'offline: no claim about the latest')
+})
+
+test('projectCopyDir: the project\'s own copy is found whichever CLI is running; a dev link is not one', () => {
+  const root = tmp()
+  assert.equal(projectCopyDir(root), null, 'no install at all')
+  const real = path.join(root, 'node_modules', PACKAGE)
+  fs.mkdirSync(real, { recursive: true })
+  assert.equal(projectCopyDir(root), fs.realpathSync(real), 'a real install is the project\'s copy')
+
+  const linked = tmp(), dev = tmp()
+  fs.mkdirSync(path.join(linked, 'node_modules', '@invisibleloop'), { recursive: true })
+  fs.symlinkSync(dev, path.join(linked, 'node_modules', PACKAGE), 'junction')
+  assert.equal(projectCopyDir(linked), null, 'an npm link to a dev checkout is never upgraded through the project')
+
+  const pnpm = tmp()
+  const store = path.join(pnpm, 'node_modules', '.pnpm', 'pulse', 'node_modules', PACKAGE)
+  fs.mkdirSync(store, { recursive: true })
+  fs.mkdirSync(path.join(pnpm, 'node_modules', '@invisibleloop'), { recursive: true })
+  fs.symlinkSync(store, path.join(pnpm, 'node_modules', PACKAGE), 'junction')
+  assert.equal(projectCopyDir(pnpm), fs.realpathSync(store), 'pnpm\'s link into node_modules/.pnpm is a real install')
 })
