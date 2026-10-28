@@ -8,6 +8,7 @@ import net  from 'net'
 import fs   from 'fs'
 import os   from 'os'
 import path from 'path'
+import { spawnSync } from 'child_process'
 import { createServer, TtlCache } from './index.js'
 
 // ---------------------------------------------------------------------------
@@ -2647,6 +2648,62 @@ await test('a client that disconnects before the static file opens does not cras
   } finally {
     process.off('uncaughtException', onUncaught)
     fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+await test('a repeated urlencoded field becomes an array (checkbox groups), like multipart', async () => {
+  const spec = {
+    route: '/f', contentType: 'application/json',
+    render: async (ctx) => JSON.stringify(await ctx.formData()),
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const { body } = await requestWithBody(port, 'POST', '/f', 'tag=a&tag=b&tag=c&one=x&__proto__=p&toString=t', 'application/x-www-form-urlencoded')
+    const got = JSON.parse(body)
+    assert(JSON.stringify(got.tag) === '["a","b","c"]', `repeated field should keep every value, got ${JSON.stringify(got.tag)}`)
+    assert(got.one === 'x', 'a single field stays a string')
+    assert(Object.getPrototypeOf(got) === Object.prototype && got.toString === 't', 'attacker-named fields stay own data properties')
+  })
+})
+
+await test('ctx.setCookie refuses values that would add cookie attributes', async () => {
+  const spec = {
+    route: '/c', contentType: 'application/json',
+    render: async (ctx) => {
+      const out = {}
+      for (const [k, opts] of Object.entries({
+        path:     { path: '/; Domain=evil.example' },
+        domain:   { domain: 'a.example; Secure' },
+        maxAge:   { maxAge: '60; Path=/x' },
+        sameSite: { sameSite: 'Lax; Secure' },
+      })) {
+        try { ctx.setCookie('s', 'v', opts); out[k] = 'accepted' } catch (e) { out[k] = e.name }
+      }
+      ctx.setCookie('ok', 'v', { path: '/app', domain: '.example.com', maxAge: 60, sameSite: 'strict', httpOnly: true })
+      return JSON.stringify(out)
+    },
+  }
+  await withServer([spec], { stream: false }, async (port) => {
+    const res = await requestFull(port, 'GET', '/c')
+    const out = JSON.parse(res.body)
+    for (const k of ['path', 'domain', 'maxAge', 'sameSite']) assert(out[k] === 'TypeError', `${k} injection should be refused, got ${out[k]}`)
+    const cookies = [].concat(res.headers['set-cookie'] || [])
+    assert(cookies.length === 1 && cookies[0] === 'ok=v; Path=/app; Max-Age=60; Domain=.example.com; SameSite=Strict; HttpOnly', `valid options are written as before: ${cookies}`)
+  })
+})
+
+await test('starting on a port that is in use exits with a clear message, not a stack trace', async () => {
+  const blocker = net.createServer()
+  await new Promise(r => blocker.listen(0, r))
+  const port = blocker.address().port
+  try {
+    const script = `import { createServer } from ${JSON.stringify(new URL('./index.js', import.meta.url).href)}
+      await createServer([{ route: '/', view: () => '<main id="main-content">x</main>' }], { port: ${port}, quiet: true })`
+    const r = spawnSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8', timeout: 15000 })
+    assert(r.status === 1, `expected exit code 1, got ${r.status}`)
+    assert(r.stderr.includes(`Port ${port} is already in use`), `expected the friendly message, got: ${r.stderr.slice(0, 300)}`)
+    assert(!r.stderr.includes('at Server') && !r.stderr.includes('node:events'), 'no raw stack trace')
+  } finally {
+    blocker.close()
   }
 })
 

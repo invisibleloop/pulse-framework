@@ -161,6 +161,22 @@ function createCompressor(encoding) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Parse an application/x-www-form-urlencoded body into a plain object. A name that appears
+ * more than once (a checkbox group, a multi-select) becomes an array, as in multipart bodies;
+ * Object.fromEntries kept only the last value. Own data properties only, so a field named
+ * "__proto__" or "toString" cannot touch the prototype.
+ */
+function parseUrlencoded(str) {
+  const result = {}
+  for (const [name, value] of new URLSearchParams(str)) {
+    const has = Object.hasOwn(result, name)
+    const stored = has ? (Array.isArray(result[name]) ? [...result[name], value] : [result[name], value]) : value
+    Object.defineProperty(result, name, { value: stored, enumerable: true, writable: true, configurable: true })
+  }
+  return result
+}
+
+/**
  * Parse a multipart/form-data body Buffer into a plain object.
  *
  * Regular text fields → string values.
@@ -1295,6 +1311,14 @@ export async function createServer(entries, options = {}) {
       console.log(`⚡ Pulse running at http://localhost:${port}`)
     })
   }
+  // Without a listener an 'error' event on the server is an uncaught exception with a raw stack.
+  server.on('error', (err) => {
+    if (err?.code !== 'EADDRINUSE' && err?.code !== 'EACCES') throw err
+    console.error(err.code === 'EADDRINUSE'
+      ? `\n  Port ${port} is already in use. Stop whatever is using it, or choose another port (--port, or pulse.config.js).\n`
+      : `\n  Not allowed to listen on port ${port}. Use a port above 1024, or run with the needed permission.\n`)
+    process.exit(1)
+  })
   if (listenHost) server.listen(port, listenHost, onListening)
   else            server.listen(port, onListening)
 
@@ -1865,7 +1889,7 @@ function buildContext(req, url, params, nonce = '', maxBody = 1024 * 1024) {
         if (!m) return null
         return parseMultipart(buf, m[1].replace(/^"|"$/g, ''))
       }
-      return Object.fromEntries(new URLSearchParams(buf.toString('utf8')))
+      return parseUrlencoded(buf.toString('utf8'))
     },
 
     // Return the raw request body as a Buffer.
@@ -1885,12 +1909,19 @@ function buildContext(req, url, params, nonce = '', maxBody = 1024 * 1024) {
     // Set a Set-Cookie response header with common options
     // opts: { httpOnly, secure, path, maxAge, sameSite, domain }
     setCookie(name, value, opts = {}) {
+      // Attribute values are written into the header as given, so a ';' in a path or domain
+      // would add attributes of its own. Refuse anything that is not a plain value.
+      if (opts.path !== undefined && !/^\/[\w\-./~%]*$/.test(opts.path)) throw new TypeError(`setCookie: invalid path ${JSON.stringify(opts.path)}`)
+      if (opts.domain !== undefined && !/^\.?[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$/i.test(opts.domain)) throw new TypeError(`setCookie: invalid domain ${JSON.stringify(opts.domain)}`)
+      if (opts.maxAge !== undefined && !Number.isInteger(opts.maxAge)) throw new TypeError(`setCookie: maxAge must be an integer number of seconds, got ${JSON.stringify(opts.maxAge)}`)
+      const sameSite = opts.sameSite === undefined ? 'Lax' : ['strict', 'lax', 'none'].find(v => v === String(opts.sameSite).toLowerCase())
+      if (!sameSite) throw new TypeError(`setCookie: sameSite must be Strict, Lax or None, got ${JSON.stringify(opts.sameSite)}`)
       let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`
       if (opts.path     !== undefined) cookie += `; Path=${opts.path}`
       else                             cookie += `; Path=/`
       if (opts.maxAge   !== undefined) cookie += `; Max-Age=${opts.maxAge}`
       if (opts.domain   !== undefined) cookie += `; Domain=${opts.domain}`
-      cookie += `; SameSite=${opts.sameSite ?? 'Lax'}`
+      cookie += `; SameSite=${sameSite[0].toUpperCase()}${sameSite.slice(1)}`
       if (opts.httpOnly)               cookie += `; HttpOnly`
       if (opts.secure)                 cookie += `; Secure`
       _responseHeaders.push(['Set-Cookie', cookie])
