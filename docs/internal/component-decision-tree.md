@@ -1,5 +1,7 @@
 # Component Decision Tree
 
+> Internal working note, not published. Written when the library had 47 components; it has 42 now, so check names against `packages/pulse/src/ui/index.js` before relying on it.
+
 Use this guide to quickly find the right component for your layout, form, or UI pattern. Organized by task.
 
 ## Layout & Structure
