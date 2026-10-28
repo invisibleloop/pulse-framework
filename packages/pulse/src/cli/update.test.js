@@ -68,6 +68,9 @@ test('compareVersions orders MAJOR.MINOR.PATCH numerically', () => {
 
 test('latestPublished returns the registry version, and null on any failure', async () => {
   assert.equal(await latestPublished(async () => ({ ok: true, json: async () => ({ version: '0.25.0' }) })), '0.25.0')
+  let url
+  await latestPublished(async u => { url = u; return { ok: false } })
+  assert.equal(url, 'https://registry.npmjs.org/%40invisibleloop%2Fpulse/latest', 'the scoped name is fully encoded')
   assert.equal(await latestPublished(async () => ({ ok: false })), null)
   assert.equal(await latestPublished(async () => { throw new Error('offline') }), null)
   assert.equal(await latestPublished(async () => ({ ok: true, json: async () => ({}) })), null)

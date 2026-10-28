@@ -56,7 +56,7 @@ export function compareVersions(a, b) {
 /** The latest published version of the package, or null when the registry cannot be reached. */
 export async function latestPublished(fetchImpl = fetch, timeoutMs = 3000) {
   try {
-    const res = await fetchImpl(`https://registry.npmjs.org/${PACKAGE.replace('/', '%2f')}/latest`, { signal: AbortSignal.timeout(timeoutMs) })
+    const res = await fetchImpl(`https://registry.npmjs.org/${encodeURIComponent(PACKAGE)}/latest`, { signal: AbortSignal.timeout(timeoutMs) })
     if (!res.ok) return null
     const { version } = await res.json()
     return typeof version === 'string' ? version : null
