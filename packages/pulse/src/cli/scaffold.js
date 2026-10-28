@@ -261,6 +261,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
     '.pulse-build',
     '.pulse-verified',
     '.pulse-awaiting-approval',
+    '# Dev-only error journal: local URLs and stack traces, rewritten as you work (design reports in .pulse/reports are kept)\n.pulse/errors.json',
     '.DS_Store',
     '# Intake images — local design references, not committed',
     'public/intake/*.jpg',
