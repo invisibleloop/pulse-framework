@@ -30,6 +30,7 @@ import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, mcpInstallSpecs, shellQuote } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { commandsToSync, addCommand, optionalCommandNames } from './commands.js'
+import { spawnCommand, spawnCommandSync } from './spawn.js'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -332,7 +333,7 @@ async function launchClaudeSession(root, mcpConfig, spawn, os) {
   // Launch the agent with MCP config — don't spawn a dev server here,
   // Claude Code cannot be launched as a child process from within a Claude session.
   // The dev server is started via the /dev slash command instead.
-  const agentProc = spawn('claude', ['--mcp-config', mcpConfigPath], {
+  const agentProc = spawnCommand('claude', ['--mcp-config', mcpConfigPath], {
     stdio: 'inherit',
     cwd:   root,
   })
@@ -390,7 +391,7 @@ async function launchCopilotSession(root, mcpServerArgv, spawn, os) {
   process.on('SIGINT',  cleanup)
   process.on('SIGTERM', cleanup)
 
-  const agentProc = spawn('copilot', [], { stdio: 'inherit', cwd: root })
+  const agentProc = spawnCommand('copilot', [], { stdio: 'inherit', cwd: root })
   agentProc.on('exit', cleanup)
 }
 
@@ -528,7 +529,7 @@ async function offerMcpDevDeps(root) {
     return
   }
   const { spawnSync } = await import('child_process')
-  const result = spawnSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
+  const result = spawnCommandSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
   if (result.status !== 0) {
     console.error(`\n  That install failed. Run it yourself:  ${line}\n`)
     process.exitCode = 1
@@ -551,7 +552,7 @@ async function runUpdate(root) {
     const { spawnSync } = await import('child_process')
     const [cmd, cmdArgs] = installCommand(root)
     console.log(`\n  Upgrading ${PACKAGE} (${cmd} ${cmdArgs.join(' ')})…\n`)
-    const install = spawnSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
+    const install = spawnCommandSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
     if (install.status !== 0) {
       console.error(`\n  Upgrade failed — nothing changed. Fix the error above, or run \`pulse update --no-install\` to only re-copy assets.\n`)
       process.exit(install.status || 1)
