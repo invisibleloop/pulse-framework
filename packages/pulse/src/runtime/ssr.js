@@ -27,13 +27,14 @@ import { assertValidSpec, getStreamOrder } from '../spec/schema.js'
  * @param {Object} [pageState]  - Optional page-level state (from a parent layout)
  * @returns {Promise<{ html: string, serverState: Object, timing: Object }>}
  */
-export async function renderToString(spec, ctx = {}, pageState = {}) {
+export async function renderToString(spec, ctx = {}, pageState = {}, { serverState: resolved } = {}) {
   assertValidSpec(spec)
 
   const t0 = performance.now()
 
-  // Resolve all server data in parallel
-  const serverState = await resolveServerState(spec, ctx)
+  // Resolve all server data in parallel (or use `resolved`: fetcher results the caller already
+  // holds, see serverTtl. Only those: the per-request extras below are always applied fresh.)
+  const serverState = resolved ?? await resolveServerState(spec, ctx)
 
   // Merge declared store keys into server state — store keys lose to page-level keys
   const mergedServerState = applyCtxExtras(mergeStoreKeys(spec, serverState, ctx.store), ctx)
@@ -96,12 +97,7 @@ export function renderToStream(spec, ctx = {}, nonce = '') {
       // Each fetcher runs at most once — deferred-scoped fetchers fire immediately
       // rather than waiting for the shell to finish, and shared fetchers are
       // never called twice even if referenced by multiple segments.
-      const fetcherCache = new Map()
-      if (spec.server) {
-        for (const [key, fn] of Object.entries(spec.server)) {
-          fetcherCache.set(key, withTimeout(fn(ctx), timeout, key))
-        }
-      }
+      const fetcherCache = startFetchers(spec, ctx, timeout)
 
       // Await only the fetchers the shell segments need
       const shellServerState = await awaitFetchersForSegments(spec, shell, fetcherCache)
@@ -200,12 +196,7 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
       const writeLine = (obj) => controller.enqueue(encode(JSON.stringify(obj) + '\n'))
 
       // Eagerly start ALL fetcher promises so shell and deferred run in parallel
-      const fetcherCache = new Map()
-      if (spec.server) {
-        for (const [key, fn] of Object.entries(spec.server)) {
-          fetcherCache.set(key, withTimeout(fn(ctx), timeout, key))
-        }
-      }
+      const fetcherCache = startFetchers(spec, ctx, timeout)
 
       // 1. Send meta immediately — no data fetching needed
       writeLine({
@@ -242,10 +233,14 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
         : {}
       const mergedAll = applyCtxExtras(mergeStoreKeys(spec, allServerState, ctx.store), ctx)
 
+      // Only a page the client mounts (spec.hydrate) needs the data. A full page load never
+      // serialises it for a page without a bundle (see wrapDocument), and this must not either:
+      // everything a fetcher returns but the view does not print would be one header away.
+      const exposeState = !!spec.hydrate
       writeLine({
         type:        'done',
-        serverState: Object.keys(mergedAll).length > 0 ? mergedAll : undefined,
-        storeState:  ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
+        serverState: exposeState && Object.keys(mergedAll).length > 0 ? mergedAll : undefined,
+        storeState:  exposeState && ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
       })
 
       controller.close()
@@ -517,6 +512,27 @@ export async function resolveServerState(spec, ctx) {
   )
 
   return Object.fromEntries(entries)
+}
+
+/**
+ * Start every spec.server fetcher at once and return their promises by name.
+ *
+ * The shell and each deferred segment await only the fetchers in their own scope, so when one
+ * fetcher fails and the render stops, the others are never awaited. A fetcher that then rejects
+ * would be an unhandled rejection, and Node exits the whole process on one: a single request
+ * with a bad id killed the server. Each promise therefore gets a no-op handler here. That marks
+ * it as handled without changing what a later `await` of it sees: it still throws.
+ */
+function startFetchers(spec, ctx, timeout) {
+  const fetchers = new Map()
+  if (!spec.server) return fetchers
+  for (const [key, fn] of Object.entries(spec.server)) {
+    let promise
+    try { promise = withTimeout(fn(ctx), timeout, key) } catch (err) { promise = Promise.reject(err) }   // a synchronous throw too
+    promise.catch(() => {})
+    fetchers.set(key, promise)
+  }
+  return fetchers
 }
 
 /**

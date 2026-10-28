@@ -2912,6 +2912,98 @@ await test('urlencoded and multipart parsing are linear: a body of 120,000 repea
   })
 })
 
+await test('one request with a bad id cannot kill the server: a deferred-scope fetcher that nothing awaits is not an unhandled rejection', async () => {
+  const lookup = id => { if (!/^\d+$/.test(id)) throw new Error('bad id'); return { id } }
+  const spec = {
+    route: '/item', state: {}, meta: { title: 't', description: 'd', theme: 'light' },
+    server: { item: async ctx => lookup(ctx.query.id), related: async ctx => { await new Promise(r => setTimeout(r, 40)); return lookup(ctx.query.id) } },
+    stream: { shell: ['head'], deferred: ['feed'], scope: { head: ['item'], feed: ['related'] } },
+    view: { head: (s, srv) => `<h1>${srv.item.id}</h1>`, feed: (s, srv) => `<p>${srv.related.id}</p>` },
+  }
+  const realError = console.error; console.error = () => {}
+  try {
+    await withServer([spec], { quiet: true }, async (port) => {
+      assert((await request(port, 'GET', '/item?id=1')).status === 200, 'a good id works')
+      await request(port, 'GET', '/item?id=x')                                    // the bad request
+      await request(port, 'GET', '/item?id=x', { 'x-pulse-navigate': 'true' })     // and through the nav stream
+      await new Promise(r => setTimeout(r, 150))                                  // the unawaited fetcher rejects now
+      assert((await request(port, 'GET', '/item?id=1')).status === 200, 'the server must still be alive and serving')
+    })
+  } finally { console.error = realError }
+})
+
+await test('the navigation response carries serverState and storeState only for a page the client mounts', async () => {
+  const secret = { user: async () => ({ name: 'Alice', ssn: 'SSN-123-45-6789', apiToken: 'TOKEN_NOT_RENDERED' }) }
+  const plain = { route: '/plain', state: {}, meta: { title: 't' }, server: secret, view: (s, srv) => `<main id="main-content">Hello ${srv.user.name}</main>` }
+  const hydrated = { route: '/live', state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, meta: { title: 't' }, server: secret, hydrate: '/dist/live.boot.js',
+    view: (s, srv) => `<main id="main-content">Hello ${srv.user.name}</main>` }
+  for (const stream of [false, true]) {
+    await withServer([plain, hydrated], { stream, quiet: true, store: { server: { flag: async () => 'STORE_SECRET_FLAG' } } }, async (port) => {
+      const nav = async (p) => (await request(port, 'GET', p, { 'x-pulse-navigate': 'true' })).body
+      const plainBody = await nav('/plain')
+      assert(!/SSN-123|TOKEN_NOT_RENDERED|STORE_SECRET_FLAG/.test(plainBody), `stream=${stream}: a page with no bundle must not expose unrendered data via the nav response: ${plainBody.slice(0, 200)}`)
+      assert(plainBody.includes('Hello Alice'), 'the rendered content is still there')
+      assert(/SSN-123/.test(await nav('/live')), `stream=${stream}: a mounted page still gets the data its client needs`)
+    })
+  }
+})
+
+await test('serverTtl caches the fetcher results only: one visitor\'s form values, CSRF token and nonce are not shown to the next', async () => {
+  const spec = {
+    route: '/ttl', state: {}, meta: { title: 'ttl' }, serverTtl: 60,
+    server: { stock: async () => 42 },
+    submit: async (ctx) => ({ values: await ctx.formData() }),
+    view: (s, srv) => `<main id="main-content"><p>stock ${srv.stock}</p><p id="echo">${JSON.stringify(srv.form?.values ?? null)}</p><form method="POST">${srv.csrf ?? ''}<input name="email"></form></main>`,
+  }
+  await withServer([spec], { stream: false, quiet: true }, async (port) => {
+    const a = await getCsrfPair(port, '/ttl')
+    const b = await getCsrfPair(port, '/ttl')
+    assert(a.token && b.token && a.token !== b.token, 'each visitor gets their own CSRF token on GET (the form was cached with the first one)')
+    const postedA = await postForm(port, '/ttl', { _csrf: a.token, email: 'alice-secret@example.com' }, a.cookie)
+    assert(postedA.body.includes('alice-secret@example.com'), 'alice sees her own values')
+    const postedB = await postForm(port, '/ttl', { _csrf: b.token, email: 'bob@example.com' }, b.cookie)
+    assert(!postedB.body.includes('alice-secret@example.com'), "bob must not see alice's submitted data")
+    assert(!postedB.body.includes(a.token), "bob must not get alice's CSRF token")
+    assert(postedB.body.includes('bob@example.com') && postedB.body.includes('stock 42'), 'bob sees his own values, and the cached fetcher data is still used')
+  })
+})
+
+await test('guarded, form and cookie-setting pages are never public in a shared cache, whatever defaultCache says; ordinary pages still are', async () => {
+  const guarded = { route: '/account', state: {}, meta: { title: 'a' }, guard: async () => undefined, view: () => '<main id="main-content">secret</main>' }
+  const form    = { route: '/contact', state: {}, meta: { title: 'c' }, submit: async () => ({ redirect: '/' }), view: (s, srv) => `<main id="main-content"><form method="POST">${srv.csrf ?? ''}</form></main>` }
+  const cookie  = { route: '/prefs', state: {}, meta: { title: 'p' }, guard: undefined, view: () => '<main id="main-content">p</main>',
+    // sets a cookie through the context, like a guard or fetcher would
+    server: { c: async (ctx) => { ctx.setCookie('seen', '1'); return 1 } } }
+  const plain   = { route: '/about', state: {}, meta: { title: 'x' }, view: () => '<main id="main-content">about</main>' }
+  await withServer([guarded, form, cookie, plain], { stream: false, defaultCache: 3600, quiet: true }, async (port) => {
+    for (const p of ['/account', '/contact', '/prefs']) {
+      const r = await request(port, 'GET', p)
+      strictAssert.equal(r.headers['cache-control'], 'private, no-cache', `${p} must not be public`)
+    }
+    assert(/public, max-age=3600/.test((await request(port, 'GET', '/about')).headers['cache-control']), 'an ordinary page keeps the default')
+  })
+})
+
+await test('a page whose meta function reads the request is not served from the in-process cache to other visitors; the brand-host case still is', async () => {
+  const greet = { route: '/greet', state: {}, meta: { title: ctx => 'Hi ' + (ctx.cookies.name || 'anon') }, view: () => '<main id="main-content">g</main>' }
+  await withServer([greet], { stream: false, defaultCache: 60, quiet: true }, async (port) => {
+    const title = async (cookie) => (await request(port, 'GET', '/greet', cookie ? { cookie } : {})).body.match(/<title>([^<]*)<\/title>/)?.[1]
+    strictAssert.equal(await title('name=Alice'), 'Hi Alice')
+    strictAssert.equal(await title('name=Bob'), 'Hi Bob', "bob must not get alice's title")
+    strictAssert.equal(await title(''), 'Hi anon')
+  })
+})
+
+await test('the page and its navigation JSON share a URL, so both say Vary: X-Pulse-Navigate', async () => {
+  const cached = { route: '/c', state: {}, meta: { title: 'c' }, cache: 60, view: () => '<main id="main-content">c</main>' }
+  await withServer([cached], { stream: false, quiet: true }, async (port) => {
+    const html = await request(port, 'GET', '/c')
+    const json = await request(port, 'GET', '/c', { 'x-pulse-navigate': 'true' })
+    assert(/X-Pulse-Navigate/i.test(html.headers.vary), `html Vary: ${html.headers.vary}`)
+    assert(/X-Pulse-Navigate/i.test(json.headers.vary), `nav Vary: ${json.headers.vary}`)
+  })
+})
+
 await test('a forged X-Forwarded-Host cannot poison the cached canonical URL for other visitors', async () => {
   await withServer([hardenPage], { defaultCache: 3600, quiet: true }, async (port) => {
     const canon = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
