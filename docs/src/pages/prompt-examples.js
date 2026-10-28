@@ -47,12 +47,12 @@ export default {
         {
           tag: 'Dynamic route',
           prompt: 'Create a blog post page at /posts/:slug. It should fetch the post from the database by slug and display the title, published date, and body content. If no post is found, return a 404.',
-          produces: 'A spec with a parameterised <code>route</code>, a <code>server.data</code> fetcher using <code>ctx.params.slug</code>, and a 404 raw response if the post is missing.',
+          produces: 'A spec with a parameterised <code>route</code>, a <code>server</code> fetcher using <code>ctx.params.slug</code>, and a 404 raw response if the post is missing.',
         },
         {
           tag: 'Listing page',
           prompt: 'Create a paginated list of articles at /articles. Read the ?page query parameter to fetch the right slice. Show 10 articles per page with previous and next links.',
-          produces: 'A spec with <code>server.data</code> reading <code>ctx.query.page</code>, pagination state, and prev/next links rendered in the view.',
+          produces: 'A spec with a <code>server</code> fetcher reading <code>ctx.query.page</code>, pagination state, and prev/next links rendered in the view.',
         },
       ])}
 
@@ -60,7 +60,7 @@ export default {
         {
           tag: 'Live filter',
           prompt: 'Add a search input to the /products page that filters the visible product list as the user types. Keep the full product list in server data and filter it in the view.',
-          produces: 'A mutation bound to <code>data-event="input:setQuery"</code> that updates a <code>query</code> state field, with the view filtering <code>server.data.products</code> against it.',
+          produces: 'A mutation bound to <code>data-event="input:setQuery"</code> that updates a <code>query</code> state field, with the view filtering <code>server.products</code> against it.',
         },
         {
           tag: 'Toggle',
@@ -96,7 +96,7 @@ export default {
         {
           tag: 'Dashboard data',
           prompt: 'The /dashboard page should show the logged-in user\'s name and their last 5 orders. Fetch both in parallel.',
-          produces: 'A <code>server.data</code> fetcher that runs two queries concurrently with <code>Promise.all</code> and passes the results to the view as <code>server.data.user</code> and <code>server.data.orders</code>.',
+          produces: 'Two <code>server</code> fetchers, <code>user</code> and <code>orders</code>, that run concurrently and reach the view as <code>server.user</code> and <code>server.orders</code>.',
         },
         {
           tag: 'Async action',
@@ -163,7 +163,7 @@ export default {
         {
           tag: 'Supabase query',
           prompt: 'The /profile page should load the current user\'s row from the Supabase users table. It should only return data the logged-in user owns.',
-          produces: 'A <code>server.data</code> fetcher using the Supabase public client initialised with the user\'s access token, so Row Level Security applies automatically.',
+          produces: 'A <code>server</code> fetcher using the Supabase public client initialised with the user\'s access token, so Row Level Security applies automatically.',
         },
         {
           tag: 'Supabase auth',

@@ -45,11 +45,8 @@ export default {
   route: '/products/:id',
   state: { quantity: 1 },
   server: {
-    data: async (ctx) => {
-      // ctx.params.id is the captured segment
-      const product = await db.products.find(ctx.params.id)
-      return { product }
-    },
+    // ctx.params.id is the captured segment
+    product: async (ctx) => db.products.find(ctx.params.id),
   },
   view: (state, server) => \`<h1>\${server.product.name}</h1>\`,
 }`, 'js'))}
@@ -74,9 +71,9 @@ createServer([home, product, products, blog], { port: 3000 })`, 'js'))}
       <p>Query string parameters are not part of the route pattern but are accessible via <code>ctx.query</code> in server data:</p>
       ${codeBlock(highlight(`// URL: /products?category=shoes&sort=price
 server: {
-  data: async (ctx) => {
+  products: async (ctx) => {
     const { category, sort } = ctx.query
-    return { products: await db.products.list({ category, sort }) }
+    return db.products.list({ category, sort })
   },
 }`, 'js'))}
 

@@ -96,7 +96,7 @@ import { img, picture } from '@invisibleloop/pulse/image'`, 'js'))}
 export default {
   route: '/blog/:slug',
   server: {
-    data: async (ctx) => ({ post: await db.posts.findBySlug(ctx.params.slug) }),
+    post: async (ctx) => db.posts.findBySlug(ctx.params.slug),
   },
   view: (state, server) => \`
     <article>

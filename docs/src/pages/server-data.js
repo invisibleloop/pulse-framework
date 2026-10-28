@@ -21,16 +21,13 @@ export default {
       ${lead('The <code>server</code> field fetches data before the page renders. It runs exclusively on the server — credentials, database access, and API secrets stay there. The browser never receives the fetcher code, only its serialised output.')}
 
       ${section('basic', 'Basic usage')}
-      <p>Declare a <code>data</code> async function inside the <code>server</code> object. It receives a <code>ctx</code> object with request context and returns a plain object:</p>
+      <p>Declare one async function per piece of data inside the <code>server</code> object. Each is a <em>fetcher</em>: it receives a <code>ctx</code> object with the request context, and whatever it returns is available to the view as <code>server.&lt;name&gt;</code>. Fetchers run in parallel:</p>
       ${codeBlock(highlight(`export default {
   route: '/products/:id',
   state: { quantity: 1 },
   server: {
-    data: async (ctx) => {
-      const product = await db.products.findById(ctx.params.id)
-      const related = await db.products.findRelated(product.category)
-      return { product, related }
-    },
+    product: async (ctx) => db.products.findById(ctx.params.id),
+    related: async (ctx) => db.products.findRelated(ctx.params.id),
   },
   view: (state, server) => \`
     <main>
@@ -47,7 +44,7 @@ export default {
 }`, 'js'))}
 
       ${section('ctx', 'The ctx object')}
-      <p>The <code>ctx</code> argument passed to <code>server.data()</code> contains the full request context:</p>
+      <p>The <code>ctx</code> argument passed to each fetcher contains the full request context:</p>
       ${table(
         ['Property', 'Type', 'Description'],
         [
@@ -58,20 +55,21 @@ export default {
         ]
       )}
       ${codeBlock(highlight(`server: {
-  data: async (ctx) => {
+  post: async (ctx) => {
     // Dynamic route: /blog/:year/:slug
     const { year, slug } = ctx.params
+    return db.posts.findBySlug(year, slug)
+  },
 
+  comments: async (ctx) => {
     // Query string: ?page=2
     const page = parseInt(ctx.query.page ?? '1', 10)
+    return db.comments.page(ctx.params.slug, page)
+  },
 
+  session: async (ctx) => {
     // Authentication via cookie
-    const session = ctx.cookies.sessionId
-      ? await sessions.find(ctx.cookies.sessionId)
-      : null
-
-    const post = await db.posts.findBySlug(year, slug)
-    return { post, page, session }
+    return ctx.cookies.sessionId ? sessions.find(ctx.cookies.sessionId) : null
   },
 }`, 'js'))}
 
@@ -93,22 +91,20 @@ view: (state, server) => \`
       ${callout('warning', 'Server state is serialised into the page HTML as <code>window.__PULSE_SERVER__</code> and is visible to anyone who views source. Filter fetcher output to only what the view needs — never include credentials, internal IDs, or user data beyond what must be rendered.')}
 
       ${section('errors', 'Error handling')}
-      <p>If <code>server.data()</code> throws, the server returns a 500 error response. Handle errors gracefully by catching inside the function and returning a safe fallback:</p>
+      <p>If a fetcher throws, the page cannot render normally: a buffered response (<code>stream: false</code>) returns a 500 through <code>onError</code>, and a streamed one (the default) logs the error and shows an error message, see <a href="/error-pages">Error pages</a>. Handle errors gracefully by catching inside the fetcher and returning a safe fallback:</p>
       ${codeBlock(highlight(`server: {
-  data: async (ctx) => {
+  product: async (ctx) => {
     try {
-      const product = await db.products.findById(ctx.params.id)
-      if (!product) return { product: null, notFound: true }
-      return { product, notFound: false }
+      return await db.products.findById(ctx.params.id)   // null when there is no such product
     } catch (err) {
       console.error('Failed to load product', err)
-      return { product: null, notFound: true }
+      return null
     }
   },
 },
-view: (state, server) => server.notFound
-  ? \`<p>Product not found.</p>\`
-  : \`<h1>\${server.product.name}</h1>\``, 'js'))}
+view: (state, server) => server.product
+  ? \`<h1>\${server.product.name}</h1>\`
+  : \`<p>Product not found.</p>\``, 'js'))}
 
       ${section('multiple-fetchers', 'Multiple named fetchers')}
       <p>The <code>server</code> object supports any number of named async functions. Each one receives <code>ctx</code> and its return value is available on <code>server</code> in the view under the same key. Fetchers run in parallel — the page renders once all have resolved:</p>

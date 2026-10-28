@@ -18,7 +18,7 @@ export default {
     next,
     content: `
       ${h1('Raw Responses')}
-      ${lead('Setting <code>contentType</code> switches a spec from the HTML pipeline to a raw response mode. The view returns the response body directly — no doctype, no hydration script. Security headers and compression still apply.')}
+      ${lead('Setting <code>contentType</code> switches a spec from the HTML pipeline to a raw response mode. The <code>render</code> function returns the response body directly — no doctype, no hydration script. Security headers and compression still apply.')}
 
       ${section('basics', 'The basics')}
       <p>Set <code>contentType</code> to any valid MIME type. When present, the normal HTML wrapper (doctype, head, body, hydration script) is skipped. The <code>render</code> function receives <code>(ctx, serverState)</code> and returns a string:</p>
@@ -26,11 +26,9 @@ export default {
   route: '/feed.xml',
   contentType: 'application/rss+xml',
   server: {
-    data: async () => ({
-      posts: await db.posts.latest(20),
-    }),
+    posts: async () => db.posts.latest(20),
   },
-  view: (ctx, server) => \`<?xml version="1.0" encoding="UTF-8"?>
+  render: (ctx, server) => \`<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>My Blog</title>
@@ -53,14 +51,12 @@ export default {
   route: '/api/products',
   contentType: 'application/json',
   server: {
-    data: async (ctx) => ({
-      products: await db.products.list({
-        page:     parseInt(ctx.query.page ?? '1', 10),
-        category: ctx.query.category,
-      }),
+    products: async (ctx) => db.products.list({
+      page:     parseInt(ctx.query.page ?? '1', 10),
+      category: ctx.query.category,
     }),
   },
-  view: (ctx, server) => JSON.stringify({
+  render: (ctx, server) => JSON.stringify({
     products: server.products,
     page:     parseInt(ctx.query.page ?? '1', 10),
   }),
@@ -73,11 +69,9 @@ export default {
   contentType: 'application/xml',
   serverTtl:   3600,
   server: {
-    data: async () => ({
-      pages: await db.pages.allPublished(),
-    }),
+    pages: async () => db.pages.allPublished(),
   },
-  view: (ctx, server) => \`<?xml version="1.0" encoding="UTF-8"?>
+  render: (ctx, server) => \`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   \${server.pages.map(p => \`
   <url>
@@ -88,8 +82,8 @@ export default {
 </urlset>\`,
 }`, 'js'))}
 
-      ${section('view-signature', 'View function signature')}
-      <p>For raw responses, the <code>view</code> function signature is <code>(ctx, serverState)</code>, not <code>(state, serverState)</code>. The <code>ctx</code> argument is the request context object with <code>params</code>, <code>query</code>, <code>headers</code>, and <code>cookies</code>.</p>
+      ${section('view-signature', 'The render function signature')}
+      <p>For raw responses, the <code>render</code> function (not <code>view</code>) takes <code>(ctx, serverState)</code>, not <code>(state, serverState)</code>. The <code>ctx</code> argument is the request context object with <code>params</code>, <code>query</code>, <code>headers</code>, and <code>cookies</code>.</p>
       ${callout('note', 'There is no client state (<code>state</code>) for raw response specs — they are purely server-side. Validation skips the <code>state</code> check entirely for a spec with <code>contentType</code> set, so it can be omitted; the examples on this page include it only for clarity.')}
 
       ${section('escaping', 'Escaping in XML and HTML')}

@@ -29,15 +29,17 @@ export default {
       ${codeBlock(highlight(`export default {
   route: '/dashboard',
   server: {
-    data: async (ctx) => ({
-      user:   await auth.getUser(ctx.cookies.sessionId),  // fast
-      feed:   await db.feed.latest(),                      // slow
-      stats:  await analytics.summary(ctx.params.id),      // slow
-    }),
+    user:  async (ctx) => auth.getUser(ctx.cookies.sessionId),   // fast
+    feed:  async ()    => db.feed.latest(),                       // slow
+    stats: async (ctx) => analytics.summary(ctx.params.id),       // slow
   },
   stream: {
     shell:    ['header', 'nav'],     // rendered immediately
-    deferred: ['feed', 'stats'],     // streamed when server data resolves
+    deferred: ['feed', 'stats'],     // streamed when their data resolves
+    scope: {                         // which fetchers each segment waits for
+      header: ['user'], nav: ['user'],
+      feed:   ['feed'], stats: ['stats'],
+    },
   },
   view: {
     header: (state, server) => \`
@@ -71,17 +73,17 @@ export default {
       ${callout('note', 'The swap is done with a tiny inline script — not a separate JS bundle. Deferred streaming works even on pages with no hydration (<code>hydrate</code> omitted).')}
 
       ${section('server-data', 'Server data and streaming')}
-      <p>All <code>server.data()</code> calls resolve in a single async call before rendering begins. Streaming is about splitting the <em>view</em> — not about parallelising data fetching. For parallel data fetching, use <code>Promise.all</code> inside <code>server.data()</code>:</p>
+      <p>Every <code>server</code> fetcher starts at once, in parallel. What streaming changes is what each part of the page <em>waits for</em>. Declare <code>stream.scope</code> to say which fetchers each segment needs: the shell is written as soon as <em>its own</em> fetchers resolve, a slow fetcher that only a deferred segment uses never holds it up, and each deferred segment streams as soon as <em>its</em> fetchers resolve:</p>
       ${codeBlock(highlight(`server: {
-  data: async (ctx) => {
-    // Fetch in parallel — both requests run concurrently
-    const [feed, stats] = await Promise.all([
-      db.feed.latest(),
-      analytics.summary(),
-    ])
-    return { feed, stats }
-  },
-}`, 'js'))}
+  user:  async (ctx) => auth.getUser(ctx.cookies.sessionId),   // fast
+  feed:  async ()    => db.feed.latest(),                       // slow
+},
+stream: {
+  shell:    ['header'],
+  deferred: ['feed'],
+  scope: { header: ['user'], feed: ['feed'] },   // the header never waits for the feed
+},`, 'js'))}
+      ${callout('note', 'A segment that is left out of <code>scope</code> (or all of them, if you omit it) is given every fetcher, so it waits for all of them. Split data across <em>named fetchers</em>, as above, so that <code>scope</code> has something to separate: one fetcher that returns everything cannot be waited for in parts.')}
 
       ${section('when-to-use', 'When to use streaming')}
       ${table(

@@ -21,21 +21,19 @@ export default {
       ${lead('Pulse handles asset caching automatically — production bundles are content-hashed and served with immutable cache headers. Page caching is controlled declaratively in the spec: <code>serverTtl</code> for in-process data, <code>cache</code> for HTTP headers. Nothing is cached by default unless you declare it.')}
 
       ${section('server-ttl', 'serverTtl — in-process data cache')}
-      <p><code>serverTtl</code> is a number of seconds to cache the result of <code>server.data()</code> in memory. Subsequent requests within the TTL window skip the async data fetch entirely and serve the cached result.</p>
+      <p><code>serverTtl</code> is a number of seconds to cache the results of the <code>server</code> fetchers in memory. Subsequent requests within the TTL window skip the async data fetch entirely and serve the cached result.</p>
       ${codeBlock(highlight(`export default {
   route: '/homepage',
   serverTtl: 60,   // cache server data for 60 seconds
   server: {
-    data: async () => ({
-      featured: await db.products.getFeatured(),
-      stats:    await analytics.getGlobalStats(),
-    }),
+    featured: async () => db.products.getFeatured(),
+    stats:    async () => analytics.getGlobalStats(),
   },
 }`, 'js'))}
       ${table(
         ['Value', 'Behaviour'],
         [
-          ['<code>undefined</code> (default)', 'No caching — <code>server.data()</code> runs on every request'],
+          ['<code>undefined</code> (default)', 'No caching — the fetchers run on every request'],
           ['<code>0</code>', 'No caching (same as undefined)'],
           ['<code>60</code>', 'Cache for 60 seconds — at most one database hit per minute'],
           ['<code>3600</code>', 'Cache for 1 hour'],
