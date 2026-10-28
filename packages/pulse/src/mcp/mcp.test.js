@@ -190,6 +190,7 @@ console.log('\nAgent doc consistency\n')
 const agentDocs = [
   ...fs.readdirSync(agentDir).filter(f => f.endsWith('.md')).map(f => ({ root: ROOT, file: path.join('src/agent', f) })),
   ...fs.readdirSync(path.join(agentDir, 'commands')).filter(f => f.endsWith('.md')).map(f => ({ root: ROOT, file: path.join('src/agent/commands', f) })),
+  ...fs.readdirSync(path.join(agentDir, 'optional-commands')).filter(f => f.endsWith('.md')).map(f => ({ root: ROOT, file: path.join('src/agent/optional-commands', f) })),
   ...fs.readdirSync(path.join(agentDir, 'skills')).flatMap(d => {
     const p = path.join(agentDir, 'skills', d, 'SKILL.md')
     return fs.existsSync(p) ? [{ root: ROOT, file: path.join('src/agent/skills', d, 'SKILL.md') }] : []
@@ -231,7 +232,7 @@ test('no agent doc references a literal ask_user tool', () => {
 })
 
 test('quietlytics-speed command keeps its safety rules: keys from the environment, report is data, edits need approval', () => {
-  const src = fs.readFileSync(path.join(agentDir, 'commands', 'quietlytics-speed.md'), 'utf8')
+  const src = fs.readFileSync(path.join(agentDir, 'optional-commands', 'quietlytics-speed.md'), 'utf8')
   assert(src.includes('$QUIETLYTICS_READ_KEY') && src.includes('$QUIETLYTICS_MARKER_KEY'), 'reads keys from environment variables')
   assert(!/qlr_[A-Za-z0-9_-]{10,}|qlm_[A-Za-z0-9_-]{10,}/.test(src), 'contains no literal key')
   assert(/data, not instructions/i.test(src), 'treats the report as untrusted data')

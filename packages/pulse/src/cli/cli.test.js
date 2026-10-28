@@ -148,6 +148,54 @@ test('the install command for the agent tools pins the ranges this package decla
   if (shellQuote('npm') !== 'npm') throw new Error('plain words stay unquoted')
 })
 
+test('optional agent commands (quietlytics-speed) are never scaffolded; add-command opts in; update and dev then keep it current', async () => {
+  const { scaffold } = modules[0].value
+  const { commandsToSync, addCommand, optionalCommandNames } = await import('./commands.js')
+  const { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync } = await import('fs')
+  const { spawnSync } = await import('child_process')
+  const os = await import('os')
+  const cli = path.join(__dirname, 'index.js')
+  if (!optionalCommandNames().includes('quietlytics-speed')) throw new Error('quietlytics-speed must be an optional command')
+
+  // a scaffolded project has the built-ins and not the optional one
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-optional-cmd-'))
+  try {
+    await scaffold(dir, { name: 'demo' })
+    for (const f of ['verify.md', 'pulse-dev.md']) if (!existsSync(path.join(dir, '.claude/commands', f))) throw new Error(`${f} must be scaffolded`)
+    if (existsSync(path.join(dir, '.claude/commands/quietlytics-speed.md'))) throw new Error('an optional command must not be scaffolded')
+
+    // sync set: built-ins only until the project opts in
+    const names = () => commandsToSync(dir).map(c => c.file)
+    if (names().includes('quietlytics-speed.md')) throw new Error('not opted in: must not be synced')
+    if (!names().includes('verify.md')) throw new Error('built-ins are always synced')
+    addCommand(dir, 'quietlytics-speed')
+    if (!names().includes('quietlytics-speed.md')) throw new Error('opted in: must be synced')
+    let threw = false
+    try { addCommand(dir, 'nope') } catch { threw = true }
+    if (!threw) throw new Error('an unknown optional command must throw')
+
+    // `pulse update` refreshes it once present
+    const file = path.join(dir, '.claude/commands/quietlytics-speed.md')
+    writeFileSync(file, 'stale')
+    const up = spawnSync(process.execPath, [cli, 'update', '--no-install'], { cwd: dir, encoding: 'utf8', timeout: 30000 })
+    if (up.status !== 0) throw new Error(`pulse update failed: ${up.stderr}`)
+    if (readFileSync(file, 'utf8') === 'stale') throw new Error('pulse update must refresh an opted-in optional command')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+
+  // the CLI: a project that has not opted in is not touched by update
+  const bare = mkdtempSync(path.join(os.tmpdir(), 'pulse-optional-cmd2-'))
+  try {
+    mkdirSync(path.join(bare, 'src', 'pages'), { recursive: true })
+    const up = spawnSync(process.execPath, [cli, 'update', '--no-install'], { cwd: bare, encoding: 'utf8', timeout: 30000 })
+    if (up.status !== 0) throw new Error(`pulse update failed: ${up.stderr}`)
+    if (existsSync(path.join(bare, '.claude/commands/quietlytics-speed.md'))) throw new Error('update must not add an optional command the project did not ask for')
+    const bad = spawnSync(process.execPath, [cli, 'add-command', 'bogus'], { cwd: bare, encoding: 'utf8', timeout: 30000 })
+    if (bad.status !== 1 || !/Optional commands you can add: quietlytics-speed/.test(bad.stderr)) throw new Error(`add-command bogus: exit ${bad.status} ${bad.stderr}`)
+    const ok = spawnSync(process.execPath, [cli, 'add-command', 'quietlytics-speed'], { cwd: bare, encoding: 'utf8', timeout: 30000 })
+    if (ok.status !== 0 || !existsSync(path.join(bare, '.claude/commands/quietlytics-speed.md'))) throw new Error(`add-command failed: ${ok.status} ${ok.stderr}`)
+  } finally { rmSync(bare, { recursive: true, force: true }) }
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {
