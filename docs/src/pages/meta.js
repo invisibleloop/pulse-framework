@@ -186,7 +186,7 @@ meta: {
         <li>Keep descriptions under 160 characters — longer values are truncated.</li>
         <li>Use structured data to qualify for Google rich results.</li>
         <li>All metadata is in the server-rendered HTML — search engines and social scrapers do not need to execute JavaScript to read it.</li>
-        <li>Pulse targets 100/100 Lighthouse SEO out of the box. Run <code>/pulse-report</code> after new pages to confirm.</li>
+        <li>Pulse targets 100/100 Lighthouse SEO out of the box. Run <code>/verify</code> after new pages to confirm.</li>
       </ul>
     `,
   }),

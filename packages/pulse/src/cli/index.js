@@ -30,6 +30,7 @@ import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand
 import { loadConfigOrExit } from './config.js'
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, mcpInstallSpecs, shellQuote } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
+import { commandsToSync, addCommand, optionalCommandNames } from './commands.js'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -568,6 +569,7 @@ async function runUpdate(root) {
   const updated   = []
   const missing   = []
 
+  fs.mkdirSync(publicDir, { recursive: true })   // a project without public/ yet used to crash here (ENOENT)
   for (const asset of assets) {
     const src = path.join(pkgPublic, asset)
     const dst = path.join(publicDir, asset)
@@ -591,14 +593,12 @@ async function runUpdate(root) {
   }
 
   // Sync slash commands into .claude/commands/
-  const commandsSrc = path.join(pkgSrc, 'agent', 'commands')
+  // (the built-ins, plus any optional command the project has opted in to: see commands.js)
   const commandsDst = path.join(root, '.claude', 'commands')
-  if (fs.existsSync(commandsSrc)) {
-    fs.mkdirSync(commandsDst, { recursive: true })
-    for (const file of fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'))) {
-      fs.copyFileSync(path.join(commandsSrc, file), path.join(commandsDst, file))
-      updated.push(`.claude/commands/${file}`)
-    }
+  fs.mkdirSync(commandsDst, { recursive: true })
+  for (const { file, src } of commandsToSync(root)) {
+    fs.copyFileSync(src, path.join(commandsDst, file))
+    updated.push(`.claude/commands/${file}`)
   }
 
   // Sync Copilot skills into .copilot/skills/
@@ -708,6 +708,7 @@ switch (command) {
     ${c.cyan('check-bundles')}    inspect public/dist/ bundle contents ${c.dim('(requires prior build)')}
     ${c.cyan('review')} ${c.dim('<file>')}     run the mechanized review checklist ${c.dim('[--quick]')}
     ${c.cyan('update')}           upgrade to the latest version, then re-copy pulse-ui assets ${c.dim('[--no-install]')}
+    ${c.cyan('add-command')} ${c.dim('<name>')} add an optional agent slash command to this project ${c.dim('(e.g. quietlytics-speed)')}
 
   ${c.bold('Options:')}
     ${c.cyan('--agent')} ${c.dim('<name>')}     use specific agent ${c.dim('(claude | copilot)')}
@@ -768,6 +769,21 @@ switch (command) {
   case 'update':
     await runUpdate(CWD)
     break
+  case 'add-command': {
+    const name = args[1]
+    const available = optionalCommandNames()
+    if (!name || !available.includes(name)) {
+      console.error(`\n  ${name ? `Unknown command "${name}".` : 'Which command?'} Optional commands you can add: ${available.join(', ') || '(none)'}.\n  Usage: pulse add-command <name>\n`)
+      process.exit(1)
+    }
+    if (!isPulseProject(CWD)) {
+      console.error('\n  Not a Pulse project. Run from your project root.\n')
+      process.exit(1)
+    }
+    const written = addCommand(CWD, name)
+    console.log(`\n  ⚡ Added /${name}  (${path.relative(CWD, written)})\n  \`pulse update\` and \`pulse dev\` keep it current from now on.\n`)
+    break
+  }
   case 'link': {
     // DEV-ONLY: npm link the local dev repo into this project, then pulse update.
     const { execSync } = await import('child_process')

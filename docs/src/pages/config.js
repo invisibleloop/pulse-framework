@@ -92,7 +92,7 @@ export default {
       )}
 
       ${section('lighthouse', 'lighthouse')}
-      <p>Global Lighthouse thresholds that every page must meet. <code>/pulse-report</code> enforces these after every audit — any page that falls below a threshold is reported as a failure, not a warning.</p>
+      <p>Global Lighthouse thresholds that every page must meet. <code>/verify</code> enforces these after every audit — any page that falls below a threshold is reported as a failure, not a warning.</p>
       ${table(
         ['Field', 'Type', 'Default', 'Description'],
         [

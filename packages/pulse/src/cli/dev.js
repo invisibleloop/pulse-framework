@@ -18,6 +18,7 @@ import * as log         from './logger.js'
 import { fileURLToPath } from 'url'
 import { definedClasses, undefinedClasses } from './class-check.js'
 import { loadConfigOrExit, failStartup } from './config.js'
+import { commandsToSync } from './commands.js'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -101,14 +102,9 @@ const PUBLIC_DIR     = path.join(ROOT, 'public')
   }
 
   // Sync slash commands into .claude/commands/ so /pulse-dev etc. always exist
-  const commandsSrc = fileURLToPath(new URL('../agent/commands', import.meta.url))
   const commandsDst = path.join(ROOT, '.claude', 'commands')
-  if (fs.existsSync(commandsSrc)) {
-    fs.mkdirSync(commandsDst, { recursive: true })
-    for (const file of fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'))) {
-      fs.copyFileSync(path.join(commandsSrc, file), path.join(commandsDst, file))
-    }
-  }
+  fs.mkdirSync(commandsDst, { recursive: true })
+  for (const { file, src } of commandsToSync(ROOT)) fs.copyFileSync(src, path.join(commandsDst, file))
 
   console.log(`  ✓ pulse-ui assets synced (v${pkgVersion})\n`)
 })()

@@ -142,21 +142,6 @@ export default {
         <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px">/llms.txt</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">Plain-text index of every doc page.</span></span>
         <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
       </a>
-      <a href="/api/framework" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90)" class="hv-2">
-        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-brackets-curly"></i></span>
-        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px"><span style="color:oklch(0.5 0.13 160)">GET</span> /api/framework</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">The full specification as JSON.</span></span>
-        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
-      </a>
-      <a href="/agent" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px;border-bottom:1px solid oklch(0.94 0.005 90)" class="hv-2">
-        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-seal-check"></i></span>
-        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px"><span style="color:oklch(0.5 0.13 160)">POST</span> /api/validate-spec</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">Send a spec. Get errors, or OK.</span></span>
-        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
-      </a>
-      <a href="/agent" style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:16px;align-items:center;padding:18px 22px" class="hv-2">
-        <span style="width:40px;height:40px;border-radius:10px;background:oklch(0.96 0.006 90);color:oklch(0.4 0.012 260);display:grid;place-items:center;font-size:20px"><i aria-hidden="true" class="ph-light ph-git-fork"></i></span>
-        <span style="display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:14px"><span style="color:oklch(0.5 0.13 160)">POST</span> /api/evaluate</span><span style="font-size:14px;color:oklch(0.5 0.012 260)">Send requirements. Get a fit score and gotchas.</span></span>
-        <i aria-hidden="true" class="ph-light ph-arrow-up-right" style="font-size:16px;color:oklch(0.6 0.01 260)"></i>
-      </a>
     </div>
     ` : `
     <div style="border:1px solid oklch(0.9 0.006 90);border-radius:18px;background:oklch(0.995 0.002 90);overflow:hidden">

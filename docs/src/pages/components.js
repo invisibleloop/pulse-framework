@@ -76,7 +76,6 @@ export default {
           ['<a href="/components/badge">badge</a>',     'Inline status label. Five semantic colour variants.'],
           ['<a href="/components/card">card</a>',       'Content surface with title, body, and optional footer.'],
           ['<a href="/components/input">input</a>',       'Labelled text input with hint and error support.'],
-          ['<a href="/components/fieldset">fieldset</a>', 'Semantic grouping of related fields with an accessible legend.'],
           ['<a href="/components/select">select</a>',     'Styled select with option groups and current-value support.'],
           ['<a href="/components/textarea">textarea</a>', 'Multi-line input with label, hint, and error.'],
           ['<a href="/components/alert">alert</a>',     'Inline feedback banner. ARIA roles wired by variant.'],
