@@ -45,7 +45,7 @@ mkdir my-project && cd my-project
 pulse
 ```
 
-Running `pulse` in an empty directory scaffolds a new project and starts an AI coding session. Your agent has MCP tools and slash commands available from the first prompt.
+Running `pulse` in an empty directory scaffolds a new project. Run `pulse` again inside it to start an AI coding session; your agent has MCP tools and slash commands available from the first prompt.
 
 Full documentation: **[pulseframework.dev](https://pulseframework.dev)**
 
@@ -55,7 +55,7 @@ Full documentation: **[pulseframework.dev](https://pulseframework.dev)**
 
 **Performance is built in.** Streaming SSR, immutable asset caching, and zero layout shift are automatic. Every scaffolded project targets Lighthouse 100 for Accessibility, Best Practices, and SEO — and is fast by design (streaming HTML before data resolves, CLS 0.00).
 
-**No client-side dependencies.** Pulse ships no runtime framework to the browser — only a small hydration bundle (~2 kB brotli) that binds your spec's mutations and actions to the DOM.
+**No client-side dependencies.** Pulse ships no runtime framework to the browser — only a small hydration bundle that binds your spec's mutations and actions to the DOM (pages with no client behaviour ship none).
 
 **AI-native.** The CLI starts an MCP server alongside the dev server, giving the coding agent tools to create pages, validate specs, and run Lighthouse audits — all without leaving the editor. The agent tools run on the MCP SDK, which is a development dependency of your project (new projects include it), so a production install does not carry it.
 

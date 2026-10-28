@@ -151,7 +151,7 @@ export default {
 </button>`, 'html'))}
 
       ${section('lighthouse', 'Lighthouse score')}
-      <p>Every page is expected to score 100 on Lighthouse Accessibility. Run <code>/pulse-report</code> after every new page or significant change. Regressions — contrast failures, missing labels, unreachable controls — are caught before they reach users.</p>
+      <p>Every page is expected to score 100 on Lighthouse Accessibility. Run <code>/verify</code> after every new page or significant change. Regressions — contrast failures, missing labels, unreachable controls — are caught before they reach users.</p>
     `,
   }),
 }

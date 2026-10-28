@@ -87,7 +87,7 @@ export const metrics = {
   ],
 
   architecture: [
-    { value: '0', label: 'Runtime dependencies' },
+    { value: '0', label: 'Dependencies in served code' },
     { value: 'None', label: 'Production build step' },
     { value: 'Brotli', label: 'Automatic compression' },
   ],

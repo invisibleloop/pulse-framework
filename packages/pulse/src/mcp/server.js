@@ -156,7 +156,7 @@ function normaliseVibe(v) {
 // Server
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({ name: 'pulse', version: '0.2.0' })
+const server = new McpServer({ name: 'pulse', version: PKG_VERSION })
 
 // ---------------------------------------------------------------------------
 // pulse://guide/* resources — split by topic so each fits in one read

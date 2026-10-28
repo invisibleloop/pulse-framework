@@ -10,7 +10,7 @@
 import fs   from 'node:fs'
 import os   from 'node:os'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { execFileSync, spawnSync } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -792,6 +792,42 @@ test('docs raw-response examples use render, not view', () => {
     // (some examples are fragments with a `// ...` elision, so only the wrong key is checked)
     if (/contentType:/.test(spec)) assert(!/\bview:/.test(spec), `a raw spec must use render, not view:\n${spec.slice(0, 200)}`)
   }
+})
+
+test('the MCP server reports the package version, not a stale constant', () => {
+  const { version } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+  assert(/new McpServer\(\{ name: 'pulse', version: PKG_VERSION \}\)/.test(serverSrc), 'serverInfo.version must come from package.json')
+  assert(!/version: '0\.2\.0'/.test(serverSrc), `the hard-coded 0.2.0 is gone (package is ${version})`)
+})
+
+// ── The docs describe things that exist ─────────────────────────────────────
+
+const docsPages = path.join(REPO_ROOT, 'docs/src/pages')
+
+test('the docs do not advertise HTTP endpoints, slash commands or components that do not exist', () => {
+  const read = f => fs.readFileSync(path.join(docsPages, f), 'utf8')
+  const all = fs.readdirSync(docsPages).filter(f => f.endsWith('.js')).map(f => [f, read(f)])
+  const endpoint = /\/api\/(framework|examples|comparison|evaluate|validate-spec)\b/
+  for (const [f, text] of all) {
+    assert(!endpoint.test(text), `${f} mentions an /api/ endpoint the docs server does not serve`)
+    assert(!/\/pulse-report\b/.test(text), `${f} mentions /pulse-report, which is not a command (use /verify)`)
+  }
+  const commands = new Set(fs.readdirSync(path.join(agentDir, 'commands')).map(f => '/' + f.replace(/\.md$/, '')))
+  assert(commands.has('/verify') && !commands.has('/pulse-report'), 'the built-in commands are what the docs name')
+  // every component the components page links to has a page of its own
+  const linked = [...read('components.js').matchAll(/href="\/components\/([a-z0-9-]+)"/g)].map(m => m[1])
+  const pages = new Set(fs.readdirSync(path.join(docsPages, 'components')).map(f => f.replace(/\.js$/, '')))
+  const missing = linked.filter(c => !pages.has(c))
+  assert(missing.length === 0, `components page links to pages that do not exist: ${missing.join(', ')}`)
+})
+
+const { default: llms } = await import(pathToFileURL(path.join(docsPages, 'llms.js')).href)
+const { NAV }           = await import(pathToFileURL(path.join(REPO_ROOT, 'docs/src/lib/nav.js')).href)
+test('/llms.txt is generated from the navigation, so it lists every docs page and nothing else', () => {
+  const text = llms.render()
+  assert(llms.route === '/llms.txt' && /^text\/plain/.test(llms.contentType), 'a plain-text route')
+  for (const { items } of NAV) for (const { href } of items) assert(text.includes(`(https://pulseframework.dev${href})`), `${href} is listed`)
+  assert(text.split('\n').filter(l => l.startsWith('- [')).length === NAV.reduce((n, s) => n + s.items.length, 0), 'one line per nav entry')
 })
 
 // ── Result ───────────────────────────────────────────────────────────────────

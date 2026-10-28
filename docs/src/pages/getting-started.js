@@ -117,15 +117,14 @@ Validate the email format before submitting."`, 'bash'))}
 /pulse-stop    # stop the dev server
 /pulse-build   # production build → public/dist/
 /pulse-start   # run the production server
-/pulse-report  # Lighthouse audit + performance report`, 'bash'))}
+/verify        # full verification: validate, Lighthouse, performance, review`, 'bash'))}
       <p>When using GitHub Copilot CLI, the equivalent capabilities are available as project skills. Type <code>/skills</code> inside Copilot to browse them — <code>build-page</code>, <code>verify</code>, and <code>new-doc-page</code> are all pre-installed.</p>
       <p>You can also skip commands and skills entirely — just describe what you want and the agent handles the rest.</p>
 
       ${section('update', 'Keeping up to date')}
-      <p>When a new version of Pulse is released, update the package and then run <code>pulse update</code> from your project root:</p>
-      ${codeBlock(highlight(`npm update @invisibleloop/pulse
-pulse update`, 'bash'))}
-      <p><code>pulse update</code> copies the latest UI assets and agent files into your project:</p>
+      <p>When a new version of Pulse is released, run <code>pulse update</code> from your project root. It upgrades the copy of Pulse installed in your project to the latest version (a plain <code>npm update</code> would stay within the <code>^0.x</code> range, which before 1.0 means patch releases only), then copies the new assets into place:</p>
+      ${codeBlock(highlight(`pulse update`, 'bash'))}
+      <p>The <code>pulse</code> command you type may itself be an older global install. If <code>pulse update</code> says so, run <code>npm install -g @invisibleloop/pulse@latest</code> and then <code>pulse update</code> again. It copies the latest UI assets and agent files into your project:</p>
       <ul>
         <li><code>public/pulse-ui.css</code> and <code>public/pulse-ui.js</code> — component library styles and behaviour</li>
         <li><code>.claude/pulse-checklist.md</code> and <code>.claude/commands/</code> — Claude agent files</li>
