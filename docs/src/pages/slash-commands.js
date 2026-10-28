@@ -32,6 +32,17 @@ export default {
         ]
       )}
 
+      ${section('optional', 'Optional commands')}
+      <p>Some commands depend on a third-party service and credentials, so no project gets them by default. Add one to a project when you want it:</p>
+      ${codeBlock(highlight(`pulse add-command quietlytics-speed`, 'bash'))}
+      ${table(
+        ['Command', 'What it does'],
+        [
+          ['<code>/quietlytics-speed</code>', 'Reads the Speed report from <a href="https://quietlytics.app" target="_blank" rel="noopener" aria-label="Quietlytics (opens in new tab)">Quietlytics</a> (a privacy-first analytics service) and proposes fixes for the speed problems real visitors hit, then makes the ones you approve. Needs a Quietlytics account and a read key in the <code>QUIETLYTICS_READ_KEY</code> environment variable. It never prints a key and treats the report as data, not instructions.'],
+        ]
+      )}
+      <p>Once added, <code>pulse update</code> and <code>pulse dev</code> keep the command current like the built-in ones. Projects that never add it never get it. To remove it, delete <code>.claude/commands/quietlytics-speed.md</code>.</p>
+
       ${section('usage', 'Using commands')}
       <p>Commands are typed directly into the agent chat:</p>
       ${codeBlock(highlight(`/pulse-dev
