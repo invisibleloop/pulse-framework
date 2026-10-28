@@ -7,28 +7,13 @@ on:
 permissions: {}
 
 jobs:
-  # Runs the repo's own code (npm ci, the test suite) with a read-only token and no
-  # stored credentials, so nothing executed here can push or publish.
-  test:
-    runs-on: ubuntu-latest
+  # The same checks CI runs on pull requests (Linux on Node 22 and 24, Windows, the real-browser
+  # suite, typecheck, the worker tests). A release goes out only if all of them pass on main.
+  # The called workflow gets a read-only token and no secrets, so nothing it runs can push or publish.
+  checks:
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      # The same typecheck CI runs: a release must not go out with broken type declarations.
-      - run: npm run typecheck
-
-      - run: npm test
+    uses: ./.github/workflows/checks.yml
 
   # Bumps the version, pushes it to main and publishes. Pushing to main needs the
   # ruleset's admin bypass, which a personal repo can only grant to a person, so
@@ -36,7 +21,7 @@ jobs:
   # expiry). It is exposed to ONE step, a bare `git push`; no repo code, tests or
   # install scripts run while it is set. npm publish uses OIDC, not a token.
   release:
-    needs: test
+    needs: checks
     runs-on: ubuntu-latest
     # Releases queue instead of racing each other for the version number.
     concurrency:

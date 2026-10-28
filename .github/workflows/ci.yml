@@ -1,8 +1,9 @@
 name: CI
 
+# Pull requests run the shared checks. On main the same checks run as the first stage of the
+# Release workflow (which publishes only if they pass), so there is no separate run on push.
+
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -10,82 +11,5 @@ permissions:
   contents: read
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    # engines is >=22. Some behaviour differs by Node version (pipeline() throws on a
-    # destroyed stream from 24), so run the lowest supported and a newer one.
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [22, 24]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      # AGENTS.md is a copy of CLAUDE.md for other agent tools; edit CLAUDE.md, then copy.
-      - name: AGENTS.md is an exact copy of CLAUDE.md
-        run: |
-          if ! cmp -s CLAUDE.md AGENTS.md; then
-            echo "::error file=AGENTS.md::AGENTS.md has drifted from CLAUDE.md. Run: cp CLAUDE.md AGENTS.md"
-            exit 1
-          fi
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-
-      - run: npm ci
-
-      - run: npm run typecheck
-
-      - run: npm test
-
-      # Feedback Worker and the agent-fix patch validator live outside the
-      # npm workspace, so npm test does not cover them.
-      - run: node --test worker/feedback/index.test.js .github/fixer/validate-patch.test.js .github/fixer/key-proxy.test.js
-
-  # The unit suite on Windows. The framework resolves, confines and serves file paths, and
-  # Windows differs there (separators, drive letters, symlink rights), so run it for real.
-  windows:
-    runs-on: windows-latest
-    steps:
-      # Keep LF on checkout: tests compare repo files byte for byte.
-      - run: git config --global core.autocrlf false
-
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - run: npm test
-
-      # The unit tests never run `pulse build` or a hydrated server. This does, in a real browser,
-      # against both `pulse dev` and the production build, so path handling that only breaks on
-      # Windows (separators in generated import strings, manifest keys) shows up here.
-      - run: npx playwright install chromium
-        working-directory: packages/e2e
-
-      - run: npm run test:e2e
-
-  # Real-browser smoke tests for the client runtime (packages/e2e): hydration, morphing,
-  # client navigation, fragment links, history. The unit tests use a DOM shim; this does not.
-  browser:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
-          cache: npm
-
-      - run: npm ci
-
-      - run: npx playwright install --with-deps chromium
-        working-directory: packages/e2e
-
-      - run: npm run test:e2e
+  checks:
+    uses: ./.github/workflows/checks.yml
