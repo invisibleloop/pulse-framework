@@ -54,9 +54,11 @@ export const mySpec = {
     ogImage:     '...',
   },
 
-  // Server data — resolved before render, passed to view as second arg
+  // Server data — one async fetcher per piece of data, run in parallel before render. Each result
+  // reaches the view as server.<name> (the second arg): here server.product, server.related.
   server: {
-    data: async (ctx) => ({ ... })  // ctx has params, query, headers, cookies
+    product: async (ctx) => db.products.find(ctx.params.id),  // ctx has params, query, headers, cookies
+    related: async (ctx) => db.products.related(ctx.params.id),
   },
 
   // Timeout for all server fetchers on this page (ms). Overrides createServer fetcherTimeout.

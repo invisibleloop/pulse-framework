@@ -52,7 +52,7 @@ Likely fixes by measure:
 | CLS, `nodims` | An image or frame with no `width` and `height`: give it dimensions or an aspect ratio. Use the Pulse image helper (`@invisibleloop/pulse/image`). |
 | CLS, `inserted` | Content added after first paint pushing the page down (banners, late data, embeds): reserve the space, or render it on the server. |
 | CLS, `moved` | Something above the element changed size: usually a font swap or late content. Reserve the space and check font loading. |
-| LCP, `ttfb` stage high | Slow server data in `server.data`, an uncached page, or a slow upstream. Fix the fetcher, add caching, or serve it static. |
+| LCP, `ttfb` stage high | A slow `server` fetcher, an uncached page, or a slow upstream. Fix the fetcher, add caching, or serve it static. |
 | LCP, `load` stage high | The largest image is big, late or from another site: right-size and compress it, mark the hero `priority`, avoid third-party hosts. |
 | LCP, `render` stage high | Render-blocking CSS or script, or a large hydrate payload: trim and defer. |
 | INP | A slow click or key handler: do less in the handler, defer non-urgent work, avoid rendering large lists at once. |

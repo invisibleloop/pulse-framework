@@ -137,10 +137,7 @@ route: '/blog/:year/:slug'`, 'js'))}
       ${section('server', 'server')}
       <p>Server-only data fetching. The result is passed to <code>view</code> as the second argument. Not available on the client. See <a href="/server-data">Server Data</a>.</p>
       ${codeBlock(highlight(`server: {
-  data: async (ctx) => {
-    const product = await db.products.find(ctx.params.id)
-    return { product }
-  }
+  product: async (ctx) => db.products.find(ctx.params.id),   // available as server.product in the view
 }`, 'js'))}
 
       ${section('stream', 'stream')}
@@ -159,7 +156,7 @@ route: '/blog/:year/:slug'`, 'js'))}
 }`, 'js'))}
 
       ${section('serverTtl', 'serverTtl')}
-      <p>Number of seconds to cache the result of <code>server.data()</code> in-process. Subsequent requests within the TTL skip the async data fetch and re-render the HTML with the cached data. See <a href="/caching">Caching</a>.</p>
+      <p>Number of seconds to cache the results of the <code>server</code> fetchers in-process. Subsequent requests within the TTL skip the async data fetch and re-render the HTML with the cached data. See <a href="/caching">Caching</a>.</p>
       ${codeBlock(highlight(`serverTtl: 60  // cache server data for 60 seconds`, 'js'))}
       ${callout('tip', '<strong>serverTtl vs cache</strong> — <code>serverTtl</code> caches only the server data fetcher results. The HTML is re-rendered on every request (good for personalised pages where only the fetched data is stable). <code>cache</code> caches the complete rendered HTML and sets <code>Cache-Control</code> headers (good for fully public pages that are identical for all users).')}
 

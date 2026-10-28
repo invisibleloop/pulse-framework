@@ -113,7 +113,7 @@ mount(
       ${callout('tip', 'Many pages that appear to need JavaScript can be handled server-side with <a href="/routing">routing</a> and <a href="/server-data">server data</a>. Keep specs free of mutations and actions wherever possible.')}
 
       ${section('server-state', 'Passing server state to the client')}
-      <p>Server data fetched via <code>server.data()</code> is serialised into the page HTML as <code>window.__PULSE_SERVER__</code>. The client runtime reads this on mount, making server data available to the view during client re-renders without an additional network request.</p>
+      <p>Server data fetched by the <code>server</code> fetchers is serialised into the page HTML as <code>window.__PULSE_SERVER__</code>. The client runtime reads this on mount, making server data available to the view during client re-renders without an additional network request.</p>
       ${codeBlock(highlight(`// Emitted in the page HTML
 <script id="__PULSE_SERVER__" type="application/json">
   {"product":{"id":1,"name":"Widget","price":9.99}}

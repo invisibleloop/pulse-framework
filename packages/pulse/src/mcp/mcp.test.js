@@ -761,6 +761,39 @@ test('global-install layout: the project\'s own copy is a symlink into the globa
   } finally { fs.rmSync(base, { recursive: true, force: true }) }
 })
 
+// ── Docs examples must match the API ────────────────────────────────────────
+// A fetcher named `data` is just a fetcher: its result is at server.data, nothing is spread into
+// `server`. The docs once taught `server: { data: async () => ({ product }) }` with a view reading
+// server.product, which crashes when pasted (found by pasting them). Raw-response specs take
+// `render`, not `view`.
+
+test('docs and CLAUDE.md do not teach `server: { data: ... }` as if its result were spread into server', () => {
+  const pagesDir = path.join(REPO_ROOT, 'docs/src/pages')
+  const files = [
+    path.join(REPO_ROOT, 'CLAUDE.md'),
+    ...fs.readdirSync(pagesDir).filter(f => f.endsWith('.js')).map(f => path.join(pagesDir, f)),
+  ]
+  const offenders = []
+  for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8')
+    // home.js shows a `data` fetcher on purpose and reads it as server.data.*
+    if (path.basename(file) === 'home.js') continue
+    if (/server:\s*\{\s*data\s*:/.test(text)) offenders.push(path.relative(REPO_ROOT, file))
+  }
+  assert(offenders.length === 0, `these still show a single fetcher named "data": ${offenders.join(', ')}. Name fetchers for what they return (server: { product: ... } -> server.product).`)
+})
+
+test('docs raw-response examples use render, not view', () => {
+  const text = fs.readFileSync(path.join(REPO_ROOT, 'docs/src/pages/raw-responses.js'), 'utf8')
+  const blocks = text.split('export default {').slice(1)
+  assert(blocks.length >= 3, 'the page has its example specs')
+  for (const b of blocks) {
+    const spec = b.slice(0, b.indexOf('}`, \'js\''))
+    // (some examples are fragments with a `// ...` elision, so only the wrong key is checked)
+    if (/contentType:/.test(spec)) assert(!/\bview:/.test(spec), `a raw spec must use render, not view:\n${spec.slice(0, 200)}`)
+  }
+})
+
 // ── Result ───────────────────────────────────────────────────────────────────
 
 console.log(`\n${passed} passed, ${failed} failed\n`)

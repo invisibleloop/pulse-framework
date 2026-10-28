@@ -83,7 +83,7 @@ mutations: {
       </ul>
 
       ${section('server-state', 'State vs server state')}
-      <p>Pulse draws a hard boundary between <em>client state</em> (the <code>state</code> field) and <em>server state</em> (from <code>server.data()</code>). Client state lives in the browser and changes in response to mutations. Server state is resolved before render and passed to the view as its second argument — it is never exposed to the client after hydration:</p>
+      <p>Pulse draws a hard boundary between <em>client state</em> (the <code>state</code> field) and <em>server state</em> (from the <code>server</code> fetchers). Client state lives in the browser and changes in response to mutations. Server state is resolved before render and passed to the view as its second argument — it is never exposed to the client after hydration:</p>
       ${codeBlock(highlight(`view: (state, server) => \`
   <div>
     <h1>\${server.product.name}</h1>      <!-- server state -->
