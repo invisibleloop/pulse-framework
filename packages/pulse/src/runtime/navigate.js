@@ -19,7 +19,14 @@ import { trustedHTML } from './tt.js'
  */
 export function initNavigation(root, mountFn) {
   // Mark initial history entry so popstate can identify Pulse navigations
-  history.replaceState({ pulse: true, path: location.pathname }, '', location.pathname)
+  // Keep the query string and fragment: this rewrites the address bar, so passing only the
+  // pathname would silently drop ?q=… and #section from the URL the visitor landed on.
+  const landed = location.pathname + (location.search || '') + (location.hash || '')
+  history.replaceState({ pulse: true, path: landed }, '', landed)
+
+  // The path (no fragment) of the page currently in the DOM, so a history step that only
+  // changes the fragment is left to the browser instead of refetching the page.
+  let shownPath = location.pathname + (location.search || '')
 
   // Track the current mount instance so we can destroy it (and its store
   // subscription) before mounting the next page.
@@ -85,7 +92,8 @@ export function initNavigation(root, mountFn) {
               if (el) deferredSlots.set(id, el)
             }
             if (push) history.pushState({ pulse: true, path }, '', path)
-            scrollAndFocus(root)
+            shownPath = withoutHash(path)
+            scrollAndFocus(root, hashOf(path))
 
           } else if (msg.type === 'deferred') {
             const slot = deferredSlots.get(msg.id)
@@ -160,7 +168,8 @@ export function initNavigation(root, mountFn) {
         }
 
         document.dispatchEvent(new CustomEvent('pulse:navigate'))
-        scrollAndFocus(root)
+        shownPath = withoutHash(path)
+        scrollAndFocus(root, hashOf(path))
       }
 
     } catch (err) {
@@ -174,6 +183,12 @@ export function initNavigation(root, mountFn) {
     const a = e.target.closest('a')
     if (!a) return
 
+    // Leave the click alone when something else already handled it, or it is not a plain
+    // primary-button click on a navigation link.
+    if (e.defaultPrevented) return
+    if (e.button) return
+    if (a.hasAttribute?.('download')) return
+
     const href = a.getAttribute('href')
     if (!href) return
 
@@ -184,13 +199,29 @@ export function initNavigation(root, mountFn) {
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return
     if (a.target && a.target !== '_self') return
 
+    // A fragment link to the page already shown ("#main-content", "/here#part"): the browser
+    // scrolls to the target, moves focus to it and records the history entry itself.
+    // Refetching would reset the scroll to the top and break skip links.
+    if (href.startsWith('#') || (url.hash && url.pathname + url.search === location.pathname + location.search)) return
+
     e.preventDefault()
-    navigate(url.pathname + url.search, true)
+    navigate(url.pathname + url.search + url.hash, true)
+  })
+
+  // A fragment link the browser handled itself creates a history entry without Pulse state, so
+  // stepping back onto it from another page would be ignored below. Mark it as ours.
+  window.addEventListener('hashchange', () => {
+    if (history.state?.pulse) return
+    history.replaceState({ pulse: true, path: location.pathname + location.search + location.hash }, '')
   })
 
   // Handle browser back / forward
   window.addEventListener('popstate', (e) => {
-    if (e.state?.pulse) navigate(location.pathname + location.search, false)
+    if (!e.state?.pulse) return
+    // Back/forward between two fragments of the page already shown: the browser restores
+    // the scroll position itself.
+    if (location.pathname + location.search === shownPath) return
+    navigate(location.pathname + location.search + location.hash, false)
   })
 
   // Return a setter so the initial mount instance can be registered for cleanup
@@ -252,10 +283,22 @@ function applyScripts(scripts) {
   )
 }
 
-/** Scroll to top and move focus to the main landmark. */
-function scrollAndFocus(root) {
-  window.scrollTo({ top: 0, behavior: 'instant' })
-  const focusTarget = root.querySelector('#main-content, main, h1') || root
+const withoutHash = (path) => path.split('#')[0]
+const hashOf = (path) => (path.includes('#') ? path.slice(path.indexOf('#')) : '')
+
+/**
+ * After a navigation: scroll to the fragment's element when the URL has one, otherwise to the
+ * top. Focus moves to that element, or to the main landmark.
+ */
+function scrollAndFocus(root, hash = '') {
+  let id = hash.slice(1)
+  try { id = decodeURIComponent(id) } catch { /* keep the raw fragment */ }
+  const anchor = id ? document.getElementById?.(id) : null
+
+  if (anchor) anchor.scrollIntoView?.()
+  else window.scrollTo({ top: 0, behavior: 'instant' })
+
+  const focusTarget = anchor || root.querySelector('#main-content, main, h1') || root
   if (!focusTarget.hasAttribute('tabindex')) {
     focusTarget.setAttribute('tabindex', '-1')
     focusTarget.addEventListener('blur', () => focusTarget.removeAttribute('tabindex'), { once: true })

@@ -428,7 +428,8 @@ function pageCacheTtl(spec, dev, defaultCache) {
  * params (?n=1, ?n=2, …) that don't change a cacheable page's output, and
  * including them would let that client mint unbounded distinct cache entries
  * (memory-exhaustion DoS). Pages whose output genuinely depends on a query
- * param declare it in `cacheVary: ['q']`.
+ * param declare it in `cacheVary: ['q']`. When `resolveBrand` is configured the
+ * request host is part of the key too, because the brand changes the output.
  */
 function buildCacheKey(spec, ctx) {
   let varied = ''
@@ -439,7 +440,10 @@ function buildCacheKey(spec, ctx) {
     }
     varied = JSON.stringify(picked)
   }
-  return spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + varied
+  // With resolveBrand, the same route renders differently per host (ctx.brand reaches
+  // meta, guard and server fetchers), so each host gets its own entry. The key is
+  // bounded by the caches' size caps, not by what a client sends.
+  return spec.route + '\0' + JSON.stringify(ctx.params) + '\0' + varied + '\0' + (ctx._brandHost ?? '')
 }
 
 /**
@@ -1075,6 +1079,7 @@ export async function createServer(entries, options = {}) {
       // Brand resolution — attach ctx.brand before guard or server data runs
       if (resolveBrand) {
         const host = req.headers.host || ''
+        ctx._brandHost = host.toLowerCase()
         const cached = brandCache.get(host)
         if (cached !== undefined) {
           ctx.brand = cached

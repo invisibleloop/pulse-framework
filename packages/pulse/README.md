@@ -85,7 +85,7 @@ Full reference at [pulseframework.dev](https://pulseframework.dev):
 - **Raw responses** — RSS feeds, sitemaps, JSON APIs
 - **Markdown** — built-in parser for blog posts and docs pages, zero browser JS
 - **Performance** — how the framework hits Lighthouse 100
-- **UI components** — 50+ built-in components
+- **UI components** — 40+ built-in components
 
 ## Reporting framework bugs
 

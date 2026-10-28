@@ -72,6 +72,14 @@ const registeredUris = [...serverSrc.matchAll(/uri:\s*['"`](pulse:\/\/guide\/[^'
 
 console.log('\nGuide file coverage\n')
 
+test('pulse_update installs only after an explicit confirmed: true', () => {
+  const body = serverSrc.slice(serverSrc.indexOf("'pulse_update',"))
+  const gate = body.indexOf('!isLinked && !confirmed')
+  const install = body.indexOf("npm install @invisibleloop/pulse@latest")
+  assert(gate !== -1, 'the unconfirmed branch is missing')
+  assert(install !== -1 && gate < install, 'the confirmation gate must come before the install')
+})
+
 test('guide-routing.md exists on disk', () => {
   assert(fs.existsSync(path.join(agentDir, 'guide-routing.md')), 'guide-routing.md not found')
 })

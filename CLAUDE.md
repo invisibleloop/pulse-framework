@@ -1,6 +1,6 @@
 # Pulse — AI Agent Guide
 
-Pulse is a spec-first frontend framework. The spec is the source of truth. No codegen, no virtual DOM, no dependencies (esbuild is dev-only).
+Pulse is a spec-first frontend framework. The spec is the source of truth. No codegen, no virtual DOM, and no runtime dependencies in the server or browser code (it imports only Node built-ins). esbuild (for `pulse build`) and the MCP SDK (for the agent tools) are installed with the package but are not used when serving a site.
 
 ## Commands
 
@@ -283,7 +283,9 @@ await createServer(
     staticDir:    'public',      // serve static files + auto-load manifest
     root:         new URL('.', import.meta.url),  // project root for deriving browser paths
     manifest:     null,          // explicit manifest path or object (overrides auto-detect)
-    defaultCache: 3600,          // default HTML cache TTL in seconds for all pages (prod only)
+    defaultCache: 3600,          // default HTML cache TTL in seconds for all pages (prod only);
+                                 // the in-process copy applies only to pages with no server/store/hydrate/submit/deferred
+                                 // stream (the rest render per request); keyed per host when resolveBrand is set
                                  // also accepts true (3600s + swr 86400s) or { public, maxAge, staleWhileRevalidate }
                                  // spec.cache overrides per-page; in-process + Cache-Control headers both set
     fetcherTimeout:  5000,        // ms before any server fetcher times out (null = no limit)
@@ -669,7 +671,7 @@ export default {
 
 ## Check Components Before Building
 
-Before writing any UI HTML by hand, check `src/ui/index.js` — there are 50+ components available. Use them. Do not reinvent `button`, `card`, `alert`, `modal`, `spinner`, `badge`, `input`, etc.
+Before writing any UI HTML by hand, check `src/ui/index.js` — there are 40+ components available. Use them. Do not reinvent `button`, `card`, `alert`, `modal`, `spinner`, `badge`, `input`, etc.
 
 **Common patterns with dedicated components — never write these from scratch:**
 

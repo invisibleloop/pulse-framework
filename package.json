@@ -11,6 +11,7 @@
     "build:framework": "npm run build --workspace packages/pulse",
     "test": "npm run test --workspace packages/pulse",
     "typecheck": "npm run typecheck --workspace packages/pulse",
+    "test:e2e": "npm run test --workspace packages/e2e",
     "docs": "npm run docs --workspace packages/pulse",
     "docs:start": "npm run docs:start --workspace packages/pulse"
   },

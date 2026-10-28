@@ -36,8 +36,29 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run typecheck
+
       - run: npm test
 
       # Feedback Worker and the agent-fix patch validator live outside the
       # npm workspace, so npm test does not cover them.
       - run: node --test worker/feedback/index.test.js .github/fixer/validate-patch.test.js .github/fixer/key-proxy.test.js
+
+  # Real-browser smoke tests for the client runtime (packages/e2e): hydration, morphing,
+  # client navigation, fragment links, history. The unit tests use a DOM shim; this does not.
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+        working-directory: packages/e2e
+
+      - run: npm run test:e2e

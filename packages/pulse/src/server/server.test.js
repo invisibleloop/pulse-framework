@@ -2707,6 +2707,21 @@ await test('starting on a port that is in use exits with a clear message, not a 
   }
 })
 
+await test('with resolveBrand, the page cache is per host (no cross-brand leak)', async () => {
+  const spec = {
+    route: '/', state: {},
+    meta:  { title: (ctx) => `Hello ${ctx.brand.name}` },
+    view:  () => '<main id="main-content">brand page</main>',
+  }
+  const resolveBrand = async (host) => ({ name: host.split(':')[0] })
+  await withServer([spec], { stream: false, defaultCache: 60, resolveBrand, quiet: true }, async (port) => {
+    const title = async (host) => (await requestFull(port, 'GET', '/', { headers: { Host: host } })).body.match(/<title>([^<]*)<\/title>/)?.[1]
+    assert(await title('a.test') === 'Hello a.test', 'first host renders its own brand')
+    assert(await title('b.test') === 'Hello b.test', 'a second host must not be served the first host\'s cached page')
+    assert(await title('a.test') === 'Hello a.test', 'and the first host still gets its own')
+  })
+})
+
 await test('a forged X-Forwarded-Host cannot poison the cached canonical URL for other visitors', async () => {
   await withServer([hardenPage], { defaultCache: 3600, quiet: true }, async (port) => {
     const canon = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]
