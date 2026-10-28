@@ -1,0 +1,12 @@
+{
+  "name": "@invisibleloop/pulse-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Real-browser smoke tests for the Pulse client runtime. Not published.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0"
+  }
+}
