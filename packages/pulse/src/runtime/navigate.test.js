@@ -48,12 +48,13 @@ function makeRoot() {
 function setup({ mountFn = null } = {}) {
   let clickHandler = null
   let popHandler   = null
+  let hashHandler  = null
 
   global.history  = { replaceState: () => {}, pushState: () => {} }
-  global.location = { pathname: '/start', search: '', origin: 'http://localhost', href: '' }
+  global.location = { pathname: '/start', search: '', hash: '', origin: 'http://localhost', href: '' }
   global.window   = {
     scrollTo: () => {},
-    addEventListener: (e, fn) => { if (e === 'popstate') popHandler = fn },
+    addEventListener: (e, fn) => { if (e === 'popstate') popHandler = fn; if (e === 'hashchange') hashHandler = fn },
   }
   global.document = {
     title: 'Test',
@@ -78,20 +79,24 @@ function setup({ mountFn = null } = {}) {
     nav,
     click: (ev) => clickHandler(ev),
     pop:   (ev) => popHandler(ev),
+    hashchange: () => hashHandler(),
   }
 }
 
 /** Build a synthetic click event targeting an anchor. */
-function clickEvent({ href, ctrlKey = false, metaKey = false, shiftKey = false, altKey = false, linkTarget = '' }) {
+function clickEvent({ href, ctrlKey = false, metaKey = false, shiftKey = false, altKey = false, linkTarget = '', download = false, button = 0, defaultPrevented = false }) {
   const anchor = {
     getAttribute: (k) => k === 'href' ? (href ?? null) : null,
+    hasAttribute: (k) => k === 'download' && download,
     target: linkTarget,
   }
-  return {
+  const ev = {
     target:      { closest: (sel) => sel === 'a' ? anchor : null },
-    ctrlKey, metaKey, shiftKey, altKey,
-    preventDefault: () => {},
+    ctrlKey, metaKey, shiftKey, altKey, button, defaultPrevented,
+    prevented: false,
+    preventDefault() { ev.prevented = true },
   }
+  return ev
 }
 
 /** Event where target has no ancestor <a>. */
@@ -169,6 +174,17 @@ await test('intercepts same-origin links', async () => {
   global.fetch = async () => { called = true; return new Promise(() => {}) }
   click(clickEvent({ href: '/same-origin' }))
   assert(called, 'fetch should be called for same-origin link')
+})
+
+await test('leaves clicks alone that are already handled, non-primary, or download links', async () => {
+  const { click } = setup()
+  let called = false
+  global.fetch = async () => { called = true; return new Promise(() => {}) }
+  for (const opts of [{ defaultPrevented: true }, { button: 1 }, { download: true }]) {
+    const ev = clickEvent({ href: '/file', ...opts })
+    click(ev)
+    assert(!called && !ev.prevented, `should not intercept ${JSON.stringify(opts)}`)
+  }
 })
 
 // ── Navigation — tearing down the previous page's mount ──────────────────────
@@ -393,6 +409,65 @@ await test('updates store state when storeState is present', async () => {
   assert.deepEqual(stored, { theme: 'dark' })
 })
 
+// ── Fragment links ───────────────────────────────────────────────────────────
+
+console.log('\nFragment links\n')
+
+await test('a fragment link to the current page is left to the browser (skip links keep working)', async () => {
+  const { click } = setup()
+  let called = false
+  global.fetch = async () => { called = true; return new Promise(() => {}) }
+  for (const href of ['#main-content', '#', '/start#details']) {
+    const ev = clickEvent({ href })
+    click(ev)
+    assert(!called && !ev.prevented, `${href} should not be intercepted`)
+  }
+})
+
+await test('a fragment link to another page navigates and keeps the fragment', async () => {
+  const { click } = setup()
+  let fetched = null
+  global.fetch = async (p) => { fetched = p; return new Promise(() => {}) }
+  const ev = clickEvent({ href: '/other#section-2' })
+  click(ev)
+  assert(ev.prevented, 'cross-page links are still intercepted')
+  assert.equal(fetched, '/other#section-2')
+})
+
+await test('after navigating to /page#id, the element with that id is scrolled to and focused', async () => {
+  const { click } = setup()
+  const log = []
+  const target = {
+    hasAttribute: () => false, setAttribute: () => {}, addEventListener: () => {}, removeAttribute: () => {},
+    scrollIntoView: () => log.push('scrollIntoView'), focus: () => log.push('focus target'),
+  }
+  global.document.getElementById = (id) => (id === 'section-2' ? target : null)
+  global.window.scrollTo = () => log.push('scrollTo top')
+  global.fetch = async () => jsonResponse({ html: '<h2 id="section-2">x</h2>', title: 'Other', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/other#section-2' }))
+  await sleep(60)
+  assert.deepEqual(log, ['scrollIntoView', 'focus target'])
+})
+
+await test('a navigation without a fragment still scrolls to the top', async () => {
+  const { click } = setup()
+  const log = []
+  global.window.scrollTo = () => log.push('scrollTo top')
+  global.fetch = async () => jsonResponse({ html: '<p>x</p>', title: 'Other', hydrate: null, serverState: {} })
+  click(clickEvent({ href: '/other' }))
+  await sleep(60)
+  assert.deepEqual(log, ['scrollTo top'])
+})
+
+await test('the first history entry keeps the query string and fragment of the landing URL', async () => {
+  const calls = []
+  setup()   // resets globals; re-run init with a richer landing URL
+  global.history  = { replaceState: (...a) => calls.push(a), pushState: () => {} }
+  global.location = { pathname: '/search', search: '?q=pulse', hash: '#results', origin: 'http://localhost', href: '' }
+  initNavigation({ addEventListener: () => {} }, null)
+  assert.equal(calls[0][2], '/search?q=pulse#results')
+})
+
 // ── Navigation — popstate ────────────────────────────────────────────────────
 
 console.log('\nNavigation — popstate\n')
@@ -406,6 +481,31 @@ await test('navigates on pulse popstate', async () => {
   pop({ state: { pulse: true } })
   await new Promise(r => setTimeout(r, 0))
   assert.equal(fetchedPath, '/history-page')
+})
+
+await test('a history step that only changes the fragment does not refetch the page', async () => {
+  const { pop } = setup()
+  let called = false
+  global.fetch = async () => { called = true; return new Promise(() => {}) }
+  global.location.pathname = '/start'   // the page already shown
+  global.location.hash     = '#part-2'
+  pop({ state: { pulse: true } })
+  await sleep(10)
+  assert(!called, 'same path, different fragment: leave it to the browser')
+})
+
+await test('a fragment entry the browser created is marked as ours, so going back onto it from another page navigates', async () => {
+  const { hashchange } = setup()
+  const replaced = []
+  global.history = { state: null, replaceState: (...a) => replaced.push(a), pushState: () => {} }
+  global.location.pathname = '/start'
+  global.location.hash     = '#part-2'
+  hashchange()
+  assert.deepEqual(replaced[0][0], { pulse: true, path: '/start#part-2' })
+  replaced.length = 0
+  global.history.state = { pulse: true }
+  hashchange()
+  assert.equal(replaced.length, 0, 'entries that already carry Pulse state are left alone')
 })
 
 await test('ignores popstate without pulse state', async () => {
