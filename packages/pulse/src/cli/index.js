@@ -26,7 +26,7 @@ import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
-import { isInstalledInProject, installCommand, devInstallCommand, PACKAGE } from './update.js'
+import { isInstalledInProject, installCommand, devInstallCommand, notInProjectNotice, latestPublished, PACKAGE } from './update.js'
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, MCP_PACKAGES } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 
@@ -625,9 +625,18 @@ async function runUpdate(root) {
     icon: { bolt: () => '⚡' },
   }))
 
-  console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')} updated to ${c.bold(version)}\n`)
+  const ownCopy = isInstalledInProject(pkgDir, root)
+  if (ownCopy) {
+    console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')} updated to ${c.bold(version)}\n`)
+  } else {
+    console.log(`\n  ${icon.bolt()} ${c.bold('Pulse')} assets re-copied from this CLI (${c.bold(version)}) — not upgraded\n`)
+  }
   for (const f of updated) console.log(fmtOk(f))
   for (const f of missing) console.log(fmtFail(`${f} not found in package`))
+  if (!ownCopy) {
+    const { version: cliVersion } = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
+    console.log('\n  ' + notInProjectNotice(cliVersion, await latestPublished()).split('\n').join('\n  '))
+  }
   console.log()
 }
 

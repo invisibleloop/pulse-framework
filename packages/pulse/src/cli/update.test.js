@@ -8,7 +8,7 @@ import assert   from 'node:assert/strict'
 import fs       from 'node:fs'
 import os       from 'node:os'
 import path     from 'node:path'
-import { isInstalledInProject, installCommand, devInstallCommand, PACKAGE } from './update.js'
+import { isInstalledInProject, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, PACKAGE } from './update.js'
 
 function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-update-')) }
 
@@ -55,4 +55,31 @@ test('devInstallCommand adds development dependencies with the project\'s packag
   assert.deepEqual(devInstallCommand(root, pkgs), ['yarn', ['add', '-D', ...pkgs]])
   fs.writeFileSync(path.join(root, 'pnpm-lock.yaml'), '')
   assert.deepEqual(devInstallCommand(root, pkgs), ['pnpm', ['add', '-D', ...pkgs]])
+})
+
+test('compareVersions orders MAJOR.MINOR.PATCH numerically', () => {
+  assert.equal(compareVersions('0.22.1', '0.25.0'), -1)
+  assert.equal(compareVersions('0.25.0', '0.25.0'), 0)
+  assert.equal(compareVersions('0.25.1', '0.25.0'), 1)
+  assert.equal(compareVersions('0.9.0', '0.10.0'), -1, 'numeric, not lexical')
+  assert.equal(compareVersions('1.0.0', '0.99.99'), 1)
+  assert.equal(compareVersions('0.25.0-rc.1', '0.25.0'), 0, 'a prerelease suffix is ignored')
+})
+
+test('latestPublished returns the registry version, and null on any failure', async () => {
+  assert.equal(await latestPublished(async () => ({ ok: true, json: async () => ({ version: '0.25.0' }) })), '0.25.0')
+  assert.equal(await latestPublished(async () => ({ ok: false })), null)
+  assert.equal(await latestPublished(async () => { throw new Error('offline') }), null)
+  assert.equal(await latestPublished(async () => ({ ok: true, json: async () => ({}) })), null)
+})
+
+test('the global/linked notice says it did not upgrade, names the latest version when behind, and gives both commands', () => {
+  const behind = notInProjectNotice('0.22.1', '0.25.0')
+  assert.match(behind, /v0\.22\.1/)
+  assert.match(behind, /cannot upgrade Pulse/)
+  assert.match(behind, /latest published version is v0\.25\.0/)
+  assert.match(behind, /npm install -g @invisibleloop\/pulse@latest/)
+  assert.match(behind, /npm install @invisibleloop\/pulse@latest/)
+  assert.doesNotMatch(notInProjectNotice('0.25.0', '0.25.0'), /latest published version/, 'no "latest is" line when already current')
+  assert.doesNotMatch(notInProjectNotice('0.22.1', null), /latest published version/, 'offline: no claim about the latest')
 })
