@@ -76,7 +76,7 @@ test('discover exports a loadPages function', () => {
 test('discover: discoverPages skips .test.js files', () => {
   const { discoverPages } = modules[1].value
   // discoverPages on this very directory must not include cli.test.js
-  const pages = discoverPages(new URL('../../', import.meta.url).pathname)
+  const pages = discoverPages(fileURLToPath(new URL('../../', import.meta.url)))
   const testFiles = pages.filter(p => p.filePath.endsWith('.test.js'))
   if (testFiles.length > 0) {
     throw new Error(`discoverPages included test files: ${testFiles.map(p => p.filePath).join(', ')}`)
@@ -119,7 +119,7 @@ test('discover: a store-only spec (no local mutations/actions/persist) still get
 
 console.log('\nCopilot skill source files\n')
 
-const skillsDir = new URL('../agent/skills', import.meta.url).pathname
+const skillsDir = fileURLToPath(new URL('../agent/skills', import.meta.url))
 const requiredSkills = ['build-page', 'verify', 'new-doc-page']
 
 for (const skill of requiredSkills) {

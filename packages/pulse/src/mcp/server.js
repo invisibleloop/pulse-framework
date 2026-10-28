@@ -49,6 +49,7 @@ import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
 import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
 import { killPulseServerOnPort } from '../cli/process-utils.js'
 import { buildReport, previewId, formatPreview, sendViaProxy, sendViaGh, formatResult, DEFAULT_ENDPOINT } from '../cli/feedback.js'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // ---------------------------------------------------------------------------
 // Crash guards — an uncaught error in any tool handler must not kill the
@@ -88,7 +89,7 @@ const IS_PULSE_PROJECT = (() => {
 })()
 
 const PKG_VERSION = JSON.parse(
-  fs.readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf8')
+  fs.readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8')
 ).version
 
 // Reads pulse.config.js fresh on every call (cache-busted — the project's
@@ -100,7 +101,7 @@ async function readPulseConfig() {
   const configPath = path.join(ROOT, 'pulse.config.js')
   if (!fs.existsSync(configPath)) return {}
   try {
-    const mod = await import(`${configPath}?t=${Date.now()}`)
+    const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
     return mod.default ?? {}
   } catch {
     return {}
@@ -704,7 +705,7 @@ server.registerTool(
     const configPath = path.join(ROOT, 'pulse.config.js')
     if (fs.existsSync(configPath)) {
       try {
-        const mod = await import(`${configPath}?t=${Date.now()}`)
+        const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
         if (mod.default?.port) port = mod.default.port
       } catch { /* use default */ }
     }
@@ -1250,7 +1251,7 @@ server.registerTool(
     const configPath = path.join(ROOT, 'pulse.config.js')
     if (fs.existsSync(configPath)) {
       try {
-        const mod = await import(`${configPath}?t=${Date.now()}`)
+        const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
         if (mod.default?.port) port = mod.default.port
       } catch { /* use default */ }
     }
@@ -1288,7 +1289,7 @@ server.registerTool(
       )
     }
 
-    const devScript = new URL('../cli/dev.js', import.meta.url).pathname
+    const devScript = fileURLToPath(new URL('../cli/dev.js', import.meta.url))
     const proc = spawn(process.execPath, [devScript, '--root', ROOT], { detached: true, stdio: 'ignore' })
     proc.unref()
 
@@ -1311,7 +1312,7 @@ server.registerTool(
     inputSchema: {},
   },
   () => new Promise(resolve => {
-    const buildScript = new URL('../../scripts/build.js', import.meta.url).pathname
+    const buildScript = fileURLToPath(new URL('../../scripts/build.js', import.meta.url))
 
     // Determine ports from config
     let devPort = 3000
@@ -1343,7 +1344,7 @@ server.registerTool(
     }
 
     // Start prod server detached on prodPort
-    const startScript = new URL('../cli/start.js', import.meta.url).pathname
+    const startScript = fileURLToPath(new URL('../cli/start.js', import.meta.url))
     const proc = spawn(process.execPath, [startScript, '--root', ROOT, '--port', String(prodPort)], { detached: true, stdio: 'ignore' })
     proc.unref()
 
@@ -1582,7 +1583,7 @@ server.registerTool(
     inputSchema: {},
   },
   () => new Promise(resolve => {
-    const pkgJson      = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url).pathname, 'utf8'))
+    const pkgJson      = JSON.parse(fs.readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'))
     const installed    = pkgJson.version
     const stampPath    = path.join(ROOT, 'public', '.pulse-ui-version')
     const staticAsset  = fs.existsSync(stampPath) ? fs.readFileSync(stampPath, 'utf8').trim() : 'unknown'

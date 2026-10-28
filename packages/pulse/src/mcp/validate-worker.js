@@ -13,6 +13,7 @@ import { validateSpec } from '../spec/schema.js'
 
 import { existsSync } from 'fs'
 import { isAbsolute }  from 'path'
+import { pathToFileURL } from 'url'
 
 const tmpFile = process.argv[2]
 if (!tmpFile) { process.stdout.write('Invalid: no file path provided'); process.exit(0) }
@@ -35,7 +36,7 @@ if (!existsSync(tmpFile)) { process.stdout.write(`Invalid: file not found — ${
 
 let mod
 try {
-  mod = await import(tmpFile)
+  mod = await import(pathToFileURL(tmpFile).href)
 } catch (err) {
   // Give a targeted message for common import-resolution failures
   const msg = err.message || ''

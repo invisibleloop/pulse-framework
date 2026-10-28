@@ -8,6 +8,7 @@
  */
 
 import fs   from 'node:fs'
+import os   from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -605,7 +606,7 @@ test('validate-worker.js still gives the file-not-found message for a missing ab
 // Regression (#167): validateSpec returned no `warnings` for raw-response specs, so the worker's
 // `[...schemaWarnings]` threw and every valid JSON API / webhook spec "failed to parse".
 test('validate-worker.js reports a valid raw-response spec as valid instead of crashing', () => {
-  const dir  = fs.mkdtempSync(path.join(fs.realpathSync(process.env.TMPDIR || '/tmp'), 'pulse-raw-spec-'))
+  const dir  = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'pulse-raw-spec-'))
   const file = path.join(dir, 'hook.mjs')
   fs.writeFileSync(file, "export default { route: '/hook', contentType: 'text/plain', state: {}, render: () => 'ok' }\n")
   try {

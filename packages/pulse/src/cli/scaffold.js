@@ -8,6 +8,7 @@
 import fs   from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
+import { fileURLToPath } from 'url'
 
 const PULSE_PKG = '@invisibleloop/pulse'
 
@@ -83,7 +84,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
   write(targetDir, 'public/intake/README.md', intakeReadme())
 
   // Copy pulse-ui assets from the package into public/ so they're served immediately
-  const pkgPublic = new URL('../../public', import.meta.url).pathname
+  const pkgPublic = fileURLToPath(new URL('../../public', import.meta.url))
   for (const asset of ['pulse-ui.css', 'pulse-ui.js']) {
     const src = path.join(pkgPublic, asset)
     const dst = path.join(targetDir, 'public', asset)
@@ -96,7 +97,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
     ['../agent/coverage-check.js',  'coverage-check.js'],
   ]
   for (const [src, dst] of agentFiles) {
-    const srcPath = new URL(src, import.meta.url).pathname
+    const srcPath = fileURLToPath(new URL(src, import.meta.url))
     const dstPath = path.join(targetDir, '.claude', dst)
     if (fs.existsSync(srcPath)) {
       fs.mkdirSync(path.dirname(dstPath), { recursive: true })
@@ -108,7 +109,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
   write(targetDir, '.claude/CLAUDE.md', claudeMd(name))
 
   // Slash commands — copied from src/agent/commands/ so scaffold and dev sync stay in lock-step
-  const commandsSrc = new URL('../agent/commands', import.meta.url).pathname
+  const commandsSrc = fileURLToPath(new URL('../agent/commands', import.meta.url))
   if (fs.existsSync(commandsSrc)) {
     for (const file of fs.readdirSync(commandsSrc).filter(f => f.endsWith('.md'))) {
       write(targetDir, `.claude/commands/${file}`, fs.readFileSync(path.join(commandsSrc, file), 'utf8'))
@@ -116,7 +117,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
   }
 
   // Copilot skills — .copilot/skills/ so GitHub Copilot CLI picks them up as project skills
-  const skillsSrc = new URL('../agent/skills', import.meta.url).pathname
+  const skillsSrc = fileURLToPath(new URL('../agent/skills', import.meta.url))
   if (fs.existsSync(skillsSrc)) {
     for (const skillDir of fs.readdirSync(skillsSrc)) {
       const skillMd = path.join(skillsSrc, skillDir, 'SKILL.md')
@@ -130,7 +131,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
   write(targetDir, '.github/copilot-instructions.md', copilotInstructionsMd(name))
 
   // Copilot checklist as a separate instructions file — auto-loaded from .github/instructions/
-  const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
+  const checklistSrc = fileURLToPath(new URL('../agent/checklist.md', import.meta.url))
   if (fs.existsSync(checklistSrc)) {
     write(targetDir, '.github/instructions/pulse-checklist.instructions.md',
       fs.readFileSync(checklistSrc, 'utf8'))

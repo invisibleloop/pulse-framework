@@ -27,6 +27,7 @@ import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
 import { isInstalledInProject, installCommand, PACKAGE } from './update.js'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -58,7 +59,7 @@ function isPulseProject(dir) {
 // ---------------------------------------------------------------------------
 
 async function runDev(root) {
-  const devScript  = new URL('./dev.js', import.meta.url).pathname
+  const devScript  = fileURLToPath(new URL('./dev.js', import.meta.url))
   const { spawn }  = await import('child_process')
   // Forward any extra flags (e.g. --port 3002) to the dev script
   const extraArgs  = args.slice(1)
@@ -75,7 +76,7 @@ async function runDev(root) {
 // ---------------------------------------------------------------------------
 
 async function runBuild(root) {
-  const buildScript = new URL('../../scripts/build.js', import.meta.url).pathname
+  const buildScript = fileURLToPath(new URL('../../scripts/build.js', import.meta.url))
   const { spawn }   = await import('child_process')
   const proc = spawn(
     process.execPath,
@@ -282,13 +283,13 @@ async function launchSession(root, agentOverride = null) {
   let agent = agentOverride || 'claude'
   if (!agentOverride && fs.existsSync(configPath)) {
     try {
-      const mod = await import(configPath)
+      const mod = await import(pathToFileURL(configPath).href)
       agent = mod.default?.agent || 'claude'
     } catch { /* use default */ }
   }
 
   // Write MCP config so the agent has access to Pulse tools
-  const mcpServerPath = new URL('../mcp/server.js', import.meta.url).pathname
+  const mcpServerPath = fileURLToPath(new URL('../mcp/server.js', import.meta.url))
   const mcpConfig = {
     mcpServers: {
       pulse: {
@@ -392,7 +393,7 @@ async function runStop(root) {
   const configPath = path.join(root, 'pulse.config.js')
   if (fs.existsSync(configPath)) {
     try {
-      const mod = await import(configPath)
+      const mod = await import(pathToFileURL(configPath).href)
       if (mod.default?.port) port = mod.default.port
     } catch { /* use default */ }
   }
@@ -427,14 +428,14 @@ async function runReportServer(root) {
   let reportPort = null
   if (fs.existsSync(configPath)) {
     try {
-      const mod = await import(configPath)
+      const mod = await import(pathToFileURL(configPath).href)
       if (mod.default?.port)       devPort    = mod.default.port
       if (mod.default?.reportPort) reportPort = mod.default.reportPort
     } catch { /* use defaults */ }
   }
   if (!reportPort) reportPort = devPort + 1
 
-  const script      = new URL('./report-server.js', import.meta.url).pathname
+  const script      = fileURLToPath(new URL('./report-server.js', import.meta.url))
   const { spawn }   = await import('child_process')
   const proc = spawn(
     process.execPath,
@@ -449,7 +450,7 @@ async function runReportServer(root) {
 // ---------------------------------------------------------------------------
 
 async function runSaveReport(root) {
-  const script    = new URL('./report.js', import.meta.url).pathname
+  const script    = fileURLToPath(new URL('./report.js', import.meta.url))
   const { spawn } = await import('child_process')
   const proc = spawn(process.execPath, [script, '--root', root, ...process.argv.slice(3)], { stdio: 'inherit' })
   proc.on('exit', code => process.exit(code ?? 0))
@@ -460,7 +461,7 @@ async function runSaveReport(root) {
 // ---------------------------------------------------------------------------
 
 async function runLoadTest(_root) {
-  const script    = new URL('./load-runner.js', import.meta.url).pathname
+  const script    = fileURLToPath(new URL('./load-runner.js', import.meta.url))
   const { spawn } = await import('child_process')
   const proc = spawn(process.execPath, [script, ...process.argv.slice(3)], { stdio: 'inherit' })
   proc.on('exit', code => process.exit(code ?? 0))
@@ -471,7 +472,7 @@ async function runLoadTest(_root) {
 // ---------------------------------------------------------------------------
 
 async function runSaveLoadReport(root) {
-  const script    = new URL('./load-report.js', import.meta.url).pathname
+  const script    = fileURLToPath(new URL('./load-report.js', import.meta.url))
   const { spawn } = await import('child_process')
   const proc = spawn(process.execPath, [script, '--root', root, ...process.argv.slice(3)], { stdio: 'inherit' })
   proc.on('exit', code => process.exit(code ?? 0))
@@ -491,7 +492,7 @@ async function runUpdate(root) {
   // running process still holds the old code, so hand the copy step to the
   // freshly installed binary. A global install or a dev `npm link` is left
   // alone and just re-copies, as before.
-  const pkgDir = new URL('../..', import.meta.url).pathname.replace(/\/$/, '')
+  const pkgDir = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]$/, '')
   if (!args.includes('--no-install') && isInstalledInProject(pkgDir, root)) {
     const { spawnSync } = await import('child_process')
     const [cmd, cmdArgs] = installCommand(root)
@@ -508,8 +509,8 @@ async function runUpdate(root) {
   // Copy assets from the package this CLI binary lives in (import.meta.url).
   // When globally npm-linked to the dev repo, this resolves to dev source.
   // When installed normally, this resolves to the installed version.
-  const pkgPublic = new URL('../../public', import.meta.url).pathname
-  const pkgSrc    = new URL('..', import.meta.url).pathname
+  const pkgPublic = fileURLToPath(new URL('../../public', import.meta.url))
+  const pkgSrc    = fileURLToPath(new URL('..', import.meta.url))
   const assets    = ['pulse-ui.css', 'pulse-ui.js', '.pulse-ui-version']
   const publicDir = path.join(root, 'public')
   const updated   = []
@@ -549,7 +550,7 @@ async function runUpdate(root) {
   }
 
   // Sync Copilot skills into .copilot/skills/
-  const skillsSrc = new URL('../agent/skills', import.meta.url).pathname
+  const skillsSrc = fileURLToPath(new URL('../agent/skills', import.meta.url))
   if (fs.existsSync(skillsSrc)) {
     for (const skillDir of fs.readdirSync(skillsSrc)) {
       const skillMd = path.join(skillsSrc, skillDir, 'SKILL.md')
@@ -563,7 +564,7 @@ async function runUpdate(root) {
   }
 
   // Sync checklist to .github/instructions/ for Copilot
-  const checklistSrc = new URL('../agent/checklist.md', import.meta.url).pathname
+  const checklistSrc = fileURLToPath(new URL('../agent/checklist.md', import.meta.url))
   if (fs.existsSync(checklistSrc)) {
     const checklistDst = path.join(root, '.github', 'instructions', 'pulse-checklist.instructions.md')
     fs.mkdirSync(path.dirname(checklistDst), { recursive: true })
@@ -593,7 +594,7 @@ async function runUpdate(root) {
 // ---------------------------------------------------------------------------
 
 async function runStart(root) {
-  const startScript = new URL('./start.js', import.meta.url).pathname
+  const startScript = fileURLToPath(new URL('./start.js', import.meta.url))
   const { spawn }   = await import('child_process')
   // Forward any extra flags (e.g. --port 3002) to the start script
   const extraArgs   = args.slice(1)
@@ -612,7 +613,7 @@ async function runStart(root) {
 switch (command) {
   case '--version':
   case '-v': {
-    const pkgPath = new URL('../../package.json', import.meta.url).pathname
+    const pkgPath = fileURLToPath(new URL('../../package.json', import.meta.url))
     const { version } = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
     console.log(version)
     process.exit(0)

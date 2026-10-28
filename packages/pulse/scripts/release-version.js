@@ -38,8 +38,11 @@ const [major, minor, patch] = pkg.version.split('.').map(Number)
 // minor/major version.
 let commits = []
 try {
-  const top = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: PKG_DIR, encoding: 'utf8' }).trim()
-  const rel = path.relative(top, PKG_DIR) || '.'
+  // git's own answer for where this directory sits in the repo ("packages/pulse/", empty at the
+  // root). Comparing --show-toplevel with PKG_DIR instead breaks on Windows, where git prints
+  // forward slashes and may use a different spelling (8.3 short names) of the same directory.
+  const prefix = execFileSync('git', ['rev-parse', '--show-prefix'], { cwd: PKG_DIR, encoding: 'utf8' }).trim()
+  const rel = prefix.replace(/\/$/, '') || '.'
   const log = execFileSync('git', ['log', '--pretty=format:%s', '--', `:(top)${rel}`], { cwd: PKG_DIR, encoding: 'utf8' }).trim()
   for (const line of log.split('\n')) {
     if (/^chore: release \d+\.\d+\.\d+/.test(line)) break

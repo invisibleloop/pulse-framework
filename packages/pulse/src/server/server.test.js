@@ -9,6 +9,7 @@ import fs   from 'fs'
 import os   from 'os'
 import path from 'path'
 import { spawnSync } from 'child_process'
+import { fileURLToPath } from 'url'
 import { createServer, TtlCache } from './index.js'
 
 // ---------------------------------------------------------------------------
@@ -1091,7 +1092,7 @@ await test('dev import map covers @invisibleloop/pulse/html and every target exi
     for (const spec of ['image', 'html', 'ui', 'md']) {
       assert(imports[`@invisibleloop/pulse/${spec}`], `import map is missing @invisibleloop/pulse/${spec}`)
     }
-    const srcDir = path.join(path.dirname(new URL(import.meta.url).pathname), '..')
+    const srcDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
     for (const [name, url] of Object.entries(imports)) {
       assert(url.startsWith('/@pulse/'), `${name} maps outside /@pulse/: ${url}`)
       assert(fs.existsSync(path.join(srcDir, url.slice('/@pulse/'.length))), `${name} -> ${url} does not exist`)
@@ -2607,6 +2608,7 @@ await test('trailing-slash redirect never produces a protocol-relative Location 
 
 await test('an unreadable static file returns 404 instead of crashing the server', async () => {
   if (process.getuid?.() === 0) return   // root can read mode-000 files
+  if (process.platform === 'win32') return   // chmod 000 does not make a file unreadable on Windows
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-static-'))
   fs.writeFileSync(path.join(dir, 'ok.txt'), 'ok')
   fs.writeFileSync(path.join(dir, 'locked.txt'), 'secret')

@@ -83,7 +83,7 @@ export async function loadPages(projectRoot, bust = 0) {
 
   const specs = await Promise.all(
     pages.map(async ({ filePath, derivedRoute }) => {
-      const url  = bust ? `${filePath}?t=${bust}` : filePath
+      const url  = pathToFileURL(filePath).href + (bust ? `?t=${bust}` : '')
       const mod  = await import(url)
       const spec = mod.default
 

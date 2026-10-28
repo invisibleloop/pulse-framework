@@ -14,6 +14,7 @@ import fs   from 'fs'
 import path from 'path'
 import os   from 'os'
 import { execFileSync } from 'child_process'
+import { fileURLToPath, pathToFileURL } from 'url'
 
 // ---------------------------------------------------------------------------
 // Quick mode — lightweight structural checks, no validator subprocess, no
@@ -32,7 +33,7 @@ export async function runQuickReview(source, file) {
   let renderedHtml = ''
   if (file) {
     try {
-      const mod  = await import(`${file}?quick=${Date.now()}`)
+      const mod  = await import(`${pathToFileURL(file).href}?quick=${Date.now()}`)
       const spec = mod.default
       if (spec && typeof spec.view === 'function') {
         renderedHtml = spec.view(spec.state || {}, {})
@@ -154,7 +155,7 @@ export function formatQuickReview(result, { agentFacing = false } = {}) {
 export async function runFullReview(source, file) {
   // Run the validator in a child process (same as pulse_validate/pulse validate)
   let validationResult = '(could not run validator)'
-  const validatorScript = new URL('../mcp/validate-worker.js', import.meta.url).pathname
+  const validatorScript = fileURLToPath(new URL('../mcp/validate-worker.js', import.meta.url))
   if (file) {
     try {
       validationResult = execFileSync(process.execPath, [validatorScript, file], {
@@ -183,7 +184,7 @@ export async function runFullReview(source, file) {
   let renderedHtml = ''
   let renderNote = ''
   try {
-    const mod  = await import(`${file}?review=${Date.now()}`)
+    const mod  = await import(`${pathToFileURL(file).href}?review=${Date.now()}`)
     const spec = mod.default
     if (spec && typeof spec.view === 'function') {
       renderedHtml = spec.view(spec.state || {}, {})

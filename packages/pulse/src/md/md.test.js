@@ -3,6 +3,7 @@
  */
 import { parseMd } from './index.js'
 import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'url'
 
 let passed = 0
 let failed = 0
@@ -239,7 +240,7 @@ test('a heading line with a huge run of spaces parses in linear time', () => {
 function parseFullInChild(input) {
   // The input goes in as an argument, never spliced into the code string.
   const code = `import('./src/md/index.js').then(({ parseMd }) => process.stdout.write(JSON.stringify(parseMd(process.argv[1]))))`
-  return JSON.parse(execFileSync(process.execPath, ['-e', code, '--', input], { timeout: 5000, encoding: 'utf8', cwd: new URL('../..', import.meta.url).pathname }))
+  return JSON.parse(execFileSync(process.execPath, ['-e', code, '--', input], { timeout: 5000, encoding: 'utf8', cwd: fileURLToPath(new URL('../..', import.meta.url)) }))
 }
 const parseInChild = (input) => parseFullInChild(input).html
 

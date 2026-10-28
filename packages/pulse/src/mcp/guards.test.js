@@ -88,10 +88,12 @@ await test('assertPublicUrl accepts a public IP literal', async () => {
 console.log('\nBypass regressions\n')
 
 await test('isInsideDir needs a path separator, so sibling dirs sharing a prefix are outside', () => {
-  assert.equal(isInsideDir('/proj/src/pages', '/proj/src/pages/a.js'), true)
-  assert.equal(isInsideDir('/proj/src/pages', '/proj/src/pages-old/a.js'), false)
-  assert.equal(isInsideDir('/proj/src/pages', '/proj/src/pages'), false)
-  assert.equal(isInsideDir('/proj/src/components', '/proj/src/components.bak/a.js'), false)
+  // Built with path.resolve, as the callers do, so separators are native on every platform.
+  const r = (...parts) => path.resolve('/proj', ...parts)
+  assert.equal(isInsideDir(r('src/pages'), r('src/pages/a.js')), true)
+  assert.equal(isInsideDir(r('src/pages'), r('src/pages-old/a.js')), false)
+  assert.equal(isInsideDir(r('src/pages'), r('src/pages')), false)
+  assert.equal(isInsideDir(r('src/components'), r('src/components.bak/a.js')), false)
 })
 
 await test('isLoopbackUrl: a hostname that merely starts with "127." is not loopback', () => {

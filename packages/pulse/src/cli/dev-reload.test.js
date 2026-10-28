@@ -15,8 +15,9 @@ import fs   from 'node:fs'
 import net  from 'node:net'
 import os   from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'url'
 
-const DEV = new URL('./dev.js', import.meta.url).pathname
+const DEV = fileURLToPath(new URL('./dev.js', import.meta.url))
 
 const freePort = () => new Promise(resolve => {
   const s = net.createServer().listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)) })
@@ -81,8 +82,10 @@ async function scenario(...below) {
     assert.equal(afterDirect.loads, first.loads, 'a node_modules package was re-evaluated on reload')
     assert.equal(afterComponent.loads, first.loads, 'a node_modules package was re-evaluated on reload')
   } finally {
+    const exited = new Promise(resolve => proc.once('exit', resolve))
     proc.kill('SIGKILL')
-    fs.rmSync(base, { recursive: true, force: true })
+    await exited   // Windows refuses to delete a directory a live process still has open
+    fs.rmSync(base, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
   }
 }
 
