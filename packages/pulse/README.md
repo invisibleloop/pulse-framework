@@ -57,7 +57,7 @@ Full documentation: **[pulseframework.dev](https://pulseframework.dev)**
 
 **No client-side dependencies.** Pulse ships no runtime framework to the browser — only a small hydration bundle (~2 kB brotli) that binds your spec's mutations and actions to the DOM.
 
-**AI-native.** The CLI starts an MCP server alongside the dev server, giving the coding agent tools to create pages, validate specs, and run Lighthouse audits — all without leaving the editor.
+**AI-native.** The CLI starts an MCP server alongside the dev server, giving the coding agent tools to create pages, validate specs, and run Lighthouse audits — all without leaving the editor. The agent tools run on the MCP SDK, which is a development dependency of your project (new projects include it), so a production install does not carry it.
 
 ## CLI
 

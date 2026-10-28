@@ -59,6 +59,23 @@ test('a scaffolded project pins a caret range on the scaffolding version, not "l
   if (!/^\^\d+\.\d+\.\d+$/.test(pulseDependencyRange())) throw new Error('not a caret range')
 })
 
+test('a scaffolded project lists the agent tools\' dependencies as devDependencies, at the ranges this package declares', async () => {
+  const { scaffold, mcpDevDependencies } = modules[0].value
+  const { peerDependencies } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  const { mkdtempSync, rmSync } = await import('fs')
+  const os = await import('os')
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-scaffold-deps-'))
+  try {
+    await scaffold(dir, { name: 'demo' })
+    const pkg = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'))
+    for (const name of ['@modelcontextprotocol/sdk', 'zod']) {
+      if (pkg.devDependencies?.[name] !== peerDependencies[name]) throw new Error(`${name}: got ${pkg.devDependencies?.[name]}, want ${peerDependencies[name]}`)
+      if (pkg.dependencies?.[name]) throw new Error(`${name} must not be a production dependency`)
+    }
+    if (JSON.stringify(mcpDevDependencies()) !== JSON.stringify(pkg.devDependencies)) throw new Error('mcpDevDependencies() differs from what was written')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {

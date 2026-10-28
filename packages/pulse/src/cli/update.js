@@ -34,3 +34,11 @@ export function installCommand(root) {
   if (has('yarn.lock'))      return ['yarn', ['add', `${PACKAGE}@latest`]]
   return ['npm', ['install', `${PACKAGE}@latest`]]
 }
+
+/** [command, args] that installs `packages` as development dependencies. */
+export function devInstallCommand(root, packages) {
+  const has = f => fs.existsSync(path.join(root, f))
+  if (has('pnpm-lock.yaml')) return ['pnpm', ['add', '-D', ...packages]]
+  if (has('yarn.lock'))      return ['yarn', ['add', '-D', ...packages]]
+  return ['npm', ['install', '-D', ...packages]]
+}

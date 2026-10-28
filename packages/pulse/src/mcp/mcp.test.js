@@ -11,7 +11,7 @@ import fs   from 'node:fs'
 import os   from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Package root (packages/pulse/) — canonical source for src/agent/*.
@@ -674,6 +674,91 @@ test('verify.md calls pulse_check_bundles as part of the full Lighthouse pre-fli
   assert(buildIdx !== -1 && checkIdx !== -1 && auditIdx !== -1, 'all three anchors must exist in verify.md')
   assert(buildIdx < checkIdx && checkIdx < auditIdx,
     'pulse_check_bundles must run after pulse_build and before the Lighthouse audit')
+})
+
+// ── The MCP SDK is an optional, development-time dependency ──────────────────
+// A served app never loads the agent tools, so a production install must not carry the SDK's
+// ~90 packages. New projects list them as devDependencies; this package declares them as optional
+// peers; and the tools fail with a clear message, not a module-not-found stack, when absent.
+
+test('package.json: esbuild is the only dependency; the MCP SDK and zod are optional peers', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+  assert(JSON.stringify(Object.keys(pkg.dependencies)) === '["esbuild"]',
+    `dependencies must be exactly esbuild, got ${JSON.stringify(Object.keys(pkg.dependencies))}`)
+  for (const name of ['@modelcontextprotocol/sdk', 'zod']) {
+    assert(pkg.peerDependencies?.[name], `${name} must be a peer dependency`)
+    assert(pkg.peerDependenciesMeta?.[name]?.optional === true, `${name} must be an OPTIONAL peer (npm installs required peers)`)
+    assert(pkg.devDependencies?.[name], `${name} must be a devDependency so this repo's own tests can load the MCP server`)
+  }
+  // zod is imported directly by the server, so it must be declared, not left to arrive with the SDK
+  assert(/import\('zod'\)|from 'zod'/.test(fs.readFileSync(path.join(__dirname, 'deps.js'), 'utf8')), 'deps.js loads zod')
+})
+
+test('server.js loads the SDK only through loadMcpDeps, never a static import', () => {
+  assert(!/from '@modelcontextprotocol|from 'zod'/.test(serverSrc), 'a static import would fail with a raw module-not-found when the SDK is absent')
+  assert(/await loadMcpDeps\(\)/.test(serverSrc), 'server.js must load its dependencies through loadMcpDeps()')
+})
+
+await (async () => {
+  const { mcpDepsMissing, mcpMissingMessage, MCP_PACKAGES } = await import('./deps.js')
+  test('mcpDepsMissing reports exactly the packages that do not resolve', () => {
+    assert(mcpDepsMissing(() => 'file:///x').length === 0, 'nothing missing when everything resolves')
+    const onlyZodGone = spec => { if (spec === 'zod') throw new Error('nope'); return 'file:///x' }
+    assert(JSON.stringify(mcpDepsMissing(onlyZodGone)) === '["zod"]', 'only zod is reported')
+    assert(mcpDepsMissing(() => { throw new Error('nope') }).length === MCP_PACKAGES.length, 'both reported when neither resolves')
+  })
+  test('the missing-dependency message names the packages and the install command', () => {
+    const msg = mcpMissingMessage(['@modelcontextprotocol/sdk', 'zod'])
+    assert(msg.includes('npm install -D @modelcontextprotocol/sdk zod'), msg)
+    assert(msg.includes('pulse update'), 'points at the command that offers to install them')
+  })
+})()
+
+test('with the SDK unresolvable, the MCP server exits 1 with the install message, not a stack trace', () => {
+  // A resolve hook that makes the SDK and zod "not installed", as in a production install.
+  const hook = "export async function resolve(s, c, next) {" +
+    " if (s.startsWith('@modelcontextprotocol/') || s === 'zod') { const e = new Error('Cannot find package ' + s); e.code = 'ERR_MODULE_NOT_FOUND'; throw e }" +
+    " return next(s, c) }"
+  const register = `import { register } from 'node:module'; register('data:text/javascript,' + encodeURIComponent(${JSON.stringify(hook)}))`
+  const r = spawnSync(process.execPath, ['--import', 'data:text/javascript,' + encodeURIComponent(register), path.join(__dirname, 'server.js'), '--root', os.tmpdir()],
+    { encoding: 'utf8', timeout: 20000 })
+  assert(r.status === 1, `expected exit 1, got ${r.status}: ${r.stderr}`)
+  assert(r.stderr.includes('npm install -D @modelcontextprotocol/sdk zod'), `expected the install hint, got: ${r.stderr}`)
+  assert(!r.stderr.includes('ERR_MODULE_NOT_FOUND') && !/\n\s+at /.test(r.stderr), `no raw error or stack trace: ${r.stderr}`)
+})
+
+const { mcpServerLaunch, mcpDepsMissingFor } = await import('./deps.js')
+test('global-install layout: the project\'s own copy is a symlink into the global install; launched with the flags, the server sees the project\'s SDK', () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-global-layout-'))
+  try {
+    const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text) }
+    // G: the "global install": a copy of deps.js and a stand-in server that reports what it cannot find
+    const G = path.join(base, 'global', 'pulse')
+    write(path.join(G, 'package.json'), '{"name":"@invisibleloop/pulse","type":"module"}')
+    fs.mkdirSync(path.join(G, 'src/mcp'), { recursive: true })
+    fs.copyFileSync(path.join(__dirname, 'deps.js'), path.join(G, 'src/mcp/deps.js'))
+    write(path.join(G, 'src/mcp/server.js'), "import { mcpDepsMissing } from './deps.js'\nconsole.log(JSON.stringify(mcpDepsMissing()))\n")
+    // P: the project, with the SDK and zod installed and its copy of Pulse linked to G
+    const P = path.join(base, 'project')
+    write(path.join(P, 'node_modules/@modelcontextprotocol/sdk/package.json'), '{"name":"@modelcontextprotocol/sdk","type":"module","exports":{"./server/mcp.js":"./mcp.js"}}')
+    write(path.join(P, 'node_modules/@modelcontextprotocol/sdk/mcp.js'), 'export const McpServer = class {}\n')
+    write(path.join(P, 'node_modules/zod/package.json'), '{"name":"zod","type":"module","exports":"./index.js"}')
+    write(path.join(P, 'node_modules/zod/index.js'), 'export const z = {}\n')
+    fs.mkdirSync(path.join(P, 'node_modules/@invisibleloop'), { recursive: true })
+    fs.symlinkSync(G, path.join(P, 'node_modules/@invisibleloop/pulse'), 'junction')
+
+    const launch = mcpServerLaunch(P)
+    assert(launch.viaProject && launch.nodeArgs.includes('--preserve-symlinks'), 'the project\'s copy is used, with the symlink flags')
+    assert(mcpDepsMissingFor(P).length === 0, `the preflight finds both in the project, got ${mcpDepsMissingFor(P)}`)
+
+    const run = args => spawnSync(process.execPath, [...args, launch.serverPath], { encoding: 'utf8' }).stdout.trim()
+    assert(run(launch.nodeArgs) === '[]', `with the flags the server must find both, got ${run(launch.nodeArgs)}`)
+    assert(run([]) === '["@modelcontextprotocol/sdk","zod"]', 'without them Node resolves from the global location and finds neither (why the flags exist)')
+
+    fs.rmSync(path.join(P, 'node_modules/zod'), { recursive: true })
+    assert(JSON.stringify(mcpDepsMissingFor(P)) === '["zod"]', 'the preflight reports exactly what the project lacks')
+    assert(mcpServerLaunch(path.join(base, 'empty')).viaProject === false, 'a project with no copy of Pulse falls back to this install')
+  } finally { fs.rmSync(base, { recursive: true, force: true }) }
 })
 
 // ── Result ───────────────────────────────────────────────────────────────────
