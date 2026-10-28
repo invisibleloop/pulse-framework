@@ -7,6 +7,7 @@
 
 import fs   from 'fs'
 import path from 'path'
+import readline from 'readline'
 
 export const PACKAGE = '@invisibleloop/pulse'
 
@@ -97,4 +98,24 @@ export function notInProjectNotice(cliVersion, latest) {
     `  npm install ${PACKAGE}@latest         # in this project, so it has its own copy`,
     `then run \`pulse update\` again.`,
   ].join('\n')
+}
+
+/**
+ * Ask a yes/no question. Resolves true or false for an answer (an empty one takes `defaultYes`),
+ * and null when the input ends first (Ctrl-D, a closed pipe): that is "no answer", which callers
+ * must treat as "skip", never as consent. (readline's promise form never settles at end of input,
+ * which silently killed the rest of `pulse update`.)
+ */
+export function confirm(question, { input = process.stdin, output = process.stdout, defaultYes = true } = {}) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input, output })
+    let answered = false
+    rl.question(question, answer => {
+      answered = true
+      rl.close()
+      const a = answer.trim().toLowerCase()
+      resolve(a === '' ? defaultYes : a === 'y' || a === 'yes')
+    })
+    rl.once('close', () => { if (!answered) resolve(null) })
+  })
 }

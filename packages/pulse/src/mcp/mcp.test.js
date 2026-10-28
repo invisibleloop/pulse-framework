@@ -709,7 +709,7 @@ await (async () => {
   })
   test('the missing-dependency message names the packages and the install command', () => {
     const msg = mcpMissingMessage(['@modelcontextprotocol/sdk', 'zod'])
-    assert(msg.includes('npm install -D @modelcontextprotocol/sdk zod'), msg)
+    assert(msg.includes("npm install -D '@modelcontextprotocol/sdk@") && msg.includes("'zod@"), `the command pins the declared ranges: ${msg}`)
     assert(msg.includes('pulse update'), 'points at the command that offers to install them')
   })
 })()
@@ -723,7 +723,7 @@ test('with the SDK unresolvable, the MCP server exits 1 with the install message
   const r = spawnSync(process.execPath, ['--import', 'data:text/javascript,' + encodeURIComponent(register), path.join(__dirname, 'server.js'), '--root', os.tmpdir()],
     { encoding: 'utf8', timeout: 20000 })
   assert(r.status === 1, `expected exit 1, got ${r.status}: ${r.stderr}`)
-  assert(r.stderr.includes('npm install -D @modelcontextprotocol/sdk zod'), `expected the install hint, got: ${r.stderr}`)
+  assert(r.stderr.includes('npm install -D') && r.stderr.includes('@modelcontextprotocol/sdk@'), `expected the install hint, got: ${r.stderr}`)
   assert(!r.stderr.includes('ERR_MODULE_NOT_FOUND') && !/\n\s+at /.test(r.stderr), `no raw error or stack trace: ${r.stderr}`)
 })
 

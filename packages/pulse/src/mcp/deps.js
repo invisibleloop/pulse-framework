@@ -19,6 +19,20 @@ import { fileURLToPath } from 'url'
 
 export const MCP_PACKAGES = ['@modelcontextprotocol/sdk', 'zod']
 
+/**
+ * `name@range` for each package, using the ranges this package declares as peers, so an install
+ * never picks a version outside them (a future SDK major would otherwise fail npm's peer check).
+ */
+export function mcpInstallSpecs() {
+  const { peerDependencies = {} } = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'))
+  return MCP_PACKAGES.map(name => peerDependencies[name] ? `${name}@${peerDependencies[name]}` : name)
+}
+
+/** Quote an argument for display in a shell command line (only when it needs it). */
+export function shellQuote(arg) {
+  return /^[\w@%+=:,./-]+$/.test(arg) ? arg : `'${arg.replace(/'/g, `'\\''`)}'`
+}
+
 // Resolved from this file, which is where the real imports in server.js resolve from too.
 const PROBES = { '@modelcontextprotocol/sdk': '@modelcontextprotocol/sdk/server/mcp.js', zod: 'zod' }
 
@@ -63,7 +77,7 @@ export function mcpDepsMissing(resolve = spec => import.meta.resolve(spec)) {
  * the project's node_modules, so Pulse itself has to be installed there too.
  */
 export function mcpMissingMessage(missing, { withPulse = false } = {}) {
-  const pkgs = [...(withPulse ? ['@invisibleloop/pulse'] : []), ...MCP_PACKAGES]
+  const pkgs = [...(withPulse ? ['@invisibleloop/pulse'] : []), ...mcpInstallSpecs()].map(shellQuote)
   return [
     `Pulse's agent tools need ${missing.join(' and ')}, which are development dependencies and are not installed here.`,
     `Install them in your project:`,

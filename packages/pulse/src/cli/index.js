@@ -26,8 +26,8 @@ import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
-import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, PACKAGE } from './update.js'
-import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, MCP_PACKAGES } from '../mcp/deps.js'
+import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, confirm, PACKAGE } from './update.js'
+import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, mcpInstallSpecs, shellQuote } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
@@ -406,6 +406,16 @@ async function runStop(root) {
       if (mod.default?.port) port = mod.default.port
     } catch { /* use default */ }
   }
+  // --port wins over pulse.config.js, as it does for `pulse dev` and `pulse start`
+  const portFlag = args.indexOf('--port')
+  if (portFlag !== -1) {
+    const given = Number(args[portFlag + 1])
+    if (!Number.isInteger(given) || given < 1 || given > 65534) {
+      console.error(`\n  --port needs a port number (1-65534), got "${args[portFlag + 1] ?? ''}".\n`)
+      process.exit(1)
+    }
+    port = given
+  }
   // Kill the dev server AND the local production server (dev port + 1) —
   // pulse_build spawns the prod server detached, so without this it lingers
   // after the session and blocks the next build's Lighthouse run. Only
@@ -423,7 +433,7 @@ async function runStop(root) {
     console.log(`⚠  Left PID ${skipped.pid} running — not a Pulse server: ${skipped.command}`)
   }
   if (stopped.length === 0 && dev.skipped.length === 0 && prod.skipped.length === 0) {
-    console.log('\nNothing running on those ports.\n')
+    console.log(`\nNothing running on ports ${port} and ${port + 1}.\n`)
   }
 }
 
@@ -501,25 +511,27 @@ async function offerMcpDevDeps(root) {
   const missing = mcpDepsMissingFor(root)
   if (missing.length === 0) return
 
-  const [cmd, cmdArgs] = devInstallCommand(root, MCP_PACKAGES)
-  const line = `${cmd} ${cmdArgs.join(' ')}`
+  // The ranges this package declares, so a future major of the SDK cannot be picked by accident.
+  const [cmd, cmdArgs] = devInstallCommand(root, mcpInstallSpecs())
+  const line = [cmd, ...cmdArgs].map(shellQuote).join(' ')
   console.log(`\n  Pulse's agent tools now need ${missing.join(' and ')} as development dependencies of your project.`)
 
   if (!process.stdin.isTTY) {
     console.log(`  Install them with:  ${line}\n`)
     return
   }
-  const readline = await import('readline/promises')
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-  const answer = (await rl.question(`  Run \`${line}\` now? [Y/n] `)).trim().toLowerCase()
-  rl.close()
-  if (answer && answer !== 'y' && answer !== 'yes') {
-    console.log(`  Skipped. Run it when you want the agent tools:  ${line}\n`)
+  const answer = await confirm(`  Run \`${line}\` now? [Y/n] `)
+  if (answer !== true) {
+    // false = declined; null = input ended (Ctrl-D). Neither installs anything.
+    console.log(`${answer === null ? '\n' : ''}  Skipped. Run it when you want the agent tools:  ${line}\n`)
     return
   }
   const { spawnSync } = await import('child_process')
   const result = spawnSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
-  if (result.status !== 0) console.error(`\n  That install failed. Run it yourself:  ${line}\n`)
+  if (result.status !== 0) {
+    console.error(`\n  That install failed. Run it yourself:  ${line}\n`)
+    process.exitCode = 1
+  }
 }
 
 async function runUpdate(root) {
@@ -573,8 +585,6 @@ async function runUpdate(root) {
     fs.copyFileSync(src, dst)
     updated.push(`public/${asset}`)
   }
-
-  await offerMcpDevDeps(root)
 
   // Sync agent files into .claude/
   const agentFiles = [
@@ -648,6 +658,10 @@ async function runUpdate(root) {
     console.log('\n  ' + notInProjectNotice(cliVersion, await latestPublished()).split('\n').join('\n  '))
   }
   console.log()
+
+  // Last, so that whatever the prompt does (a failed install, Ctrl-D) cannot leave the update
+  // above half applied.
+  await offerMcpDevDeps(root)
 }
 
 // ---------------------------------------------------------------------------
@@ -679,6 +693,7 @@ switch (command) {
     console.log(version)
     process.exit(0)
   }
+  case 'help':
   case '--help':
   case '-h': {
     const { c, icon } = await import('./fmt.js').catch(() => ({
@@ -693,6 +708,7 @@ switch (command) {
   ${c.bold('Commands:')}
     ${c.cyan('(none)')}           detect project, or launch the scaffold wizard
     ${c.cyan('dev')}              start the dev server
+    ${c.cyan('stop')}             stop the dev and local production servers ${c.dim('[--port <n>]')}
     ${c.cyan('build')}            production build  ${c.dim('→ public/dist/')}
     ${c.cyan('start')}            production server ${c.dim('(requires prior build)')}
     ${c.cyan('validate')} ${c.dim('<file>')}   validate a spec — the same check an agent runs, without an agent
@@ -771,5 +787,11 @@ switch (command) {
     break
   }
   default:
-    await runDefault(CWD, agentFlag)
+    if (command === undefined) {
+      await runDefault(CWD, agentFlag)
+    } else {
+      // Anything else is a typo or a flag in the wrong place, not a request for an AI session.
+      console.error(`\n  Unknown command "${command}". Run \`pulse --help\` to see the commands.\n`)
+      process.exit(1)
+    }
 }
