@@ -23,6 +23,7 @@ import { c, header, table, ok, fail, info, warn, elapsed, icon } from '../src/cl
 import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
 import { buildBootstrapSource } from './bootstrap.js'
 import { fileURLToPath, pathToFileURL } from 'url'
+import { toPosix } from '../src/cli/paths.js'
 
 // ---------------------------------------------------------------------------
 // Server-only property stripping
@@ -490,15 +491,16 @@ const bootstrapFiles = pages.flatMap(({ filePath }) => {
   const relToPages    = path.relative(PAGES_DIR, filePath)
   const name          = relToPages.replace(/\.js$/, '').replace(/[\\/]/g, '--')
   const bootstrapPath = path.join(TMP_DIR, `${name}.boot.js`)
-  const relSpec       = path.relative(TMP_DIR, filePath)
-  const relRuntime    = path.relative(TMP_DIR, RUNTIME_PATH)
-  const relNavigate   = path.relative(TMP_DIR, NAVIGATE_PATH)
+  // Forward slashes: these go inside string literals in generated JS (see paths.js)
+  const relSpec       = toPosix(path.relative(TMP_DIR, filePath))
+  const relRuntime    = toPosix(path.relative(TMP_DIR, RUNTIME_PATH))
+  const relNavigate   = toPosix(path.relative(TMP_DIR, NAVIGATE_PATH))
 
   // Global store — when pulse.store.js exists, every boot bundle imports it and
   // passes it to mount() so client store mutations register in production.
   // The strip plugin removes its server fetchers from the browser bundle;
   // esbuild's shared-chunk splitting keeps it from being duplicated per page.
-  const storeImport = STORE_PATH ? `\nimport store from '${path.relative(TMP_DIR, STORE_PATH)}'` : ''
+  const storeImport = STORE_PATH ? `\nimport store from '${toPosix(path.relative(TMP_DIR, STORE_PATH))}'` : ''
   const mountOpts   = STORE_PATH ? `{ ssr: true, store }` : `{ ssr: true }`
 
   fs.writeFileSync(bootstrapPath, buildBootstrapSource({ relSpec, relRuntime, relNavigate, storeImport, mountOpts }))
@@ -549,7 +551,7 @@ const realRuntimeChunk = Object.entries(result.metafile.outputs).find(([outFile,
 for (const [outFile, meta] of Object.entries(result.metafile.outputs)) {
   // outFile is relative to process.cwd(), not ROOT — use path.resolve to get the
   // true absolute path before computing the URL-relative bundle path.
-  const bundlePath = '/' + path.relative(path.join(ROOT, 'public'), path.resolve(outFile))
+  const bundlePath = '/' + toPosix(path.relative(path.join(ROOT, 'public'), path.resolve(outFile)))
 
   // Shared runtime chunk — esbuild generates this via splitting, no entryPoint.
   // Identified by containing the actual runtime/index.js source, not by name.
@@ -565,7 +567,7 @@ for (const [outFile, meta] of Object.entries(result.metafile.outputs)) {
   if (!entry) continue
 
   // Hydrate key is the path the browser uses to import the spec
-  const sourceKey  = '/' + path.relative(ROOT, entry.filePath)
+  const sourceKey  = '/' + toPosix(path.relative(ROOT, entry.filePath))
   manifest[sourceKey] = bundlePath
 }
 

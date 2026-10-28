@@ -196,6 +196,31 @@ test('optional agent commands (quietlytics-speed) are never scaffolded; add-comm
   } finally { rmSync(bare, { recursive: true, force: true }) }
 })
 
+test('toPosix turns native separators into forward slashes for generated JS, manifest keys and URLs', async () => {
+  const { toPosix } = await import('./paths.js')
+  if (toPosix('..\\src\\pages\\home.js', '\\') !== '../src/pages/home.js') throw new Error('Windows separators must become /')
+  if (toPosix('../src/pages/home.js', '/') !== '../src/pages/home.js') throw new Error('POSIX paths are untouched')
+  if (toPosix('a\\b', '/') !== 'a\\b') throw new Error('on POSIX a backslash is a legal filename character and must stay')
+})
+
+test('every path.relative that feeds generated JS, a manifest key or a URL goes through toPosix (pulse build was broken on Windows)', () => {
+  const files = ['../../scripts/build.js', 'discover.js', 'check-bundles.js']
+  const offenders = []
+  for (const f of files) {
+    const lines = readFileSync(new URL(f, import.meta.url), 'utf8').split('\n')
+    lines.forEach((line, i) => {
+      if (!/path\.relative\(/.test(line) || /^\s*(\/\/|\*)/.test(line)) return
+      // relToPages is only used to build an output NAME (its separators are replaced); the rest are paths
+      // (findFiles' `rel` stays native: deriveRoute splits it on path.sep)
+      if (/toPosix\(/.test(line) || /relToPages\s*=/.test(line) || /const rel\s*=/.test(line)) return
+      // the multi-line call in discover.js: the toPosix( is on the previous line
+      if (/toPosix\(\s*path\.relative\($/.test(lines[i - 1] ?? '') || /toPosix\(path\.relative\($/.test(lines[i - 1] ?? '')) return
+      offenders.push(`${f}:${i + 1}: ${line.trim()}`)
+    })
+  }
+  if (offenders.length) throw new Error(`path.relative result used without toPosix:\n${offenders.join('\n')}`)
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {

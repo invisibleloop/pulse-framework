@@ -15,6 +15,7 @@
 import fs   from 'fs'
 import path from 'path'
 import { pathToFileURL } from 'url'
+import { toPosix } from './paths.js'
 
 /**
  * Derive a route from a file path relative to the pages directory.
@@ -103,10 +104,10 @@ export async function loadPages(projectRoot, bust = 0) {
       // no error surfaced anywhere (server-rendered HTML looks correct).
       const needsHydration = spec.hydrate || spec.mutations || spec.actions || spec.persist || spec.store?.length
       const hydrateUrl = needsHydration
-        ? spec.hydrate || ('/src/pages/' + path.relative(
+        ? spec.hydrate || ('/src/pages/' + toPosix(path.relative(
             path.join(projectRoot, 'src', 'pages'),
             filePath
-          ))
+          )))
         : null
 
       return {
