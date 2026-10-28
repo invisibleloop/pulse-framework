@@ -32,6 +32,21 @@ export const PULSE_SERVER_MARKERS = ['cli/dev.js', 'cli/start.js', 'scripts/buil
  * @returns {{ killed: string[], skipped: { pid: string, command: string }[] }}
  */
 export function killPulseServerOnPort(port) {
+  return process.platform === 'win32' ? killOnPortWindows(port) : killOnPortPosix(port)
+}
+
+function classify(result, pid, command, kill) {
+  // Windows command lines use backslashes; the markers are written with forward slashes
+  const normalised = command.replace(/\\/g, '/')
+  if (PULSE_SERVER_MARKERS.some(marker => normalised.includes(marker))) {
+    kill(pid)
+    result.killed.push(pid)
+  } else {
+    result.skipped.push({ pid, command })
+  }
+}
+
+function killOnPortPosix(port) {
   const result = { killed: [], skipped: [] }
   let pids
   try {
@@ -46,12 +61,37 @@ export function killPulseServerOnPort(port) {
       command = execFileSync('sh', ['-c', `ps -o command= -p ${pid} 2>/dev/null`], { encoding: 'utf8' }).trim()
     } catch { continue } // process gone between lsof and ps — nothing to kill
     if (!command) continue
-    if (PULSE_SERVER_MARKERS.some(marker => command.includes(marker))) {
-      try { execFileSync('sh', ['-c', `kill -9 ${pid} 2>/dev/null`]) } catch { /* already gone */ }
-      result.killed.push(pid)
-    } else {
-      result.skipped.push({ pid, command })
-    }
+    classify(result, pid, command, p => {
+      try { execFileSync('sh', ['-c', `kill -9 ${p} 2>/dev/null`]) } catch { /* already gone */ }
+    })
+  }
+  return result
+}
+
+function powershell(script) {
+  return execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8' })
+}
+
+function killOnPortWindows(port) {
+  const result = { killed: [], skipped: [] }
+  const portNum = Number(port)
+  if (!Number.isInteger(portNum)) return result
+  let pids
+  try {
+    pids = powershell(`Get-NetTCPConnection -LocalPort ${portNum} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique`)
+      .split(/\r?\n/).map(s => s.trim()).filter(s => /^\d+$/.test(s))
+  } catch {
+    return result
+  }
+  for (const pid of pids) {
+    let command = ''
+    try {
+      command = powershell(`(Get-CimInstance Win32_Process -Filter "ProcessId=${pid}").CommandLine`).trim()
+    } catch { continue }
+    if (!command) continue
+    classify(result, pid, command, p => {
+      try { execFileSync('taskkill', ['/F', '/PID', p], { stdio: 'ignore' }) } catch { /* already gone */ }
+    })
   }
   return result
 }
