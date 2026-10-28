@@ -2,8 +2,8 @@ import { defineConfig } from '@playwright/test'
 
 // Two servers over the same fixture app: `pulse dev` (source modules, import map) and the
 // production path (`pulse build` bundles, then `pulse start`). Every test runs against both.
-const CLI = '../pulse/src/cli/index.js'
-const STYLES = 'mkdir -p fixture/public && cp ../pulse/public/pulse-ui.css fixture/public/pulse-ui.css'
+// Paths are relative to fixture/, where the servers run
+const CLI = '../../pulse/src/cli/index.js'
 
 export default defineConfig({
   testDir: './tests',
@@ -19,15 +19,21 @@ export default defineConfig({
   webServer: [
     {
       // PORT must be set explicitly: a PORT already in the environment overrides --port.
-      command: `${STYLES} && cd fixture && PORT=3500 node ../${CLI} dev --port 3500`,
+      command: `node ../prepare.js && node ${CLI} dev --port 3500`,
+      cwd: 'fixture',
+      env: { PORT: '3500' },
       url: 'http://localhost:3500/',
-      reuseExistingServer: !process.env.CI,
+      // Never reuse a server that is already listening: it could be an unrelated app (or a stale
+      // build), and the suite would pass or fail against that instead of this checkout.
+      reuseExistingServer: false,
       timeout: 60_000,
     },
     {
-      command: `${STYLES} && cd fixture && node ../${CLI} build && PORT=3501 node ../${CLI} start --port 3501`,
+      command: `node ../prepare.js && node ${CLI} build && node ${CLI} start --port 3501`,
+      cwd: 'fixture',
+      env: { PORT: '3501' },
       url: 'http://localhost:3501/',
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: false,
       timeout: 120_000,
     },
   ],

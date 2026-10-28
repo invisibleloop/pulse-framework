@@ -90,16 +90,21 @@ test('an in-page fragment link jumps without refetching; a cross-page one lands 
   await expect.poll(() => page.evaluate(() => Math.round(document.getElementById('part-two').getBoundingClientRect().top))).toBeLessThan(40)
 })
 
-test('back and forward restore pages and fragments', async ({ page }) => {
+test('back and forward restore pages and fragments, and a fragment-only step does not refetch', async ({ page }) => {
   await page.goto('/')
+  let navFetches = 0
+  page.on('request', (r) => { if (r.headers()['x-pulse-navigate']) navFetches++ })
   await page.click('#to-here')                                // /#details (browser-handled entry)
   await page.click('#to-about')                               // /about
   await expect(page.locator('h1')).toHaveText('About')
   await page.goBack()
   await expect(page.locator('h1')).toHaveText('Home')
   expect(here(page)).toBe('/#details')
-  await page.goBack()
+  const fetchesBeforeFragmentStep = navFetches
+  await page.goBack()                                         // /#details -> /: same page, fragment only
   expect(here(page)).toBe('/')
+  await page.waitForTimeout(300)                              // a (wrong) refetch would have started by now
+  expect(navFetches, 'stepping between two fragments of the page already shown must not refetch it').toBe(fetchesBeforeFragmentStep)
   await page.goForward()
   await page.goForward()
   await expect(page.locator('h1')).toHaveText('About')
@@ -109,6 +114,11 @@ test('navigating to a page with no client bundle leaves no live handlers from th
   await page.goto('/')
   await page.click('#to-static')
   await expect(page.locator('h1')).toHaveText('Static')
+  // The previous page's mount must be released when a page with no bundle replaces it. If it is
+  // not, its handler answers this click and re-renders the old page's view over this one.
+  await page.click('#stale-probe')
+  await page.waitForTimeout(200)
+  await expect(page.locator('h1'), 'the Static page is still showing').toHaveText('Static')
   await page.click('#back-home')
   await expect(page.locator('h1')).toHaveText('Home')
   await page.click('#inc')

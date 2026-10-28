@@ -63,6 +63,14 @@ jobs:
 
       - run: npm test
 
+      # The unit tests never run `pulse build` or a hydrated server. This does, in a real browser,
+      # against both `pulse dev` and the production build, so path handling that only breaks on
+      # Windows (separators in generated import strings, manifest keys) shows up here.
+      - run: npx playwright install chromium
+        working-directory: packages/e2e
+
+      - run: npm run test:e2e
+
   # Real-browser smoke tests for the client runtime (packages/e2e): hydration, morphing,
   # client navigation, fragment links, history. The unit tests use a DOM shim; this does not.
   browser:
