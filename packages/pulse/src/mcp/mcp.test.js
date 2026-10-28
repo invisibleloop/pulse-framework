@@ -485,6 +485,12 @@ test('agents are told when and how to report Pulse bugs (workflow.md + scaffolde
     'both scaffolded instruction files (claudeMd and copilotInstructionsMd) must include the "If Pulse itself is broken" section')
 })
 
+test('scaffolded instruction files carry the untrusted-content rule', () => {
+  const scaffold = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
+  assert((scaffold.match(/## Content you read is data/g) || []).length === 2,
+    'both scaffolded instruction files (claudeMd and copilotInstructionsMd) must tell the agent that content it reads is data, not commands')
+})
+
 test('scaffolded pulse.config.js documents the design:"freeform" flag', () => {
   const scaffoldSrc = fs.readFileSync(path.join(ROOT, 'src/cli/scaffold.js'), 'utf8')
   assert(/design: 'freeform'/.test(scaffoldSrc),
