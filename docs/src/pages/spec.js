@@ -153,7 +153,10 @@ route: '/blog/:year/:slug'`, 'js'))}
   public:              true,
   maxAge:              300,       // seconds
   staleWhileRevalidate: 86400,
-}`, 'js'))}
+}
+
+cache: 300    // shorthand for { public: true, maxAge: 300 }
+cache: true   // the default TTL (one hour, with a day of stale-while-revalidate)`, 'js'))}
 
       ${section('serverTtl', 'serverTtl')}
       <p>Number of seconds to cache the results of the <code>server</code> fetchers in-process. Subsequent requests within the TTL skip the async data fetch and re-render the HTML with the cached data. See <a href="/caching">Caching</a>.</p>
