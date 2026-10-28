@@ -176,6 +176,39 @@ await test('intercepts same-origin links', async () => {
   assert(called, 'fetch should be called for same-origin link')
 })
 
+/** A streamed navigation to /p#late where #late lives in the deferred segment "feed". */
+async function deferredHashNavigation({ scrollBeforeSegmentArrives = false } = {}) {
+  const { click, root } = setup()
+  const scrolled = []
+  let present = false
+  const target = { scrollIntoView: () => scrolled.push('late'), hasAttribute: () => true, setAttribute: () => {}, addEventListener: () => {}, focus: () => {} }
+  global.window.scrollY = 0
+  global.window.scrollTo = () => {}
+  global.document.getElementById = (id) => (present && id === 'late' ? target : null)
+  root.querySelector = (sel) => (sel === '[id="pd-feed"]' ? { replaceWith: () => { present = true } } : null)
+  global.document.createElement = () => {
+    if (scrollBeforeSegmentArrives) global.window.scrollY = 500     // the visitor scrolls while it loads
+    return { set innerHTML(_) {}, childNodes: [] }
+  }
+  global.fetch = async () => streamResponse([
+    { type: 'meta', hydrate: null, title: 'P', styles: [], scripts: [] },
+    { type: 'html', html: '<p>shell</p><pulse-deferred id="pd-feed"></pulse-deferred>', deferred: ['feed'] },
+    { type: 'deferred', id: 'feed', html: '<section id="late">feed</section>' },
+    { type: 'done', serverState: {} },
+  ])
+  click(clickEvent({ href: '/p#late' }))
+  await new Promise(r => setTimeout(r, 60))
+  return scrolled
+}
+
+await test('a #fragment whose target is in a streamed deferred segment is scrolled to when the segment arrives', async () => {
+  assert.deepEqual(await deferredHashNavigation(), ['late'])
+})
+
+await test('...but not if the visitor has scrolled in the meantime', async () => {
+  assert.deepEqual(await deferredHashNavigation({ scrollBeforeSegmentArrives: true }), [])
+})
+
 await test('relative links resolve against the current URL (or <base href>), not the site root', async () => {
   const { click } = setup()
   const fetched = []
