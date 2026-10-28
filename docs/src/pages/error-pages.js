@@ -83,6 +83,8 @@ export default {
 })`, 'js'))}
       <p>For errors thrown inside a <em>view</em> specifically, prefer <code>onViewError</code> on the spec — it returns a 200 with fallback HTML instead of a 500, keeping the page alive when one piece of data is malformed.</p>
 
+      ${callout('warning', '<strong>Streaming and <code>onError</code>.</strong> With streaming (the default) Pulse sends the <code>200</code> status and the page head before it runs your view and server fetchers, which is what makes the first paint fast. If one then throws, the status cannot change and <code>onError</code> cannot write a response. The error is logged (<code>[Pulse] Error while streaming …</code>), recorded in the dev error journal, and the page shows an error message in place of its content. If you need a real <code>500</code> for these (for example so monitoring sees it), set <code>stream: false</code>; if you want a designed fallback, use <code>onViewError</code>.')}
+
       ${callout('note', 'Three layers, three jobs: <code>route: \'*\'</code> for URLs that don\'t exist, <code>onViewError</code> for views that throw on bad data, <code>onError</code> for everything else that goes wrong server-side.')}
 
       ${section('error-journal', 'The error journal — a fourth layer, for the agent')}

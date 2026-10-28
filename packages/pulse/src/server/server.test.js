@@ -2289,6 +2289,39 @@ await test('server error in dev mode writes an entry to the journal', async () =
   fs.rmSync(root, { recursive: true, force: true })
 })
 
+await test('a view that throws while STREAMING (the default) is still logged, and journaled in dev, even though the 200 is already sent', async () => {
+  const logged = []
+  const realError = console.error
+  console.error = (...a) => { logged.push(a.map(String).join(' ')) }
+  const root = makeTmpRoot()
+  try {
+    await withServer([journalThrowingSpec], { dev: true, root }, async (port) => {   // stream defaults to true
+      const r = await get(port, '/boom-journal')
+      assert(r.status === 200, 'the status was already sent, so it stays 200 (documented)')
+      const entries = readJournal(root)
+      assert(entries && entries.length === 1 && entries[0].message.includes('deliberate view failure'), `streamed error missing from the journal: ${JSON.stringify(entries)}`)
+      assert(entries[0].route === '/boom-journal', 'the journal records the route')
+    })
+    const prodRoot = makeTmpRoot()
+    await withServer([journalThrowingSpec], { dev: false, root: prodRoot }, async (port) => { await get(port, '/boom-journal') })
+    assert(readJournal(prodRoot) === null, 'prod writes no journal')
+    fs.rmSync(prodRoot, { recursive: true, force: true })
+  } finally { console.error = realError; fs.rmSync(root, { recursive: true, force: true }) }
+  assert(logged.filter(l => l.includes('deliberate view failure')).length === 2, `each streamed error must be logged (dev and prod), got ${JSON.stringify(logged)}`)
+})
+
+await test('a custom 404 and a POST re-render do not get the server-wide public cache header; ordinary pages still do', async () => {
+  const notFound = { route: '*', state: {}, meta: { title: 'nf' }, view: () => '<main id="main-content">nope</main>' }
+  const page     = { route: '/p', state: {}, meta: { title: 'p' }, view: () => '<main id="main-content">p</main>' }
+  await withServer([notFound, page], { stream: false, defaultCache: 3600, quiet: true }, async (port) => {
+    const nf = await requestFull(port, 'GET', '/nope')
+    assert(nf.status === 404, 'custom 404 status')
+    assert(nf.headers['cache-control'] === 'no-cache', `a 404 must not be publicly cached for the default TTL, got: ${nf.headers['cache-control']}`)
+    const ok = await requestFull(port, 'GET', '/p')
+    assert(/public, max-age=3600/.test(ok.headers['cache-control']), `ordinary pages keep the default, got: ${ok.headers['cache-control']}`)
+  })
+})
+
 await test('server error NOT in dev mode does not write a journal entry', async () => {
   const root = makeTmpRoot()
   await withServer([journalThrowingSpec], { stream: false, dev: false, root }, async (port) => {
