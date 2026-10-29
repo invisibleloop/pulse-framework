@@ -135,7 +135,7 @@ export const KNOWN_SPEC_KEYS = new Set([
 ])
 
 /** Edit distance, for "did you mean" suggestions on unknown keys. */
-function editDistance(a, b) {
+export function editDistance(a, b) {
   const row = Array.from({ length: b.length + 1 }, (_, i) => i)
   for (let i = 1; i <= a.length; i++) {
     let prev = row[0]
