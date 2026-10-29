@@ -79,8 +79,8 @@ export function initNavigation(root, mountFn) {
           if (msg.type === 'meta') {
             hydratePath    = msg.hydrate
             document.title = msg.title || document.title
-            applyStyles(msg.styles)
-            await applyScripts(msg.scripts)
+            applyStyles(msg.styles, msg.integrity)
+            await applyScripts(msg.scripts, msg.integrity)
 
           } else if (msg.type === 'html') {
             if (!hydratePath) {
@@ -152,7 +152,7 @@ export function initNavigation(root, mountFn) {
 
       } else {
         // Legacy JSON response (server running with stream: false)
-        const { html, title, styles, scripts, hydrate, serverState, storeState } = await res.json()
+        const { html, title, styles, scripts, integrity, hydrate, serverState, storeState } = await res.json()
 
         if (controller.signal.aborted) return
 
@@ -163,8 +163,8 @@ export function initNavigation(root, mountFn) {
         if (!hydrate) releaseCurrentMount()
         root.innerHTML = trustedHTML(html)
         document.title = title || document.title
-        applyStyles(styles)
-        await applyScripts(scripts)
+        applyStyles(styles, integrity)
+        await applyScripts(scripts, integrity)
         runScripts(root)
 
         if (push) history.pushState({ pulse: true, path }, '', path)
@@ -262,8 +262,16 @@ function runScripts(el) {
   })
 }
 
+/** Carry a URL's SRI hash (meta.integrity) onto an element injected during navigation. */
+function setIntegrity(el, integrity, url) {
+  const hash = integrity && typeof integrity === 'object' ? integrity[url] : null
+  if (typeof hash !== 'string' || !hash) return
+  el.integrity   = hash
+  el.crossOrigin = 'anonymous'
+}
+
 /** Inject any stylesheets not already present in <head>. */
-function applyStyles(styles) {
+function applyStyles(styles, integrity) {
   if (!Array.isArray(styles)) return
   const existing = new Set(
     [...document.querySelectorAll('link[rel="stylesheet"]')].map(l => l.getAttribute('href'))
@@ -273,13 +281,14 @@ function applyStyles(styles) {
       const link = document.createElement('link')
       link.rel  = 'stylesheet'
       link.href = href
+      setIntegrity(link, integrity, href)
       document.head.appendChild(link)
     }
   }
 }
 
 /** Inject any external scripts not already present in <head>. Returns a Promise. */
-function applyScripts(scripts) {
+function applyScripts(scripts, integrity) {
   if (!Array.isArray(scripts)) return Promise.resolve()
   const existingSrcs = new Set(
     [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src'))
@@ -290,6 +299,7 @@ function applyScripts(scripts) {
       .map(src => new Promise((resolve) => {
         const script   = document.createElement('script')
         script.src     = src
+        setIntegrity(script, integrity, src)
         script.onload  = resolve
         script.onerror = resolve
         document.head.appendChild(script)

@@ -22,7 +22,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, clientStoreState, buildHydrateScript, buildStylePreconnects, safeJson } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, clientStoreState, buildHydrateScript, buildStylePreconnects, integrityAttrs, safeJson } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 import { pathToFileURL } from 'url'
@@ -1583,6 +1583,7 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
     title:       meta.title || 'Pulse',
     styles:      meta.styles || [],
     scripts:     meta.scripts || [],
+    integrity:   meta.integrity || undefined,
     hydrate:     spec.hydrate  || null,
     // Only a page the client mounts needs its data. A full page load does not serialise it for a
     // page without a bundle, and this must not either (it was every fetcher result, rendered or not).
@@ -1750,7 +1751,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   const stylePreconnects = buildStylePreconnects([...(meta.styles || []), ...(meta.deferredStyles || [])])
 
   const stylePreloads = (meta.styles || [])
-    .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}">`)
+    .map(href => `  <link rel="preload" as="style" href="${escHtml(href)}"${integrityAttrs(meta.integrity, href)}>`)
     .join('\n')
 
   const runtimePreload = runtimeBundle && spec.hydrate?.startsWith('/dist/')
@@ -1763,7 +1764,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     meta.description  ? `  <meta name="description" content="${escHtml(meta.description)}">` : '',
     meta.ogTitle      ? `  <meta property="og:title" content="${escHtml(meta.ogTitle)}">` : '',
     meta.ogImage      ? `  <meta property="og:image" content="${escHtml(meta.ogImage)}">` : '',
-    ...(meta.styles || []).map((href, i) => `  <link rel="stylesheet" href="${escHtml(href)}"${i === 0 ? ' fetchpriority="high"' : ''}>`),
+    ...(meta.styles || []).map((href, i) => `  <link rel="stylesheet" href="${escHtml(href)}"${integrityAttrs(meta.integrity, href)}${i === 0 ? ' fetchpriority="high"' : ''}>`),
     (meta.deferredStyles || []).length > 0
       ? `  <script nonce="${nonce}">(function(){${
           (meta.deferredStyles || []).map(href =>
@@ -1791,7 +1792,7 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
   <div id="pulse-root">`
 
   const scriptTags    = (meta.scripts || [])
-    .map(src => `  <script src="${escHtml(src)}" defer></script>`)
+    .map(src => `  <script src="${escHtml(src)}"${integrityAttrs(meta.integrity, src)} defer></script>`)
     .join('\n')
   const storeScript   = buildStoreScript(spec, clientStoreState(spec, ctx), nonce, livePath)
   const hydrateScript = buildHydrateScript(spec, store, nonce)

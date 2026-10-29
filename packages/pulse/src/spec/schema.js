@@ -487,13 +487,39 @@ export function validateSpec(spec) {
   // the framework reading spec.meta.vibe directly — this check catches unknown keys)
   if (spec.meta && typeof spec.meta === 'object' && !Array.isArray(spec.meta)) {
     const KNOWN_META_KEYS = new Set([
-      'title', 'description', 'styles', 'deferredStyles', 'scripts', 'theme', 'vibe',
+      'title', 'description', 'styles', 'deferredStyles', 'scripts', 'integrity', 'theme', 'vibe',
       'ogTitle', 'ogDescription', 'ogImage', 'canonical', 'schema',
       'robots', 'viewport', 'charset', 'lang',
     ])
     const unknown = Object.keys(spec.meta).filter(k => typeof spec.meta[k] !== 'function' && !KNOWN_META_KEYS.has(k))
     if (unknown.length) {
       warnings.push(`spec.meta has unrecognised field${unknown.length > 1 ? 's' : ''}: ${unknown.map(k => `"${k}"`).join(', ')} — these are silently ignored by the framework. Known fields: ${[...KNOWN_META_KEYS].join(', ')}.`)
+    }
+  }
+
+  // Subresource Integrity: meta.integrity maps a cross-origin script/stylesheet URL to its hash.
+  if (spec.meta && typeof spec.meta === 'object' && !Array.isArray(spec.meta)) {
+    const integ = spec.meta.integrity
+    if (integ !== undefined && typeof integ !== 'function') {
+      if (!integ || typeof integ !== 'object' || Array.isArray(integ)) {
+        errors.push('spec.meta.integrity must be an object mapping a URL to its hash, e.g. { "https://cdn.example/lib.js": "sha384-…" }')
+      } else {
+        const listed = new Set([...(Array.isArray(spec.meta.scripts) ? spec.meta.scripts : []), ...(Array.isArray(spec.meta.styles) ? spec.meta.styles : [])])
+        for (const [url, hash] of Object.entries(integ)) {
+          if (typeof hash !== 'string' || !/^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}( sha(256|384|512)-[A-Za-z0-9+/]+={0,2})*$/.test(hash)) {
+            errors.push(`spec.meta.integrity["${url}"] is not a valid hash — expected "sha384-<base64>" (sha256, sha384 or sha512)`)
+          } else if (Array.isArray(spec.meta.scripts) && Array.isArray(spec.meta.styles) && !listed.has(url)) {
+            warnings.push(`spec.meta.integrity has an entry for "${url}", which is in neither meta.scripts nor meta.styles — it has no effect`)
+          }
+        }
+      }
+    }
+    if (Array.isArray(spec.meta.scripts) && typeof integ !== 'function') {
+      for (const src of spec.meta.scripts) {
+        if (typeof src === 'string' && /^(https?:)?\/\//i.test(src) && !(integ && typeof integ === 'object' && integ[src])) {
+          warnings.push(`spec.meta.scripts loads "${src}" from another origin with no integrity hash — add meta.integrity: { "${src}": "sha384-…" } so a tampered copy is refused (compute with: curl -s URL | openssl dgst -sha384 -binary | openssl base64 -A). Skip only for scripts whose content changes by design (analytics/ad loaders).`)
+        }
+      }
     }
   }
 

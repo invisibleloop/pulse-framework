@@ -41,6 +41,18 @@ function assertValid(spec) {
 
 console.log('\nSpec validation\n')
 
+test('meta.integrity: a malformed hash is an error; a cross-origin script without one warns', () => {
+  const base = { route: '/', view: () => '' }
+  const bad = validateSpec({ ...base, meta: { title: 't', description: 'd', theme: 'light', scripts: ['https://cdn.example/a.js'], integrity: { 'https://cdn.example/a.js': 'md5-zzz' } } })
+  assert(bad.errors.some(e => e.includes('not a valid hash')), 'bad hash should be an error: ' + bad.errors)
+  const none = validateSpec({ ...base, meta: { title: 't', description: 'd', theme: 'light', scripts: ['https://cdn.example/a.js'] } })
+  assert(none.warnings.some(w => w.includes('no integrity hash')), 'missing integrity should warn')
+  const ok = validateSpec({ ...base, meta: { title: 't', description: 'd', theme: 'light', scripts: ['https://cdn.example/a.js'], integrity: { 'https://cdn.example/a.js': 'sha384-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA' } } })
+  assert(ok.valid && !ok.warnings.some(w => w.includes('integrity')), 'a hashed script is clean: ' + ok.warnings)
+  const own = validateSpec({ ...base, meta: { title: 't', description: 'd', theme: 'light', scripts: ['/pulse-ui.js'] } })
+  assert(!own.warnings.some(w => w.includes('integrity')), 'same-origin scripts are not flagged')
+})
+
 test('every result carries a warnings array, including the early returns (raw-response and non-object specs)', () => {
   const raw = validateSpec({ route: '/hook', contentType: 'text/plain', state: {}, render: () => 'ok' })
   assert(raw.valid === true, 'a valid raw-response spec should be valid')

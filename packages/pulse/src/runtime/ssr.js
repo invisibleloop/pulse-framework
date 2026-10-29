@@ -204,6 +204,7 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
         title:   resolvedMeta.title   || 'Pulse',
         styles:  resolvedMeta.styles  || [],
         scripts: resolvedMeta.scripts || [],
+        integrity: resolvedMeta.integrity || undefined,
         hydrate: spec.hydrate || null,
       })
 
@@ -338,6 +339,19 @@ export function buildHydrateScript(spec, storeDef, nonce) {
 // connection to the page's own origin is already open. Shared by wrapDocument
 // (non-streaming render) and the streaming response head in server/index.js,
 // which builds its <head> independently rather than calling wrapDocument.
+/**
+ * Subresource Integrity attributes for a URL listed in meta.scripts / meta.styles.
+ * `meta.integrity` maps a URL to its `sha256-`/`sha384-`/`sha512-` hash; a URL without an entry,
+ * or an entry that is not a well-formed hash, gets no attributes. `crossorigin` is required for the
+ * browser to check a cross-origin response.
+ */
+const SRI_HASH = /^sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}(?: sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2})*$/
+export function integrityAttrs(integrity, url) {
+  const hash = integrity && typeof integrity === 'object' ? integrity[url] : undefined
+  if (typeof hash !== 'string' || !SRI_HASH.test(hash)) return ''
+  return ` integrity="${esc(hash)}" crossorigin="anonymous"`
+}
+
 export function buildStylePreconnects(styles = []) {
   const styleOrigins = [...new Set(
     styles
@@ -379,7 +393,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
   const stylePreconnects = buildStylePreconnects([...(meta.styles || []), ...(meta.deferredStyles || [])])
 
   const stylePreloads = (meta.styles || [])
-    .map(href => `<link rel="preload" as="style" href="${esc(href)}">`)
+    .map(href => `<link rel="preload" as="style" href="${esc(href)}"${integrityAttrs(meta.integrity, href)}>`)
     .join('\n  ')
 
   const runtimePreload = runtimeBundle && isBundle(spec.hydrate)
@@ -387,7 +401,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     : ''
 
   const styleLinks = (meta.styles || [])
-    .map((href, i) => `<link rel="stylesheet" href="${esc(href)}"${i < 2 ? ' fetchpriority="high"' : ''}>`)
+    .map((href, i) => `<link rel="stylesheet" href="${esc(href)}"${integrityAttrs(meta.integrity, href)}${i < 2 ? ' fetchpriority="high"' : ''}>`)
     .join('\n  ')
 
   // Deferred styles — injected via a nonce'd script so CSP is respected.
@@ -401,7 +415,7 @@ export function wrapDocument({ content, spec = {}, serverState = {}, storeState 
     : ''
 
   const scriptTags = (meta.scripts || [])
-    .map(src => `<script src="${esc(src)}" defer></script>`)
+    .map(src => `<script src="${esc(src)}"${integrityAttrs(meta.integrity, src)} defer></script>`)
     .join('\n  ')
 
   const schemaScript = meta.schema
