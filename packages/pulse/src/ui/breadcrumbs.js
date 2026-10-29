@@ -10,7 +10,7 @@
  * @param {string} opts.class
  */
 
-import { escHtml as e } from '../html.js'
+import { escHtml as e, safeUrl } from '../html.js'
 
 export function breadcrumbs({
   items      = [],
@@ -27,7 +27,7 @@ export function breadcrumbs({
 
     const content = isLast
       ? `<span class="ui-breadcrumbs-current" aria-current="page">${e(item.label)}</span>`
-      : `<a href="${e(item.href)}" class="ui-breadcrumbs-link">${e(item.label)}</a>`
+      : `<a href="${e(safeUrl(item.href))}" class="ui-breadcrumbs-link">${e(item.label)}</a>`
 
     return `<li class="ui-breadcrumbs-item">${sep}${content}</li>`
   }).join('')

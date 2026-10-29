@@ -19,7 +19,7 @@
  * @param {string}  opts.fetchpriority - 'high' | 'low' | 'auto' — set 'high' on the LCP image
  */
 
-import { escHtml as e } from '../html.js'
+import { escHtml as e, safeUrl } from '../html.js'
 
 export function uiImage({
   src           = '',
@@ -55,7 +55,7 @@ export function uiImage({
   if (ratio) {
     return `<figure class="${e(figClasses)}"${maxWidthStyle}>
   <div class="ui-image-crop" style="aspect-ratio:${e(ratio)}">
-    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img--cover"${widthAttr}${heightAttr} loading="${e(loading)}" decoding="async"${fetchpriorityAttr}>
+    <img src="${e(safeUrl(src, { image: true }))}" alt="${e(alt)}" class="ui-image-img--cover"${widthAttr}${heightAttr} loading="${e(loading)}" decoding="async"${fetchpriorityAttr}>
   </div>
   ${captionHtml}
 </figure>`
@@ -63,7 +63,7 @@ export function uiImage({
 
   return `<figure class="${e(figClasses)}"${maxWidthStyle}>
   <div class="ui-image-wrap">
-    <img src="${e(src)}" alt="${e(alt)}" class="ui-image-img"${widthAttr}${heightAttr} loading="${e(loading)}" decoding="async"${fetchpriorityAttr}>
+    <img src="${e(safeUrl(src, { image: true }))}" alt="${e(alt)}" class="ui-image-img"${widthAttr}${heightAttr} loading="${e(loading)}" decoding="async"${fetchpriorityAttr}>
   </div>
   ${captionHtml}
 </figure>`
