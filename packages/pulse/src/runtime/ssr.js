@@ -528,7 +528,10 @@ function startFetchers(spec, ctx, timeout) {
   if (!spec.server) return fetchers
   for (const [key, fn] of Object.entries(spec.server)) {
     let promise
-    try { promise = withTimeout(fn(ctx), timeout, key) } catch (err) { promise = Promise.reject(err) }   // a synchronous throw too
+    // Promise.resolve: a fetcher may be synchronous and return a plain value (the docs show
+    // `brand: (ctx) => ctx.brand`), and withTimeout returns that value as it is when no timeout is set.
+    // A synchronous throw becomes a rejection too.
+    try { promise = Promise.resolve(withTimeout(fn(ctx), timeout, key)) } catch (err) { promise = Promise.reject(err) }
     promise.catch(() => {})
     fetchers.set(key, promise)
   }
