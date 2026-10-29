@@ -191,6 +191,20 @@ await test('serves a registered route', async () => {
   })
 })
 
+await test('meta.integrity reaches the streamed head, the buffered page and the navigation payloads', async () => {
+  const hash = 'sha384-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  const spec = { route: '/sri', meta: { title: 'SRI', scripts: ['https://cdn.example/a.js'], styles: ['https://cdn.example/a.css'], integrity: { 'https://cdn.example/a.js': hash, 'https://cdn.example/a.css': hash } }, view: () => '<main>x</main>' }
+  for (const stream of [true, false]) {
+    await withServer([spec], { stream }, async (port) => {
+      const { body } = await get(port, '/sri')
+      assert(body.includes(`href="https://cdn.example/a.css" integrity="${hash}" crossorigin="anonymous"`), `stylesheet (stream:${stream}): ${body}`)
+      assert(body.includes(`src="https://cdn.example/a.js" integrity="${hash}" crossorigin="anonymous"`), `script (stream:${stream})`)
+      const nav = await request(port, 'GET', '/sri', { 'x-pulse-navigate': 'true' })
+      assert(nav.body.includes(hash), `navigation payload should carry the hash (stream:${stream}): ${nav.body}`)
+    })
+  }
+})
+
 await test('returns 404 for unknown route', async () => {
   await withServer([helloSpec], { stream: false }, async (port) => {
     const { status, body } = await get(port, '/nope')

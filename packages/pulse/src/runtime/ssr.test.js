@@ -374,6 +374,19 @@ await test('stream.scope: __PULSE_SERVER__ includes state from all scoped fetche
 
 console.log('\nwrapDocument\n')
 
+await test('meta.integrity puts a hash on the matching cross-origin script and stylesheet, and only a well-formed one', async () => {
+  const good = 'sha384-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+  const { html } = wrapDocument({ content: '<p>x</p>', spec: { meta: {
+    scripts: ['https://cdn.example/lib.js', '/own.js'],
+    styles:  ['https://cdn.example/lib.css'],
+    integrity: { 'https://cdn.example/lib.js': good, 'https://cdn.example/lib.css': good, '/own.js': 'not-a-hash" onload="x' },
+  } } })
+  assert(html.includes(`<script src="https://cdn.example/lib.js" integrity="${good}" crossorigin="anonymous" defer>`), 'script should carry integrity')
+  assert(html.includes(`<link rel="stylesheet" href="https://cdn.example/lib.css" integrity="${good}" crossorigin="anonymous"`), 'stylesheet should carry integrity')
+  assert(html.includes(`<link rel="preload" as="style" href="https://cdn.example/lib.css" integrity="${good}"`), 'preload should carry integrity')
+  assert(html.includes('<script src="/own.js" defer>'), 'a malformed hash must not be emitted')
+})
+
 await test('wraps content in full HTML document', async () => {
   const { html } = wrapDocument({ content: '<p>Hello</p>' })
   assert(html.includes('<!DOCTYPE html>'), 'Missing DOCTYPE')

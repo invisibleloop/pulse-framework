@@ -238,6 +238,23 @@ createServer(specs, {
 
 Without this, external images will be blocked in production and Lighthouse will flag a Best Practices failure. Use the same pattern for other external resource types (`media-src` for video, `connect-src` for fetch/XHR to external APIs).
 
+### Subresource Integrity (SRI) for third-party scripts and styles
+
+A script or stylesheet loaded from another origin can be pinned to a hash, so the browser refuses a copy that was changed on the CDN. List the hash in `meta.integrity`, keyed by the same URL you put in `meta.scripts` / `meta.styles`; Pulse adds `integrity` and `crossorigin="anonymous"` to the tag (on first load and on client navigation):
+
+```js
+meta: {
+  scripts:   ['https://cdn.example.com/lib@1.2.3/lib.min.js'],
+  integrity: { 'https://cdn.example.com/lib@1.2.3/lib.min.js': 'sha384-…' },
+}
+// hash: curl -s URL | openssl dgst -sha384 -binary | openssl base64 -A   (prefix with sha384-)
+```
+
+- Pin a **versioned** URL: a hash of a file that changes under the same URL breaks the page. Loaders that change by design (ad networks, analytics tags, Google Fonts CSS) cannot use SRI.
+- The server must send `Access-Control-Allow-Origin` for the file, and `csp['script-src']` must allow the origin (see below).
+- `pulse_validate` warns about a cross-origin entry in `meta.scripts` with no hash, and errors on a malformed one.
+- Pulse's own bundles are same-origin and content-hashed, so they need none.
+
 ### Third-party scripts (ad networks, analytics SDKs)
 
 **Every `csp` key merges the same way — including `trusted-types` and `require-trusted-types-for`.** This is a real, tested behavior, not a guess: `csp` passed to `createServer` (or `pulse.config.js`) is spread onto the framework's base CSP directive-by-directive, so `csp: { 'trusted-types': ['google'] }` produces `trusted-types pulse google` in the response header — it does not replace or drop the framework's own `pulse` policy.
