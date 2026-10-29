@@ -304,7 +304,7 @@ const { updateSpecs, updateStore } = await createServer(specs, {
   ...(_config.csp ? { csp: _config.csp } : {}),
   // Server options forwarded verbatim from pulse.config.js so dev behaves like
   // production — keep in sync with start.js PASSTHROUGH_OPTIONS
-  ...(['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts'].reduce(
+  ...(['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts', 'allowedHosts'].reduce(
     (acc, k) => (_config[k] !== undefined ? { ...acc, [k]: _config[k] } : acc), {})),
 
   onRequest(req, res) {
@@ -358,7 +358,10 @@ const { updateSpecs, updateStore } = await createServer(specs, {
       if (!url.startsWith(urlPrefix)) return false
       const rel      = url.slice(urlPrefix.length)
       const filePath = path.resolve(dir, rel)
-      if (!filePath.startsWith(path.resolve(dir))) return false  // traversal guard
+      // Traversal guard. The separator matters: without it /src/../src2/x.js escapes into a sibling
+      // directory whose name merely starts with the same letters.
+      const root = path.resolve(dir)
+      if (filePath !== root && !filePath.startsWith(root + path.sep)) return false
       return serveFile(filePath)
     }
 

@@ -74,3 +74,32 @@ test('pulse dev --host 0.0.0.0 opts in to other interfaces', { skip: !lanAddress
     assert.equal(await canConnect(lanAddress, port), true, `--host 0.0.0.0 should answer on ${lanAddress}`)
   })
 })
+
+test('pulse dev refuses a request addressed to another host, and does not serve a sibling directory whose name starts with "src"', async () => {
+  const http = await import('node:http')
+  const dir  = project()
+  fs.mkdirSync(path.join(dir, 'src2'), { recursive: true })
+  fs.writeFileSync(path.join(dir, 'src2', 'secret.js'), "export const DB_PASSWORD = 'SIBLING_DIR_SECRET'\n")
+  fs.mkdirSync(path.join(dir, 'src', 'lib'), { recursive: true })
+  fs.writeFileSync(path.join(dir, 'src', 'lib', 'ok.js'), "export const fine = 1\n")
+  const port = await freePort()
+  const proc = spawn(process.execPath, [DEV, '--root', dir, '--port', String(port)], { stdio: 'ignore' })
+  const raw = (reqPath, headers = {}) => new Promise((resolve, reject) => {
+    // http.request sends the path exactly as given, so the dot segments reach the server unnormalised
+    const r = http.request({ host: '127.0.0.1', port, path: reqPath, headers }, res => { let b = ''; res.on('data', c => b += c); res.on('end', () => resolve({ status: res.statusCode, body: b })) })
+    r.on('error', reject); r.end()
+  })
+  try {
+    for (let i = 0; i < 100 && !(await canConnect('127.0.0.1', port)); i++) await new Promise(r => setTimeout(r, 150))
+    assert.equal((await raw('/src/lib/ok.js')).status, 200, 'a file under src/ is served')
+    const sibling = await raw('/src/../src2/secret.js')
+    assert.ok(!sibling.body.includes('SIBLING_DIR_SECRET'), `a sibling directory must not be served, got ${sibling.status}: ${sibling.body.slice(0, 80)}`)
+    const rebound = await raw('/src/lib/ok.js', { Host: `rebind.attacker.test:${port}` })
+    assert.equal(rebound.status, 403, 'source files must not be readable through a rebound Host')
+    assert.ok(!rebound.body.includes('fine'), 'and nothing of the file is returned')
+  } finally {
+    const exited = new Promise(resolve => proc.once('exit', resolve))
+    proc.kill('SIGKILL'); await exited
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
+  }
+})

@@ -26,6 +26,7 @@ import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolv
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 import { pathToFileURL } from 'url'
+import os from 'os'
 
 const gzipAsync   = promisify(zlib.gzip)
 const brotliAsync = promisify(zlib.brotliCompress)
@@ -56,6 +57,33 @@ const SECURITY_HEADERS = {
  */
 function localPath(p) {
   return '/' + p.replace(/^[/\\]+/, '')
+}
+
+/**
+ * May the dev server answer a request whose Host header is `hostHeader`? Yes for names that can
+ * only mean this machine or its network: localhost and *.localhost, any IP address, *.local
+ * (mDNS, what a phone uses to reach `macbook.local`), this computer's hostname, the interface the
+ * server was told to listen on, and anything in `allowedHosts` (an exact name, or ".example.com"
+ * for the domain and everything under it). An absent Host (HTTP/1.0, a bare client) is allowed:
+ * a browser always sends one, and that is the attack. A rebinding page is addressed by a domain
+ * name the attacker controls, which none of these match.
+ */
+export function isAllowedDevHost(hostHeader, { listenHost = null, allowedHosts = [] } = {}) {
+  if (!hostHeader) return true
+  let name = String(hostHeader).trim().toLowerCase()
+  if (name.startsWith('[')) name = name.slice(1, name.indexOf(']') === -1 ? undefined : name.indexOf(']'))   // [::1]:3000
+  else name = name.replace(/:\d*$/, '')                                                                    // host:3000
+  name = name.replace(/\.$/, '')
+  if (name === '') return true
+  if (name === 'localhost' || name.endsWith('.localhost') || name.endsWith('.local')) return true
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(name) || name.includes(':')) return true      // an IP address: a browser cannot rebind one
+  const machine = os.hostname().toLowerCase()
+  if (name === machine || name === machine.split('.')[0]) return true
+  if (listenHost && name === String(listenHost).toLowerCase()) return true
+  return allowedHosts.some(h => {
+    const allowed = String(h).toLowerCase()
+    return allowed.startsWith('.') ? (name === allowed.slice(1) || name.endsWith(allowed)) : name === allowed
+  })
 }
 
 /** Lower-case, with a trailing dot ("example.com.") removed, keeping any port. */
@@ -748,6 +776,7 @@ export async function createServer(entries, options = {}) {
                                    // Host / X-Forwarded-* headers, which a client (or a CDN that ignores
                                    // Vary) can forge. Recommended in production.
     host: listenHost = null,       // interface to listen on (default: all). `pulse dev` uses 127.0.0.1.
+    allowedHosts   = [],           // dev only: extra hostnames the dev server answers to (see isAllowedDevHost)
     extraBody     = '',            // extra HTML injected before </body> on every page
     dev           = false,         // dev mode — show detailed error pages
     store         = null,          // global store definition (pulse.store.js default export)
@@ -966,6 +995,15 @@ export async function createServer(entries, options = {}) {
 
   const server = http.createServer(async (req, res) => {
     req[HSTS_VALUE] = hstsValue
+    // The dev server serves source files, a reload trigger and the error journal. A web page the
+    // developer visits can reach it through DNS rebinding: the attacker's own domain is made to
+    // resolve to 127.0.0.1, and the browser then treats the dev server as same-origin with it. Such
+    // requests carry the attacker's name in Host, so refuse any Host that is not this machine.
+    if (dev && !isAllowedDevHost(req.headers.host, { listenHost, allowedHosts })) {
+      res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS })
+      res.end('Invalid Host header.\nIn development Pulse only answers requests addressed to localhost, an IP address, a .local or .localhost name, or a host listed in `allowedHosts` in pulse.config.js.')
+      return
+    }
     // On every HTTPS response, whichever code path writes it (static files, errors, sitemap, SSE,
     // health check, ...): setHeader values are merged into the writeHead that follows. The
     // per-handler httpsHeaders() spreads set the same value again, harmlessly.
