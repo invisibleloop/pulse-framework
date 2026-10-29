@@ -25,7 +25,7 @@ export const KNOWN_CONFIG_KEYS = new Set([
   'port', 'host', 'agent', 'design',
   'defaultCache', 'staticCache', 'csp', 'redirects', 'sitemap', 'robots', 'secret', 'live',
   'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts', 'allowedHosts',
-  'lighthouse', 'load', 'environments', 'routes',
+  'lighthouse', 'load', 'environments', 'routes', 'css',
   'reportFeedback', 'reportEndpoint', 'reportTransport',
 ])
 
