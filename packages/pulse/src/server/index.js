@@ -22,7 +22,7 @@ import { createRequire } from 'module'
 
 const _require = createRequire(import.meta.url)
 export const version = _require('../../package.json').version
-import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, buildHydrateScript, buildStylePreconnects, safeJson } from '../runtime/ssr.js'
+import { renderToString, renderToStream, renderToNavStream, wrapDocument, resolveServerState, buildStoreScript, clientStoreState, buildHydrateScript, buildStylePreconnects, safeJson } from '../runtime/ssr.js'
 import { validateSpec } from '../spec/schema.js'
 import { validateStore, resolveStoreState } from '../store/index.js'
 import { pathToFileURL } from 'url'
@@ -1303,6 +1303,7 @@ export async function createServer(entries, options = {}) {
       ctx.fetcherTimeout = fetcherTimeout ?? null
       if (storeDef) {
         ctx.store = await resolveStoreState(storeDef, ctx)
+        Object.defineProperty(ctx, '_storePublicKeys', { value: Object.keys(storeDef.state || {}), enumerable: false })
       }
 
       const hydrateMap     = getHydrateMap()
@@ -1571,7 +1572,7 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
     // Only a page the client mounts needs its data. A full page load does not serialise it for a
     // page without a bundle, and this must not either (it was every fetcher result, rendered or not).
     serverState: spec.hydrate && Object.keys(serverState).length > 0 ? serverState : undefined,
-    storeState:  spec.hydrate && ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
+    storeState:  clientStoreState(spec, ctx) || undefined,
   })
 
   // mergeCtxHeaders so cookies/headers queued on ctx during the request (the CSRF cookie, anything a
@@ -1658,7 +1659,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     const canonicalTag      = hostDerived ? CANONICAL_MARK : canonicalLink(canonicalUrl)
     const resolvedSpec      = { ...spec, meta: await resolveMeta(spec.meta, ctx) }
     const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody
-    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: ctx.store || null, storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag + analyticsTag, nonce, runtimeBundle, faviconHref: faviconPath || '', livePath })
+    const wrapped           = wrapDocument({ content, spec: resolvedSpec, serverState, storeState: clientStoreState(resolvedSpec, ctx), storeDef: store || null, timing, extraBody: resolvedExtraBody, extraHead: (dev ? devImportMap(nonce) + '\n  ' : '') + canonicalTag + analyticsTag, nonce, runtimeBundle, faviconHref: faviconPath || '', livePath })
     html              = wrapped.html
     serverTimingValue = wrapped.serverTimingValue
     if (ttl > 0) pageHtmlCache.set(cacheKey, { html }, ttl)
@@ -1777,7 +1778,7 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
   const scriptTags    = (meta.scripts || [])
     .map(src => `  <script src="${escHtml(src)}" defer></script>`)
     .join('\n')
-  const storeScript   = buildStoreScript(spec, ctx.store || null, nonce, livePath)
+  const storeScript   = buildStoreScript(spec, clientStoreState(spec, ctx), nonce, livePath)
   const hydrateScript = buildHydrateScript(spec, store, nonce)
 
   const resolvedExtraBody = typeof extraBody === 'function' ? extraBody(nonce) : extraBody

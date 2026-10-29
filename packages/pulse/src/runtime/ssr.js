@@ -240,7 +240,7 @@ export function renderToNavStream(spec, ctx = {}, resolvedMeta = {}) {
       writeLine({
         type:        'done',
         serverState: exposeState && Object.keys(mergedAll).length > 0 ? mergedAll : undefined,
-        storeState:  exposeState && ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
+        storeState:  exposeState ? (clientStoreState(spec, ctx) || undefined) : undefined,
       })
 
       controller.close()
@@ -272,7 +272,29 @@ export function buildStoreScript(spec, storeState, nonce, livePath = '') {
   if (storeState && Object.keys(storeState).length > 0) {
     return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}window.__PULSE_STORE__=${safeJson(storeState)};window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
   }
-  return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}</script>`
+  // No store data for this page, but the updater must still exist: a client navigation to a page
+  // that does subscribe hands its store state to window.__updatePulseStore__.
+  return `<script nonce="${nonce}">window.__PULSE_NONCE__='${nonce}';${liveFlag}window.__updatePulseStore__=function(s){window.__PULSE_STORE__=Object.assign(window.__PULSE_STORE__||{},s);};</script>`
+}
+
+/**
+ * The part of the resolved global store that goes to the browser for this page: the keys the page
+ * subscribes to (spec.store) and the store's static defaults (store.state). Everything else the
+ * store's server fetchers returned (the signed-in user, tokens, per-request lookups) stays on the
+ * server. Without this every hydrated page carried the whole store, including pages that never
+ * read it, such as the login page.
+ *
+ * @param {object} spec
+ * @param {object} ctx - request context; ctx.store is the resolved store, ctx._storePublicKeys the keys of store.state
+ * @returns {object|null}
+ */
+export function clientStoreState(spec, ctx) {
+  const store = ctx?.store
+  if (!store || !spec?.hydrate) return null
+  const keys = new Set([...(spec.store || []), ...(ctx._storePublicKeys || [])])
+  const out = {}
+  for (const k of keys) if (store[k] !== undefined) out[k] = store[k]
+  return Object.keys(out).length > 0 ? out : null
 }
 
 /**
