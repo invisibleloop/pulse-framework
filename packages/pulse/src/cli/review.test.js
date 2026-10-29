@@ -158,3 +158,31 @@ test('the review shows spec source in a fence the source cannot close', () => {
   const fences = out.match(/^`{4,}js$/gm) || []
   assert.equal(fences.length, 2, `source dumped twice (validation + render error), each in a 4-backtick fence: ${fences.length}`)
 })
+
+import { hasDataEventOnTextInput } from './review.js'
+import { slider } from '../ui/slider.js'
+import { checkbox } from '../ui/checkbox.js'
+import { fileURLToPath, pathToFileURL } from 'node:url'
+
+test('data-event on a text input is flagged; the framework\'s own slider and checkbox are not', () => {
+  assert.equal(hasDataEventOnTextInput('<input name="q" data-event="input:setQuery">'), true, 'no type means text')
+  assert.equal(hasDataEventOnTextInput('<input type="email" data-event="input:x">'), true)
+  assert.equal(hasDataEventOnTextInput('<input type="text">'), false, 'no event, nothing to flag')
+  assert.equal(hasDataEventOnTextInput(slider({ name: 'brightness', label: 'Brightness', event: 'change:setBrightness' })), false, 'slider() puts data-event on a range input')
+  assert.equal(hasDataEventOnTextInput(checkbox({ name: 'agree', label: 'Agree', event: 'change:toggle' })), false)
+  assert.equal(hasDataEventOnTextInput('<input type="range" data-event="a"><input data-event="b">'), true, 'one bad input among fine ones still counts')
+})
+
+test('the review does not report the framework\'s own slider as an error', async () => {
+  const spec = {
+    route: '/s', state: {}, meta: { title: 't', description: 'd', theme: 'light' },
+    view: () => `<main id="main-content">${slider({ name: 'brightness', label: 'Brightness', event: 'change:setBrightness' })}</main>`,
+  }
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-slider-')), 'slider.js')
+  fs.writeFileSync(file, `import { slider } from ${JSON.stringify(pathToFileURL(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../ui/slider.js')).href)}
+export default { route: '/s', state: {}, meta: { title: 't', description: 'd', theme: 'light' }, view: () => '<main id="main-content">' + slider({ name: 'brightness', label: 'Brightness', event: 'change:setBrightness' }) + '</main>' }\n`)
+  const result = await runFullReview(fs.readFileSync(file, 'utf8'), file)
+  const out = formatFullReview(result, { source: fs.readFileSync(file, 'utf8'), file, agentFacing: true })
+  assert.ok(!out.includes('data-event on <input>'), 'the slider must not trigger the focus-loss error')
+  fs.rmSync(path.dirname(file), { recursive: true, force: true })
+})

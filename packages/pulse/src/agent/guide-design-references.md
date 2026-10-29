@@ -66,7 +66,7 @@ When you choose a design direction, tell the user which one you're using and why
 **Palette pattern:** bright bg (coral / mint / lavender) + dark text  
 **Signature moves (use these, not 3-col feature grids):**
 - **Full-colour section blocks** — each section has its own bg colour (yellow stats strip, cyan testimonials, hot-pink CTA). Palette is structure, not accent.
-- **Oversized hero element** — the product's key visual (a game board, an illustration, an icon) fills most of the hero viewport. `phoneFrame` is one option, not the default.
+- **Oversized hero element** — the product's key visual (a game board, an illustration, an icon) fills most of the hero viewport. A phone mockup is one option, not the default.
 - **Scrolling strip** — giant repeated icon-library glyphs, brand marks, or product icons scrolling across the page between sections (raw HTML + CSS `@keyframes` animation, creative override — no dedicated component). Use icons from `src/ui/icons.js`, not emoji — emoji are banned in UI output (not accessible, not theme-aware).
 - **Tilted cards** — testimonial or feature cards at ±2–4° with `card` + CSS `transform: rotate()`
 - **Memphis-style geometric shapes** between sections — raw inline SVG or CSS background shapes (creative override)

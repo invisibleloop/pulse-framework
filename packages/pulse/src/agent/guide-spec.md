@@ -137,19 +137,21 @@ Use a `<form data-action="...">` element with class `u-flex u-flex-col u-gap-4` 
 ```js
 card({ content: `
   <form data-action="submit" class="u-flex u-flex-col u-gap-4">
-    ${fieldset({ legend: 'Your details', content: `
+    <fieldset class="u-flex u-flex-col u-gap-4">
+      <legend class="u-text-sm u-font-semibold">Your details</legend>
       ${grid({ cols: 2, gap: 'md', content: `
         ${input({ name: 'firstName', label: 'First name', required: true })}
         ${input({ name: 'lastName',  label: 'Last name',  required: true })}
       ` })}
       ${input({ name: 'email', label: 'Email', type: 'email', required: true })}
-    ` })}
-    ${fieldset({ legend: 'Message', content: `
+    </fieldset>
+    <fieldset class="u-flex u-flex-col u-gap-4">
+      <legend class="u-text-sm u-font-semibold">Message</legend>
       ${textarea({ name: 'message', label: 'Tell us about your project', rows: 5, required: true })}
-    ` })}
+    </fieldset>
     ${button({ label: 'Send', type: 'submit', variant: 'primary', fullWidth: true })}
   </form>
 ` })
 ```
 
-For simple forms without distinct groups, omit `fieldset` and use `u-flex u-flex-col u-gap-4` on the `<form>` directly.
+There is no `fieldset` component: group related fields with a plain `<fieldset>` and `<legend>` as above. For simple forms without distinct groups, omit it and use `u-flex u-flex-col u-gap-4` on the `<form>` directly.

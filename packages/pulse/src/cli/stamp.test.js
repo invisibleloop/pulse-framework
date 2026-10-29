@@ -147,3 +147,18 @@ test('formatStampResult on success says nothing about resolving when count is ze
   const output = formatStampResult({ stamped: true, refused: false, reason: null, resolvedCount: 0, ts: '123' }, { agentFacing: true })
   assert.doesNotMatch(output, /marked resolved/)
 })
+
+test('full mode without a route is refused: a full verification is about a page, and the stamp must not claim one it has no evidence for', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-stamp-noroute-'))
+  try {
+    const result = writeStamp(root, { mode: 'full' })
+    assert.equal(result.stamped, false)
+    assert.equal(result.refused, true)
+    assert.match(result.reason, /needs the page it verified/)
+    assert.equal(fs.existsSync(path.join(root, '.pulse-verified')), false, 'no stamp file may be written')
+    // quick mode and a bare call (no mode) are unchanged
+    assert.equal(writeStamp(root, { mode: 'quick' }).stamped, true)
+    fs.rmSync(path.join(root, '.pulse-verified'))
+    assert.equal(writeStamp(root, {}).stamped, true)
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})

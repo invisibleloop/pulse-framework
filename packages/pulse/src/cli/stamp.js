@@ -33,6 +33,18 @@ const STAMP_REPORT_WINDOW_MS = 10 * 60 * 1000 // a report older than this wasn't
  *   ts: the stamp's unix-seconds timestamp, when stamped is true (null otherwise)
  */
 export function writeStamp(root, { route, mode } = {}) {
+  // A full verification is about a page. Without a route there is no report to look for, and the
+  // stamp used to be written anyway, with nothing behind it: the one thing the stamp must not be.
+  if (mode === 'full' && !route) {
+    return {
+      stamped: false,
+      refused: true,
+      reason: 'Full verification needs the page it verified: pass route (pulse stamp --full --route </path>). ' +
+        'Use mode "quick" (or omit mode) for a stamp that does not claim a Lighthouse run.',
+      resolvedCount: 0,
+      ts: null,
+    }
+  }
   if (route && mode === 'full') {
     const slug = urlToSlug(route)
     const reportDir = path.join(root, '.pulse', 'reports', slug)

@@ -1031,7 +1031,8 @@ export async function createServer(entries, options = {}) {
     import('../cli/logger.js').then(m => { logRequest = m.request }).catch(() => {})
   }
 
-  const server = http.createServer(async (req, res) => {
+  // A named function so a request can be handled a second time as "not found" (see the catch below).
+  const handleRequest = async (req, res) => {
     req[HSTS_VALUE] = hstsValue
     // The dev server serves source files, a reload trigger and the error journal. A web page the
     // developer visits can reach it through DNS rebinding: the attacker's own domain is made to
@@ -1053,7 +1054,7 @@ export async function createServer(entries, options = {}) {
     // and kill the process.
     let reqUrl = null
     try { reqUrl = new URL(req.url, `http://localhost:${port}`) } catch { /* answered with 400 below */ }
-    res.on('finish', () => {
+    if (!req._pulseNotFound) res.on('finish', () => {   // (once per request, not again for the 404 pass)
       if (logRequest) {
         logRequest({ method: req.method, pathname: reqUrl ? reqUrl.pathname : '(malformed)', status: res.statusCode, ms: Date.now() - reqStart })
       }
@@ -1130,7 +1131,7 @@ export async function createServer(entries, options = {}) {
       }
 
       // Request hook — allows middleware-like behaviour
-      if (onRequest) {
+      if (onRequest && !req._pulseNotFound) {
         const result = onRequest(req, res)
         if (result === false) return
       }
@@ -1235,7 +1236,7 @@ export async function createServer(entries, options = {}) {
       }
 
       // Match route
-      let match          = matchRoute(router, pathname)
+      let match          = req._pulseNotFound ? null : matchRoute(router, pathname)
       let responseStatus = 200
 
       if (!match) {
@@ -1450,9 +1451,18 @@ export async function createServer(entries, options = {}) {
         }
         return
       }
+      // A fetcher or meta function that throws an error with status 404 (the markdown fetcher does
+      // for a file that does not exist) means "this URL has no page", not "the server broke". Answer
+      // it as an unmatched route: the site's own `*` page if it has one, else the default 404.
+      // Only before the response has started, and only once (the second pass skips this).
+      if (err?.status === 404 && !req._pulseNotFound && !res.headersSent && (req.method === 'GET' || req.method === 'HEAD')) {
+        req._pulseNotFound = true
+        return handleRequest(req, res)
+      }
       onError(err, req, res)
     }
-  })
+  }
+  const server = http.createServer(handleRequest)
 
   // ---------------------------------------------------------------------------
   // Connection tracking for graceful shutdown

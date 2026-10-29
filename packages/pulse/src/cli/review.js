@@ -27,6 +27,21 @@ import { fileURLToPath, pathToFileURL } from 'url'
  * @param {string|null} file - absolute path to the spec file, or null (content-only mode)
  * @returns {Promise<{ issues: string[], warnings: string[], confirms: string[] }>}
  */
+/**
+ * Does the rendered HTML bind data-event on a TEXT-entry input? Those lose focus on every keystroke
+ * when the view re-renders. Inputs that commit a value in one go (range, checkbox, radio, file,
+ * colour, date ...) are fine, so the framework's own slider() and checkbox() must not trip this.
+ */
+const TEXT_INPUT_TYPES = new Set(['', 'text', 'search', 'email', 'url', 'tel', 'password', 'number'])
+export function hasDataEventOnTextInput(html) {
+  for (const [tag] of String(html).matchAll(/<input\b[^>]*>/gi)) {
+    if (!/\bdata-event\s*=/i.test(tag)) continue
+    const type = (tag.match(/\btype\s*=\s*["']?([a-z-]+)/i)?.[1] || '').toLowerCase()
+    if (TEXT_INPUT_TYPES.has(type)) return true
+  }
+  return false
+}
+
 export async function runQuickReview(source, file) {
   const issues = []
   const warnings = []
@@ -45,7 +60,7 @@ export async function runQuickReview(source, file) {
   if (renderedHtml) {
     if (!/<main[^>]*id=["']?main-content/.test(renderedHtml))
       issues.push('✗ Missing `<main id="main-content">` landmark')
-    if (/<input[^>]*data-event/.test(renderedHtml))
+    if (hasDataEventOnTextInput(renderedHtml))
       issues.push('✗ `data-event` on `<input>` — destroys focus on every keystroke, use FormData in onStart instead')
     if (/(className|htmlFor|onClick)=/.test(renderedHtml))
       issues.push('✗ React patterns found (className / htmlFor / onClick) — use class, for, data-event')
@@ -206,7 +221,7 @@ export async function runFullReview(source, file) {
     const posTabindex = /tabindex=["']?([1-9]\d*)/.test(renderedHtml)
     autoChecks.push(posTabindex ? '✗ **Positive tabindex found** — remove tabindex > 0, reorder DOM instead' : '✓ No positive tabindex')
 
-    const dataEventInput = /<input[^>]*data-event/.test(renderedHtml)
+    const dataEventInput = hasDataEventOnTextInput(renderedHtml)
     autoChecks.push(dataEventInput ? '✗ **data-event on <input>** — this destroys focus on every keystroke' : '✓ No data-event on text inputs')
 
     const reactPatterns = /(className|htmlFor|onClick)=/.test(renderedHtml)

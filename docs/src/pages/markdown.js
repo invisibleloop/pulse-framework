@@ -77,13 +77,8 @@ export default {
       \${prose({ content: post.html })}
     </main>
   \`,
-  onViewError: (err) => \`
-    <main id="main-content">
-      <p>Post not found.</p>
-    </main>
-  \`,
 }`, 'js'))}
-      ${callout('note', 'If the file does not exist, the fetcher throws with <code>{ status: 404 }</code>. Define <code>onViewError</code> on dynamic-route pages to render a friendly not-found message instead of a 500.')}
+      ${callout('note', 'If the file does not exist, the fetcher throws an error with <code>status: 404</code> and the server answers with a <strong>404</strong>: your <code>*</code> page if you have one, otherwise the default. No <code>onViewError</code> is needed for that (it is for a view that throws). Call <code>md()</code> in <code>meta</code> as above: in streaming mode, the default, a 404 can only be set from <code>meta</code> or <code>guard</code>, because the response has already started when server fetchers run.')}
 
       ${section('parseMd', 'parseMd()')}
       <p>For cases where you already have a markdown string (from a database, API, or generated content), use <code>parseMd</code> directly instead of the file helper:</p>

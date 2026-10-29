@@ -489,11 +489,10 @@ export default {
       ${prose({ content: post.html })}
     </main>
   `,
-  onViewError: () => `<main id="main-content"><p>Post not found.</p></main>`,
 }
 ```
 
-Always add `onViewError` on dynamic markdown routes — if the file does not exist the fetcher throws `{ status: 404 }`.
+A missing file makes the fetcher throw an error with `status: 404`, and the server answers that with a **404**: your `*` page if you have one, otherwise the default. You do not need `onViewError` for it (that is for a view that throws). Call `md()` in `meta` as above: the status is only still changeable before the response starts, so in streaming mode (the default) a 404 thrown from a plain `server` fetcher arrives too late; `meta` functions and `guard` run first.
 
 ### `parseMd(source)` — string parser
 

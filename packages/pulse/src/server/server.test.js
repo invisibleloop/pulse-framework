@@ -3416,6 +3416,59 @@ await test('over HTTPS the CSRF cookie is __Host- prefixed, and a plain pulse_cs
 
 // ---------------------------------------------------------------------------
 
+console.log('\nA thrown 404 is a 404, not a 500\n')
+
+await test('a missing markdown file (or any fetcher/meta that throws status 404) answers 404 with the site\'s * page, and onRequest runs once', async () => {
+  const { md } = await import('../md/index.js')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-md404-'))
+  fs.mkdirSync(path.join(dir, 'content'))
+  fs.writeFileSync(path.join(dir, 'content', 'hello.md'), '---\ntitle: Hello\n---\nbody text')
+  const post = md(path.join(dir, 'content', ':slug.md'))
+  const mkdMeta = { description: 'd', theme: 'light' }
+  const blog = {
+    route: '/blog/:slug',
+    meta: { ...mkdMeta, title: async (c) => (await post(c)).frontmatter.title },
+    server: { post },
+    view: (_s, { post }) => `<main>${post.html}</main>`,
+    onViewError: () => '<main>view fallback</main>',
+  }
+  const broken = { route: '/broken', meta: { title: 'b', ...mkdMeta }, server: { x: async () => { throw new Error('db down') } }, view: () => '<main>x</main>' }
+  const gone = { route: '/gone', meta: { title: 'g', ...mkdMeta }, server: { x: async () => { throw Object.assign(new Error('no such thing'), { status: 404 }) } }, view: () => '<main>x</main>' }
+  const goneInMeta = { route: '/gone-meta', meta: { ...mkdMeta, title: async () => { throw Object.assign(new Error('no such thing'), { status: 404 }) } }, view: () => '<main>x</main>' }
+  const notFound = { route: '*', meta: { title: 'Not here', ...mkdMeta }, view: () => '<main>custom not found page</main>' }
+  try {
+    for (const stream of [false, true]) {
+      let hookCalls = 0
+      for (const specs of [[blog, broken, gone, goneInMeta, notFound], [blog, broken, gone, goneInMeta]]) {
+        const custom = specs.includes(notFound)
+        await withServer(specs, { stream, quiet: true, onRequest: () => { hookCalls++ } }, async (port) => {
+          const label = `stream:${stream} custom404:${custom}`
+          assert((await get(port, '/blog/hello')).status === 200, `${label}: an existing file still renders`)
+          hookCalls = 0
+          const missing = await get(port, '/blog/nope')
+          assert(missing.status === 404, `${label}: a missing file is 404, got ${missing.status}`)
+          assert(hookCalls === 1, `${label}: onRequest must run once for the request, ran ${hookCalls}`)
+          assert(custom ? missing.body.includes('custom not found page') : missing.body.includes('404'), `${label}: wrong page: ${missing.body.slice(0, 120)}`)
+          assert(!missing.body.includes('view fallback'), `${label}: onViewError is not for a missing page`)
+          assert((await get(port, '/gone-meta')).status === 404, `${label}: a meta function that throws status 404 is a 404`)
+          // A fetcher's failure is only a 404 before the response starts. Streaming sends the 200 and the
+          // head first, so there it cannot be changed; it must not crash the server either.
+          const goneFetcher = await get(port, '/gone')
+          if (!stream) assert(goneFetcher.status === 404, `${label}: a fetcher that throws status 404 is a 404 when not streaming, got ${goneFetcher.status}`)
+          else assert(goneFetcher.status === 200 || goneFetcher.status === 404, `${label}: streamed fetcher failure: ${goneFetcher.status}`)
+          const brokenRes = await get(port, '/broken')
+          if (!stream) assert(brokenRes.status === 500, `${label}: other errors are still 500, got ${brokenRes.status}`)
+          else assert(brokenRes.status !== 404, `${label}: an ordinary error must not become a 404, got ${brokenRes.status}`)
+          const nav = await request(port, 'GET', '/blog/nope', { 'X-Pulse-Navigate': 'true' })
+          assert(nav.status === 404, `${label}: a navigation request gets 404 too, got ${nav.status}`)
+        })
+      }
+    }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)
