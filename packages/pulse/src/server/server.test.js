@@ -3296,6 +3296,61 @@ await test('safeRedirect used the documented way keeps ?next= on the site', asyn
 
 // ---------------------------------------------------------------------------
 
+console.log('\nLive channel limits, forwarded headers\n')
+
+await test('the live channel is behind onRequest, and refuses connections past maxClients', async () => {
+  const port = nextPort++
+  let allow = false
+  const { server } = await createServer([helloSpec], {
+    port, quiet: true, live: { maxClients: 2 },
+    onRequest: (req, res) => {
+      if (req.url.startsWith('/__pulse/live') && !allow) { res.writeHead(401); res.end('no'); return false }
+    },
+  })
+  try {
+    assert((await openSse(port, '/__pulse/live')).status === 401, 'onRequest must be able to block the live channel')
+    allow = true
+    const a = await openSse(port, '/__pulse/live')
+    const b = await openSse(port, '/__pulse/live')
+    const c = await openSse(port, '/__pulse/live')
+    assert(a.status === 200 && b.status === 200, 'first two connect')
+    assert(c.status === 503 && c.headers['retry-after'], `third should be 503, got ${c.status}`)
+    a.destroy(); await wait(100)
+    const d = await openSse(port, '/__pulse/live')
+    assert(d.status === 200, 'a slot frees when a client disconnects')
+    b.destroy(); d.destroy()
+  } finally {
+    server.closeAllConnections?.()
+    await new Promise(r => server.close(r))
+  }
+})
+
+await test('forwarded host/proto are used when plausible and ignored when not (sitemap, robots, canonical)', async () => {
+  const page = { route: '/p', meta: { title: 'P', description: 'd', theme: 'dark' }, view: () => '<main>p</main>' }
+  await withServer([page], { stream: false, sitemap: true, quiet: true }, async (port) => {
+    const loc = async (headers, path = '/sitemap.xml') => {
+      const r = await getWith(port, path, headers)
+      return { r, origin: r.body.match(/(?:<loc>|Sitemap: )(https?:\/\/[^/<\s]+)/)?.[1] }
+    }
+    assert((await loc({ host: 'a.test', 'x-forwarded-host': 'shop.example.com', 'x-forwarded-proto': 'https' })).origin === 'https://shop.example.com', 'plausible forwarded values used')
+    assert((await loc({ host: 'a.test', 'x-forwarded-host': 'one.example.com, two.example.com' })).origin === 'http://one.example.com', 'a list yields its first entry')
+    for (const bad of ['evil.com"><script>1</script>', 'a b', 'x/y', '</loc><loc>http://evil', 'user@evil.com', '']) {
+      const { origin } = await loc({ host: 'real.test', 'x-forwarded-host': bad })
+      assert(origin === 'http://real.test', `${JSON.stringify(bad)} should fall back to Host, got ${origin}`)
+    }
+    assert((await loc({ host: 'real.test', 'x-forwarded-proto': 'javascript' })).origin === 'http://real.test', 'unknown proto → http')
+    const { r } = await loc({ host: 'real.test' })
+    assert(/X-Forwarded-Host/i.test(r.headers.vary), `sitemap must Vary on the forwarded headers: ${r.headers.vary}`)
+    const robots = await loc({ host: 'real.test', 'x-forwarded-host': 'bad host' }, '/robots.txt')
+    assert(robots.r.body.includes('Sitemap: http://real.test/sitemap.xml'), robots.r.body)
+    const html = await getWith(port, '/p', { host: 'real.test', 'x-forwarded-host': 'a"b' })
+    assert(html.body.includes('href="http://real.test/p"'), 'canonical falls back too')
+    assert(/X-Forwarded-Host/i.test(html.headers.vary), `HTML must Vary on the forwarded headers: ${html.headers.vary}`)
+  })
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)

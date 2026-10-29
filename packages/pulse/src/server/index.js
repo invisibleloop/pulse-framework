@@ -50,6 +50,22 @@ const SECURITY_HEADERS = {
  * Detects HTTPS via the x-forwarded-proto header (CDN/proxy) or the socket.
  */
 /**
+ * The public origin this request was addressed to, for canonical URLs, og: tags and the sitemap.
+ * Taken from x-forwarded-proto / x-forwarded-host (behind a proxy) or Host. Those are request
+ * headers, so a value that is not a plausible scheme or host:port is ignored rather than echoed:
+ * a list ("a.com, b.com") yields its first entry, and anything else falls back to Host, then to
+ * localhost. Pin `origin` in createServer to take the headers out of it entirely.
+ */
+const HOST_RE = /^(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?|\[[0-9a-f:.]+\])(?::\d{1,5})?$/i
+function requestOrigin(req, port) {
+  const first = v => String(Array.isArray(v) ? v[0] : (v ?? '')).split(',')[0].trim()
+  const proto = first(req.headers['x-forwarded-proto']).toLowerCase()
+  const fwd   = first(req.headers['x-forwarded-host'])
+  const host  = HOST_RE.test(fwd) ? fwd : HOST_RE.test(first(req.headers.host)) ? first(req.headers.host) : `localhost:${port}`
+  return `${proto === 'https' ? 'https' : 'http'}://${host}`
+}
+
+/**
  * Force a path to a single leading slash before it goes into a Location header.
  * Dot-segment normalisation can leave a pathname like "//evil.com/x" (from
  * "/.//evil.com/x"), and "Location: //evil.com/x" is a protocol-relative URL —
@@ -955,6 +971,7 @@ export async function createServer(entries, options = {}) {
   const analyticsTag = analyticsSrc ? `<script defer src="${escHtml(analyticsSrc)}"></script>` : ''
   const livePath    = live ? ((typeof live === 'object' && live.path) || '/__pulse/live') : null
   const liveClients = new Set()
+  const liveMaxClients = (typeof live === 'object' && Number.isInteger(live.maxClients) && live.maxClients > 0) ? live.maxClients : 5000
   const liveHeartbeat = livePath
     ? setInterval(() => {
         for (const res of liveClients) { try { res.write(':hb\n\n') } catch {} }
@@ -1063,22 +1080,6 @@ export async function createServer(entries, options = {}) {
         return
       }
 
-      // Live store push — SSE channel. Clients (the runtime's initLiveStore)
-      // connect here; pushStore() broadcasts store patches down the stream.
-      if (livePath && pathname === livePath && req.method === 'GET') {
-        res.writeHead(200, {
-          'Content-Type':      'text/event-stream',
-          'Cache-Control':     'no-store',
-          'Connection':        'keep-alive',
-          'X-Accel-Buffering': 'no',
-          ...SECURITY_HEADERS,
-        })
-        res.write(':connected\n\n')
-        liveClients.add(res)
-        req.on('close', () => liveClients.delete(res))
-        return
-      }
-
       // Client-side error reporting — dev only. The runtime POSTs view/action
       // failures here so they land in the same journal as server-side errors;
       // pulse_diagnose reads one file regardless of where the error occurred.
@@ -1134,6 +1135,29 @@ export async function createServer(entries, options = {}) {
         if (result === false) return
       }
 
+      // Live store push — SSE channel. Clients (the runtime's initLiveStore)
+      // connect here; pushStore() broadcasts store patches down the stream.
+      // After onRequest, so an auth or blocking hook covers it like any other route. Every open
+      // stream is a held socket, so the number is capped (live.maxClients, default 5000).
+      if (livePath && pathname === livePath && req.method === 'GET') {
+        if (liveClients.size >= liveMaxClients) {
+          res.writeHead(503, { 'Content-Type': 'text/plain', 'Retry-After': '30', 'Cache-Control': 'no-store', ...SECURITY_HEADERS })
+          res.end('Too many live connections')
+          return
+        }
+        res.writeHead(200, {
+          'Content-Type':      'text/event-stream',
+          'Cache-Control':     'no-store',
+          'Connection':        'keep-alive',
+          'X-Accel-Buffering': 'no',
+          ...SECURITY_HEADERS,
+        })
+        res.write(':connected\n\n')
+        liveClients.add(res)
+        req.on('close', () => liveClients.delete(res))
+        return
+      }
+
       // Static file serving — GET/HEAD only
       if (staticDir && (req.method === 'GET' || req.method === 'HEAD')) {
         const served = serveStatic(req, res, staticDir, dev, staticCache)
@@ -1144,8 +1168,7 @@ export async function createServer(entries, options = {}) {
       // physical file in staticDir always wins over the generated one.
       if (sitemapEnabled && (req.method === 'GET' || req.method === 'HEAD') &&
           (pathname === '/sitemap.xml' || (pathname === '/robots.txt' && robots !== false))) {
-        const origin = sitemapOrigin ||
-          `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`}`
+        const origin = sitemapOrigin || requestOrigin(req, port)
 
         let body, contentType
         if (pathname === '/robots.txt') {
@@ -1164,7 +1187,7 @@ export async function createServer(entries, options = {}) {
         const headers  = {
           'Content-Type':  contentType,
           'Cache-Control': dev ? 'no-store' : 'public, max-age=3600',
-          'Vary':          'Accept-Encoding',
+          'Vary':          'Accept-Encoding, X-Forwarded-Host, X-Forwarded-Proto',
           ...SECURITY_HEADERS, ...httpsHeaders(req),
         }
         if (encoding) headers['Content-Encoding'] = encoding
@@ -1376,12 +1399,11 @@ export async function createServer(entries, options = {}) {
       // not pin or validate these headers, an attacker can influence the canonical
       // URL (SEO/canonical poisoning). Trust x-forwarded-* only behind a proxy you
       // control; set spec.meta.canonical to a fixed string to opt out entirely.
-      const proto        = req.headers['x-forwarded-proto'] || 'http'
-      const host         = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${port}`
+      const origin       = requestOrigin(req, port)
       const canonicalPath = trailingSlash === 'add' && pathname !== '/'
         ? (pathname.endsWith('/') ? pathname : pathname + '/')
         : (pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname)
-      const canonicalBase = pinnedOrigin ? `${pinnedOrigin}${canonicalPath}` : `${proto}://${host}${canonicalPath}`
+      const canonicalBase = pinnedOrigin ? `${pinnedOrigin}${canonicalPath}` : `${origin}${canonicalPath}`
 
       // Raw content spec (RSS, sitemap, JSON API, webhooks) — bypass HTML pipeline
       if (spec.contentType) {
@@ -1650,7 +1672,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     'Content-Type':              'text/html; charset=utf-8',
     'Cache-Control':             buildCacheControl(spec, dev, defaultCache, status, ctx.method, isPersonalised(spec, ctx)),
     'Content-Security-Policy':   fromCache ? buildCachedCsp(csp) : buildCsp(nonce, csp),
-    'Vary':                      'Accept-Encoding, X-Pulse-Navigate',
+    'Vary':                      'Accept-Encoding, X-Pulse-Navigate, X-Forwarded-Host, X-Forwarded-Proto',
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
   })
@@ -1678,7 +1700,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
       'Content-Type':            'text/html; charset=utf-8',
       'Cache-Control':           buildCacheControl(spec, dev, defaultCache, 200, 'GET', isPersonalised(spec, ctx)),
       'Content-Security-Policy': buildCachedCsp(csp),
-      'Vary':                    'Accept-Encoding, X-Pulse-Navigate',
+      'Vary':                    'Accept-Encoding, X-Pulse-Navigate, X-Forwarded-Host, X-Forwarded-Proto',
       ...SECURITY_HEADERS,
       ...httpsHeaders(req),
     })
@@ -1777,7 +1799,7 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
     'Transfer-Encoding':         'chunked',
     'Cache-Control':             buildCacheControl(spec, dev, defaultCache, 200, 'GET', isPersonalised(spec, ctx)),
     'Content-Security-Policy':   buildCsp(nonce, csp),
-    'Vary':                      'Accept-Encoding, X-Pulse-Navigate',
+    'Vary':                      'Accept-Encoding, X-Pulse-Navigate, X-Forwarded-Host, X-Forwarded-Proto',
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
   })

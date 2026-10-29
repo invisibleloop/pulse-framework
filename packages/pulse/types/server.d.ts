@@ -146,10 +146,11 @@ export interface ServerOptions {
    * Enable the SSE store-push channel. createServer's return value gains a
    * working pushStore(partial) that broadcasts store patches to all connected
    * clients; pages subscribed via spec.store re-render immediately. Pass
-   * { path } to move the endpoint (default '/__pulse/live'). The channel is a
+   * { path, maxClients } to move the endpoint (default '/__pulse/live') or change the cap on open
+   * connections (default 5000; more get 503). onRequest runs before it. The channel is a
    * broadcast — push SHARED data only (stock, announcements), never per-user data.
    */
-  live?: boolean | { path?: string }
+  live?: boolean | { path?: string; maxClients?: number }
 
   /**
    * Extra CSP sources to merge into the framework's default Content-Security-Policy.
