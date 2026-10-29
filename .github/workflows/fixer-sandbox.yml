@@ -1,0 +1,55 @@
+name: Fixer sandbox
+
+# Proves the agent fixer's isolation on a real hosted runner, without a real API key, a label or
+# a model call: the sandbox user must not be able to use sudo, read other processes, or find a key
+# (a random dummy one here) anywhere it can read. Runs when the fixer changes, and weekly, because
+# the runner image can change under us (a new default group, a different sudoers file, a service
+# that puts secrets somewhere readable) and the real fixer only checks this when it runs.
+
+on:
+  pull_request:
+    paths:
+      - '.github/fixer/**'
+      - '.github/workflows/agent-fix.yml'
+      - '.github/workflows/fixer-sandbox.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.github/fixer/**'
+      - '.github/workflows/agent-fix.yml'
+      - '.github/workflows/fixer-sandbox.yml'
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      # The same steps agent-fix.yml runs before the model, with a throwaway key.
+      - name: Build the sandbox, start the proxy, run the self-test
+        run: |
+          export ANTHROPIC_API_KEY="sk-ant-test-$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+          export PROXY_PORT=8787
+          bash .github/fixer/sandbox-setup.sh "$GITHUB_WORKSPACE"
+          bash .github/fixer/start-proxy.sh
+          SELFTEST_KEY="$ANTHROPIC_API_KEY" bash .github/fixer/selftest.sh
+
+      # The self-test must also be able to FAIL: each of these breaks the setup in one way.
+      - name: The self-test catches a broken sandbox
+        run: bash .github/fixer/test-sandbox.sh
+
+      - name: verify.sh reaches the right outcome, and model-written code gets no privileges
+        run: bash .github/fixer/test-verify.sh
