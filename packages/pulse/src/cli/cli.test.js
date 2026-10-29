@@ -291,6 +291,13 @@ test('unknown pulse.config.js keys are reported with a suggestion (a typo used t
   }
 })
 
+test('the Claude session config lives in a private temp directory, and Copilot cleans up on SIGHUP', () => {
+  const src = readFileSync(path.join(__dirname, 'index.js'), 'utf8')
+  assert.match(src, /mkdtempSync\(path\.join\(os\.tmpdir\(\), 'pulse-mcp-'\)\)/, 'an unpredictable directory, not pulse-mcp-<timestamp>.json in the shared temp dir')
+  assert.ok(!/pulse-mcp-\$\{Date\.now\(\)\}/.test(src), 'the guessable name is gone')
+  assert.match(src, /process\.on\('SIGHUP',\s+cleanup\)/, 'closing the terminal must restore the Copilot config')
+})
+
 test('a CLI command prints the unknown-key warning once and carries on', async () => {
   const { spawnSync } = await import('child_process')
   const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import('fs')

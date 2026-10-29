@@ -189,8 +189,8 @@ await test('resolves multiple server fetchers in parallel', async () => {
     route: '/multi',
     state: {},
     server: {
-      a: async () => { await new Promise(r => setTimeout(r, 20)); return 'A' },
-      b: async () => { await new Promise(r => setTimeout(r, 20)); return 'B' }
+      a: async () => { await new Promise(r => setTimeout(r, 100)); return 'A' },
+      b: async () => { await new Promise(r => setTimeout(r, 100)); return 'B' }
     },
     view: (s, server) => `${server.a}${server.b}`
   }
@@ -200,8 +200,9 @@ await test('resolves multiple server fetchers in parallel', async () => {
   const elapsed = Date.now() - t0
 
   assert(html === 'AB', `Got: ${html}`)
-  // Parallel: should be ~20ms, not ~40ms
-  assert(elapsed < 35, `Expected parallel resolution ~20ms, took ${elapsed}ms`)
+  // Parallel: ~100ms, not ~200ms. The gap is wide on purpose: timers on a loaded Windows runner
+  // overshoot by tens of milliseconds, which a 20ms-vs-35ms bound could not absorb.
+  assert(elapsed < 170, `Expected parallel resolution ~100ms, took ${elapsed}ms`)
 })
 
 await test('renders segmented view in order', async () => {
