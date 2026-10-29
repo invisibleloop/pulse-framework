@@ -30,14 +30,14 @@
  * @param {string}  opts.class
  */
 
-import { escHtml as e } from '../html.js'
+import { escHtml as e, safeUrl } from '../html.js'
 import { iconMenu, iconX, iconChevronDown } from './icons.js'
 
 let _navId = 0
 
 function megaItem({ label = '', href = '', description = '' }) {
   return `<div class="ui-nav-mega-item">
-    <a href="${e(href)}" class="ui-nav-mega-item-label">${e(label)}</a>
+    <a href="${e(safeUrl(href))}" class="ui-nav-mega-item-label">${e(label)}</a>
     ${description ? `<span class="ui-nav-mega-item-desc">${e(description)}</span>` : ''}
   </div>`
 }
@@ -65,7 +65,7 @@ function renderLink(link, navId, idx) {
   </div>`
   }
   const current = link.current ? ' aria-current="page"' : ''
-  return `<a href="${e(link.href || '')}" class="ui-nav-link"${current}>${e(link.label || '')}</a>`
+  return `<a href="${e(safeUrl(link.href || ''))}" class="ui-nav-link"${current}>${e(link.label || '')}</a>`
 }
 
 function renderMobileLink(link) {
@@ -74,7 +74,7 @@ function renderMobileLink(link) {
     return `<p class="ui-nav-mobile-section">${e(link.label || '')}</p>` + items.map(item => megaItem(item)).join('')
   }
   const current = link.current ? ' aria-current="page"' : ''
-  return `<a href="${e(link.href || '')}" class="ui-nav-link"${current}>${e(link.label || '')}</a>`
+  return `<a href="${e(safeUrl(link.href || ''))}" class="ui-nav-link"${current}>${e(link.label || '')}</a>`
 }
 
 export function nav({
@@ -98,7 +98,7 @@ export function nav({
   const bgStyle = styles ? ` style="${styles}"` : ''
 
   const linksHtml       = links.map((l, i) => renderLink(l, id, i)).join('')
-  const utilityHtml     = utilityLinks.map(l => `<a href="${e(l.href || '')}" class="ui-nav-link"${l.current ? ' aria-current="page"' : ''}>${e(l.label || '')}</a>`).join('')
+  const utilityHtml     = utilityLinks.map(l => `<a href="${e(safeUrl(l.href || ''))}" class="ui-nav-link"${l.current ? ' aria-current="page"' : ''}>${e(l.label || '')}</a>`).join('')
   const mobileLinksHtml = [...links, ...utilityLinks].map(renderMobileLink).join('')
 
   const burgerHtml = (links.length || utilityLinks.length) ? `
@@ -120,7 +120,7 @@ export function nav({
 
   return `<header class="${e(classes)}"${bgStyle}>
   <div class="ui-nav-inner">
-    <a href="${e(logoHref)}" class="ui-nav-logo">${logo}</a>
+    <a href="${e(safeUrl(logoHref))}" class="ui-nav-logo">${logo}</a>
     ${navContent}${burgerHtml}
   </div>${mobileMenuHtml}
 </header>`

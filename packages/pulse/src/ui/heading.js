@@ -31,14 +31,14 @@ export function heading({
   const tag      = `h${Math.min(Math.max(Math.floor(level), 1), 6)}`
   const sizeKey  = size || LEVEL_SIZE[level] || 'base'
   const weight   = level <= 3 ? 'bold' : 'semibold'
-  const colorCls = color !== 'default' ? ` u-text-${color}` : ''
+  const colorCls = color !== 'default' ? ` u-text-${e(color)}` : ''
   const classes  = [
-    `u-text-${sizeKey}`,
+    `u-text-${e(sizeKey)}`,
     `u-font-${weight}`,
     'u-leading-tight',
     colorCls,
     balance ? 'u-text-balance' : '',
-    cls,
+    e(cls),
   ].filter(Boolean).join(' ')
 
   return `<${tag} class="${classes}">${e(text)}</${tag}>`

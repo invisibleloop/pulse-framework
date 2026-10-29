@@ -18,7 +18,7 @@
  * @param {object}  opts.attrs     - Extra HTML attributes (key→value) for <button> only
  */
 
-import { escHtml as e } from '../html.js'
+import { escHtml as e, safeUrl } from '../html.js'
 
 const VARIANTS = new Set(['primary', 'secondary', 'ghost', 'ghost-light', 'danger'])
 const SIZES    = new Set(['sm', 'md', 'lg'])
@@ -65,7 +65,7 @@ export function button({
   ].join('')
 
   if (href) {
-    return `<a href="${e(href)}" class="${e(classes)}"${disabled ? ' aria-disabled="true" tabindex="-1"' : ''}>${inner}</a>`
+    return `<a href="${e(safeUrl(href))}" class="${e(classes)}"${disabled ? ' aria-disabled="true" tabindex="-1"' : ''}>${inner}</a>`
   }
 
   const attrsStr = Object.entries(attrs)

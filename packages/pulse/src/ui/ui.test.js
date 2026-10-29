@@ -9,6 +9,8 @@ import { test }   from 'node:test'
 import assert     from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { button }      from './button.js'
+import { safeUrl }     from '../html.js'
+import * as ui         from './index.js'
 import { badge }       from './badge.js'
 import { card }        from './card.js'
 import { input }       from './input.js'
@@ -1179,4 +1181,46 @@ test('pulse-ui.css hides the injected .pulse-skip-link until it is focused', () 
   // display:none / visibility:hidden would make it unreachable by keyboard.
   assert.doesNotMatch(base, /display:\s*none|visibility:\s*hidden/)
   assert.doesNotMatch(focus, /display:\s*none|visibility:\s*hidden|left:\s*-/)
+})
+
+// ---------------------------------------------------------------------------
+// Untrusted values: URL schemes and attribute breakout
+// ---------------------------------------------------------------------------
+
+test('safeUrl keeps relative, http(s), mailto and tel; replaces every other scheme', () => {
+  for (const ok of ['/a', 'a/b', '?q=1', '#top', '//cdn.example.com/x', 'https://x.com', 'HTTP://x.com', 'mailto:a@b.c', 'tel:+1', '/a:b']) {
+    assert.equal(safeUrl(ok), ok)
+  }
+  for (const bad of ['javascript:alert(1)', 'JaVaScRiPt:1', ' javascript:1', 'java\tscript:1', 'java\nscript:1', '\u0000javascript:1', 'vbscript:1', 'data:text/html,<script>1</script>', 'data:image/png;base64,AA']) {
+    assert.equal(safeUrl(bad), '#', JSON.stringify(bad))
+  }
+  assert.equal(safeUrl('data:image/png;base64,AA', { image: true }), 'data:image/png;base64,AA')
+  assert.equal(safeUrl('data:text/html;base64,AA', { image: true }), '#')
+  assert.equal(safeUrl(undefined), '')
+})
+
+test('no component links to a javascript: URL', () => {
+  const J = 'javascript:alert(1)'
+  const out = [
+    ui.button({ label: 'x', href: J }),
+    ui.appBadge({ href: J, store: 'apple' }),
+    ui.nav({ logo: 'x', logoHref: J, links: [{ label: 'a', href: J }], utilityLinks: [{ label: 'b', href: J }] }),
+    ui.footer({ links: [{ label: 'a', href: J }], logoHref: J }),
+    ui.footer({ columns: [{ title: 't', links: [{ label: 'a', href: J }] }] }),
+    ui.breadcrumbs({ items: [{ label: 'a', href: J }, { label: 'b' }] }),
+    ui.avatar({ src: J, alt: 'a' }),
+    ui.uiImage({ src: J, alt: 'a', width: 1, height: 1 }),
+  ]
+  out.forEach((html, i) => assert.ok(!/javascript:/i.test(html), `component ${i} kept the URL: ${html.slice(0, 120)}`))
+  assert.ok(ui.button({ label: 'x', href: '/ok' }).includes('href="/ok"'), 'normal hrefs unchanged')
+})
+
+test('heading and prose class/size/color cannot break out of the attribute', () => {
+  const P = '" onmouseover=PWN x="'
+  for (const html of [
+    ui.heading({ text: 't', class: P }), ui.heading({ text: 't', size: P }), ui.heading({ text: 't', color: P }),
+    ui.prose({ content: 'x', class: P }), ui.prose({ content: 'x', size: P }),
+  ]) {
+    assert.ok(!/<[a-z0-9]+[^>]*"\s+onmouseover=/.test(html) && html.includes('&quot; onmouseover'), html)
+  }
 })

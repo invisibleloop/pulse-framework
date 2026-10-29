@@ -172,7 +172,7 @@ Image galleries, photo grids, logo/trust marquees, and timelines have no dedicat
 | Component | Key props |
 |-----------|-----------|
 | `heading` | `level` (1–6), `text`, `size` (xs–4xl, overrides level default), `color` (default/muted/accent), `balance` (true — prevents orphaned words) |
-| `prose` | `content` (raw HTML — not escaped), `size` (sm/base/lg) — for CMS/markdown content you don't control |
+| `prose` | `content` (raw HTML — not escaped), `size` (sm/base/lg) — for markdown you rendered yourself with `parseMd` or other trusted server-side HTML; never user input (sanitise CMS HTML first) |
 
 **Never write raw `<h1>`–`<h6>` without styling.** Use `heading()` instead. *(Mode A only — in a creative override, raw headings styled directly with utility classes or custom CSS are correct. The `heading()` component adds wrapper markup that can fight custom layouts.)* There is no dedicated list component — write `<ul>`/`<ol>` directly, styled with utility classes or `app.css`.
 

@@ -29,7 +29,7 @@
  * @param {string} opts.class
  */
 
-import { escHtml as e } from '../html.js'
+import { escHtml as e, safeUrl } from '../html.js'
 
 export function footer({
   logo       = '',
@@ -66,12 +66,12 @@ export function footer({
   // Simple layout
   if (!isRich) {
     const linksHtml = links.map(({ label = '', href = '' }) =>
-      `<a href="${e(href)}" class="ui-footer-link">${e(label)}</a>`
+      `<a href="${e(safeUrl(href))}" class="ui-footer-link">${e(label)}</a>`
     ).join('')
 
     return `<footer class="${e(classes)}"${styleAttr}>
   <div class="ui-footer-inner">
-    ${logo  ? `<a href="${e(logoHref)}" class="ui-footer-logo">${logo}</a>` : ''}
+    ${logo  ? `<a href="${e(safeUrl(logoHref))}" class="ui-footer-logo">${logo}</a>` : ''}
     ${links.length ? `<nav class="ui-footer-links" aria-label="Footer navigation">${linksHtml}</nav>` : ''}
     ${legal ? `<p class="ui-footer-legal">${e(legal)}</p>` : ''}
   </div>
@@ -83,17 +83,17 @@ export function footer({
     <div class="ui-footer-col">
       ${title ? `<p class="ui-footer-col-title">${e(title)}</p>` : ''}
       <ul class="ui-footer-col-links" role="list">
-        ${cols.map(({ label = '', href = '' }) => `<li><a href="${e(href)}">${e(label)}</a></li>`).join('')}
+        ${cols.map(({ label = '', href = '' }) => `<li><a href="${e(safeUrl(href))}">${e(label)}</a></li>`).join('')}
       </ul>
     </div>`).join('')
 
   const legalLinks = links.map(({ label = '', href = '' }) =>
-    `<a href="${e(href)}">${e(label)}</a>`
+    `<a href="${e(safeUrl(href))}">${e(label)}</a>`
   ).join('')
 
   return `<footer class="${e(classes)}"${styleAttr}>
   ${logo || subscribe ? `<div class="ui-footer-top">
-    ${logo ? `<a href="${e(logoHref)}" class="ui-footer-logo">${logo}</a>` : ''}
+    ${logo ? `<a href="${e(safeUrl(logoHref))}" class="ui-footer-logo">${logo}</a>` : ''}
     ${subscribe ? `<div class="ui-footer-subscribe">${subscribe}</div>` : ''}
   </div>` : ''}
   ${columns.length ? `<div class="ui-footer-columns">${columnsHtml}

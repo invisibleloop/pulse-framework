@@ -13,7 +13,7 @@
  * @param {string} opts.class
  */
 
-import { escHtml as e } from '../html.js'
+import { escHtml as e, safeUrl } from '../html.js'
 
 const SIZES = new Set(['sm', 'md', 'lg', 'xl'])
 
@@ -39,7 +39,7 @@ export function avatar({
   const classes = ['ui-avatar', `ui-avatar--${size}`, cls].filter(Boolean).join(' ')
 
   if (src) {
-    return `<img src="${e(src)}" alt="${e(alt)}" class="${e(classes)}" width="40" height="40" loading="lazy" decoding="async">`
+    return `<img src="${e(safeUrl(src, { image: true }))}" alt="${e(alt)}" class="${e(classes)}" width="40" height="40" loading="lazy" decoding="async">`
   }
 
   const display = initials || deriveInitials(alt)

@@ -801,7 +801,7 @@ export interface ProseProps {
   /** Extra classes on the wrapper */
   class?: string
 }
-/** Pulse UI — Prose Typography wrapper for rich text content: CMS output, markdown-rendered HTML, blog posts, article bodies, legal text, etc. Styles all descendant elements (h1–h6, p, ul, ol, li, a, blockquote, code, pre, table, hr, img) without requiring classes on individual elements. Use this any time you're outputting HTML you don't control. */
+/** Pulse UI — Prose Typography wrapper for rich text content: CMS output, markdown-rendered HTML, blog posts, article bodies, legal text, etc. Styles all descendant elements (h1–h6, p, ul, ol, li, a, blockquote, code, pre, table, hr, img) without requiring classes on individual elements. It styles HTML; it does not sanitise it. `content` is inserted as-is, so it must come from a source you trust (your own markdown through parseMd, your own templates) or be sanitised first. */
 export function prose(props?: ProseProps): string
 
 export interface HeadingProps {

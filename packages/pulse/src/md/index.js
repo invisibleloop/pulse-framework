@@ -12,6 +12,7 @@ import fs   from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { highlight } from './highlight.js'
+import { safeUrl as sharedSafeUrl } from '../html.js'
 
 // ---------------------------------------------------------------------------
 // HTML escaping
@@ -55,15 +56,7 @@ function esc(s) {
  * @returns {string}
  */
 function safeUrl(url, isImage = false) {
-  // Strip leading control chars/whitespace that browsers ignore when parsing
-  // the scheme (e.g. "java\tscript:"), then test for a scheme prefix.
-  const stripped = url.replace(/[\x00-\x20]+/g, '')
-  const scheme   = stripped.match(/^([a-zA-Z][a-zA-Z0-9+.\-]*):/)
-  if (!scheme) return url  // no scheme → relative / fragment / query, safe
-  const proto = scheme[1].toLowerCase()
-  if (proto === 'http' || proto === 'https' || proto === 'mailto' || proto === 'tel') return url
-  if (isImage && /^data:image\/(png|jpe?g|gif|webp|avif|svg\+xml);/i.test(stripped)) return url
-  return '#'
+  return sharedSafeUrl(url, { image: isImage })
 }
 
 // ---------------------------------------------------------------------------
