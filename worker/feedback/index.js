@@ -40,6 +40,16 @@ const json = (data, status = 200) =>
     headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
   })
 
+/**
+ * Remove characters a person cannot see but a model reads: control characters (except newline,
+ * carriage return and tab), and every format character (zero-width, bidi overrides, the Unicode
+ * "tag" block that can spell out instructions invisibly). Fencing the text in markdown stops it
+ * rendering as markdown; it does not stop a model reading hidden text.
+ */
+function invisibleToNothing(text) {
+  return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\p{Cf}]/gu, '')
+}
+
 /** Validate and normalise a report. Returns { ok, report } or { ok:false, error }. */
 export function validateReport(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
@@ -57,8 +67,9 @@ export function validateReport(input) {
     }
     if (typeof v !== 'string') return { ok: false, error: `${key} must be a string` }
     if (v.length > max) return { ok: false, error: `${key} exceeds ${max} characters` }
-    report[key] = v.trim()
+    report[key] = invisibleToNothing(v).trim()
   }
+  for (const key of REQUIRED) if (!report[key]) return { ok: false, error: `Missing field: ${key}` }   // a field of only invisible characters
   if (!/^\d+\.\d+\.\d+([-+][\w.]+)?$/.test(report.version)) {
     return { ok: false, error: 'version must look like 1.2.3' }
   }
@@ -75,7 +86,10 @@ export function validateReport(input) {
 
 /** Stable short fingerprint — same bug reported twice should collide. */
 export async function fingerprint(report) {
-  const norm = `${report.title.toLowerCase().replace(/\W+/g, ' ').trim()}|${(report.repro ?? '').replace(/\s+/g, ' ').trim()}`
+  // The description and actual result are part of it: with only title and repro, someone who files
+  // first with a chosen title and repro captures every later genuine report that shares them.
+  const squash = (t) => (t ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+  const norm = `${report.title.toLowerCase().replace(/\W+/g, ' ').trim()}|${squash(report.repro)}|${squash(report.description)}|${squash(report.actual)}`
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(norm))
   return [...new Uint8Array(buf)].slice(0, 6).map(b => b.toString(16).padStart(2, '0')).join('')
 }

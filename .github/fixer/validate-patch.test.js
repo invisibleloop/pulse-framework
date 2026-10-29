@@ -131,3 +131,45 @@ test('scanAdded spots long encoded blobs; formatRisk never repeats patch text', 
   assert.match(md, /`packages\/pulse\/src\/ui\/x\.js:10`/)
   assert.ok(!md.includes('@evil') && !md.includes('click') && !md.includes(blob), 'report must contain locations only, not code')
 })
+
+test('an automated fix may not change what ships to developers\' machines or users\' browsers, even outside the deny-list (the audit\'s five examples)', () => {
+  for (const p of [
+    'packages/pulse/src/agent/coverage-check.js',          // copied into every project and run by its Stop hook
+    'packages/pulse/src/agent/commands/verify.md',         // instructions every project's agent follows
+    'packages/pulse/src/agent/identity.md',
+    'packages/pulse/public/pulse-ui.js',                   // runs in every user's browser
+    'packages/pulse/.npmrc',                               // dotfiles
+    'packages/pulse/.npmignore',
+    'packages/pulse/.gitattributes',
+    'packages/pulse/tsconfig.json',
+    'packages/pulse/README.md',
+    'packages/pulse/LICENSE',
+  ]) {
+    const r = checkChanges([...goodSet(), m(p, { status: 'A' })])
+    assert.equal(r.ok, false, `${p} must be refused`)
+    assert.match(r.errors.join(), /not a path an automated fix may change|protected path/, p)
+  }
+})
+
+test('the paths a framework fix legitimately touches are allowed', () => {
+  for (const p of [
+    'packages/pulse/src/runtime/morph.js', 'packages/pulse/src/server/index.js', 'packages/pulse/src/spec/schema.js',
+    'packages/pulse/src/ui/badge.js', 'packages/pulse/src/md/index.js', 'packages/pulse/src/store/index.js',
+    'packages/pulse/src/testing/index.js', 'packages/pulse/src/html.js', 'packages/pulse/types/ui.d.ts', 'packages/pulse/public/pulse-ui.css',
+  ]) {
+    assert.deepEqual(checkChanges([m(p), m('packages/pulse/src/ui/ui.test.js', { added: 8, deleted: 0 })]), { ok: true, errors: [] }, p)
+  }
+})
+
+test('the reviewer aid also flags the evasions the audit found (dynamic import, Reflect, constructor, node: modules, bracket access)', () => {
+  const diff = ['+++ b/packages/pulse/src/server/index.js', '@@ -1,0 +1,6 @@',
+    "+const h = await import('node:http')",
+    "+const e = Reflect.get(process, 'e' + 'nv')",
+    "+const f = (async () => {}).constructor('return 1')",
+    "+const d = (await import('node:dns')).promises",
+    "+const v = process['en' + 'v']",
+    "+const g = globalThis['proc' + 'ess']",
+  ].join('\n')
+  const names = scanAdded(diff).map(f => f.name)
+  for (const expected of ['dynamic code execution', 'environment variables', 'node: built-in imports']) assert.ok(names.includes(expected), `${expected} in ${names}`)
+})

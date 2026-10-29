@@ -19,6 +19,19 @@ export const LIMITS = { maxFiles: 15, maxChangedLines: 500 }
 
 const ALLOWED_PREFIX = 'packages/pulse/'
 
+// What an unattended fix may change: framework runtime code and its types, and the component
+// stylesheet. This is an ALLOW-LIST on top of the deny-list below, because a deny-list only
+// stops what its author thought of. It left out, for instance, `src/agent/coverage-check.js`
+// (copied into every project's .claude/ and run by its Stop hook), the agent command files in
+// `src/agent/commands/` (instructions every project's agent follows), `public/pulse-ui.js` (runs in
+// every user's browser), and dotfiles such as `.npmrc`. A change there is for a human.
+const ALLOWED = [
+  /^packages\/pulse\/src\/(runtime|server|spec|ui|md|store|testing)\//,
+  /^packages\/pulse\/src\/html\.js$/,
+  /^packages\/pulse\/types\//,
+  /^packages\/pulse\/public\/pulse-ui\.css$/,
+]
+
 // Even inside the allowed prefix — release plumbing and anything that executes
 // with elevated trust must never be touched by an automated fix.
 const DENIED = [
@@ -56,6 +69,7 @@ export function checkChanges(changes) {
     if (!c.path.startsWith(ALLOWED_PREFIX)) errors.push(`${where}: outside ${ALLOWED_PREFIX}`)
     if (c.path.includes('..') || /["\\\n`]/.test(c.path)) errors.push(`${where}: unsafe path`)
     if (DENIED.some(re => re.test(c.path))) errors.push(`${where}: protected path`)
+    else if (!ALLOWED.some(re => re.test(c.path))) errors.push(`${where}: not a path an automated fix may change (runtime, server, spec, ui, md, store, testing, types and pulse-ui.css only)`)
     if (c.added === null || c.deleted === null) { errors.push(`${where}: binary change`); continue }
 
     if (c.status !== 'M' && c.status !== 'A') errors.push(`${where}: only added or modified files are allowed (status ${c.status})`)
@@ -108,9 +122,10 @@ export function parseDiff(output) {
 
 const RISKY = [
   ['process spawning',           /\b(spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)\s*\(|child_process/],
-  ['dynamic code execution',     /\beval\s*\(|new\s+Function\s*\(|\bvm\.(run\w*|Script)\b/],
+  ['dynamic code execution',     /\beval\s*\(|\bFunction\s*\(|\.constructor\s*\(|\bvm\.(run\w*|Script)\b|\bReflect\.(get|apply|construct)\b|\bimport\s*\(/],
   ['network access',             /\bfetch\s*\(|\bhttps?\.(request|get)\s*\(|\bnet\.(connect|createConnection)\b|\bWebSocket\b|XMLHttpRequest|from\s+['"](node:)?(net|dgram|tls|http2)['"]|\bsendBeacon\b/],
-  ['environment variables',      /\bprocess\.env\b/],
+  ['environment variables',      /\bprocess\.env\b|\bprocess\s*\[|\bglobalThis\s*\[|\bReflect\.get\(\s*process\b/],
+  ['node: built-in imports',     /['"]node:(http|https|dns|net|tls|dgram|http2|child_process|worker_threads|cluster|inspector|vm|fs|os)['"]/],
   ['filesystem writes/deletes',  /\bfs\.\w*(write|append|unlink|rm|rename|chmod|symlink|copy)\w*\(|\b(writeFile|appendFile|unlink|rm|rmdir|rename|chmod|symlink|copyFile)(Sync)?\(/i],
   ['encoded or obfuscated data', /\batob\s*\(|Buffer\.from\([^)]*['"]base64['"]|[A-Za-z0-9+/]{80,}={0,2}|(\\x[0-9a-fA-F]{2}){8,}|String\.fromCharCode\s*\(\s*\d+\s*(,\s*\d+\s*){7,}/],
 ]
