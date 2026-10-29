@@ -192,6 +192,13 @@ export interface PulseStoreDefinition {
 // ---------------------------------------------------------------------------
 
 /**
+ * Make a redirect target taken from the request (`?next=`, a form field) safe to use: returns
+ * `target` only if it is a path on this site, otherwise `fallback`.
+ * @example return { redirect: safeRedirect(ctx.query.next, '/dashboard') }
+ */
+export declare function safeRedirect(target: unknown, fallback?: string): string
+
+/**
  * Module-level broadcast to the running live server — for spec files that have
  * no server handle (the CLI owns createServer in scaffolded apps).
  * Throws unless a server with `live: true` is running.
