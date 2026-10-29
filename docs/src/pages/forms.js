@@ -82,7 +82,7 @@ return { errors: { email: 'Invalid email' }, values: data }
       ${table(
         ['Piece', 'Where it lives', 'What it does'],
         [
-          ['Random id', '<code>pulse_csrf</code> cookie (HttpOnly, SameSite=Lax)', 'Set on the first GET of the form page'],
+          ['Random id', '<code>pulse_csrf</code> cookie (HttpOnly, SameSite=Lax); over HTTPS <code>__Host-pulse_csrf</code>, which no sibling subdomain can set or replace', 'Set on the first GET of the form page'],
           ['Token', 'Hidden <code>_csrf</code> input via <code>\${server.csrf}</code>', '<code>HMAC-SHA256(secret, id)</code> — embedded into the form server-side'],
           ['Verification', 'On every POST, before <code>submit</code> runs', 'Recomputes the HMAC from the cookie and compares in constant time — mismatch is 403'],
         ]

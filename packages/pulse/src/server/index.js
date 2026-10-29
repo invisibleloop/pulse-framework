@@ -1346,17 +1346,22 @@ export async function createServer(entries, options = {}) {
       // http page) could choose the id, fetch the matching token from a GET, and
       // replay the pair against the victim.
       if (typeof spec.submit === 'function' && spec.csrf !== false) {
-        let csrfId = readCsrfId(csrfSecret, ctx.cookies.pulse_csrf)
+        // Over HTTPS the cookie carries the __Host- prefix, which the browser enforces: Secure, Path=/,
+        // no Domain, and no other host (a sibling subdomain, an http page) can set or replace it.
+        // Without it a subdomain could overwrite the cookie with a pair it legitimately obtained
+        // (cookie tossing) and then knows the matching token. Plain http (local dev) cannot use it.
+        const csrfCookie = isHttpsRequest(req) ? '__Host-pulse_csrf' : 'pulse_csrf'
+        let csrfId = readCsrfId(csrfSecret, ctx.cookies[csrfCookie])
         if (!csrfId) {
           csrfId = crypto.randomBytes(16).toString('base64url')
-          ctx.setCookie('pulse_csrf', signCsrfId(csrfSecret, csrfId), { httpOnly: true, sameSite: 'Lax', path: '/', secure: isHttpsRequest(req) })
+          ctx.setCookie(csrfCookie, signCsrfId(csrfSecret, csrfId), { httpOnly: true, sameSite: 'Lax', path: '/', secure: isHttpsRequest(req) })
         }
         ctx._csrfField = `<input type="hidden" name="_csrf" value="${csrfToken(csrfSecret, csrfId)}">`
 
         if (req.method === 'POST') {
           const form      = await ctx.formData()
           const submitted = typeof form?._csrf === 'string' ? form._csrf : ''
-          const cookieId  = readCsrfId(csrfSecret, ctx.cookies.pulse_csrf)
+          const cookieId  = readCsrfId(csrfSecret, ctx.cookies[csrfCookie])
           if (!cookieId || !safeEqual(submitted, csrfToken(csrfSecret, cookieId))) {
             res.writeHead(403, mergeCtxHeaders(ctx, {
               'Content-Type': 'text/plain',
