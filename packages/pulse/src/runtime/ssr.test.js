@@ -649,10 +649,11 @@ await test('sends html message with shell content', async () => {
   assert(html.html.includes('shell'), 'html should contain view output')
 })
 
-await test('sends done message with serverState', async () => {
+await test('sends done message with serverState (for a page the client mounts)', async () => {
   const spec = {
     route:  '/nav',
     state:  {},
+    hydrate: '/dist/nav.boot.js',
     server: { items: async () => [1, 2, 3] },
     view:   (s, srv) => `<main id="main-content">${srv.items.length}</main>`,
   }
@@ -661,6 +662,39 @@ await test('sends done message with serverState', async () => {
   assert(done, 'should have done message')
   assert(Array.isArray(done.serverState?.items), 'serverState.items should be present')
   assert(done.serverState.items.length === 3, 'serverState.items should have 3 entries')
+})
+
+await test('a page the client does not mount gets no serverState or storeState in its nav stream (what a view does not print stays on the server)', async () => {
+  const spec = {
+    route:  '/profile',
+    state:  {},
+    server: { user: async () => ({ name: 'Alice', ssn: 'SSN-123-45-6789' }) },
+    view:   (s, srv) => `<main id="main-content">Hello ${srv.user.name}</main>`,
+  }
+  const messages = await collectNavMessages(renderToNavStream(spec, { store: { token: 'STORE_SECRET' } }))
+  const done = messages.find(m => m.type === 'done')
+  assert(done && done.serverState === undefined && done.storeState === undefined, `got ${JSON.stringify(done)}`)
+  assert(!JSON.stringify(messages).includes('SSN-123') && !JSON.stringify(messages).includes('STORE_SECRET'), 'nothing unrendered appears anywhere in the stream')
+})
+
+await test('a failing fetcher that nothing awaits does not become an unhandled rejection that kills the process (renderToStream and renderToNavStream)', async () => {
+  const unhandled = []
+  const onUnhandled = (e) => unhandled.push(e.message)
+  process.on('unhandledRejection', onUnhandled)
+  try {
+    const spec = {
+      route: '/x', state: {},
+      server: { item: async () => { throw new Error('shell fetcher failed') }, related: async () => { await new Promise(r => setTimeout(r, 30)); throw new Error('deferred fetcher failed') } },
+      stream: { shell: ['head'], deferred: ['feed'], scope: { head: ['item'], feed: ['related'] } },
+      view: { head: (s, srv) => `<h1>${srv.item}</h1>`, feed: (s, srv) => `<p>${srv.related}</p>` },
+    }
+    // the shell fetcher fails, so the render stops and nothing ever awaits `related`
+    await Promise.resolve(collectNavMessages(renderToNavStream(spec))).catch(() => {})
+    const reader = renderToStream(spec, {}, 'n').getReader()
+    try { while (!(await reader.read()).done) { /* drain */ } } catch { /* the stream errors: expected */ }
+    await new Promise(r => setTimeout(r, 120))      // long enough for the unawaited fetcher to reject
+  } finally { process.off('unhandledRejection', onUnhandled) }
+  assert(unhandled.length === 0, `unhandled rejection(s) (Node would exit the process): ${unhandled.join('; ')}`)
 })
 
 await test('sends deferred messages for each deferred segment', async () => {

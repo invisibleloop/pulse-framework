@@ -458,8 +458,15 @@ function resolveCache(value) {
  * touches the network at all. No risk of stale dynamic content on a normal
  * page load; this only affects the back/forward navigation path.
  */
-function buildCacheControl(spec, dev, defaultCache = null, status = 200, method = 'GET') {
+function buildCacheControl(spec, dev, defaultCache = null, status = 200, method = 'GET', personalised = false) {
   if (dev) return 'no-store'
+
+  // A response that differs per visitor must never be stored by a shared cache: a guarded page (its
+  // body is for whoever passed the guard), a page with a form (its CSRF token and cookie are
+  // per-visitor) or any response that sets a cookie. `private, no-cache` whatever the cache config
+  // says, so `defaultCache` cannot turn them into `public, max-age=3600` for a CDN to hand to
+  // anyone.
+  if (personalised) return 'private, no-cache'
 
   // The server-wide default applies to ordinary page responses only. A custom 404 (or any other
   // non-200 render) or a POST re-render is not the page a CDN should keep for the default TTL: a
@@ -483,6 +490,24 @@ function buildCacheControlFromConfig(cfg) {
   if (maxAge > 0) parts.push(`max-age=${maxAge}`)
   if (staleWhileRevalidate) parts.push(`stale-while-revalidate=${staleWhileRevalidate}`)
   return parts.join(', ')
+}
+
+/** True when this response is specific to the visitor (see buildCacheControl). */
+function isPersonalised(spec, ctx) {
+  if (spec?.guard || spec?.submit) return true
+  return !!ctx?._responseHeaders?.some(([name]) => String(name).toLowerCase() === 'set-cookie')
+}
+
+/**
+ * May the in-process page cache serve this page? On top of isCacheablePage, a page whose `meta` has
+ * a function is cached only when its output is keyed by what the function can read: the brand host
+ * (resolveBrand) or query keys it declared in `cacheVary`. A `meta.title: ctx => ...cookie...` was
+ * rendered once and then shown to every visitor, whatever their cookie.
+ */
+function canCachePage(spec, ctx) {
+  if (!isCacheablePage(spec)) return false
+  const dynamicMeta = spec.meta && Object.values(spec.meta).some(v => typeof v === 'function')
+  return !dynamicMeta || ctx?._brandHost !== undefined || Array.isArray(spec.cacheVary)
 }
 
 /**
@@ -588,14 +613,18 @@ async function cachedRenderToString(spec, ctx, dev) {
     return renderToString(spec, ctx)
   }
 
+  // Cache what the docs say is cached: the RESULTS OF THE FETCHERS. The page is rendered again for
+  // every request, so what belongs to one request (the CSRF token and field, a POST's `form`
+  // values, the CSP nonce) is never shared. Caching the whole render result showed one visitor's
+  // submitted form data, CSRF token and nonce to the next.
   const key = buildCacheKey(spec, ctx)
 
-  const cached = serverDataCache.get(key)
-  if (cached) return cached
-
-  const result = await renderToString(spec, ctx)
-  serverDataCache.set(key, result, spec.serverTtl)
-  return result
+  let serverState = serverDataCache.get(key)
+  if (!serverState) {
+    serverState = await resolveServerState(spec, ctx)
+    serverDataCache.set(key, serverState, spec.serverTtl)
+  }
+  return renderToString(spec, ctx, {}, { serverState })
 }
 
 const MIME_TYPES = {
@@ -1458,15 +1487,19 @@ async function handleNavResponse(spec, ctx, res, dev = false) {
     styles:      meta.styles || [],
     scripts:     meta.scripts || [],
     hydrate:     spec.hydrate  || null,
-    serverState: Object.keys(serverState).length > 0 ? serverState : undefined,
-    storeState:  ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
+    // Only a page the client mounts needs its data. A full page load does not serialise it for a
+    // page without a bundle, and this must not either (it was every fetcher result, rendered or not).
+    serverState: spec.hydrate && Object.keys(serverState).length > 0 ? serverState : undefined,
+    storeState:  spec.hydrate && ctx.store && Object.keys(ctx.store).length > 0 ? ctx.store : undefined,
   })
 
   // mergeCtxHeaders so cookies/headers queued on ctx during the request (the CSRF cookie, anything a
   // guard or fetcher sets) reach the browser on client-side navigations, not just on full page loads.
   res.writeHead(200, mergeCtxHeaders(ctx, {
     'Content-Type':  'application/json',
-    'Cache-Control': buildCacheControl(spec, dev),
+    'Cache-Control': buildCacheControl(spec, dev, null, 200, 'GET', isPersonalised(spec, ctx)),
+    // The same URL answers with the page's HTML or with this JSON, depending on this request header
+    'Vary':          'X-Pulse-Navigate',
     ...SECURITY_HEADERS,
   }))
   res.end(payload)
@@ -1522,7 +1555,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
   const cacheKey = buildCacheKey(spec, ctx)
   // Never cache POST re-renders or non-200 responses (custom 404s) — POST output
   // varies per submission and a cached 404 body would be served with a 200 later.
-  const cacheable = status === 200 && ctx.method !== 'POST' && isCacheablePage(spec)
+  const cacheable = status === 200 && ctx.method !== 'POST' && canCachePage(spec, ctx)
   const ttl       = cacheable ? pageCacheTtl(spec, dev, defaultCache) : 0
 
   let html, serverTimingValue, fromCache = false
@@ -1556,9 +1589,9 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
 
   const headers = mergeCtxHeaders(ctx, {
     'Content-Type':              'text/html; charset=utf-8',
-    'Cache-Control':             buildCacheControl(spec, dev, defaultCache, status, ctx.method),
+    'Cache-Control':             buildCacheControl(spec, dev, defaultCache, status, ctx.method, isPersonalised(spec, ctx)),
     'Content-Security-Policy':   fromCache ? buildCachedCsp(csp) : buildCsp(nonce, csp),
-    'Vary':                      'Accept-Encoding',
+    'Vary':                      'Accept-Encoding, X-Pulse-Navigate',
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
   })
@@ -1576,7 +1609,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
 async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = false, canonicalBase = '', nonce = '', runtimeBundle = '', defaultCache = null, store = null, csp = {}, faviconPath = null, livePath = '', analyticsTag = '', errorJournalPath = null) {
   // Serve from in-process page cache when available — skip streaming overhead.
   const cacheKey = buildCacheKey(spec, ctx)
-  const ttl      = isCacheablePage(spec) ? pageCacheTtl(spec, dev, defaultCache) : 0
+  const ttl      = canCachePage(spec, ctx) ? pageCacheTtl(spec, dev, defaultCache) : 0
   const cached   = ttl > 0 ? pageHtmlCache.get(cacheKey) : null
 
   if (cached) {
@@ -1584,9 +1617,9 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
     const buf      = await compressBuffer(Buffer.from(fillCanonical(cached.html, canonicalBase), 'utf8'), encoding)
     const headers  = mergeCtxHeaders(ctx, {
       'Content-Type':            'text/html; charset=utf-8',
-      'Cache-Control':           buildCacheControl(spec, dev, defaultCache),
+      'Cache-Control':           buildCacheControl(spec, dev, defaultCache, 200, 'GET', isPersonalised(spec, ctx)),
       'Content-Security-Policy': buildCachedCsp(csp),
-      'Vary':                    'Accept-Encoding',
+      'Vary':                    'Accept-Encoding, X-Pulse-Navigate',
       ...SECURITY_HEADERS,
       ...httpsHeaders(req),
     })
@@ -1683,9 +1716,9 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
   const headers = mergeCtxHeaders(ctx, {
     'Content-Type':              'text/html; charset=utf-8',
     'Transfer-Encoding':         'chunked',
-    'Cache-Control':             buildCacheControl(spec, dev, defaultCache),
+    'Cache-Control':             buildCacheControl(spec, dev, defaultCache, 200, 'GET', isPersonalised(spec, ctx)),
     'Content-Security-Policy':   buildCsp(nonce, csp),
-    'Vary':                      'Accept-Encoding',
+    'Vary':                      'Accept-Encoding, X-Pulse-Navigate',
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
   })

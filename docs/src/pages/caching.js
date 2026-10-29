@@ -21,7 +21,7 @@ export default {
       ${lead('Pulse handles asset caching automatically — production bundles are content-hashed and served with immutable cache headers. Page caching is controlled declaratively in the spec: <code>serverTtl</code> for in-process data, <code>cache</code> for HTTP headers. Nothing is cached by default unless you declare it.')}
 
       ${section('server-ttl', 'serverTtl — in-process data cache')}
-      <p><code>serverTtl</code> is a number of seconds to cache the results of the <code>server</code> fetchers in memory. Subsequent requests within the TTL window skip the async data fetch entirely and serve the cached result.</p>
+      <p><code>serverTtl</code> is a number of seconds to cache the results of the <code>server</code> fetchers in memory. Subsequent requests within the TTL window skip the async data fetch entirely and use the cached results. Only the fetcher results are cached: the page is rendered again for every request, so a form's submitted values, its CSRF token and the CSP nonce are never shared between visitors. The cache key is the route and its params, so <strong>a fetcher that reads cookies, headers or the query string must not be used with <code>serverTtl</code></strong>: its result would be handed to every visitor.</p>
       ${codeBlock(highlight(`export default {
   route: '/homepage',
   serverTtl: 60,   // cache server data for 60 seconds
@@ -73,6 +73,7 @@ cache: { public: true, maxAge: 3600, staleWhileRevalidate: 86400 }
 
       ${section('html-default', 'Default HTML caching')}
       <p>By default, Pulse sends <code>Cache-Control: no-cache</code> for all HTML responses — a deliberate choice, not a lesser default. <code>no-cache</code> still revalidates on every direct load or refresh, so there's no risk of stale content; the difference from <code>no-store</code> is that it doesn't block the browser's back/forward cache. Stale HTML is never served from browser or proxy caches unless you explicitly declare a <code>cache</code> policy in the spec.</p>
+      ${callout('warning', '<strong>Personalised pages are always <code>private</code>.</strong> A page with a <code>guard</code>, a <code>submit</code> form (its CSRF cookie and token belong to one visitor) or any response that sets a cookie is sent <code>Cache-Control: private, no-cache</code>, whatever <code>defaultCache</code> or <code>spec.cache</code> says, so a CDN cannot hand one visitor\'s page to another. The same applies to the in-process page cache: a page whose <code>meta</code> has a <em>function</em> is only served from it when the output is keyed by what the function can read (the brand host with <code>resolveBrand</code>, or query keys listed in <code>cacheVary</code>). A <code>meta</code> function that reads cookies or headers makes the page personalised: give it <code>cache: false</code>. Responses that can be either the page or its client-navigation JSON carry <code>Vary: X-Pulse-Navigate</code>.')}
 
       ${section('asset-caching', 'Asset caching')}
       <p>Static assets in <code>public/</code> receive <code>Cache-Control: max-age=3600</code> (one hour).</p>

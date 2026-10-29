@@ -90,6 +90,13 @@ if (specs.length === 0) {
   process.exit(1)
 }
 
+// A request must not be able to take the server down. The framework handles the cases it knows
+// of (a failing fetcher that nothing awaits), but any other promise that rejects without a
+// handler would end the process on Node 15+. Log it and keep serving.
+process.on('unhandledRejection', (reason) => {
+  console.error('[Pulse] Unhandled promise rejection (the server keeps running):', reason)
+})
+
 createServer(specs, {
   port,
   stream:       true,
