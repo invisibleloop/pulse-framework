@@ -150,7 +150,9 @@ function findSpecObject(ast) {
   if (!target) return { none: true }
   if (target.type === 'ObjectExpression') return { object: target, declaration: null }
   if (target.type === 'Identifier') {
-    for (const node of ast.body) {
+    for (const stmt of ast.body) {
+      // `const spec = {...}` or `export const spec = {...}` (a spec that is also a named export)
+      const node = stmt.type === 'ExportNamedDeclaration' && stmt.declaration?.type === 'VariableDeclaration' ? stmt.declaration : stmt
       if (node.type !== 'VariableDeclaration') continue
       for (const d of node.declarations) {
         if (d.id.type === 'Identifier' && d.id.name === target.name) {
