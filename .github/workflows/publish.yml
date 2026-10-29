@@ -3,6 +3,8 @@ name: Release
 on:
   push:
     branches: [main]
+  # Run by hand to release what is on main (e.g. after a queued release failed). Needs write access.
+  workflow_dispatch:
 
 permissions: {}
 
@@ -51,6 +53,11 @@ jobs:
       - name: Bump the version from conventional commits and commit it
         id: bump
         run: |
+          # A release queued behind another checked out the commit that triggered it, which
+          # predates the release commit the earlier job pushed: it computed the next version from
+          # the old one and failed to rebase. Start from the current main, with that commit in it.
+          git fetch origin main
+          git merge --ff-only origin/main
           cd packages/pulse
           VERSION=$(node scripts/release-version.js)
           # No version means no commit touched the package since the last release (docs-only,
