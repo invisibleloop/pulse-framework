@@ -47,7 +47,7 @@ export interface MountResult {
  * mount(spec, root, window.__PULSE_SERVER__ ?? {}, { ssr: true })
  */
 export function mount(
-  spec:        PulseSpec,
+  spec:        PulseSpec<any, any>,
   el:          HTMLElement,
   serverState?: Record<string, unknown>,
   options?:    MountOptions

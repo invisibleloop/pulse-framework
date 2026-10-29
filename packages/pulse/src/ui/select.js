@@ -7,7 +7,7 @@
  * @param {object}   opts
  * @param {string}   opts.name
  * @param {string}   opts.label
- * @param {Array}    opts.options   - Array of strings or { value, label } objects
+ * @param {Array<string | {value: string, label: string}>} opts.options   - Array of strings or { value, label } objects
  * @param {string}   opts.value     - Currently selected value
  * @param {string}   opts.error
  * @param {string}   opts.hint

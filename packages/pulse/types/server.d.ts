@@ -8,8 +8,9 @@
 import type { IncomingMessage, ServerResponse, Server } from 'http'
 import type { PulseSpec } from './schema.js'
 
-export type { PulseSpec, RequestContext, ValidationRule, StreamConfig, ActionConfig,
-             GuardResult, CacheConfig, MetaConfig, ToastOptions, ValidationResult } from './schema.js'
+export type { PulseSpec, ServerState, RequestContext, ValidationRule, StreamConfig, ActionConfig,
+             GuardResult, CacheConfig, MetaConfig, ToastOptions, ValidationResult,
+             FormValue, FormFile, SubmitResult, SitemapEntry } from './schema.js'
 
 // ---------------------------------------------------------------------------
 // createServer options
@@ -214,7 +215,7 @@ export interface ServerInstance {
   shutdown(): void
 
   /** Swap the spec list at runtime (used by the dev server for hot reload). */
-  updateSpecs(specs: PulseSpec[]): void
+  updateSpecs(specs: PulseSpec<any, any>[]): void
 
   /** Swap the store definition at runtime (dev hot reload of pulse.store.js). Validates; throws on a bad definition. */
   updateStore(storeDef: PulseStoreDefinition | null): void
@@ -244,10 +245,15 @@ export interface ServerInstance {
  * import home    from './src/pages/home.js'
  * import contact from './src/pages/contact.js'
  *
- * const { server, shutdown } = createServer([home, contact], {
+ * const { server, shutdown } = await createServer([home, contact], {
  *   port:      3000,
  *   stream:    true,
  *   staticDir: 'public',
  * })
+ *
+ * Entries are spec objects or `URL`s of spec files (`new URL('./home.js', import.meta.url)`); with
+ * URLs the browser path used to hydrate each spec is derived for you.
+ *
+ * createServer is async: always `await` it.
  */
-export function createServer(specs: PulseSpec[], options?: ServerOptions): ServerInstance
+export function createServer(entries: Array<PulseSpec<any, any> | URL>, options?: ServerOptions): Promise<ServerInstance>

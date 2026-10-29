@@ -21,7 +21,7 @@
  * @param {string} opts.legal      - Copyright / legal text
  *
  * Rich layout params:
- * @param {Array<{title: string, links: Array<{label, href}>}>} opts.columns - Multi-column link sections
+ * @param {Array<{title: string, links: Array<{label: string, href: string}>}>} opts.columns - Multi-column link sections
  * @param {string} opts.subscribe  - Raw HTML slot — newsletter subscribe form
  * @param {string} opts.wordmark   - Giant display text shown at the very bottom of the footer
  * @param {string} opts.background - CSS background value — sets the footer background colour

@@ -116,6 +116,11 @@ export interface StreamConfig {
   shell:     string[]
   /** Segment keys rendered after their async data resolves */
   deferred?: string[]
+  /**
+   * Which server fetchers each segment waits for. The shell is written as soon as its own fetchers
+   * resolve; a deferred segment streams as soon as its own do. A segment left out is given all of them.
+   */
+  scope?:    Record<string, string[]>
 }
 
 export interface ActionConfig<S extends object = Record<string, unknown>> {
@@ -143,12 +148,15 @@ export interface CacheConfig {
   staleWhileRevalidate?: number
 }
 
+/** A meta value, or a function (sync or async) resolved per request. */
+type Meta<T> = T | ((ctx: RequestContext) => T | Promise<T>)
+
 export interface MetaConfig {
-  title?:       string | ((ctx: RequestContext) => string)
-  description?: string | ((ctx: RequestContext) => string)
-  styles?:      string[] | ((ctx: RequestContext) => string[])
-  ogTitle?:     string | ((ctx: RequestContext) => string)
-  ogImage?:     string | ((ctx: RequestContext) => string)
+  title?:       Meta<string>
+  description?: Meta<string>
+  styles?:      Meta<string[]>
+  ogTitle?:     Meta<string>
+  ogImage?:     Meta<string>
   schema?:      Record<string, unknown>
   theme?:       'light' | 'dark'
   [key: string]: unknown
@@ -158,7 +166,15 @@ export interface MetaConfig {
 // PulseSpec
 // ---------------------------------------------------------------------------
 
-export interface PulseSpec<S extends object = Record<string, unknown>> {
+/**
+ * What a view receives as its second argument: the results of the `server` fetchers by name, plus
+ * `form` and `csrf` on a page with `submit`, and the store keys the page subscribes to. Values are
+ * `any` so a destructuring view such as `(state, { post }) => ...` works; pass a second type
+ * argument to PulseSpec to be exact.
+ */
+export type ServerState = Record<string, any>
+
+export interface PulseSpec<S extends object = Record<string, unknown>, V extends object = ServerState> {
   /**
    * URL pattern. Supports :param segments.
    * Use '*' for the custom not-found page — rendered with status 404 when no route matches.
@@ -167,9 +183,9 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
 
   /**
    * Initial client-side state. Deep-cloned on mount.
-   * Required for page specs; omit only for raw content specs (contentType set).
+   * Optional: omit it on a purely server-rendered page (no mutations, actions or persist).
    */
-  state: S
+  state?: S
 
   /**
    * Pure function returning an HTML string.
@@ -177,8 +193,8 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
    * Can also be a keyed object of segment functions for streaming SSR.
    */
   view:
-    | ((state: S, server?: Record<string, unknown>) => string)
-    | Record<string, (state: S, server?: Record<string, unknown>) => string>
+    | ((state: S, server: V) => string)
+    | Record<string, (state: S, server: V) => string>
 
   /**
    * Browser-importable path to this spec file.
@@ -202,7 +218,7 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
    * Required when contentType is set.
    * Receives (ctx, server) and returns the raw response body string.
    */
-  render?: (ctx: RequestContext, server?: Record<string, unknown>) => Promise<string> | string
+  render?: (ctx: RequestContext, server: V) => Promise<string> | string
 
   /** Page metadata for the <head>. Fields may be functions for per-request resolution. */
   meta?: MetaConfig
@@ -259,8 +275,7 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
    */
   guard?: (ctx: RequestContext) => Promise<GuardResult | void> | GuardResult | void
 
-  /** HTTP Cache-Control header config for the page response. */
-  /** true = default TTL, a number = seconds (public, max-age=N), or an explicit CacheConfig. */
+  /** HTTP Cache-Control for the page response. true = default TTL, a number = seconds (public, max-age=N), or an explicit CacheConfig. */
   cache?: boolean | number | CacheConfig
 
   /**
@@ -283,7 +298,7 @@ export interface PulseSpec<S extends object = Record<string, unknown>> {
    * Return an HTML string to display instead of the default error message.
    * On the server, if not defined, view errors propagate to the 500 handler.
    */
-  onViewError?: (err: Error, state: S, server?: Record<string, unknown>) => string
+  onViewError?: (err: Error, state: S, server: V) => string
 }
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@
  * Steps after `current` are upcoming (muted border + muted number).
  *
  * @param {object}  opts
- * @param {Array}   opts.steps    - Array of step label strings
+ * @param {string[]} opts.steps    - Array of step label strings
  * @param {number}  opts.current  - 0-based index of the active step
  * @param {string}  opts.class
  */

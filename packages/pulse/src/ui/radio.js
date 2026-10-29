@@ -16,7 +16,7 @@
  * @param {object}   opts                    (radioGroup)
  * @param {string}   opts.name               - Shared field name
  * @param {string}   opts.legend             - Group label (renders as <legend>)
- * @param {Array}    opts.options             - [{ value, label, hint?, disabled? }]
+ * @param {Array<{value: string, label: string, hint?: string, disabled?: boolean}>} opts.options             - [{ value, label, hint?, disabled? }]
  * @param {string}   opts.value              - Currently selected value
  * @param {string}   opts.hint               - Helper text below the group
  * @param {string}   opts.error              - Validation error message

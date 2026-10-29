@@ -303,6 +303,15 @@ test('textarea: error renders role=alert', () => {
 
 // ─── alert ──────────────────────────────────────────────────────────────────
 
+test('alert: message is plain text and is escaped; content is HTML and is not (the documented { variant, message } call used to render an empty alert)', () => {
+  const text = alert({ variant: 'error', message: 'Email <b>is</b> required & "bad"' })
+  assert.match(text, /Email &lt;b&gt;is&lt;\/b&gt; required &amp;/, 'message is escaped')
+  assert.doesNotMatch(text, /<b>is<\/b>/)
+  assert.match(alert({ variant: 'info', content: '<b>raw</b>' }), /<b>raw<\/b>/, 'content stays raw HTML')
+  assert.match(alert({ variant: 'info', message: 'x', content: '<i>wins</i>' }), /<i>wins<\/i>/, 'content takes precedence when both are given')
+  assert.match(alert({ variant: 'error', message: 'Required' }), /ui-alert-body">Required</)
+})
+
 test('alert: info uses role=status', () => {
   assert.match(alert({ variant: 'info', content: 'x' }), /role="status"/)
 })

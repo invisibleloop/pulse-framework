@@ -7,7 +7,8 @@
  * @param {object}  opts
  * @param {'info'|'success'|'warning'|'error'} opts.variant
  * @param {string}  opts.title   - Bold heading (optional)
- * @param {string}  opts.content - Message body — HTML string, not escaped
+ * @param {string}  opts.message - Message body as plain text — escaped, so it is safe for user or error text
+ * @param {string}  opts.content - Message body as an HTML string — NOT escaped. Use `message` for text.
  * @param {string}  opts.class
  */
 
@@ -26,6 +27,7 @@ const ICONS = {
 export function alert({
   variant    = 'info',
   title      = '',
+  message    = '',
   content    = '',
   class: cls = '',
 } = {}) {
@@ -38,6 +40,6 @@ export function alert({
 
   return `<div class="${e(classes)}" role="${role}">
   <span class="ui-alert-icon">${ICONS[variant]}</span>
-  <div class="ui-alert-body">${titleHtml}${content}</div>
+  <div class="ui-alert-body">${titleHtml}${content || e(message)}</div>
 </div>`
 }

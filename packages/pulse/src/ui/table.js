@@ -8,7 +8,7 @@
  *
  * @param {object}   opts
  * @param {string[]} opts.headers  - Column header labels (escaped automatically)
- * @param {Array[]}  opts.rows     - 2D array of cell content (HTML strings)
+ * @param {string[][]} opts.rows     - 2D array of cell content (HTML strings)
  * @param {string}   opts.caption  - Accessible caption (also used as aria-label)
  * @param {string}   opts.class
  */
