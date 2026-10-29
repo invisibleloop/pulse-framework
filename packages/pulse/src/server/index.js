@@ -108,6 +108,27 @@ function httpsHeaders(req) {
 }
 
 /**
+ * Make a redirect target safe to use when it came from the request (a `?next=` or `?return=`
+ * parameter, a form field, a cookie). Returns `target` only if it is a path on this site;
+ * anything else (another host, a protocol-relative `//host`, `/\\host`, a `javascript:` URL,
+ * control characters, a non-string) returns `fallback`.
+ *
+ *   guard: (ctx) => ctx.cookies.session ? undefined : { redirect: '/login?next=' + encodeURIComponent(ctx.pathname) }
+ *   submit: async (ctx) => ({ redirect: safeRedirect(ctx.query.next, '/dashboard') })
+ *
+ * Redirects you write yourself (a literal '/login', or an OAuth provider's URL) do not need it.
+ */
+export function safeRedirect(target, fallback = '/') {
+  if (typeof target !== 'string' || target.length === 0 || target.length > 2048) return fallback
+  if (!target.startsWith('/') || target.startsWith('//')) return fallback
+  if (/[\\\u0000-\u001f\u007f]/.test(target)) return fallback        // backslash (browsers read it as /) and control chars (the URL parser strips tabs and newlines)
+  try {
+    if (new URL(target, 'http://pulse.invalid').origin !== 'http://pulse.invalid') return fallback
+  } catch { return fallback }
+  return target
+}
+
+/**
  * Turn the `hsts` option into a header value, or null for "send none".
  *   undefined / true   max-age=31536000 (one year, this exact host only)
  *   false              no header (the proxy or CDN in front sets its own)
@@ -2197,9 +2218,21 @@ function serveStatic(req, res, staticDir, dev = false, staticCache = null) {
   const filePath = path.join(staticDir, pathname)
   if (!filePath.startsWith(staticDir + path.sep) && filePath !== staticDir) return false
 
+  // Dotfiles (.env, .git/, .npmrc, editor backups) are never public. /.well-known/ is the one
+  // standard exception (security.txt, ACME and app-association files).
+  const segments = pathname.split('/').filter(Boolean)
+  if (segments.some((seg, i) => seg.startsWith('.') && !(i === 0 && seg === '.well-known'))) return false
+
   let stat
   try { stat = fs.statSync(filePath) } catch { return false }
   if (!stat.isFile()) return false
+
+  // A symlink inside staticDir may point anywhere; serve it only if it resolves inside staticDir.
+  try {
+    const realRoot = fs.realpathSync(staticDir)
+    const real     = fs.realpathSync(filePath)
+    if (!real.startsWith(realRoot + path.sep)) return false
+  } catch { return false }
 
   const ext  = path.extname(filePath).toLowerCase()
   const mime = MIME_TYPES[ext] || 'application/octet-stream'
@@ -2228,6 +2261,9 @@ function serveStatic(req, res, staticDir, dev = false, staticCache = null) {
     ...SECURITY_HEADERS,
   }
   if (encoding) headers['Content-Encoding'] = encoding
+  // An SVG opened directly is a document that can run script. Used as an <img> it never does,
+  // so this costs nothing for normal use and shuts the direct-navigation case.
+  if (ext === '.svg') headers['Content-Security-Policy'] = "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox"
 
   // Open the file before committing to a 200. A plain .pipe() has no error
   // handling: an unreadable file (EACCES) or one deleted after the stat above

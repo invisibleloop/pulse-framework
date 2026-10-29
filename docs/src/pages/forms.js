@@ -59,6 +59,13 @@ export default {
         ]
       )}
       <p><strong>Always redirect after a successful mutation.</strong> Rendering a success message directly from the POST means a browser refresh resubmits the form. Redirect to a URL that shows the confirmation instead (e.g. <code>/contact?sent=1</code>).</p>
+      <p><strong>If the redirect target comes from the request</strong> (a <code>?next=</code> parameter, a hidden field, a cookie), pass it through <code>safeRedirect</code>. Redirecting to whatever the URL says is an open redirect: a link to your site can send people anywhere. <code>safeRedirect(target, fallback)</code> returns the target only when it is a path on this site, and the fallback otherwise.</p>
+      ${codeBlock(highlight(`import { safeRedirect } from '@invisibleloop/pulse'
+
+submit: async (ctx) => {
+  await signIn(await ctx.formData())
+  return { redirect: safeRedirect(ctx.query.next, '/dashboard') }   // ?next=//evil.com → /dashboard
+},`, 'js'))}
 
       ${section('server-form', 'server.form — errors and echoed values')}
       <p>On a re-render, whatever <code>submit</code> returned is available to the view as <code>server.form</code>. On a plain GET it is <code>undefined</code> — always use optional chaining.</p>

@@ -11,7 +11,7 @@ import path from 'path'
 import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import strictAssert from 'node:assert/strict'
-import { createServer, TtlCache } from './index.js'
+import { createServer, TtlCache, safeRedirect } from './index.js'
 
 // ---------------------------------------------------------------------------
 // Test runner
@@ -3190,6 +3190,108 @@ await test('a page whose fetchers return plain values (not promises) renders ove
       assert(body.includes('async-ok'), `Missing async fetcher output: ${body}`)
     })
   }
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nStatic files: dotfiles, symlinks, SVG\n')
+
+await test('dotfiles are not served, except under /.well-known/', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-static-'))
+  fs.writeFileSync(path.join(dir, 'ok.txt'), 'ok')
+  fs.writeFileSync(path.join(dir, '.env'), 'SECRET=1')
+  fs.mkdirSync(path.join(dir, '.git'))
+  fs.writeFileSync(path.join(dir, '.git', 'config'), '[core]')
+  fs.mkdirSync(path.join(dir, '.well-known'))
+  fs.writeFileSync(path.join(dir, '.well-known', 'security.txt'), 'Contact: x')
+  fs.mkdirSync(path.join(dir, 'a'))
+  fs.writeFileSync(path.join(dir, 'a', '.hidden'), 'h')
+  try {
+    await withServer([hardenPage], { staticDir: dir, quiet: true }, async (port) => {
+      assert((await get(port, '/ok.txt')).body === 'ok', 'normal file served')
+      for (const p of ['/.env', '/.git/config', '/a/.hidden', '/%2eenv', '/.well-known/../.env']) {
+        const r = await get(port, p)
+        assert(!r.body.includes('SECRET') && !r.body.includes('[core]') && r.body !== 'h', `${p} was served`)
+      }
+      assert((await get(port, '/.well-known/security.txt')).body === 'Contact: x', '/.well-known/ still served')
+    })
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
+await test('a symlink out of the static directory is not followed; one inside it is', async () => {
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-outside-'))
+  const dir     = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-static-'))
+  fs.writeFileSync(path.join(outside, 'secret.txt'), 'OUTSIDE')
+  fs.writeFileSync(path.join(dir, 'real.txt'), 'inside')
+  try {
+    fs.symlinkSync(path.join(outside, 'secret.txt'), path.join(dir, 'leak.txt'))
+    fs.symlinkSync(outside, path.join(dir, 'linked'))
+    fs.symlinkSync(path.join(dir, 'real.txt'), path.join(dir, 'alias.txt'))
+  } catch { fs.rmSync(outside, { recursive: true, force: true }); fs.rmSync(dir, { recursive: true, force: true }); return }   // no symlink permission (Windows)
+  try {
+    await withServer([hardenPage], { staticDir: dir, quiet: true }, async (port) => {
+      assert((await get(port, '/leak.txt')).body !== 'OUTSIDE', 'file symlink out of the directory was served')
+      assert((await get(port, '/linked/secret.txt')).body !== 'OUTSIDE', 'directory symlink out of the directory was served')
+      assert((await get(port, '/alias.txt')).body === 'inside', 'a symlink that stays inside is served')
+    })
+  } finally {
+    fs.rmSync(outside, { recursive: true, force: true })
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+await test('an SVG is served with a CSP that stops script running when it is opened directly', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-static-'))
+  fs.writeFileSync(path.join(dir, 'a.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><script>1</script></svg>')
+  fs.writeFileSync(path.join(dir, 'a.css'), 'a{}')
+  try {
+    await withServer([hardenPage], { staticDir: dir, quiet: true }, async (port) => {
+      const csp = (await get(port, '/a.svg')).headers['content-security-policy'] || ''
+      assert(/default-src 'none'/.test(csp) && /sandbox/.test(csp), `svg CSP: ${csp}`)
+      assert(!(await get(port, '/a.css')).headers['content-security-policy'], 'other files are unchanged')
+    })
+  } finally { fs.rmSync(dir, { recursive: true, force: true }) }
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nsafeRedirect\n')
+
+await test('safeRedirect keeps local paths and refuses everything that leaves the site', () => {
+  for (const ok of ['/', '/dashboard', '/a/b?x=1&y=2#frag', '/search?q=%2F%2Fevil.com', '/a//b']) {
+    assert(safeRedirect(ok, '/fb') === ok, `${ok} should pass`)
+  }
+  const bad = [
+    '//evil.com', '//evil.com/x', '/\\evil.com', '/\\/evil.com', 'https://evil.com', 'http://evil.com',
+    'javascript:alert(1)', 'evil.com', '', ' /x', '/\t/evil.com', '/\n/evil.com', '/\r\nSet-Cookie: a=b',
+    '/\u0000x', ['/x'], { toString: () => '/x' }, null, undefined, 42, '/' + 'a'.repeat(3000),
+  ]
+  for (const b of bad) assert(safeRedirect(b, '/fb') === '/fb', `${JSON.stringify(b)} should fall back`)
+  assert(safeRedirect('//evil.com') === '/', 'the fallback defaults to /')
+})
+
+await test('safeRedirect used the documented way keeps ?next= on the site', async () => {
+  const loginSpec = {
+    route: '/login-demo',
+    meta:  { title: 'Login', description: 'd', theme: 'dark' },
+    submit: async (ctx) => ({ redirect: safeRedirect(ctx.query.next, '/dashboard') }),
+    view:  (_s, server) => `<main><form method="POST">${server.csrf}<button>go</button></form></main>`,
+  }
+  await withServer([loginSpec], { stream: false, quiet: true }, async (port) => {
+    const { headers, body } = await get(port, '/login-demo')
+    const token = body.match(/name="_csrf" value="([^"]+)"/)?.[1] ?? body.match(/value="([^"]+)"/)?.[1]
+    const cookie = [].concat(headers['set-cookie'] || []).map(c => c.split(';')[0]).join('; ')
+    for (const [next, expected] of [['/account', '/account'], ['//evil.com', '/dashboard'], ['https://evil.com', '/dashboard']]) {
+      const r = await new Promise((resolve, reject) => {
+        const data = `_csrf=${encodeURIComponent(token)}`
+        const req = http.request({ method: 'POST', hostname: 'localhost', port, path: `/login-demo?next=${encodeURIComponent(next)}`,
+          headers: { cookie, 'content-type': 'application/x-www-form-urlencoded', 'content-length': Buffer.byteLength(data) } },
+          res => { res.resume(); res.on('end', () => resolve(res)) })
+        req.on('error', reject); req.end(data)
+      })
+      assert(r.statusCode === 303 && r.headers.location === expected, `next=${next}: ${r.statusCode} ${r.headers.location}`)
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------
