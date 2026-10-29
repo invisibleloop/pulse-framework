@@ -97,3 +97,27 @@ test('--color-accent and --color-bg are not presented as tokens to set (the inpu
   }
   assert.deepEqual(problems, [], '\n' + problems.join('\n'))
 })
+
+test('pulse-ui.css has no styles for components that no longer exist', () => {
+  // Every .ui-<family> in the stylesheet must be used by a component or by pulse-ui.js. It shipped
+  // rules for five removed components (and a long-gone code window) in every project's public/.
+  // Utilities that are meant to be used directly, with no component, are listed here on purpose.
+  const UTILITY_FAMILIES = new Set(['sr'])   // .ui-sr-only: visually hidden text, documented in the stylesheet
+  const css = fs.readFileSync(path.join(PKG, 'public', 'pulse-ui.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const families = [...new Set([...css.matchAll(/\.ui-([a-z0-9]+)/g)].map(m => m[1]))]
+  const code = [
+    ...walk(path.join(PKG, 'src'), p => p.endsWith('.js') && !p.endsWith('.test.js')),
+    path.join(PKG, 'public', 'pulse-ui.js'),
+  ].map(f => fs.readFileSync(f, 'utf8')).join('\n')
+  const dead = families.filter(f => !UTILITY_FAMILIES.has(f) && !new RegExp(`ui-${f}(?![a-z0-9])`).test(code))
+  assert.deepEqual(dead, [], `no component or script uses .ui-${dead.join(', .ui-')}: remove the styles, or list a deliberate utility in UTILITY_FAMILIES`)
+})
+
+test('every copy of pulse-ui.css in the repository is the package\'s', () => {
+  const canonical = fs.readFileSync(path.join(PKG, 'public', 'pulse-ui.css'), 'utf8')
+  for (const dir of ['', 'docs', 'examples', 'companion']) {
+    const copy = path.join(REPO, dir, 'public', 'pulse-ui.css')
+    if (!fs.existsSync(copy)) continue
+    assert.equal(fs.readFileSync(copy, 'utf8'), canonical, `${path.relative(REPO, copy)} differs from packages/pulse/public/pulse-ui.css (copy it over)`)
+  }
+})
