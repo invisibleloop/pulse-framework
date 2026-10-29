@@ -26,12 +26,13 @@ import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
 import { killPulseServerOnPort } from './process-utils.js'
-import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, confirm, PACKAGE } from './update.js'
+import { isInstalledInProject, projectCopyDir, linkedToInstalledCopy, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, confirm, PACKAGE } from './update.js'
 import { loadConfigOrExit } from './config.js'
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, mcpInstallSpecs, shellQuote } from '../mcp/deps.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { commandsToSync, addCommand, optionalCommandNames } from './commands.js'
 import { spawnCommand, spawnCommandSync } from './spawn.js'
+import { migrateProject } from './migrations.js'
 
 // Extract --agent flag before routing, so it works alongside any subcommand
 const rawArgs   = process.argv.slice(2)
@@ -500,6 +501,11 @@ async function runSaveLoadReport(root) {
  */
 async function offerMcpDevDeps(root) {
   if (!mcpServerLaunch(root).viaProject) return   // no copy of Pulse in the project to give them to
+  // Only a real copy. Installing the dev dependencies into a project whose Pulse is a symlink makes
+  // npm replace the link with a copy at whatever range package.json holds: a project running 0.26
+  // through a link to the global install was silently put back on 0.24. Linked projects are
+  // converted by `pulse update` before it gets here; a link to a dev checkout is left alone.
+  if (!projectCopyDir(root)) return
   const missing = mcpDepsMissingFor(root)
   if (missing.length === 0) return
 
@@ -538,9 +544,15 @@ async function runUpdate(root) {
   // the freshly installed binary. A dev `npm link` has no copy of its own to upgrade and is left
   // alone: it just re-copies, as before.
   const pkgDir = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]$/, '')
-  if (!args.includes('--no-install') && projectCopyDir(root)) {
+  const linkedToGlobal = !projectCopyDir(root) && linkedToInstalledCopy(root)
+  if (!args.includes('--no-install') && (projectCopyDir(root) || linkedToGlobal)) {
     const { spawnSync } = await import('child_process')
     const [cmd, cmdArgs] = installCommand(root)
+    if (linkedToGlobal) {
+      // Scaffolds before 0.26 linked the project to the global install: it runs whatever that is,
+      // while package.json says something else, and nothing can upgrade it. Give it a real copy.
+      console.log(`\n  This project's ${PACKAGE} is a link to the global install, not a copy of its own.\n  Installing a real copy at the latest version, so package.json and what runs agree.`)
+    }
     console.log(`\n  Upgrading ${PACKAGE} (${cmd} ${cmdArgs.join(' ')})…\n`)
     const install = spawnCommandSync(cmd, cmdArgs, { cwd: root, stdio: 'inherit' })
     if (install.status !== 0) {
@@ -601,6 +613,9 @@ async function runUpdate(root) {
     fs.copyFileSync(src, path.join(commandsDst, file))
     updated.push(`.claude/commands/${file}`)
   }
+
+  // Narrow, idempotent fixes to files the scaffold wrote once (see migrations.js)
+  for (const rel of migrateProject(root)) updated.push(`${rel.split(path.sep).join('/')}  (migrated)`)
 
   // Sync Copilot skills into .copilot/skills/
   const skillsSrc = fileURLToPath(new URL('../agent/skills', import.meta.url))

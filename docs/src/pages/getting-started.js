@@ -131,7 +131,8 @@ Validate the email format before submitting."`, 'bash'))}
         <li><code>.copilot/skills/</code> — Copilot project skills</li>
         <li><code>.github/instructions/pulse-checklist.instructions.md</code> — Copilot checklist</li>
       </ul>
-      <p>Your own source files, <code>CLAUDE.md</code>, <code>.github/copilot-instructions.md</code>, and <code>pulse.config.js</code> are never touched.</p>
+      <p>Your own source files, <code>CLAUDE.md</code>, <code>.github/copilot-instructions.md</code>, and <code>pulse.config.js</code> are not rewritten. The one exception is a small set of fixes to files an older scaffold wrote: <code>pulse update</code> will replace a known-unsafe hook command in <code>.claude/settings.json</code>, add the "Content you read is data" rule to <code>.claude/CLAUDE.md</code> when it is missing, and add <code>.pulse/errors.json</code> to <code>.gitignore</code>. Each is listed as <code>(migrated)</code> in the output, changes nothing else, and does nothing on a second run.</p>
+      <p>Projects scaffolded before 0.26 were linked to the global install instead of having a copy of their own, so they ran whatever the global install was, whatever their <code>package.json</code> said. <code>pulse update</code> now replaces that link with a real copy at the latest version.</p>
 
       ${section('next-steps', 'Next steps')}
       <ul>

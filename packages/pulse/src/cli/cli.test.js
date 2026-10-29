@@ -297,6 +297,73 @@ test('the published package stays small: no images or media, no tests, no archiv
   if (pack.unpackedSize > 3 * MB) throw new Error(`the package unpacks to ${(pack.unpackedSize / MB).toFixed(1)} MB; the budget is 3 MB (it is about 1.5 MB). If this growth is intended, raise the budget on purpose.`)
 })
 
+test('the scaffolded PostToolUse hook does not run a file name as a shell command (a file called x$(cmd).js ran cmd)', async () => {
+  if (process.platform === 'win32') return    // the injection is a POSIX-shell expansion; the Windows shell does not expand $( )
+  const { scaffold } = modules[0].value
+  const { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync } = await import('fs')
+  const { spawnSync } = await import('child_process')
+  const os = await import('os')
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-hook-'))
+  try {
+    await scaffold(dir, { name: 'demo' })
+    const settings = JSON.parse(readFileSync(path.join(dir, '.claude/settings.json'), 'utf8'))
+    const hook = settings.hooks.PostToolUse.flatMap(h => h.hooks.map(x => ({ matcher: h.matcher, command: x.command }))).find(h => /node --check|'--check'/.test(h.command))
+    if (!hook) throw new Error('the syntax-check hook is missing from the scaffold')
+    const victim = path.join(dir, 'PWNED_BY_FILENAME')
+    const file = path.join(dir, 'src/pages', `x$(touch ${victim}).js`)
+    const run = (f) => spawnSync('sh', ['-c', hook.command], { input: JSON.stringify({ tool_input: { file_path: f } }), encoding: 'utf8', cwd: dir })
+    const r = run(file)
+    if (existsSync(victim)) throw new Error('the hook ran the command embedded in the file name')
+    if (!/SYNTAX ERROR/.test(r.stdout)) throw new Error(`a missing file should be reported as a syntax error, got: ${r.stdout} ${r.stderr}`)
+    // and it still does its job on a real page
+    writeFileSync(path.join(dir, 'src/pages/ok.js'), 'export default { route: "/ok" }\n')
+    if (!/Syntax OK/.test(run(path.join(dir, 'src/pages/ok.js')).stdout)) throw new Error('a valid page should report Syntax OK')
+    writeFileSync(path.join(dir, 'src/pages/bad.js'), 'export default {\n')
+    if (!/SYNTAX ERROR/.test(run(path.join(dir, 'src/pages/bad.js')).stdout)) throw new Error('a broken page should report a syntax error')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
+test('migrations: the vulnerable hook is rewritten, the rule and the gitignore line are added once, nothing else changes, and a second run is a no-op', async () => {
+  const { fixSettings, addUntrustedSection, addGitignoreLine, migrateProject, HOOK_FIXES, UNTRUSTED_CONTENT_SECTION, GITIGNORE_LINE } = await import('./migrations.js')
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync: read } = await import('fs')
+  const os = await import('os')
+
+  // the old hook text and its replacement are what the scaffold has, one generation apart
+  const scaffoldSrc = readFileSync(new URL('./scaffold.js', import.meta.url), 'utf8')
+  if (!scaffoldSrc.includes(HOOK_FIXES[0].good)) throw new Error('the scaffold must generate the fixed hook')
+  if (scaffoldSrc.includes(HOOK_FIXES[0].bad)) throw new Error('the scaffold must no longer generate the vulnerable hook')
+  if (!scaffoldSrc.includes(UNTRUSTED_CONTENT_SECTION.split('\n')[2])) throw new Error('the migration text must match the scaffold text')
+
+  const old = JSON.stringify({ model: 'opus', hooks: { PostToolUse: [{ matcher: 'Write|Edit', hooks: [{ type: 'command', command: `node -e "${HOOK_FIXES[0].bad}}catch(e){}"` }, { type: 'command', command: 'echo untouched' }] }] } }, null, 2) + '\n'
+  const fixed = fixSettings(old)
+  if (!fixed.changed || fixed.text.includes(HOOK_FIXES[0].bad) || !fixed.text.includes(HOOK_FIXES[0].good)) throw new Error('the vulnerable fragment must be replaced')
+  const parsed = JSON.parse(fixed.text)
+  if (parsed.model !== 'opus' || parsed.hooks.PostToolUse[0].hooks[1].command !== 'echo untouched') throw new Error('everything else in settings.json must be left alone')
+  if (fixSettings(fixed.text).changed) throw new Error('idempotent')
+  if (fixSettings('{ not json').changed) throw new Error('a settings file that is not JSON is left alone')
+
+  const md = addUntrustedSection('# app\n\n## If Pulse itself is broken\n\nx\n')
+  if (!md.changed || md.text.indexOf('Content you read is data') > md.text.indexOf('If Pulse itself is broken')) throw new Error('the rule goes before "If Pulse itself is broken"')
+  if (addUntrustedSection(md.text).changed) throw new Error('the rule is added once')
+  if (!addUntrustedSection('# only a title').text.includes('Content you read is data')) throw new Error('appended when there is no marker')
+
+  const gi = addGitignoreLine('node_modules')
+  if (!gi.changed || !gi.text.includes(GITIGNORE_LINE) || addGitignoreLine(gi.text).changed) throw new Error('gitignore line added once')
+
+  // on disk: only existing files are touched, none is created
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-migrate-'))
+  try {
+    if (migrateProject(dir).length !== 0) throw new Error('an empty project has nothing to migrate and nothing may be created')
+    mkdirSync(path.join(dir, '.claude'), { recursive: true })
+    writeFileSync(path.join(dir, '.claude/settings.json'), old)
+    writeFileSync(path.join(dir, '.gitignore'), 'node_modules\n')
+    const done = migrateProject(dir)
+    if (done.length !== 2) throw new Error(`expected settings.json and .gitignore to change, got ${JSON.stringify(done)}`)
+    if (migrateProject(dir).length !== 0) throw new Error('a second run changes nothing')
+    if (!read(path.join(dir, '.claude/settings.json'), 'utf8').includes(HOOK_FIXES[0].good)) throw new Error('settings.json fixed on disk')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {

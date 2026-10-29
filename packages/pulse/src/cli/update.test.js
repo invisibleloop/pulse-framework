@@ -8,7 +8,7 @@ import assert   from 'node:assert/strict'
 import fs       from 'node:fs'
 import os       from 'node:os'
 import path     from 'node:path'
-import { isInstalledInProject, projectCopyDir, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, confirm, PACKAGE } from './update.js'
+import { isInstalledInProject, projectCopyDir, linkedToInstalledCopy, installCommand, devInstallCommand, compareVersions, latestPublished, notInProjectNotice, confirm, PACKAGE } from './update.js'
 
 function tmp() { return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-update-')) }
 
@@ -121,4 +121,26 @@ test('confirm: y/n/default answer, and end of input is null, never consent (Ctrl
   assert.equal(await ask(i => i.write('\n')), true, 'an empty answer takes the default (Y)')
   assert.equal(await ask(i => i.write('\n'), { defaultYes: false }), false)
   assert.equal(await ask(i => i.end()), null, 'EOF with no answer settles, as null')
+})
+
+test('linkedToInstalledCopy: a link to a global install is converted, a link to a dev checkout never is', () => {
+  const root = tmp()
+  const modulesDir = path.join(root, 'node_modules', '@invisibleloop')
+  fs.mkdirSync(modulesDir, { recursive: true })
+  assert.equal(linkedToInstalledCopy(root), false, 'nothing installed')
+
+  const globalInstall = path.join(tmp(), 'lib', 'node_modules', '@invisibleloop', 'pulse')   // what `npm install -g` makes
+  fs.mkdirSync(globalInstall, { recursive: true })
+  fs.symlinkSync(globalInstall, path.join(modulesDir, 'pulse'), 'junction')
+  assert.equal(linkedToInstalledCopy(root), true, 'a link into a node_modules directory is a link to an installed copy')
+
+  const other = tmp(), checkout = path.join(tmp(), 'src', 'pulse', 'packages', 'pulse')    // a dev checkout: no node_modules in its path
+  fs.mkdirSync(checkout, { recursive: true })
+  fs.mkdirSync(path.join(other, 'node_modules', '@invisibleloop'), { recursive: true })
+  fs.symlinkSync(checkout, path.join(other, 'node_modules', '@invisibleloop', 'pulse'), 'junction')
+  assert.equal(linkedToInstalledCopy(other), false, 'an npm link to a dev checkout must never be replaced')
+
+  const real = tmp()
+  fs.mkdirSync(path.join(real, 'node_modules', '@invisibleloop', 'pulse'), { recursive: true })
+  assert.equal(linkedToInstalledCopy(real), false, 'a real directory is not a link')
 })
