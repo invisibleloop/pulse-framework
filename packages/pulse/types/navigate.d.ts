@@ -3,7 +3,7 @@
  * @invisibleloop/pulse/navigate
  */
 
-import type { MountResult } from './runtime.js'
+import type { MountResult, MountOptions } from './runtime.js'
 import type { PulseSpec } from './schema.js'
 
 /**
@@ -32,10 +32,10 @@ import type { PulseSpec } from './schema.js'
 export function initNavigation(
   root:    HTMLElement,
   mountFn: (
-    spec:        PulseSpec,
+    spec:        PulseSpec<any, any>,
     el:          HTMLElement,
     serverState?: Record<string, unknown>,
-    options?:    { ssr?: boolean; store?: unknown }
+    options?:    MountOptions
   ) => MountResult
 ): {
   /** Register the first page's mount so the first navigation destroys it. */

@@ -6,7 +6,7 @@
  * @param {object} opts
  * @param {string} opts.title       - Primary message
  * @param {string} opts.description - Supporting text (optional)
- * @param {object} opts.action      - { label, href, variant } — renders a button (optional)
+ * @param {{label: string, href?: string, variant?: 'primary'|'secondary'|'ghost'|'danger'}} opts.action      - { label, href, variant } — renders a button (optional)
  * @param {string} opts.class
  */
 

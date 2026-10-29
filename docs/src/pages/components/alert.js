@@ -27,7 +27,9 @@ export default {
         `alert({ variant: 'info',    content: 'Your account is pending email verification.' })
 alert({ variant: 'success', title: 'Saved',    content: 'Your changes have been saved.' })
 alert({ variant: 'warning', title: 'Heads up', content: 'This action cannot be undone.' })
-alert({ variant: 'error',   title: 'Failed',   content: escHtml(server.error) })`,
+// message is plain text and is escaped for you; content is an HTML string and is not
+alert({ variant: 'error',   title: 'Failed',   message: server.error })
+alert({ variant: 'info',    content: '<a href="/help">Read the guide</a>' })`,
         { col: true }
       )}
     `,

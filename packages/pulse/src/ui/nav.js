@@ -20,7 +20,7 @@
  * @param {object}  opts
  * @param {string}  opts.logo       - Raw HTML slot — SVG, img, or text
  * @param {string}  opts.logoHref   - Logo link destination (default: '/')
- * @param {Array<{label:string, href?:string, current?:boolean, mega?:Array}>} opts.links
+ * @param {Array<{label:string, href?:string, current?:boolean, mega?:Array<{heading?: string, items?: Array<{label: string, href: string, description?: string}>}>}>} opts.links
  * @param {Array<{label:string, href?:string}>} opts.utilityLinks - Secondary links pushed to the far right
  * @param {string}  opts.action     - Raw HTML slot — typically a button()
  * @param {boolean} opts.sticky     - Position sticky with backdrop blur

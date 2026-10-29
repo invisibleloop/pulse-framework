@@ -5,7 +5,7 @@
  * <span> with aria-current="page". All other items render as links.
  *
  * @param {object} opts
- * @param {Array}  opts.items      - Array of { label, href }. Last item has no href.
+ * @param {Array<{label: string, href?: string}>} opts.items      - Array of { label, href }. Last item has no href.
  * @param {string} opts.separator  - Separator character (default: '/')
  * @param {string} opts.class
  */
