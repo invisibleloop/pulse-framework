@@ -44,6 +44,23 @@ export function projectCopyDir(root) {
   }
 }
 
+/**
+ * True when the project's copy of the package is a symlink to an INSTALLED copy elsewhere, which is
+ * what scaffolds before 0.26 made (`npm link` to the global install): the project then runs
+ * whatever the global install is, while its package.json says something else. Such a project should
+ * be given a real copy of its own. A link to a dev checkout (no node_modules in the real path) is
+ * deliberately not matched: that link is the point, and installing over it would destroy it.
+ */
+export function linkedToInstalledCopy(root) {
+  try {
+    const entry = path.join(root, 'node_modules', PACKAGE)
+    if (!fs.lstatSync(entry).isSymbolicLink()) return false
+    return fs.realpathSync(entry).split(path.sep).includes('node_modules')
+  } catch {
+    return false
+  }
+}
+
 /** [command, args] that upgrades the package with the project's package manager. */
 export function installCommand(root) {
   const has = f => fs.existsSync(path.join(root, f))

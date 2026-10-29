@@ -209,7 +209,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
           hooks: [
             {
               type: 'command',
-              command: `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const f=(i.tool_input||{}).file_path||'';if(!f.includes('/src/pages/')||!f.endsWith('.js')){return;}const {execSync}=require('child_process');try{execSync('node --check '+JSON.stringify(f),{stdio:'pipe'});process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'Syntax OK: '+f}}));}catch(e){process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'SYNTAX ERROR in '+f+': '+e.stderr.toString().trim()}}));}})"`,
+              command: `node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const i=JSON.parse(d);const f=(i.tool_input||{}).file_path||'';if(!f.includes('/src/pages/')||!f.endsWith('.js')){return;}const {execFileSync}=require('child_process');try{execFileSync(process.execPath,['--check',f],{stdio:'pipe'});process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'Syntax OK: '+f}}));}catch(e){process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PostToolUse',additionalContext:'SYNTAX ERROR in '+f+': '+e.stderr.toString().trim()}}));}})"`,
               statusMessage: 'Checking page syntax...',
             },
             {
