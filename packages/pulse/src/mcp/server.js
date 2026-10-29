@@ -1468,7 +1468,7 @@ server.registerTool(
 
 Call this as the **last step** of /verify — after Lighthouse desktop + mobile both pass 100/100/100, pulse_review is complete, and no further spec edits will be made.
 
-Pass \`route\` and \`mode: "full"\` (full /verify, not --quick) and this refuses to stamp unless \`pulse save-report\` was actually run for that route in the last 10 minutes — a real Lighthouse run that passed the score bar but was never saved (a documented step this has been silently skipped for before, since prose alone didn't stop it) leaves nothing for \`pulse report-server\` or a companion dashboard to show. Omit \`mode\` (or pass "quick") to skip this check — quick mode never runs Lighthouse, so there is nothing to have saved.
+Pass \`route\` and \`mode: "full"\` (full /verify, not --quick; "full" without a route is refused) and this refuses to stamp unless \`pulse save-report\` was actually run for that route in the last 10 minutes — a real Lighthouse run that passed the score bar but was never saved (a documented step this has been silently skipped for before, since prose alone didn't stop it) leaves nothing for \`pulse report-server\` or a companion dashboard to show. Omit \`mode\` (or pass "quick") to skip this check — quick mode never runs Lighthouse, so there is nothing to have saved.
 
 When \`route\` is passed, also marks any unresolved error-journal entries for that route as resolved (a clean pass this far means whatever was flagged either wasn't real or was already fixed by an earlier /verify step) — this previously only happened via the separate pulse_resolve_error tool, despite this tool's own description having claimed it happened here.
 

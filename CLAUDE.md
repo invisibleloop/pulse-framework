@@ -483,16 +483,16 @@ There are two CSS files and they have distinct roles — do not mix them:
 **CSS for a section used by more than one spec lives in the shared `app.css`, once** — every spec that renders the section lists the same file in `meta.styles`. Never copy a CSS block into a second per-page stylesheet; two copies drift. Per-page stylesheets are only for styles a single page uses.
 
 ```css
-/* public/theme.css — hex values live here */
+/* public/theme.css — hex values live here. These are the INPUT tokens (--accent, --bg, --text …) */
 [data-theme="light"] {
-  --color-accent: #e25;
-  --color-bg: #ffffff;
+  --accent: #e25;
+  --bg: #ffffff;
 }
 
-/* app.css — only var() references */
+/* app.css — only var() references, to the OUTPUT tokens (--ui-*) that components use */
 .hero {
-  background: var(--color-bg);
-  color: var(--color-accent);
+  background: var(--ui-bg);
+  color: var(--ui-accent);
 }
 ```
 
@@ -669,13 +669,12 @@ export default {
       ${prose({ content: post.html })}
     </main>
   `,
-  onViewError: () => `<main id="main-content"><p>Post not found.</p></main>`,
 }
 ```
 
 - `md(path)` returns an async fetcher — call it in both `meta` and `server`, the file is read only once per request
 - Result is `{ html, frontmatter }` — `html` goes into `prose()`, `frontmatter` holds the `---` key/value pairs
-- Missing file throws `{ status: 404 }` — always add `onViewError` on dynamic markdown routes
+- A missing file makes `md()` throw an error with `status: 404`, which the server answers with a 404 (your `*` page if you have one) — no `onViewError` needed. Call `md()` in `meta`, as above: in streaming mode a 404 can only be set from `meta` or `guard`
 - For markdown from a database/API use `parseMd(source)` directly: `import { parseMd } from '@invisibleloop/pulse/md'`
 - Use `new URL('./content/file.md', import.meta.url)` to resolve relative to the spec file rather than `process.cwd()`
 

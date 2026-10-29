@@ -419,9 +419,10 @@ function themeCSS() {
  * Override pulse-ui tokens by targeting [data-theme="light"] (higher specificity than :root).
  */
 
-/* Example — uncomment and edit to set a custom accent colour:
+/* Example — uncomment and edit to set a custom accent colour (the input token is --accent;
+   components read it as --ui-accent, so app.css uses var(--ui-accent)):
 [data-theme="light"] {
-  --color-accent: #0066cc;
+  --accent: #0066cc;
 }
 */
 `

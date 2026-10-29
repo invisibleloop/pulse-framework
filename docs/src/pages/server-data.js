@@ -192,7 +192,6 @@ export default {
   },
   server: { post },
   view: (state, { post }) => prose({ content: post.html }),
-  onViewError: () => \`<p>Post not found.</p>\`,
 }`, 'js'))}
     `,
   }),

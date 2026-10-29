@@ -142,7 +142,7 @@ Before finishing any spec, verify every point below. Fix anything that fails.
 
 - **Use `md()` from `@invisibleloop/pulse/md` for `.md` file content.** Never read and parse markdown manually. Pass the result's `html` to `prose()`.
 - **Call the same `md()` fetcher in both `meta` and `server`** — it caches on `ctx._mdCache` so the file is only read once per request. Do not create two separate fetchers for the same file.
-- **Always add `onViewError` on dynamic markdown routes** (routes with `:param` segments loading `.md` files). A missing file throws `{ status: 404 }` which must be caught gracefully.
+- **Call `md()` in `meta` on dynamic markdown routes.** A missing file throws an error with `status: 404`, and the server answers it with a 404 (your `*` page if you have one). `onViewError` is for a view that throws, not for a missing file; in streaming mode a 404 can only be set from `meta` or `guard`, which run before the response starts.
 
 ### View error handling
 

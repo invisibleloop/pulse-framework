@@ -37,7 +37,7 @@ When the vibe is **playful, bold, brutalist, retro, or neon**, run `pulse_sketch
 
 - The template tells you *what to include* (a hero, features, social proof, CTA). It does **not** tell you how to arrange them or what shape they take.
 - Full-colour section blocks, oversized typography heroes, CSS-only scrolling strips, dense grids, and palette-as-structure are all fair game.
-- The `phoneFrame` in Mobile App Landing is **not mandatory** — a full-bleed game board, an oversized illustration, or a typography-only hero may serve the brief better.
+- The phone mockup in Mobile App Landing (bespoke HTML/CSS in the template; there is no `phoneFrame` component) is **not mandatory** — a full-bleed game board, an oversized illustration, or a typography-only hero may serve the brief better.
 - `feature()` in a 3-column grid is the most predictable layout on the web. If the brief is "fun and bold", use a scrolling strip of features (raw HTML + CSS `@keyframes`, creative override), a zigzag alternating layout, or full-bleed feature sections instead.
 
 ---
@@ -112,7 +112,7 @@ Record the intake answers. If the user provides palette hex values, note which a
 | Section | Component(s) |
 |---|---|
 | Sticky nav | `nav` with logo, links, CTA button |
-| Hero | `hero` (split layout) with `phoneFrame` mockup |
+| Hero | `hero` (split layout) with a bespoke phone mockup |
 | Stats bar | `stat` × 4 in a `grid` |
 | Features | `feature` × 6 in a `grid` |
 | Testimonials | `card({ content, footer })` × 3 in a `grid` |
@@ -132,7 +132,7 @@ Record the intake answers. If the user provides palette hex values, note which a
 
 1. **Brand name** — replace every instance of "Lumio" with the new app name.
 2. **Copy** — update eyebrows, titles, subtitles, feature descriptions, testimonials, pricing names/features, FAQ items, and footer links to match the new product.
-3. **Phone screen** — the `phoneScreen` HTML inside `phoneFrame` is a bespoke mockup. Update colours, labels, and data to match the new brand. Inline styles inside `phoneScreen` are intentional — the mockup uses sub-utility-scale sizes that utility classes cannot express.
+3. **Phone screen** — the `phoneScreen` HTML inside the phone mockup is bespoke. Update colours, labels, and data to match the new brand. Inline styles inside `phoneScreen` are intentional — the mockup uses sub-utility-scale sizes that utility classes cannot express.
 4. **Colour palette** — create `public/themes/[name].css` (see CSS rules below).
 5. **Icons** — the logo uses `iconFeather` for Lumio. Choose an appropriate icon from `src/ui/icons.js` or add a new one if nothing fits.
 6. **Route** — set `route: '/[name]'` or `route: '/'` as appropriate.
@@ -218,7 +218,7 @@ All HTML outside `phoneScreen` must use utility classes, not inline `style=""` a
 
 - Nav and footer logo links must go to the same `href` (both `/`). Identical accessible name + different destination = WCAG failure.
 - Skip link: `<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;...">Skip to main content</a>` — always include it at the top of the view.
-- `phoneFrame` has `role="img" aria-label="Phone screen preview"` built in.
+- A phone mockup is decorative: give its wrapper `role="img"` and `aria-label="Phone screen preview"`.
 
 ---
 

@@ -83,9 +83,9 @@ Dark with serif headline typography. Featured article hero with byline, read-tim
 **Route:** `/templates/mobile-app`  
 **Vibe:** `bold` or `minimal`  **Theme:** `dark`  **CSS:** *(dark theme built-in)*
 
-Hero with phone-frame mockup, feature grid, pricing section, testimonials, and App Store badges. The centrepiece is a `phoneFrame` component wrapping a screenshot or animated mockup. Pricing tiers and testimonials are built from `grid()` of `card()` tiles (no dedicated `pricing`/`testimonial` component).
+Hero with phone-frame mockup, feature grid, pricing section, testimonials, and App Store badges. The centrepiece is a bespoke phone mockup (HTML/CSS, no component) wrapping a screenshot or animated mockup. Pricing tiers and testimonials are built from `grid()` of `card()` tiles (no dedicated `pricing`/`testimonial` component).
 
-**Key components:** `hero`, `phoneFrame`, `feature`, `grid`, `card`, `appBadge`, `cta`
+**Key components:** `hero`, a bespoke phone mockup, `feature`, `grid`, `card`, `appBadge`, `cta`
 
 **Best for:** iOS/Android app, SaaS with mobile client, consumer product launch
 

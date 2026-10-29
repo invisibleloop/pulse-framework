@@ -10,7 +10,7 @@ import { nav, hero, feature, button, card, stat, grid, section, container, iconZ
 meta: { styles: ['/pulse-ui.css', '/app.css'] }
 ```
 
-Interactive components (tooltip) also need `/pulse-ui.js` in `meta.scripts`. Modal is handled natively by the Pulse runtime — no extra script needed.
+Modal is handled natively by the Pulse runtime — no extra script needed.
 
 ### Component root CSS classes
 
@@ -22,7 +22,7 @@ Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The r
 | `hero` | `.ui-hero` | |
 | `button` | `.ui-btn` | |
 | `card` | `.ui-card` | |
-| `input` / `select` / `textarea` / `search` / `slider` | `.ui-field` | Wrapper div; inner input has `.ui-input` |
+| `input` / `select` / `textarea` / `slider` | `.ui-field` | Wrapper div; inner input has `.ui-input` |
 | `modal` | `.ui-modal` | |
 | `alert` | `.ui-alert` | |
 | `badge` | `.ui-badge` | |
@@ -40,15 +40,12 @@ Use these when writing tests (`.get('.ui-card')`) or custom CSS overrides. The r
 | `accordion` | `.ui-accordion` | |
 | `cta` | `.ui-cta` | |
 | `footer` | `.ui-footer` | |
-| `phoneFrame` | `.ui-phone` | **Not** `.ui-phone-frame` |
 | `prose` | `.ui-prose` | |
 | `progress` | `.ui-progress` | |
 | `breadcrumbs` | `.ui-breadcrumbs` | |
 | `stepper` | `.ui-stepper` | |
-| `tooltip` | `.ui-tooltip` | |
 | `appBadge` | `.ui-app-badge` | |
 | `uiImage` | `.ui-image` | |
-| `segmented` | `.ui-segmented` | |
 | `rating` | `.ui-rating` | |
 
 
@@ -135,14 +132,11 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 |-----------|-----------|
 | `button` | `label`, `variant` (primary/secondary/ghost/**ghost-light**/danger), `size` (sm/md/lg), `href`, `type`, `disabled`, `fullWidth`, `icon`, `iconAfter`, `attrs` — **use `ghost-light` when the button sits on a dark background** (hero, `section--dark`, navy wrapper); `ghost` uses `--ui-muted` text which fails contrast on dark backgrounds in light theme |
 | `input` | `name`, `label`, `type`, `placeholder`, `value`, `error`, `hint`, `required`, `disabled`, `attrs` |
-| `search` | `name`, `label`, `labelHidden`, `placeholder`, `value`, `event` (e.g. `'input:setSearch'`), `debounce` (ms, default 200), `clearEvent` (shown when value non-empty), `disabled`, `attrs` — search input with icon + clear button. **Use this instead of `input({ type: 'search' })`.** |
 | `select` | `name`, `label`, `options` (strings or `{value,label}`), `value`, `error`, `required`, `event` |
 | `textarea` | `name`, `label`, `placeholder`, `value`, `rows`, `error`, `hint`, `required`, `disabled`, `attrs` |
-| `fieldset` | `legend`, `content` (HTML slot), `gap` (xs/sm/md/lg) |
 | `toggle` | `name`, `label`, `checked`, `disabled`, `hint`, `id`, `event` — iOS-style switch; reads as `'on'` in FormData |
 | `fileUpload` | `name`, `label`, `hint`, `error`, `accept`, `multiple`, `required`, `disabled`, `event` — drag-and-drop zone. **Never use `input({ type: 'file' })` for file uploads — always use `fileUpload()`.** |
 | `slider` | `name`, `label`, `min`, `max`, `step`, `value`, `disabled`, `hint`, `event` — use `change:mutationName` not `input` |
-| `segmented` | `name`, `options` ([{value,label}]), `value`, `size`, `disabled`, `event` — iOS-style segmented control. `value` must match an `options[].value` entry exactly — ensure `state` is initialised with a default that matches one of the option values. |
 | `radio` | `name`, `value`, `label`, `checked`, `disabled`, `id`, `event` |
 | `radioGroup` | `name`, `legend`, `options` ([{value,label,hint?,disabled?}]), `value`, `hint`, `error`, `gap`, `event` |
 | `rating` | `value` (0–max, 0.5 steps), `max` (5), `name` (enables interactive mode), `label`, `size`, `disabled` |
@@ -244,7 +238,6 @@ Symptom: fighting a component's wrapper styles (padding, max-width, centering) i
 |-----------|-----------|
 | `nav` | `logo` (HTML slot), `logoHref`, `links` ([{label,href}]), `action` (HTML slot), `sticky`, `background` (any CSS value — overrides default surface colour), `color` (foreground colour — set when custom background doesn't contrast with default muted text) — ⚠ **renders a `<nav>` landmark internally. Never wrap it in another `<nav>` or `<header><nav>` — that creates a duplicate landmark Lighthouse flags as an accessibility failure. Wrapping in `<header>` alone is fine.** |
 | `hero` | `eyebrow`, `title`, `subtitle`, `actions` (HTML slot), `image` (HTML slot — activates image layout), `imageAlign` (right/left), `align` (center/left), `size` (md/sm), `layout` (split/asymmetric/overlap — when image provided: 'split'=50/50, 'asymmetric'=60/40 text-heavy, 'overlap'=image fills section with text overlay), `gradient` (true/false or preset: 'purple'\|'blue'\|'green'\|'rose'\|'orange'), `background` (any CSS value), `eyebrowColor` |
-| `phoneFrame` | `content` (HTML slot — rendered inside the phone screen), `animate` (boolean, default `false` — enables a gentle 3-D tilt on hover). Pure CSS phone mockup with dynamic island, side buttons, home indicator. Use as the `image` slot in `hero()` for app landing pages. Add `animate: true` whenever the phone is a prominent hero element. |
 | `feature` | `image` (HTML slot — rendered above icon), `icon` (HTML slot), `title`, `level` (1–6, default 3), `description` (or `body` as alias), `center` |
 | `accordion` | `items` ([{question,answer}]) — native `<details>`, no JS |
 | `appBadge` | `store` (apple/google), `href` — **always use this for App Store / Google Play download buttons. Never write a raw `<a>` with an SVG badge image.** Designed to sit in a `hero()` `actions` slot or anywhere a download CTA is needed. |

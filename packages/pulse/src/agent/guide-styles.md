@@ -3,7 +3,7 @@
 - meta.styles — array of CSS paths loaded as <link rel="stylesheet">. Always include '/app.css'.
 - meta.scripts — array of JS paths loaded as <script defer>. Required for interactive UI components.
 
-Interactive Pulse UI components (tooltip) require BOTH:
+Interactive Pulse UI components (`nav`'s mobile menu, `modal`) require BOTH:
 ```js
 meta: {
   styles: ['/app.css', '/pulse-ui.css'],
