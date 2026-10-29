@@ -10,6 +10,7 @@
 
 import { existsSync, readFileSync } from 'fs'
 import path from 'path'
+import assert from 'node:assert/strict'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -268,6 +269,41 @@ test('a pulse.config.js that cannot be loaded, or has a bad port, stops the CLI 
       }
     } finally { rmSync(dir, { recursive: true, force: true }) }
   }
+})
+
+test('unknown pulse.config.js keys are reported with a suggestion (a typo used to be ignored silently)', async () => {
+  const { unknownConfigKeys, KNOWN_CONFIG_KEYS } = await import('./config.js')
+  const found = unknownConfigKeys({ prot: 4000, port: 3000, hsts: false, defaultCahce: 60, wibble: 1, _mine: true, allowedHosts: [] })
+  assert.deepEqual(found, [
+    { key: 'prot', suggestion: 'port' },
+    { key: 'defaultCahce', suggestion: 'defaultCache' },
+    { key: 'wibble', suggestion: null },
+  ])
+  for (const k of ['port', 'host', 'agent', 'design', 'csp', 'live', 'hsts', 'allowedHosts', 'lighthouse', 'load', 'environments', 'routes', 'reportFeedback', 'origin', 'maxBody', 'trailingSlash']) {
+    assert.ok(KNOWN_CONFIG_KEYS.has(k), `${k} must be a known key`)
+  }
+  // The keys the CLI forwards to createServer must all be known, or the warning would cry wolf.
+  const { readFileSync } = await import('fs')
+  for (const file of ['start.js', 'dev.js']) {
+    const text = readFileSync(path.join(__dirname, file), 'utf8')
+    const list = text.match(/\[('redirects'[^\]]*)\]/)?.[1] || ''
+    for (const k of list.match(/'(\w+)'/g).map(x => x.slice(1, -1))) assert.ok(KNOWN_CONFIG_KEYS.has(k), `${file} forwards ${k}, which the warning would call unknown`)
+  }
+})
+
+test('a CLI command prints the unknown-key warning once and carries on', async () => {
+  const { spawnSync } = await import('child_process')
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync } = await import('fs')
+  const os = await import('os')
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-unkcfg-'))
+  try {
+    mkdirSync(path.join(dir, 'src', 'pages'), { recursive: true })
+    writeFileSync(path.join(dir, 'pulse.config.js'), 'export default { prot: 4000 }\n')
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'index.js'), 'stop', '--port', '47399'], { cwd: dir, encoding: 'utf8', timeout: 30000, env: { ...process.env, PORT: '' } })
+    assert.match(r.stderr, /"prot" is not a Pulse option and is ignored\. Did you mean "port"\?/)
+    assert.equal((r.stderr.match(/"prot"/g) || []).length, 1, 'reported once')
+    assert.notEqual(r.status, 1, `the command should still run: ${r.stderr}`)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
 test('a spec that fails validation at startup is reported with its route and file, and no stack trace', async () => {

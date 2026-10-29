@@ -10,10 +10,46 @@
 import fs   from 'fs'
 import path from 'path'
 import { pathToFileURL } from 'url'
+import { editDistance } from '../spec/schema.js'
 
 export class ConfigError extends Error {
   constructor(message) { super(message); this.name = 'ConfigError' }
 }
+
+/**
+ * Every key pulse.config.js understands: the server options the CLI forwards to createServer
+ * (keep in sync with PASSTHROUGH_OPTIONS in start.js and dev.js), plus what the CLI and the
+ * agent tooling read themselves.
+ */
+export const KNOWN_CONFIG_KEYS = new Set([
+  'port', 'host', 'agent', 'design',
+  'defaultCache', 'staticCache', 'csp', 'redirects', 'sitemap', 'robots', 'secret', 'live',
+  'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts', 'allowedHosts',
+  'lighthouse', 'load', 'environments', 'routes',
+  'reportFeedback', 'reportEndpoint', 'reportTransport',
+])
+
+/**
+ * Keys in the config that Pulse does not read, each with the closest known key if one is near.
+ * An unknown key is ignored, which is how a typo (`prot: 4000`) used to cost an hour. Keys that
+ * start with "_" are left alone, for the project's own use.
+ * @returns {{ key: string, suggestion: string | null }[]}
+ */
+export function unknownConfigKeys(cfg) {
+  const out = []
+  for (const key of Object.keys(cfg || {})) {
+    if (KNOWN_CONFIG_KEYS.has(key) || key.startsWith('_')) continue
+    let best = null
+    for (const known of KNOWN_CONFIG_KEYS) {
+      const d = editDistance(key.toLowerCase(), known.toLowerCase())
+      if (d <= 2 && (!best || d < best.d)) best = { known, d }
+    }
+    out.push({ key, suggestion: best ? best.known : null })
+  }
+  return out
+}
+
+const warned = new Set()
 
 /** Check the values that would otherwise fail confusingly later. Throws ConfigError. */
 export function checkConfig(cfg, file = 'pulse.config.js') {
@@ -50,7 +86,15 @@ export async function loadConfig(root, { bust = false } = {}) {
 /** For the CLI: load the config, or print the problem without a stack trace and exit 1. */
 export async function loadConfigOrExit(root, opts) {
   try {
-    return await loadConfig(root, opts)
+    const cfg = await loadConfig(root, opts)
+    for (const { key, suggestion } of unknownConfigKeys(cfg)) {
+      const id = path.resolve(root) + '\0' + key
+      if (warned.has(id)) continue          // a hot reload re-reads the file; say it once
+      warned.add(id)
+      console.error(`  ⚠ pulse.config.js: "${key}" is not a Pulse option and is ignored.` +
+        (suggestion ? ` Did you mean "${suggestion}"?` : ` Known options: ${[...KNOWN_CONFIG_KEYS].join(', ')}. Prefix your own keys with "_".`))
+    }
+    return cfg
   } catch (err) {
     if (!(err instanceof ConfigError)) throw err
     console.error(`\n  ${err.message}\n`)
