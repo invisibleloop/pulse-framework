@@ -359,6 +359,32 @@ test('the scaffolded PostToolUse hook does not run a file name as a shell comman
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('migrations: the new-doc-page skill is removed from a project when unmodified, kept when edited', async () => {
+  const { migrateProject, removeStaleSkills, REMOVED_SKILLS } = await import('./migrations.js')
+  const { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync: exists } = await import('fs')
+  const os = await import('os')
+  const crypto = await import('crypto')
+  // Rebuild the shipped file from git history is brittle; instead check the hash really is of a file with the expected shape.
+  assert.match(REMOVED_SKILLS[0].sha256, /^[0-9a-f]{64}$/)
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-skill-'))
+  try {
+    const skill = path.join(dir, '.copilot', 'skills', 'new-doc-page')
+    mkdirSync(skill, { recursive: true })
+    writeFileSync(path.join(skill, 'SKILL.md'), '# my own notes about docs\n')          // user-edited: hash differs
+    assert.deepEqual(removeStaleSkills(dir), [])
+    assert.ok(exists(path.join(skill, 'SKILL.md')), 'an edited copy must be left alone')
+    assert.deepEqual(migrateProject(dir), [])
+
+    // The unmodified copy goes (tested with a stand-in of known content), and its empty folder with it.
+    const body = '---\nname: new-doc-page\n---\nstand-in\n'
+    writeFileSync(path.join(skill, 'SKILL.md'), body)
+    const list = [{ ...REMOVED_SKILLS[0], sha256: crypto.createHash('sha256').update(body).digest('hex') }]
+    assert.deepEqual(removeStaleSkills(dir, list), [path.join('.copilot', 'skills', 'new-doc-page', 'SKILL.md')])
+    assert.ok(!exists(skill), 'the empty skill folder is removed too')
+    assert.deepEqual(removeStaleSkills(dir, list), [], 'a second run is a no-op')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('migrations: the vulnerable hook is rewritten, the rule and the gitignore line are added once, nothing else changes, and a second run is a no-op', async () => {
   const { fixSettings, addUntrustedSection, addGitignoreLine, migrateProject, HOOK_FIXES, UNTRUSTED_CONTENT_SECTION, GITIGNORE_LINE } = await import('./migrations.js')
   const { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync: read } = await import('fs')
@@ -461,7 +487,7 @@ test('discover: a store-only spec (no local mutations/actions/persist) still get
 console.log('\nCopilot skill source files\n')
 
 const skillsDir = fileURLToPath(new URL('../agent/skills', import.meta.url))
-const requiredSkills = ['build-page', 'verify', 'new-doc-page']
+const requiredSkills = ['build-page', 'verify']
 
 for (const skill of requiredSkills) {
   const skillMd = path.join(skillsDir, skill, 'SKILL.md')
