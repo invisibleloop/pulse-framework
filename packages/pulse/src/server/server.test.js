@@ -3004,6 +3004,36 @@ await test('the page and its navigation JSON share a URL, so both say Vary: X-Pu
   })
 })
 
+await test('isAllowedDevHost: this machine and its network, never a name an attacker controls', async () => {
+  const { isAllowedDevHost } = await import('./index.js')
+  for (const ok of ['localhost:3000', 'LOCALHOST', 'localhost.', 'app.localhost:3000', '127.0.0.1:3000', '127.0.0.1', '[::1]:3000', '[::1]', '192.168.1.20:3000', 'macbook.local:3000', undefined, ''])
+    assert(isAllowedDevHost(ok), `${ok} must be allowed`)
+  assert(isAllowedDevHost(os.hostname() + ':3000'), "this computer's own hostname is allowed")
+  for (const bad of ['evil.example', 'evil.example:3000', 'rebind.attacker.test:3000', 'localhost.evil.example', '127.0.0.1.evil.example', 'notlocalhost', 'x.local.evil.example'])
+    assert(!isAllowedDevHost(bad), `${bad} must be refused`)
+  assert(isAllowedDevHost('myapp.test:3000', { allowedHosts: ['myapp.test'] }), 'an exact allowedHosts entry')
+  assert(isAllowedDevHost('a.dev.example.com', { allowedHosts: ['.dev.example.com'] }) && isAllowedDevHost('dev.example.com', { allowedHosts: ['.dev.example.com'] }), 'a leading dot allows the domain and what is under it')
+  assert(!isAllowedDevHost('evildev.example.com', { allowedHosts: ['.dev.example.com'] }), 'but not a name that merely ends the same way')
+  assert(isAllowedDevHost('box.internal', { listenHost: 'box.internal' }), 'the interface the server was told to listen on')
+})
+
+await test('the dev server refuses a request addressed to anyone but this machine (DNS rebinding), and production does not care', async () => {
+  const spec = { route: '/', state: {}, meta: { title: 't' }, view: () => '<main id="main-content">hi</main>' }
+  await withServer([spec], { dev: true, quiet: true }, async (port) => {
+    assert((await request(port, 'GET', '/')).status === 200, 'localhost works')
+    const rebound = await request(port, 'GET', '/', { host: `rebind.attacker.test:${port}` })
+    assert(rebound.status === 403 && /Invalid Host header/.test(rebound.body), `a rebound Host must be refused, got ${rebound.status}`)
+    const post = await requestFull(port, 'POST', '/__pulse/error', { headers: { host: `rebind.attacker.test:${port}`, origin: `http://rebind.attacker.test:${port}`, 'sec-fetch-site': 'same-origin', 'content-type': 'application/json' }, body: '{"message":"x"}' })
+    assert(post.status === 403, `the error endpoint must refuse it too, got ${post.status}`)
+  })
+  await withServer([spec], { dev: true, quiet: true, allowedHosts: ['myapp.test'] }, async (port) => {
+    assert((await request(port, 'GET', '/', { host: 'myapp.test' })).status === 200, 'allowedHosts lets a custom dev name through')
+  })
+  await withServer([spec], { quiet: true }, async (port) => {
+    assert((await request(port, 'GET', '/', { host: 'www.example.com' })).status === 200, 'production serves any Host (it sits behind a proxy and brands)')
+  })
+})
+
 await test('a forged X-Forwarded-Host cannot poison the cached canonical URL for other visitors', async () => {
   await withServer([hardenPage], { defaultCache: 3600, quiet: true }, async (port) => {
     const canon = b => (b.match(/<link rel="canonical" href="([^"]*)"/) || [])[1]

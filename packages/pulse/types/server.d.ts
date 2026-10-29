@@ -78,6 +78,15 @@ export interface ServerOptions {
   shutdownTimeout?: number
 
   /**
+   * Development only. Extra hostnames the dev server answers to. By default it answers only
+   * requests addressed to localhost, an IP address, a `.local` or `.localhost` name or this
+   * computer's hostname, which keeps a web page elsewhere from reaching it through DNS rebinding.
+   * An entry is an exact name (`'myapp.test'`) or `'.example.com'` for the domain and everything
+   * under it.
+   */
+  allowedHosts?: string[]
+
+  /**
    * Strict-Transport-Security on HTTPS responses (HTTPS is detected from the socket or
    * `x-forwarded-proto`). Default: `max-age=31536000` — one year, this exact host only.
    * `false` sends none (the proxy or CDN in front sets its own). A string is sent verbatim.

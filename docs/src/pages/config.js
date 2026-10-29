@@ -22,6 +22,8 @@ export default {
 
       ${callout('note', 'A <code>pulse.config.js</code> that cannot be loaded (a syntax error, say) or has an invalid value stops <code>pulse dev</code>, <code>build</code>, <code>start</code> and <code>stop</code> with a message that names the problem. It is never silently ignored: falling back to the defaults would start the server on a different port, without your <code>csp</code> or <code>redirects</code>. <code>port</code> must be a whole number from 1 to 65535, and <code>agent</code> must be <code>\'claude\'</code> or <code>\'copilot\'</code>.')}
 
+      ${callout('note', '<strong><code>pulse dev</code> only answers requests addressed to this machine.</strong> A web page you visit can make a domain of its own resolve to <code>127.0.0.1</code> (DNS rebinding) and then read your source files and the error journal through the dev server. So the dev server refuses any request whose <code>Host</code> is not <code>localhost</code>, an IP address, a <code>.local</code> or <code>.localhost</code> name, or this computer\'s hostname. If you reach it by another name, list it: <code>allowedHosts: [\'myapp.test\']</code> (or <code>\'.dev.example.com\'</code> for a domain and everything under it) in <code>pulse.config.js</code>.')}
+
       ${section('schema', 'Full schema')}
       ${codeBlock(highlight(`// pulse.config.js
 export default {
