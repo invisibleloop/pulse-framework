@@ -1159,7 +1159,7 @@ test('pulse-ui.css: form controls are at least 16px on touch devices (iOS focus-
   // every text-entry control at >= 16px on touch devices.
   const css  = readFileSync(new URL('../../public/pulse-ui.css', import.meta.url), 'utf8')
   const block = css.match(/@media \(pointer: coarse\) \{[\s\S]*?\n\}/)?.[0] ?? ''
-  for (const sel of ['.ui-input', '.ui-textarea', '.ui-select', '.ui-search-input']) {
+  for (const sel of ['.ui-input', '.ui-textarea', '.ui-select']) {
     assert.ok(block.includes(sel), `${sel} missing from the (pointer: coarse) 16px block`)
   }
   assert.match(block, /font-size:\s*max\(1rem, 16px\)/)

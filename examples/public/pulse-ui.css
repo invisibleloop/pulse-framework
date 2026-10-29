@@ -373,8 +373,7 @@ html, body {
 @media (pointer: coarse) {
   .ui-input,
   .ui-textarea,
-  .ui-select,
-  .ui-search-input {
+  .ui-select {
     font-size: max(1rem, 16px);
   }
 }
@@ -392,64 +391,7 @@ html, body {
   border-color: var(--ui-red);
 }
 
-/* ─── Search ─────────────────────────────────────────────────────────────── */
-.ui-search-wrap {
-  position: relative;
-  display:  flex;
-  align-items: center;
-}
-
-.ui-search-icon {
-  position:    absolute;
-  left:        .75rem;
-  display:     flex;
-  align-items: center;
-  color:       var(--ui-muted);
-  pointer-events: none;
-}
-
-.ui-search-input {
-  width:         100%;
-  height:        var(--ui-touch-min);
-  padding:       0 2.5rem 0 2.5rem;
-  background:    var(--ui-surface);
-  border:        1px solid var(--ui-border);
-  border-radius: var(--ui-radius);
-  font-family:   var(--ui-font);
-  font-size:     .9rem;
-  color:         var(--ui-text);
-  transition:    border-color .15s;
-  appearance:    none;
-  -webkit-appearance: none;
-}
-
-.ui-search-input::placeholder { color: var(--ui-muted); }
-
-.ui-search-input:hover:not(:disabled) { border-color: var(--ui-muted); }
-
-.ui-search-input:disabled { opacity: .5; cursor: not-allowed; }
-
 /* Hide native browser cancel button — the component provides its own */
-.ui-search-input::-webkit-search-cancel-button { display: none; }
-
-.ui-search-clear {
-  position:    absolute;
-  right:       .5rem;
-  display:     flex;
-  align-items: center;
-  justify-content: center;
-  width:       1.75rem;
-  height:      1.75rem;
-  padding:     0;
-  background:  transparent;
-  border:      none;
-  border-radius: var(--ui-radius-sm);
-  color:       var(--ui-muted);
-  cursor:      pointer;
-  transition:  color .15s, background .15s;
-}
-
-.ui-search-clear:hover { color: var(--ui-text); background: var(--ui-surface-2); }
 
 /* ─── Select ─────────────────────────────────────────────────────────────── */
 .ui-select-wrap {
@@ -1019,72 +961,11 @@ hr.ui-divider {
 .ui-accordion-body { padding: 0 1.25rem 1rem; }
 .ui-accordion-body p { font-size: .9rem; color: var(--ui-muted, var(--muted, #9090a0)); line-height: 1.7; margin: 0; }
 
-/* ─── Tooltip ────────────────────────────────────────────────────────────── */
-.ui-tooltip {
-  position: relative;
-  display:  inline-block;
-}
-
-.ui-tooltip::after {
-  content:        attr(data-tip);
-  position:       absolute;
-  bottom:         calc(100% + 8px);
-  left:           50%;
-  transform:      translateX(-50%) translateY(4px);
-  background:     var(--ui-surface-2, var(--surface-2, #1a1a26));
-  color:          var(--ui-text, var(--text, #e2e2ea));
-  font-size:      .78rem;
-  font-weight:    500;
-  line-height:    1.4;
-  white-space:    nowrap;
-  padding:        .35rem .7rem;
-  border-radius:  6px;
-  border:         1px solid var(--ui-border, var(--border, #2a2a38));
-  pointer-events: none;
-  opacity:        0;
-  transition:     opacity .15s, transform .15s;
-  z-index:        var(--ui-z-tooltip, 200);
-}
-
-.ui-tooltip::before {
-  content:          '';
-  position:         absolute;
-  bottom:           calc(100% + 2px);
-  left:             50%;
-  transform:        translateX(-50%);
-  border:           5px solid transparent;
-  border-top-color: var(--ui-border, var(--border, #2a2a38));
-  pointer-events:   none;
-  opacity:          0;
-  transition:       opacity .15s;
-  z-index:          var(--ui-z-tooltip, 200);
-}
-
-.ui-tooltip:hover::after,
-.ui-tooltip:focus-within::after {
-  opacity:   1;
-  transform: translateX(-50%) translateY(0);
-}
-.ui-tooltip:hover::before,
-.ui-tooltip:focus-within::before { opacity: 1; }
-
 /* bottom */
-.ui-tooltip--bottom::after  { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%) translateY(-4px); }
-.ui-tooltip--bottom::before { bottom: auto; top: calc(100% + 2px); border-top-color: transparent; border-bottom-color: var(--ui-border, var(--border, #2a2a38)); }
-.ui-tooltip--bottom:hover::after,
-.ui-tooltip--bottom:focus-within::after { transform: translateX(-50%) translateY(0); }
 
 /* left */
-.ui-tooltip--left::after  { bottom: auto; top: 50%; left: auto; right: calc(100% + 8px); transform: translateY(-50%) translateX(4px); }
-.ui-tooltip--left::before { bottom: auto; top: 50%; left: auto; right: calc(100% + 2px); transform: translateY(-50%); border-top-color: transparent; border-left-color: var(--ui-border, var(--border, #2a2a38)); }
-.ui-tooltip--left:hover::after,
-.ui-tooltip--left:focus-within::after  { transform: translateY(-50%) translateX(0); }
 
 /* right */
-.ui-tooltip--right::after  { bottom: auto; top: 50%; left: calc(100% + 8px); transform: translateY(-50%) translateX(-4px); }
-.ui-tooltip--right::before { bottom: auto; top: 50%; left: calc(100% + 2px); transform: translateY(-50%); border-top-color: transparent; border-right-color: var(--ui-border, var(--border, #2a2a38)); }
-.ui-tooltip--right:hover::after,
-.ui-tooltip--right:focus-within::after { transform: translateY(-50%) translateX(0); }
 
 /* ─── Modal ──────────────────────────────────────────────────────────────── */
 .ui-modal {
@@ -1687,157 +1568,13 @@ hr.ui-divider {
   .ui-cta-actions { flex-direction: column; align-items: stretch; }
 }
 
-/* ─── Code Window ────────────────────────────────────────────────────────────
-   macOS-style window chrome around a <pre><code> block.                     */
-.ui-code-window {
-  background:    var(--ui-surface-2);
-  border:        1px solid var(--ui-border);
-  border-radius: var(--ui-radius);
-  overflow:      hidden;
-}
-
-.ui-code-window-chrome {
-  display:         flex;
-  align-items:     center;
-  gap:             .4rem;
-  padding:         .6rem 1rem;
-  background:      var(--ui-surface);
-  border-bottom:   1px solid var(--ui-border);
-}
-
-.ui-code-window-dot {
-  width:         10px;
-  height:        10px;
-  border-radius: 50%;
-  flex-shrink:   0;
-}
-
-.ui-code-window-dot:nth-child(1) { background: #ff5f57; }
-.ui-code-window-dot:nth-child(2) { background: #febc2e; }
-.ui-code-window-dot:nth-child(3) { background: #28c840; }
-
-.ui-code-window-filename {
-  font-size:   .75rem;
-  font-family: var(--ui-mono);
-  color:       var(--ui-muted);
-  margin-left: .35rem;
-}
-
-.ui-code-window-lang {
-  font-size:   .7rem;
-  font-family: var(--ui-mono);
-  color:       var(--ui-muted);
-  margin-left: auto;
-}
-
-.ui-code-window-pre {
-  margin:      0;
-  padding:     1.25rem 1.5rem;
-  overflow-x:  auto;
-  font-family: var(--ui-mono);
-  font-size:   .85rem;
-  line-height: 1.7;
-  color:       var(--ui-text);
-  tab-size:    2;
-}
-
-.ui-code-window-code { font-family: inherit; }
-
-/* ─── Phone Frame ────────────────────────────────────────────────────────────
-   Realistic CSS mobile phone frame — body, dynamic island, side buttons,
-   home indicator. Drop any HTML into the content slot.                       */
-.ui-phone {
-  position: relative;
-  display: inline-flex;
-  width: 260px;
-  background: linear-gradient(160deg, #1e1e28 0%, #141418 100%);
-  border-radius: 3rem;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.8),
-    0 2px 0 1px rgba(255, 255, 255, 0.05) inset,
-    0 48px 96px rgba(0, 0, 0, 0.55),
-    0 12px 32px rgba(0, 0, 0, 0.4);
-  padding: 12px;
-}
-
 /* Side buttons */
-.ui-phone-btn {
-  position: absolute;
-  background: linear-gradient(90deg, #1a1a22 0%, #26262e 100%);
-  border-radius: 2px;
-}
-.ui-phone-btn--mute     { left: -3px; top: 88px;  width: 3px; height: 28px; }
-.ui-phone-btn--vol-up   { left: -3px; top: 128px; width: 3px; height: 48px; }
-.ui-phone-btn--vol-down { left: -3px; top: 186px; width: 3px; height: 48px; }
-.ui-phone-btn--power    { right: -3px; top: 140px; width: 3px; height: 64px; }
-
-/* Phone inner — holds screen + chrome */
-.ui-phone-inner {
-  width: 100%;
-  background: #000;
-  border-radius: 2.5rem;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
 
 /* Dynamic island */
-.ui-phone-island {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-  background: #000;
-}
-.ui-phone-camera {
-  display: block;
-  width: 10px;
-  height: 10px;
-  background: radial-gradient(circle at 35% 35%, #2a2a3a, #0a0a0a);
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
-}
 
 /* Screen */
-.ui-phone-screen {
-  flex: 1;
-  overflow: hidden;
-}
 
 /* Home indicator */
-.ui-phone-home {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 24px;
-  background: #000;
-}
-.ui-phone-home::after {
-  content: '';
-  display: block;
-  width: 80px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
-}
-
-/* Hover tilt — enabled by .ui-phone--tilt */
-.ui-phone--tilt {
-  transform-style: preserve-3d;
-  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.4s ease;
-  will-change: transform;
-}
-.ui-phone--tilt:hover {
-  transform: perspective(900px) rotateY(-8deg) rotateX(3deg);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.8),
-    0 2px 0 1px rgba(255, 255, 255, 0.07) inset,
-    8px 56px 120px rgba(0, 0, 0, 0.65),
-    4px 16px 40px rgba(0, 0, 0, 0.5);
-}
 
 /* ─── Footer ─────────────────────────────────────────────────────────────────
    Site footer — logo, nav links, legal text. Stacks on mobile.              */
@@ -2540,45 +2277,6 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
 
 .ui-upload-input {
   display: none;
-}
-
-/* ─── Segmented ─────────────────────────────────────────────────────────── */
-.ui-segmented {
-  display:       inline-flex;
-  background:    var(--ui-surface-2);
-  border-radius: var(--ui-radius);
-  padding:       3px;
-  gap:           2px;
-}
-.ui-segmented-input {
-  position: absolute;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0,0,0,0); border: 0;
-}
-.ui-segmented-label {
-  display:       inline-flex;
-  align-items:   center;
-  padding:       .4rem .9rem;
-  border-radius: calc(var(--ui-radius) - 2px);
-  font-size:     .85rem;
-  font-weight:   500;
-  color:         var(--ui-muted);
-  cursor:        pointer;
-  user-select:   none;
-  white-space:   nowrap;
-  transition:    background .15s, color .15s, box-shadow .15s;
-}
-.ui-segmented--sm .ui-segmented-label { font-size: .75rem; padding: .25rem .65rem; }
-.ui-segmented--lg .ui-segmented-label { font-size: .95rem; padding: .55rem 1.1rem; }
-.ui-segmented-input:checked + .ui-segmented-label {
-  background:  var(--ui-surface);
-  color:       var(--ui-text);
-  box-shadow:  0 1px 3px rgba(0,0,0,.25);
-}
-.ui-segmented-input:focus-visible + .ui-segmented-label {
-  outline:        2px solid var(--ui-accent);
-  outline-offset: 1px;
 }
 
 /* ─── Breadcrumbs ────────────────────────────────────────────────────────── */
