@@ -57,11 +57,29 @@ keyfile=$(mktemp)
 trap 'rm -f "$keyfile"' EXIT
 printf %s "$SELFTEST_KEY" > "$keyfile"
 
-scan_roots=(/tmp /var/tmp /srv /usr/local /home /etc "${RUNNER_TEMP:-}" "${GITHUB_WORKSPACE:-}")
-found=$(as_fixer sh -c '
-  for r in "$@"; do [ -d "$r" ] && find "$r" -xdev -type f -readable -size -4M -print0 2>/dev/null; done
-' _ "${scan_roots[@]}" \
-  | xargs -0 -r grep -lF -f "$keyfile" -- 2>/dev/null | grep -vxF "$keyfile" | head -5)
+# Where a secret could plausibly end up: temp directories, the sandbox, home, config, the job's own
+# directories and the proxy. Not the whole disk: a hosted runner has gigabytes of toolchains (Android
+# SDK, Rust, .NET) that no job writes a secret into, and a scan that never finishes proves nothing.
+scan_roots=(/tmp /var/tmp /srv /home /etc /usr/local/lib/key-proxy.mjs "${RUNNER_TEMP:-}" "${GITHUB_WORKSPACE:-}")
+prune='( -name node_modules -o -name .git -o -name .rustup -o -name .cargo -o -name .dotnet -o -name .nvm -o -name .npm -o -name .cache -o -name hostedtoolcache ) -prune -o'
+
+# Step 1, as the sandbox user: list the files it can read. Step 2, as us: look for the key in them.
+filelist=$(mktemp)
+trap 'rm -f "$keyfile" "$filelist"' EXIT
+timeout 240 sudo -n -u fixer env -i PATH="$PATH" HOME=/srv/fixer/home sh -c '
+  prune="$1"; shift
+  for r in "$@"; do
+    [ -e "$r" ] || continue
+    find "$r" -xdev $prune -type f -readable -size -2M -print0 2>/dev/null
+  done
+' _ "$prune" "${scan_roots[@]}" > "$filelist"
+[ $? -ne 124 ] || bad "listing the files the sandbox user can read did not finish in time, so the search proves nothing (narrow scan_roots)"
+
+hits=$(mktemp)
+trap 'rm -f "$keyfile" "$filelist" "$hits"' EXIT
+timeout 240 xargs -0 -r grep -lF -f "$keyfile" -- < "$filelist" > "$hits" 2>/dev/null
+[ $? -ne 124 ] || bad "searching those files for the key did not finish in time (narrow scan_roots)"
+found=$(head -5 "$hits")
 [ -z "$found" ] && ok "the key is not in any file the sandbox user can read" || bad "the key appears in: $found"
 
 # ...and in every process attribute it can read: command lines and environments, its own and anyone's.
