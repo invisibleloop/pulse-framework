@@ -29,6 +29,8 @@ agent hits a Pulse bug → pulse_report_issue (user approves) → Worker files i
 Add `approved-to-fix` to the issue, or run the workflow manually with the issue number.
 The issue gets a comment either way: a PR link, or why no fix was produced.
 
+**Testing the fixer itself** (after bumping `CLAUDE_CODE_VERSION`, or changing the workflow): run it manually with `dry_run` ticked. It stops after verification: no PR, no comment, no label changes; the outcome is on the run's summary page. Point it at a canary, a copy of the repo with a deliberately planted bug and a matching `agent-report` issue, so there is something real to fix (`gh workflow run agent-fix.yml --ref <canary-branch> -f issue=<n> -f dry_run=true`). The issue must still pass the author check.
+
 ## What protects the repo
 
 The issue text is written by a stranger's AI agent, so it is treated as hostile at every step:

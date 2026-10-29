@@ -24,6 +24,10 @@ on:
       issue:
         description: Issue number to attempt (must be an agent-report)
         required: true
+      dry_run:
+        description: Stop after verification - open no PR, comment on and relabel nothing (for testing the fixer itself)
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -146,6 +150,27 @@ jobs:
         id: verify
         run: bash .github/fixer/verify.sh
 
+      # The outcome, on the run page. Always, so a dry run (which posts nothing) still shows its result.
+      # The reason can contain test output derived from model-written code, so it goes in a fence
+      # longer than any backtick run in it.
+      - name: Show the outcome
+        if: always()
+        env:
+          OUTCOME: ${{ steps.verify.outputs.outcome }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          WORK="$RUNNER_TEMP/fixer"
+          {
+            echo "## Fixer outcome: \`${OUTCOME:-none}\`$([ "$DRY_RUN" = true ] && echo ' (dry run: no PR, no issue comment)')"
+            echo
+            if [ -s "$WORK/reason.txt" ]; then
+              head -c 1500 "$WORK/reason.txt" > "$WORK/reason.clip"
+              longest=$(grep -oE '`+' "$WORK/reason.clip" | awk '{ if (length($0) > m) m = length($0) } END { print m+0 }')
+              n=$(( longest < 3 ? 3 : longest + 1 )); fence=$(printf '`%.0s' $(seq 1 "$n"))
+              echo "${fence}text"; cat "$WORK/reason.clip"; echo; echo "$fence"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -156,7 +181,7 @@ jobs:
 
   pr:
     needs: fix
-    if: needs.fix.outputs.outcome == 'fixed'
+    if: needs.fix.outputs.outcome == 'fixed' && !inputs.dry_run
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -252,7 +277,7 @@ jobs:
 
   notify:
     needs: fix
-    if: always() && needs.fix.result != 'skipped' && needs.fix.outputs.outcome != 'fixed'
+    if: always() && !inputs.dry_run && needs.fix.result != 'skipped' && needs.fix.outputs.outcome != 'fixed'
     runs-on: ubuntu-latest
     permissions:
       issues: write
