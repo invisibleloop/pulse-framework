@@ -3351,6 +3351,45 @@ await test('forwarded host/proto are used when plausible and ignored when not (s
 
 // ---------------------------------------------------------------------------
 
+console.log('\nGlobal store: what reaches the browser\n')
+
+await test('a page receives only the store keys it subscribes to, plus the static defaults; the updater always exists', async () => {
+  const store = {
+    state:  { theme: 'dark' },
+    server: { user: async () => ({ email: 'private@example.com', token: 'SECRET-TOKEN' }), motd: async () => 'hello' },
+  }
+  const meta = { title: 'T', description: 'd', theme: 'dark' }
+  const noStore = { route: '/login', hydrate: '/login.js', meta, state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, view: () => '<main>login</main>' }
+  const wantsDefault = { route: '/themed', hydrate: '/themed.js', meta, store: ['theme'], state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, view: (_s, sv) => `<main>${sv.theme}</main>` }
+  const wantsUser = { route: '/account', hydrate: '/account.js', meta, store: ['user'], state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, view: (_s, sv) => `<main>${sv.user.email}</main>` }
+  const storeJson = (html) => { const m = html.match(/window\.__PULSE_STORE__=(\{.*?\});window/); return m ? JSON.parse(m[1]) : null }
+  for (const stream of [false, true]) {
+    await withServer([noStore, wantsDefault, wantsUser], { stream, store, quiet: true }, async (port) => {
+      const label = `stream:${stream}`
+      const a = (await get(port, '/login')).body
+      assert(!a.includes('SECRET-TOKEN') && !a.includes('private@example.com') && !a.includes('hello'), `${label}: the login page carries server-resolved store data`)
+      assert(a.includes('window.__updatePulseStore__'), `${label}: the updater must exist even with no store data, or navigating to a store page loses its state`)
+
+      const b = (await get(port, '/themed')).body
+      assert(!b.includes('SECRET-TOKEN') && !b.includes('private@example.com'), `${label}: /themed must not get the user`)
+      assert(storeJson(b)?.theme === 'dark', `${label}: /themed gets the static default it subscribes to: ${storeJson(b)}`)
+
+      const c = (await get(port, '/account')).body
+      assert(storeJson(c)?.user?.token === 'SECRET-TOKEN', `${label}: /account subscribes to user and gets it`)
+      assert(!('motd' in (storeJson(c) || {})), `${label}: ...but not motd`)
+
+      for (const [route, expect] of [['/login', false], ['/themed', false], ['/account', true]]) {
+        const nav = await new Promise((resolve, reject) => http.get({ host: '127.0.0.1', port, path: route, headers: { 'X-Pulse-Navigate': 'true' } }, res => {
+          let t = ''; res.on('data', d => { t += d }); res.on('end', () => resolve(t))
+        }).on('error', reject))
+        assert(nav.includes('SECRET-TOKEN') === expect, `${label}: navigation JSON for ${route} ${expect ? 'must' : 'must not'} carry the user`)
+      }
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)

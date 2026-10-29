@@ -88,6 +88,7 @@ export default {
 
       ${section('ctx-store', 'Accessing the store in server fetchers')}
       <p>Store data is resolved before page server fetchers run. The full resolved store state is available as <code>ctx.store</code> in any page's <code>server</code> fetcher, <code>guard</code>, and <code>meta</code> functions:</p>
+      <p><strong>What the browser receives.</strong> The server resolves the whole store for every request, but a page's HTML and client-navigation data carry only the keys it lists in <code>spec.store</code>, plus the defaults in <code>store.state</code>. Whatever else your <code>store.server</code> fetchers return (the signed-in user, a token) stays on the server for a page that does not subscribe to it, so a login page does not ship the user record. List a key in <code>spec.store</code> only on the pages that render it.</p>
       ${codeBlock(highlight(`export default {
   route: '/account',
   store: ['user'],
