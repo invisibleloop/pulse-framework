@@ -3168,6 +3168,32 @@ await test('host: "127.0.0.1" listens on loopback only', async () => {
 
 // ---------------------------------------------------------------------------
 
+console.log('\nSynchronous server fetchers (streamed, the default mode)\n')
+
+await test('a page whose fetchers return plain values (not promises) renders over the stream', async () => {
+  const syncSpec = {
+    route: '/sync-fetchers',
+    meta:  { title: 'Sync' },
+    server: {
+      brand: () => ({ name: 'Acme' }),
+      zero:  () => 0,
+      none:  () => undefined,
+      later: async () => 'async-ok',
+    },
+    view: (_s, server) => `<main><h1>${server.brand.name}</h1><p id="z">${server.zero}</p><p id="l">${server.later}</p></main>`,
+  }
+  for (const options of [{ quiet: true }, { quiet: true, fetcherTimeout: 1000 }]) {
+    await withServer([syncSpec], options, async (port) => {
+      const { status, body } = await get(port, '/sync-fetchers')
+      assert(status === 200, `Expected 200, got ${status}`)
+      assert(body.includes('<h1>Acme</h1>'), `Missing sync fetcher output: ${body}`)
+      assert(body.includes('async-ok'), `Missing async fetcher output: ${body}`)
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 finished = true
 if (failed > 0) process.exit(1)

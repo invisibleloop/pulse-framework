@@ -664,6 +664,51 @@ await test('sends done message with serverState (for a page the client mounts)',
   assert(done.serverState.items.length === 3, 'serverState.items should have 3 entries')
 })
 
+await test('synchronous fetchers (a plain value, undefined, a thenable) work in every render path; the docs show `brand: (ctx) => ctx.brand`', async () => {
+  const fetchers = {
+    plain:     () => 'sync value',
+    zero:      () => 0,
+    nothing:   () => undefined,
+    object:    () => ({ a: 1 }),
+    thenable:  () => ({ then: (resolve) => resolve('from a thenable') }),
+    async_:    async () => 'async value',
+  }
+  const view = (s, srv) => `<main id="main-content">${srv.plain}|${srv.zero}|${srv.nothing}|${srv.object.a}|${srv.thenable}|${srv.async_}</main>`
+  const expected = 'sync value|0|undefined|1|from a thenable|async value'
+  const base = { route: '/s', state: {}, server: fetchers, view }
+
+  assert((await renderToString(base)).html.includes(expected), 'renderToString')
+
+  // streamed (no segments: the whole view), with and without a fetcher timeout
+  for (const ctx of [{}, { fetcherTimeout: 1000 }]) {
+    const reader = renderToStream(base, ctx, 'n').getReader()
+    let html = ''
+    for (let r; !(r = await reader.read()).done;) html += new TextDecoder().decode(r.value)
+    assert(html.includes(expected), `renderToStream ${JSON.stringify(ctx)}: ${html.slice(0, 200)}`)
+  }
+
+  // streamed with a scope
+  const scoped = { ...base, view: { head: (s, srv) => `<h1>${srv.plain}</h1>`, feed: (s, srv) => `<p>${srv.thenable}</p>` },
+    stream: { shell: ['head'], deferred: ['feed'], scope: { head: ['plain'], feed: ['thenable'] } } }
+  const reader = renderToStream(scoped, {}, 'n').getReader()
+  let streamed = ''
+  for (let r; !(r = await reader.read()).done;) streamed += new TextDecoder().decode(r.value)
+  assert(streamed.includes('sync value') && streamed.includes('from a thenable'), 'scoped stream')
+
+  // the client-navigation stream
+  const messages = await collectNavMessages(renderToNavStream({ ...base, hydrate: '/x.js' }))
+  const done = messages.find(m => m.type === 'done')
+  assert(done?.serverState?.plain === 'sync value' && done.serverState.zero === 0 && done.serverState.object.a === 1, `nav stream: ${JSON.stringify(done)}`)
+})
+
+await test('a fetcher that throws synchronously is a render error, not a crash, in the streamed path', async () => {
+  const spec = { route: '/t', state: {}, server: { bad: () => { throw new Error('sync boom') } }, view: (s, srv) => `<p>${srv.bad}</p>` }
+  const reader = renderToStream(spec, {}, 'n').getReader()
+  let error = null
+  try { while (!(await reader.read()).done) { /* drain */ } } catch (e) { error = e }
+  assert(error && /sync boom/.test(error.message), `expected the fetcher's error, got ${error}`)
+})
+
 await test('a page the client does not mount gets no serverState or storeState in its nav stream (what a view does not print stays on the server)', async () => {
   const spec = {
     route:  '/profile',
