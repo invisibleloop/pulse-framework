@@ -1,6 +1,6 @@
 # Pulse — AI Agent Guide
 
-Pulse is a spec-first frontend framework. The spec is the source of truth. No codegen, no virtual DOM, and no runtime dependencies in the server or browser code (it imports only Node built-ins). The package's one dependency is esbuild (for `pulse build`), which is not used when serving a site. The MCP SDK and zod (for the agent tools) are development dependencies of your project, not of the package, so a production install omits them.
+Pulse is a spec-first frontend framework. The spec is the source of truth. No codegen, no virtual DOM, and no runtime dependencies in the server or browser code (it imports only Node built-ins). The package's dependencies, esbuild and acorn, are used only by `pulse build` (to bundle, and to remove server-only code from the browser bundle), never when serving a site. The MCP SDK and zod (for the agent tools) are development dependencies of your project, not of the package, so a production install omits them.
 
 ## Commands
 
@@ -264,6 +264,8 @@ The bundle is self-executing (imports spec, calls `mount` + `initNavigation` int
 - `public/dist/chunk-[hash].js` — shared code, split out by esbuild whenever multiple pages import the same thing (the runtime included). Zero, one, or several of these may exist depending on actual import overlap — there is no single fixed filename or size to quote. Check the network tab or run `pulse_check_bundles` for real numbers on your build.
 - `public/dist/[name].boot-[hash].js` — per-page spec bundle
 - `public/dist/manifest.json` — maps `/examples/foo.js` → `/dist/foo.boot-HASH.js`
+
+**Server code stays out of the bundle, and the build fails if it cannot prove that.** For a page that gets a boot bundle, `pulse build` parses the spec and removes `server`, `guard`, `submit`, `meta`, `render`, `contentType`, `sitemap`, `serverTimeout` and `serverTtl` from the exported object, then the imports and top-level declarations only that code used. Write the spec as `export default { ... }` (or `const spec = { ... }` then `export default spec`) with these keys written inline. A spread (`...base`), a computed key, a built or imported spec object, or a file that fails to parse makes the build stop with the file, line and reason, because server code could be hiding in what the build cannot see. A page that needs no bundle (no mutations, actions, persist or store) is not affected. Also fails the build: a page that cannot be imported.
 
 To add a new page to the build, add its spec path to the `ENTRIES` array in `scripts/build.js`.
 
