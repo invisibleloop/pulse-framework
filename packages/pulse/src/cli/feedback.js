@@ -110,7 +110,7 @@ export function previewId(payload) {
 
 const SECURITY_URL = 'https://github.com/invisibleloop/pulse-framework/security/advisories/new'
 
-export function formatPreview(payload, { transport = 'proxy', endpoint = DEFAULT_ENDPOINT } = {}) {
+export function formatPreview(payload, { transport = 'proxy', endpoint = DEFAULT_ENDPOINT, approvalId = previewId(payload), forUser = false } = {}) {
   const dest = transport === 'gh'
     ? `GitHub issue on ${REPO}, filed with your own \`gh\` login`
     : `${new URL(endpoint).host} (the Pulse feedback service), which files a public GitHub issue on ${REPO}`
@@ -126,7 +126,7 @@ export function formatPreview(payload, { transport = 'proxy', endpoint = DEFAULT
     section('Expected', payload.expected) +
     section('Actual', payload.actual) +
     section('Minimal repro', payload.repro),
-    `Show the user the report above, verbatim, and ask whether to send it. Only if they agree, call pulse_report_issue again with the same fields plus confirmed: true and previewId: "${previewId(payload)}".`,
+    ...(forUser ? [] : [`Show the user the report above, verbatim, and ask whether to send it. Only if they agree, call pulse_report_issue again with the same fields plus confirmed: true and previewId: "${approvalId}".`]),
   ].join('\n')
 }
 

@@ -462,14 +462,14 @@ test('pulse://start reads design:"freeform" from pulse.config.js and ties it to 
     'comment into each spec file — pulse_review detects Mode B from that comment, not from config')
 })
 
-test('pulse_report_issue is registered and gated behind preview → previewId confirm', () => {
+test('pulse_report_issue is registered and gated behind preview → a server-issued, single-use previewId', () => {
   assert(/registerTool\(\s*'pulse_report_issue'/.test(serverSrc), 'pulse_report_issue must be registered')
   assert(/!args\.confirmed\)\s*return text\(formatPreview/.test(serverSrc),
     'an unconfirmed call must return the preview and send nothing')
-  assert(/args\.previewId !== previewId\(built\.payload\)/.test(serverSrc),
-    'a confirmed call must be rejected unless previewId matches the redacted payload that was previewed')
+  assert(/approvals\.consume\('report', args\.previewId, subject\)/.test(serverSrc),
+    'a confirmed call must be rejected unless the previewId is a live, single-use id issued for this exact report')
   const sendIdx = serverSrc.indexOf('sendViaProxy(built.payload')
-  const gateIdx = serverSrc.indexOf('args.previewId !== previewId')
+  const gateIdx = serverSrc.indexOf("approvals.consume('report'")
   assert(gateIdx !== -1 && sendIdx > gateIdx, 'sending must come after the previewId check')
 })
 

@@ -32,6 +32,7 @@
 
 import { loadMcpDeps } from './deps.js'
 import { spawnCommandSync } from '../cli/spawn.js'
+import { createApprovals, askUser } from './approval.js'
 
 import path                      from 'path'
 import fs                        from 'fs'
@@ -158,6 +159,10 @@ function normaliseVibe(v) {
 // ---------------------------------------------------------------------------
 
 const server = new McpServer({ name: 'pulse', version: PKG_VERSION })
+const approvals = createApprovals()
+
+// Validating a spec means importing it, which runs its top-level code. Say so in the tools that do it.
+const RUNS_SPEC_CODE = "\n\nNote: this imports and runs the spec's JavaScript on this machine, unsandboxed. Only pass content you wrote or trust."
 
 // ---------------------------------------------------------------------------
 // pulse://guide/* resources — split by topic so each fits in one read
@@ -815,7 +820,7 @@ server.registerTool(
 server.registerTool(
   'pulse_validate',
   {
-    description: 'Validate a Pulse spec before writing it. Returns errors or confirms the spec is valid.',
+    description: 'Validate a Pulse spec before writing it. Returns errors or confirms the spec is valid.' + RUNS_SPEC_CODE,
     inputSchema: {
       content: z.string().optional().describe('JavaScript spec content to validate'),
       file: z.string().optional().describe('Absolute path to spec file to validate'),
@@ -859,7 +864,7 @@ Rules for the spec you write:
 - Use var(--ui-*) CSS tokens for any colour — never hardcode hex values
 - onSuccess AND onError are both required in every action
 - Do NOT use data-event on text inputs — use FormData in onStart/run instead
-- Always export default spec`,
+- Always export default spec` + RUNS_SPEC_CODE,
     inputSchema: {
       name: z.string().describe('Filename without extension, matching what you wrote — e.g. "about" or "blog/post"'),
     },
@@ -871,6 +876,10 @@ Rules for the spec you write:
     if (!isInsideDir(PAGES_DIR, fullPath)) {
       return text('Error: page name must not escape src/pages/')
     }
+    // The real path too: a symlink at src/pages/x.js that points outside the project (git keeps
+    // symlinks, so a cloned repo can ship one) made this read and import a file elsewhere and echo
+    // its content in the parse error.
+    try { resolveInRoot(ROOT, fullPath) } catch (e) { return text(`Error: ${e.message}`) }
 
     if (!fs.existsSync(fullPath)) {
       return text(`Error: ${path.relative(ROOT, fullPath)} does not exist — write the file with the Write tool first, then call pulse_create_page.`)
@@ -918,6 +927,7 @@ Rules for the component you write:
     if (!isInsideDir(COMPONENTS_DIR, fullPath)) {
       return text('Error: component name must not escape src/components/')
     }
+    try { resolveInRoot(ROOT, fullPath) } catch (e) { return text(`Error: ${e.message}`) }
 
     if (!fs.existsSync(fullPath)) {
       return text(`Error: ${path.relative(ROOT, fullPath)} does not exist — write the file with the Write tool first, then call pulse_create_component.`)
@@ -956,6 +966,7 @@ Rules for the store you write:
   },
   () => {
     const storePath = path.join(ROOT, 'pulse.store.js')
+    try { resolveInRoot(ROOT, storePath) } catch (e) { return text(`Error: ${e.message}`) }
 
     if (!fs.existsSync(storePath)) {
       return text('Error: pulse.store.js does not exist — write the file with the Write tool first, then call pulse_create_store.')
@@ -1068,6 +1079,10 @@ The generated file uses @invisibleloop/pulse/testing (renderSync / render). Do N
     const relPath = path.relative(ROOT, file)
     const testFile = file.replace(/\.js$/, '.test.js')
 
+    // The test file's own path must stay inside the project too. A dangling symlink at
+    // src/pages/x.test.js looks "missing" to existsSync, and writing through it created a file at the
+    // link's target, outside the project.
+    try { resolveInRoot(ROOT, testFile) } catch (e) { return text(`Error: ${e.message}`) }
     if (fs.existsSync(testFile)) {
       return text(`Test file already exists: ${path.relative(ROOT, testFile)}\nDelete it first if you want to regenerate.`)
     }
@@ -1189,7 +1204,9 @@ The generated file uses @invisibleloop/pulse/testing (renderSync / render). Do N
     }
 
     const testContent = lines.join('\n')
-    fs.writeFileSync(testFile, testContent, 'utf8')
+    // 'wx': create only, and never through a symlink (O_EXCL fails on one, dangling or not)
+    try { fs.writeFileSync(testFile, testContent, { encoding: 'utf8', flag: 'wx' }) }
+    catch (e) { return text(`Error: could not create ${path.relative(ROOT, testFile)}: ${e.code || e.message}`) }
 
     const summary = [
       `Generated ${path.relative(ROOT, testFile)}`,
@@ -1400,7 +1417,7 @@ any feature build.
 
 **Two modes:**
 - Default (full review): runs after Lighthouse passes — the canonical final gate. Returns full checklist + rendered HTML + validator output.
-- \`quick: true\`: lightweight mid-build check. Runs structural checks (main landmark, data-event on inputs, missing onError, hex in view, component patterns) without Lighthouse or the full checklist. Use after first draft, before the expensive verification pass. Not a substitute for the full review.`,
+- \`quick: true\`: lightweight mid-build check. Runs structural checks (main landmark, data-event on inputs, missing onError, hex in view, component patterns) without Lighthouse or the full checklist. Use after first draft, before the expensive verification pass. Not a substitute for the full review.` + RUNS_SPEC_CODE,
     inputSchema: {
       file:    z.string().optional().describe('Absolute path to the spec file to review'),
       content: z.string().optional().describe('JavaScript spec content to review (alternative to file)'),
@@ -1648,6 +1665,8 @@ Two steps. First call (no confirmed): returns the redacted report for you to sho
       confirmed:   z.boolean().optional().describe('true only after the user has approved the previewed report'),
       previewId:   z.string().optional().describe('The id returned by the preview step; required when confirmed is true'),
     },
+    // Publishes to a public issue tracker through the network: a host can use this to ask first
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   async (args) => {
     const config = await readPulseConfig()
@@ -1661,11 +1680,18 @@ Two steps. First call (no confirmed): returns the redacted report for you to sho
     const transport = config.reportTransport === 'gh' ? 'gh' : 'proxy'
     const endpoint  = typeof config.reportEndpoint === 'string' ? config.reportEndpoint : DEFAULT_ENDPOINT
 
-    if (!args.confirmed) return text(formatPreview(built.payload, { transport, endpoint }))
+    const subject = previewId(built.payload)      // identifies this exact redacted report
+    if (!args.confirmed) return text(formatPreview(built.payload, { transport, endpoint, approvalId: approvals.issue('report', subject) }))
 
-    if (args.previewId !== previewId(built.payload)) {
-      return text('Not sent: the report differs from the one previewed (or no previewId was given). Call without confirmed to preview it again, show the user, and confirm with the new previewId.')
+    // A server-issued, single-use id for exactly this report (see approval.js): a hash anyone can
+    // recompute, or an id from an earlier preview, does not pass.
+    if (!approvals.consume('report', args.previewId, subject)) {
+      return text('Not sent: no valid preview for this exact report (the previewId is missing, was already used, has expired, or belongs to a different report). Call without confirmed to preview it again, show the user, and confirm with the new previewId.')
     }
+    // Where the client can ask the person directly, it does: the model's own `confirmed: true` is
+    // not the user's consent.
+    const answer = await askUser(server, `${formatPreview(built.payload, { transport, endpoint, forUser: true })}\n\nPublish this report?`)
+    if (answer === 'declined') return text('Not sent: the user did not approve the report.')
 
     const result = transport === 'gh'
       ? sendViaGh(built.payload)
@@ -3703,9 +3729,11 @@ server.registerTool(
     description: 'Install the latest @invisibleloop/pulse package (skipped if npm-linked), then re-copy pulse-ui.css, pulse-ui.js, and the agent checklist into public/. Installing can change behaviour (before 1.0 a minor release may break), so the first call only reports the installed and latest versions: show that to the user, and only if they agree call again with confirmed: true. Never confirm on your own.',
     inputSchema: {
       confirmed: z.boolean().optional().describe('true only after the user has approved upgrading to the latest version'),
+      previewId: z.string().optional().describe('The id returned by the first call; required when confirmed is true'),
     },
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
   },
-  async ({ confirmed } = {}) => {
+  async ({ confirmed, previewId: updateId } = {}) => {
     // 1. npm install latest — but only if the package is NOT npm-linked.
     //    An npm link is a symlink in node_modules. Installing @latest over a
     //    link downgrades the project to the published version even when the
@@ -3723,11 +3751,17 @@ server.registerTool(
         `Not updated yet. Installed: v${installed}. Latest on npm: v${latest}.`,
         '',
         'Upgrading may change behaviour (before 1.0 a minor release can include breaking changes). Release notes: https://github.com/invisibleloop/pulse-framework/releases',
-        'Show this to the user. If they approve, call pulse_update again with confirmed: true.',
+        `Show this to the user. If they approve, call pulse_update again with confirmed: true and previewId: "${approvals.issue('update', 'latest')}".`,
       ].join('\n'))
     }
 
     if (!isLinked) {
+      if (!approvals.consume('update', updateId, 'latest')) {
+        return text('Not updated: no valid preview (the previewId is missing, was already used or has expired). Call pulse_update without confirmed to see the versions, show the user, and confirm with the new previewId.')
+      }
+      if (await askUser(server, 'Install the latest @invisibleloop/pulse into this project (npm install @invisibleloop/pulse@latest)? Before 1.0 a minor release can include breaking changes.') === 'declined') {
+        return text('Not updated: the user did not approve.')
+      }
       try {
         execSync('npm install @invisibleloop/pulse@latest', { cwd: ROOT, stdio: 'pipe' })
       } catch (e) {
