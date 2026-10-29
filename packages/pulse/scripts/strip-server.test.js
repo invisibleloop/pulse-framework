@@ -230,6 +230,28 @@ test('the real build refuses (exit 1, the file and the reason, no stack trace) a
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })
 
+test('export forms: `export const spec = {...}` followed by `export default spec` is understood (the docs site uses it, and its deploy failed when it was not)', () => {
+  const { code } = strip(`export const spec = {
+  route: '/a', state: {}, mutations: { m: s => s },
+  server: { k: async () => 'SECRET_A' },
+  view: () => '',
+}
+export default spec`)
+  clean(code)
+  assert.ok(code.includes('export const spec') && code.includes('mutations'), 'the exported binding stays, minus the server keys')
+  const analysis = analyseSpec(`export const spec = { view: () => '', mutations: {} }\nexport default spec`)
+  assert.ok(analysis.analysable && needsClientBundle(analysis))
+  // a `let`/`var` binding is read the same way
+  assert.ok(analyseSpec(`let spec = { view: () => '', actions: {} }\nexport default spec`).analysable)
+})
+
+test('the docs site, a real consumer with ~100 pages in the patterns real projects use, builds with the real build', () => {
+  const docs = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs')
+  if (!fs.existsSync(path.join(docs, 'src', 'pages'))) return          // not part of a published package checkout
+  const r = spawnSync(process.execPath, [BUILD, '--root', docs], { encoding: 'utf8', timeout: 120000, env: { ...process.env, PORT: '' } })
+  assert.equal(r.status, 0, `the docs site must build (a deploy runs exactly this):\n${r.stdout.slice(-600)}${r.stderr}`)
+})
+
 test('the real build leaves a spread page alone when it needs no browser bundle (nothing would ship)', () => {
   const root = project({
     'src/lib/base.js': `export default { server: { k: async () => 'SECRET_X' } }\n`,
