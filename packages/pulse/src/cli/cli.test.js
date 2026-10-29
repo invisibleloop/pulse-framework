@@ -289,6 +289,11 @@ test('unknown pulse.config.js keys are reported with a suggestion (a typo used t
     const list = text.match(/\[('redirects'[^\]]*)\]/)?.[1] || ''
     for (const k of list.match(/'(\w+)'/g).map(x => x.slice(1, -1))) assert.ok(KNOWN_CONFIG_KEYS.has(k), `${file} forwards ${k}, which the warning would call unknown`)
   }
+  // Nor may the build's own reads (`css.safelist` was read by build.js but warned about as unknown).
+  const build = readFileSync(path.join(__dirname, '..', '..', 'scripts', 'build.js'), 'utf8')
+  const read = [...build.matchAll(/_projectConfig\??\.(\w+)/g)].map(m => m[1])
+  assert.ok(read.includes('css') && read.includes('csp'), 'the scan should find the build\'s config reads')
+  for (const k of read) assert.ok(KNOWN_CONFIG_KEYS.has(k), `scripts/build.js reads ${k}, which the warning would call unknown`)
 })
 
 test('the Claude session config lives in a private temp directory, and Copilot cleans up on SIGHUP', () => {
