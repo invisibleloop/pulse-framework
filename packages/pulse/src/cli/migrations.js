@@ -10,6 +10,7 @@
 
 import fs   from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 
 /**
  * Hook code the scaffold used to generate and what replaces it. The old PostToolUse hook built a
@@ -72,6 +73,33 @@ export function addGitignoreLine(text) {
 }
 
 /**
+ * The `new-doc-page` skill describes writing a page for this repository's own docs site
+ * (docs/src/lib/nav.js), which no project has, yet the scaffold copied it into every project's
+ * .copilot/skills. It is no longer shipped. A copy that still matches what the scaffold wrote is
+ * removed; one the user edited is left alone.
+ */
+export const REMOVED_SKILLS = [
+  { dir: path.join('.copilot', 'skills', 'new-doc-page'), file: 'SKILL.md', sha256: '6fa8dad2d57a54b8b13b17614648efa7de8c57259712015a1138ee273a561ee2' },
+]
+
+/** Remove the shipped-and-unmodified copies listed in REMOVED_SKILLS. Returns the relative paths removed. */
+export function removeStaleSkills(root, list = REMOVED_SKILLS) {
+  const removed = []
+  for (const { dir, file, sha256 } of list) {
+    const target = path.join(root, dir, file)
+    let buf
+    try { buf = fs.readFileSync(target) } catch { continue }
+    if (crypto.createHash('sha256').update(buf).digest('hex') !== sha256) continue
+    try {
+      fs.rmSync(target)
+      if (fs.readdirSync(path.join(root, dir)).length === 0) fs.rmdirSync(path.join(root, dir))
+      removed.push(path.join(dir, file))
+    } catch { /* read-only or racing: leave it */ }
+  }
+  return removed
+}
+
+/**
  * Run every migration on a project. Returns the relative paths that were changed.
  * Only files that exist are touched; none is created.
  */
@@ -88,5 +116,6 @@ export function migrateProject(root) {
   apply(path.join('.claude', 'settings.json'), fixSettings)
   apply(path.join('.claude', 'CLAUDE.md'), addUntrustedSection)
   apply('.gitignore', addGitignoreLine)
+  for (const rel of removeStaleSkills(root)) done.push(rel)
   return done
 }

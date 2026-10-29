@@ -58,7 +58,7 @@ pulse`, 'bash'))}
       ${codeBlock(highlight(`export default {
   agent: 'copilot',
 }`, 'js'))}
-      <p>When using Copilot, project skills (<code>build-page</code>, <code>verify</code>, <code>new-doc-page</code>) are available via the <code>/skills</code> command inside the Copilot CLI session. The Pulse MCP server is automatically injected into your Copilot MCP config for the duration of the session and removed cleanly on exit.</p>
+      <p>When using Copilot, project skills (<code>build-page</code> and <code>verify</code>) are available via the <code>/skills</code> command inside the Copilot CLI session. The Pulse MCP server is automatically injected into your Copilot MCP config for the duration of the session and removed cleanly on exit.</p>
 
       ${section('first-build', 'Build your first page')}
       <p>Once Claude opens, start the dev server and ask for something:</p>
@@ -100,8 +100,7 @@ Validate the email format before submitting."`, 'bash'))}
 ├── .copilot/                ← GitHub Copilot CLI agent context
 │   └── skills/              ← project skills available inside Copilot
 │       ├── build-page/
-│       ├── verify/
-│       └── new-doc-page/
+│       └── verify/
 ├── .github/
 │   ├── copilot-instructions.md          ← session instructions for Copilot
 │   └── instructions/
@@ -118,7 +117,7 @@ Validate the email format before submitting."`, 'bash'))}
 /pulse-build   # production build → public/dist/
 /pulse-start   # run the production server
 /verify        # full verification: validate, Lighthouse, performance, review`, 'bash'))}
-      <p>When using GitHub Copilot CLI, the equivalent capabilities are available as project skills. Type <code>/skills</code> inside Copilot to browse them — <code>build-page</code>, <code>verify</code>, and <code>new-doc-page</code> are all pre-installed.</p>
+      <p>When using GitHub Copilot CLI, the equivalent capabilities are available as project skills. Type <code>/skills</code> inside Copilot to browse them — <code>build-page</code> and <code>verify</code> are pre-installed.</p>
       <p>You can also skip commands and skills entirely — just describe what you want and the agent handles the rest.</p>
 
       ${section('update', 'Keeping up to date')}

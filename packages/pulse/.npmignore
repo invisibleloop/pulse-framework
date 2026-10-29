@@ -6,3 +6,14 @@ types/checks/
 
 # Archived, unreferenced scaffold kept in the repo for reference
 src/cli/scaffold.archive.js
+
+# Repository tooling, not used by an installed package or a project made with it
+scripts/bench.js
+scripts/release-version.js
+scripts/gen-ui-types.js
+tsconfig.json
+
+# Demo styles for the repository's own examples/ pages; projects get pulse-ui.css/js only
+public/examples/
+public/chippy-bird.css
+public/log-dashboard.css
