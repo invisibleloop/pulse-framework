@@ -253,6 +253,13 @@ export default {
         <dd>Updates the Pulse package to the latest version and copies the latest UI assets and agent files into the project. The first call only reports the installed and latest versions; the agent asks you, then calls again with <code>confirmed: true</code>.</dd>
       </dl>
 
+      ${section('tool-safety', 'What the tools can do on your machine')}
+      <ul>
+        <li><strong>Validating runs your spec.</strong> <code>pulse_validate</code>, <code>pulse_review</code> and <code>pulse_create_page</code> import the spec to check it, so its top-level JavaScript runs on your machine, unsandboxed. That is the same as running your own code, so only let the agent pass content you wrote or trust. Their descriptions say so.</li>
+        <li><strong>Publishing and installing need your say-so.</strong> <code>pulse_report_issue</code> publishes a public GitHub issue and <code>pulse_update</code> installs a package. Each asks the agent to show you what it will do first, and the confirming call must carry a single-use id the server issued with that preview. If your client supports MCP elicitation, the server also asks <em>you</em> through the client's own dialog, so a model saying "confirmed" is not enough. Without elicitation the gate depends on your client prompting before the call, so keep <code>mcp__pulse__pulse_report_issue</code> and <code>mcp__pulse__pulse_update</code> out of any allow-list. Both tools are marked as open-world in their annotations so a client can prompt for them.</li>
+        <li><strong>Files stay in the project.</strong> Every tool that takes a path resolves it through symlinks and refuses anything that lands outside the project, including a symlink a cloned repository brought with it.</li>
+      </ul>
+
       ${section('flow', 'What happens when you ask for something')}
 
       ${agentFlow}
