@@ -1,491 +1,256 @@
 /**
- * Tests for the server-only property stripper in build.js
- * Run: node scripts/strip-server.test.js
+ * Server-only code stripping — run with: node scripts/strip-server.test.js
+ *
+ * Tests the real module (scripts/strip-server.js), and the real build end to end: what must
+ * never reach the public /dist bundles, and the cases where the build must refuse.
  */
 
-// ---------------------------------------------------------------------------
-// Inline the scanner functions (duplicated here to keep test self-contained)
-// ---------------------------------------------------------------------------
+import { test } from 'node:test'
+import assert   from 'node:assert/strict'
+import fs       from 'node:fs'
+import os       from 'node:os'
+import path     from 'node:path'
+import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { stripServerCode, analyseSpec, needsClientBundle, StripError, SERVER_ONLY_KEYS } from './strip-server.js'
 
-const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render', 'sitemap']
-const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md', '@invisibleloop/pulse']
+const strip = (src) => stripServerCode(src, { file: 'page.js' })
+const SECRETS = ['SECRET_A', 'SECRET_B', 'SECRET_C']
+const clean = (code) => { for (const s of SECRETS) assert.ok(!code.includes(s), `${s} must not survive:\n${code}`) }
 
-function stripServerOnlyKeys(source) {
-  for (const key of SERVER_ONLY_KEYS) source = removeObjectKey(source, key)
-  return source
+// ── the keys, in every layout ───────────────────────────────────────────────
+
+test('server-only keys are removed from the layout the old scanner knew, and the client keys stay', () => {
+  const { code } = strip(`export default {
+  route: '/a',
+  meta: { title: 'SECRET_A' },
+  server: {
+    data: async () => 'SECRET_B',
+  },
+  state: { n: 0 },
+  mutations: { inc: s => ({ n: s.n + 1 }) },
+  view: s => '<main>' + s.n + '</main>',
+}`)
+  clean(code)
+  assert.ok(code.includes('mutations') && code.includes('view') && code.includes("route: '/a'") && code.includes('state: { n: 0 }'))
+})
+
+test('...and in the layouts it missed: one line, quoted keys, shorthand, methods, getters, submit', () => {
+  for (const [label, src] of [
+    ['one line',   `export default { route: '/a', mutations: { m: s => s }, server: { k: () => 'SECRET_A' }, view: () => '', guard: () => 'SECRET_B' }`],
+    ['quoted',     `export default { 'route': '/a', mutations: { m: s => s }, 'server': { k: () => 'SECRET_A' }, "guard": () => 'SECRET_B', view: () => '' }`],
+    ['shorthand',  `const server = { k: () => 'SECRET_A' }\nconst guard = () => 'SECRET_B'\nexport default { route: '/a', mutations: { m: s => s }, server, guard, view: () => '' }`],
+    ['method',     `export default { route: '/a', mutations: { m: s => s }, server() { return 'SECRET_A' }, async guard() { return 'SECRET_B' }, view() { return '' } }`],
+    ['getter',     `export default { route: '/a', mutations: { m: s => s }, get server() { return 'SECRET_A' }, view: () => '', guard: async () => 'SECRET_B' }`],
+    ['computed literal', `export default { route: '/a', mutations: { m: s => s }, ['server']: { k: () => 'SECRET_A' }, ['guard']: () => 'SECRET_B', view: () => '' }`],
+    ['submit',     `export default { route: '/a', mutations: { m: s => s }, submit: async (ctx) => { await send('SECRET_A') }, guard: () => 'SECRET_B', view: () => '' }`],
+    ['trailing key', `export default { route: '/a', mutations: { m: s => s }, view: () => '', server: { k: () => 'SECRET_A' }, guard: () => 'SECRET_B' }`],
+  ]) {
+    const { code } = strip(src)
+    clean(code); assert.ok(code.includes('mutations'), `${label}: client keys stay`)
+    assert.ok(analyseSpec(code).analysable, `${label}: the output still parses`)
+  }
+})
+
+test('an ACTION named submit (or guard, server) is not a spec key and is left alone; only the top level counts', () => {
+  const { code } = strip(`export default {
+  route: '/a', state: { server: 1, guard: 2 },
+  actions: { submit: { run: async () => 'KEEP_ME' }, server: { run: async () => 1 } },
+  mutations: { guard: s => s },
+  submit: async () => 'SECRET_A',
+  view: () => '',
+}`)
+  assert.ok(code.includes('KEEP_ME') && code.includes('state: { server: 1, guard: 2 }') && code.includes('mutations: { guard: s => s }'))
+  assert.ok(!code.includes('SECRET_A'))
+})
+
+test('text that merely looks like code does not confuse it: strings, templates, comments, regexes, division', () => {
+  const { code } = strip(`// server: { fake: 1 }
+/* guard: nope */
+export default {
+  route: '/a',
+  mutations: { m: s => s },
+  view: () => \`
+    server: { in a template }
+    \${ 10 / 2 } and a regex /server: {/g and "guard: x"
+  \`,
+  server: { k: async () => /"/.test('SECRET_A') ? 4 / 2 : 'SECRET_B' },
+  meta: { description: 'a string with server: { } inside, and a } brace' },
+}`)
+  clean(code)
+  assert.ok(code.includes('and a regex /server: {/g') && code.includes('// server: { fake: 1 }'), 'the lookalikes are untouched')
+  assert.ok(!/^\s*meta:/m.test(code))
+})
+
+// ── imports and what only server code used ─────────────────────────────────
+
+test('imports and declarations used only by the removed code go with it; what client code uses stays', () => {
+  const { code, removed } = strip(`import { sendMail } from '../lib/mailer.js'
+import fs from 'node:fs'
+import { md } from '@invisibleloop/pulse/md'
+import { fmt } from './client-helper.js'
+import './side-effect.js'
+const post = md('content/x.md')
+const API = 'SECRET_A'
+const TABLE = { rows: ['SECRET_B'] }
+const clientOnly = 42
+function lookup() { return fs.readFileSync(API) }
+function shared() { return clientOnly }
+const server = { post: async () => post, find: lookup, rows: () => TABLE }
+export default {
+  route: '/a', mutations: { m: s => ({ n: fmt(shared()) }) },
+  submit: async () => sendMail(API), server, view: () => '',
+}`)
+  clean(code)
+  assert.deepEqual(removed.imports.sort(), ['../lib/mailer.js', '@invisibleloop/pulse/md', 'node:fs'])
+  assert.ok(code.includes("import { fmt } from './client-helper.js'"), 'an import the client still uses stays')
+  assert.ok(code.includes("import './side-effect.js'"), 'a side-effect import has no bindings and stays')
+  assert.ok(code.includes('function shared') && code.includes('const clientOnly = 42'), 'client-used declarations stay')
+  assert.ok(!code.includes('function lookup') && !code.includes('const post') && !code.includes('const API') && !code.includes('const server'), 'server-only declarations go')
+})
+
+test('the package root and node: built-ins imported for server code only (pushStore in a webhook, fs in a fetcher) are removed, as the old special-casing did', () => {
+  const { code, removed } = strip(`import { pushStore } from '@invisibleloop/pulse'
+import { md } from '@invisibleloop/pulse/md'
+import crypto from 'node:crypto'
+const hash = (x) => crypto.createHash('sha256').update(x).digest('hex')
+const post = md('content/post.md')
+export default {
+  route: '/hooks', state: {}, mutations: { m: s => s }, view: () => '',
+  submit: async (ctx) => { pushStore({ k: hash('SECRET_A') }) },
+  server: { post },
+}`)
+  clean(code)
+  assert.deepEqual(removed.imports.sort(), ['@invisibleloop/pulse', '@invisibleloop/pulse/md', 'node:crypto'])
+  assert.ok(!/pushStore|crypto|\bmd\b/.test(code), `nothing of them is left:\n${code}`)
+})
+
+test('a variable with a side-effecting initialiser that nothing ever read is not deleted on a guess', () => {
+  const { code } = strip(`import { register } from './plugin.js'
+const _ = register()
+export default { route: '/a', mutations: { m: s => s }, view: () => '', server: { k: () => 1 } }`)
+  assert.ok(code.includes('register()') && code.includes("from './plugin.js'"))
+})
+
+// ── what it will not guess ──────────────────────────────────────────────────
+
+test('it refuses, naming the file and line, when it cannot see the spec: spread, computed key, built or imported object', () => {
+  const cases = [
+    ['a spread',          `import base from './base.js'\nexport default {\n  ...base,\n  route: '/a', mutations: {}, view: () => '' }`, /spreads another object[\s\S]*`\.\.\.base`/, 3],
+    ['a computed key',    `const k = 'server'\nexport default { [k]: () => 1, route: '/a', mutations: {}, view: () => '' }`, /computed property key/, 2],
+    ['a call',            `export default defineSpec({ route: '/a', mutations: {}, view: () => '' })`, /not an object literal/, 1],
+    ['an imported name',  `import spec from './spec.js'\nexport default spec`, /not declared in this file as a plain object/, 2],
+    ['a non-object binding', `const spec = makeSpec()\nexport default spec`, /not bound to an object literal/, 2],
+  ]
+  for (const [label, src, message, line] of cases) {
+    assert.throws(() => stripServerCode(src, { file: 'src/pages/x.js' }), (err) => {
+      assert.ok(err instanceof StripError, `${label}: a StripError`)
+      assert.match(err.message, /^src\/pages\/x\.js:\d+: /, `${label}: names the file and a line`)
+      assert.match(err.message, message, label)
+      assert.ok(err.message.startsWith(`src/pages/x.js:${line}:`), `${label}: line ${line}, got ${err.message.slice(0, 30)}`)
+      return true
+    })
+  }
+  assert.throws(() => stripServerCode('export default { route: "/a", view: () => {', { file: 'x.js' }), /could not parse this file/)
+})
+
+test('export forms it understands: a bound const, `export { spec as default }`; and a helper module with no default export is returned unchanged', () => {
+  const a = strip(`const spec = { route: '/a', mutations: {}, server: { k: () => 'SECRET_A' }, view: () => '' }\nexport default spec`)
+  clean(a.code); assert.ok(a.code.includes('const spec ='), 'the spec binding itself stays')
+  const b = strip(`const spec = { route: '/a', mutations: {}, guard: () => 'SECRET_A', view: () => '' }\nexport { spec as default }`)
+  clean(b.code)
+  const helper = `export const x = 1\nexport function y() { return 'SECRET_A' }\n`
+  assert.equal(strip(helper).code, helper, 'not a spec: untouched')
+})
+
+test('analyseSpec and needsClientBundle: a view plus client behaviour', () => {
+  const need = (src) => needsClientBundle(analyseSpec(src))
+  assert.equal(need(`export default { view: () => '', mutations: {} }`), true)
+  assert.equal(need(`export default { view: () => '', actions: {} }`), true)
+  assert.equal(need(`export default { view: () => '', persist: ['a'] }`), true)
+  assert.equal(need(`export default { view: () => '', store: ['user'] }`), true)
+  assert.equal(need(`export default { view: () => '', server: {} }`), false, 'a server-rendered page needs no bundle')
+  assert.equal(need(`export default { view: () => '', submit: async () => 1 }`), false, 'a submit-only form needs no bundle')
+  assert.equal(need(`export default { render: () => '', mutations: {} }`), false, 'no view: a raw response')
+  assert.equal(need(`export default { ...x, view: () => '', mutations: {} }`), false, 'unanalysable is not "needs": the build decides separately')
+  assert.deepEqual(SERVER_ONLY_KEYS.includes('submit') && SERVER_ONLY_KEYS.includes('server') && SERVER_ONLY_KEYS.includes('guard'), true)
+})
+
+// ── the real build ──────────────────────────────────────────────────────────
+
+const BUILD = path.join(path.dirname(fileURLToPath(import.meta.url)), 'build.js')
+
+function project(files) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-strip-build-'))
+  fs.mkdirSync(path.join(root, 'public'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"p","type":"module"}')
+  fs.writeFileSync(path.join(root, 'public', 'pulse-ui.css'), '')
+  for (const [file, text] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(root, file)), { recursive: true })
+    fs.writeFileSync(path.join(root, file), text)
+  }
+  return root
 }
+const build = (root) => spawnSync(process.execPath, [BUILD, '--root', root], { encoding: 'utf8', timeout: 60000, env: { ...process.env, PORT: '' } })
+const distText = (root) => fs.readdirSync(path.join(root, 'public', 'dist')).filter(f => f.endsWith('.js')).map(f => fs.readFileSync(path.join(root, 'public', 'dist', f), 'utf8')).join('\n')
+const META = `meta: { title: 't', description: 'd', theme: 'light' }`
+const VIEW = `view: s => \`<main id="main-content"><button data-event="inc">\${s.n}</button></main>\``
 
-function stripServerOnlyImports(source) {
-  const extraPattern = SERVER_ONLY_IMPORTS
-    .map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('|')
-  const combinedRe = new RegExp(
-    `^[ \\t]*import\\s+(?:\\{[^}]*\\}|[\\w*]+(?:\\s+as\\s+\\w+)?)\\s+from\\s+['"](?:node:[^'"]+|${extraPattern})['"]\\s*;?[ \\t]*\\n?`,
-    'gm'
-  )
-  const importedNames = new Set()
-  for (const m of source.matchAll(combinedRe)) {
-    const named = m[0].match(/\{\s*([^}]*)\s*\}/)
-    if (named) {
-      for (const part of named[1].split(',')) {
-        const name = part.trim().split(/\s+as\s+/).pop().trim()
-        if (name) importedNames.add(name)
-      }
+test('the real build: no server-side secret reaches the public bundles, in any of the layouts the audit found', () => {
+  const root = project({
+    'src/lib/mailer.js': `const HELPER_SECRET = 'SECRET_HELPER'\nexport async function sendMail(x) { return [HELPER_SECRET, x] }\n`,
+    'src/pages/submit.js':    `import { sendMail } from '../lib/mailer.js'\nexport default { route: '/submit', ${META}, state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) },\n  submit: async () => { await sendMail('SECRET_SUBMIT') },\n  ${VIEW} }\n`,
+    'src/pages/oneline.js':    `export default { route: '/oneline', ${META}, state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, server: { k: async () => 'SECRET_ONELINE' }, ${VIEW} }\n`,
+    'src/pages/quoted.js':    `export default { 'route': '/quoted', ${META}, state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, 'server': { k: async () => 'SECRET_QUOTED' }, ${VIEW} }\n`,
+    'src/pages/shorthand.js': `const server = { k: async () => 'SECRET_SHORTHAND' }\nconst guard = async () => 'SECRET_GUARD'\nexport default { route: '/shorthand', ${META}, state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, server, guard, ${VIEW} }\n`,
+    'src/pages/normal.js':    `export default {\n  route: '/normal', ${META}, state: { n: 0 },\n  mutations: { inc: s => ({ n: s.n + 1 }) },\n  server: {\n    k: async () => 'SECRET_NORMAL',\n  },\n  ${VIEW},\n}\n`,
+  })
+  try {
+    const r = build(root)
+    assert.equal(r.status, 0, `the build should succeed:\n${r.stdout}${r.stderr}`)
+    const dist = distText(root)
+    for (const secret of ['SECRET_HELPER', 'SECRET_SUBMIT', 'SECRET_ONELINE', 'SECRET_QUOTED', 'SECRET_SHORTHAND', 'SECRET_GUARD', 'SECRET_NORMAL']) {
+      assert.ok(!dist.includes(secret), `${secret} reached the public bundle`)
     }
-    const def = m[0].match(/import\s+([\w]+)\s+from/)
-    if (def) importedNames.add(def[1])
-  }
-  source = source.replace(combinedRe, '')
-  for (const name of importedNames) {
-    const declRe = new RegExp(
-      `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\b[^\\n]*;?[ \\t]*\\n?`,
-      'gm'
-    )
-    source = source.replace(declRe, '')
-  }
-  return source
-}
-
-function strip(source) {
-  return stripServerOnlyImports(stripServerOnlyKeys(source))
-}
-
-// Mirrors needsClientBundle() in build.js exactly — see its doc comment there.
-function needsClientBundle(strippedSource) {
-  return /\b(mutations|actions|persist|store)\s*:/.test(strippedSource)
-}
-
-function isInsideString(source, pos) {
-  let i = 0
-  const stack = []
-  while (i < pos) {
-    const c = source[i]
-    const top = stack[stack.length - 1]
-    if (top === '"' || top === "'") {
-      if (c === '\\') { i += 2; continue }
-      if (c === top)  { stack.pop() }
-      i++; continue
-    }
-    if (top === '`') {
-      if (c === '\\') { i += 2; continue }
-      if (c === '`')  { stack.pop(); i++; continue }
-      if (c === '$' && source[i + 1] === '{') { stack.push('{'); i += 2; continue }
-      i++; continue
-    }
-    if (top === '{') {
-      if (c === '{') { stack.push('{'); i++; continue }
-      if (c === '}') { stack.pop(); i++; continue }
-      if (c === '"' || c === "'" || c === '`') { stack.push(c); i++; continue }
-      i++; continue
-    }
-    if (c === '/') {
-      if (source[i + 1] === '/') { while (i < pos && source[i] !== '\n') i++; continue }
-      if (source[i + 1] === '*') { const end = source.indexOf('*/', i + 2); i = end < 0 ? pos : end + 2; continue }
-      let prev = ''
-      for (let k = i - 1; k >= 0; k--) { if (source[k] !== ' ' && source[k] !== '\t') { prev = source[k]; break } }
-      if (!/[a-zA-Z0-9_$)\]]/.test(prev)) {
-        i++
-        while (i < pos) { if (source[i] === '\\') { i += 2; continue } if (source[i] === '/') { i++; break } if (source[i] === '\n') break; i++ }
-        while (i < pos && /[gimsuy]/.test(source[i])) i++
-        continue
-      }
-    }
-    if (c === '"' || c === "'" || c === '`') { stack.push(c) }
-    i++
-  }
-  return stack.length > 0
-}
-
-function removeObjectKey(source, key) {
-  const keyRe = new RegExp(`^([ \\t]*)(${key})([ \\t]*:)`, 'gm')
-  let match
-  while ((match = keyRe.exec(source)) !== null) {
-    if (isInsideString(source, match.index)) { continue }
-    const removeStart = match.index
-    const afterColon  = match.index + match[0].length
-    let pos = afterColon
-    while (pos < source.length && (source[pos] === ' ' || source[pos] === '\t')) pos++
-    pos = scanJsValue(source, pos)
-    while (pos < source.length && (source[pos] === ' ' || source[pos] === '\t')) pos++
-    if (pos < source.length && source[pos] === ',') pos++
-    if (pos < source.length && source[pos] === '\n') pos++
-    source = source.slice(0, removeStart) + source.slice(pos)
-    keyRe.lastIndex = removeStart
-  }
-  return source
-}
-
-function scanJsValue(src, pos) {
-  let i = pos, depth = 0
-  while (i < src.length) {
-    const c = src[i]
-    if (c === '/' && src[i + 1] === '/') { while (i < src.length && src[i] !== '\n') i++; continue }
-    if (c === '/' && src[i + 1] === '*') { const e = src.indexOf('*/', i + 2); i = e < 0 ? src.length : e + 2; continue }
-    if (c === '"' || c === "'") {
-      i++
-      while (i < src.length) { if (src[i] === '\\') { i += 2; continue } if (src[i] === c) { i++; break } i++ }
-      if (depth === 0) return i
-      continue
-    }
-    if (c === '`') { i = scanTemplateLiteral(src, i + 1); if (depth === 0) return i; continue }
-    if (c === '{' || c === '[' || c === '(') { depth++; i++; continue }
-    if (c === '}' || c === ']' || c === ')') {
-      if (depth === 0) return i
-      depth--; i++
-      if (depth === 0) {
-        let j = i
-        while (j < src.length && (src[j] === ' ' || src[j] === '\t')) j++
-        const next = src[j]
-        if (!next || next === ',' || next === '}' || next === ']' || next === ')' || next === '\n') return i
-        if (next === '=' && src[j + 1] === '>') continue
-        continue
-      }
-      continue
-    }
-    if (depth === 0 && (c === ',' || c === '\n')) return i
-    i++
-  }
-  return i
-}
-
-function scanTemplateLiteral(src, pos) {
-  let i = pos
-  while (i < src.length) {
-    if (src[i] === '\\') { i += 2; continue }
-    if (src[i] === '`')  { return i + 1 }
-    if (src[i] === '$' && src[i + 1] === '{') {
-      i += 2; let depth = 1
-      while (i < src.length && depth > 0) {
-        const c = src[i]
-        if (c === '{') { depth++; i++; continue }
-        if (c === '}') { depth--; i++; continue }
-        if (c === '"' || c === "'") { const q = c; i++; while (i < src.length) { if (src[i] === '\\') { i += 2; continue } if (src[i] === q) { i++; break } i++ } continue }
-        if (c === '`') { i = scanTemplateLiteral(src, i + 1); continue }
-        i++
-      }
-      continue
-    }
-    i++
-  }
-  return i
-}
-
-// ---------------------------------------------------------------------------
-// Test runner
-// ---------------------------------------------------------------------------
-
-let pass = 0, fail = 0
-
-function test(label, input, expected) {
-  const got = strip(input).trim()
-  const exp = expected.trim()
-  if (got === exp) {
-    console.log('  \u2713 ' + label)
-    pass++
-  } else {
-    console.log('  \u2717 ' + label)
-    console.log('    expected: ' + JSON.stringify(exp))
-    console.log('    got:      ' + JSON.stringify(got))
-    fail++
-  }
-}
-
-// ---------------------------------------------------------------------------
-
-console.log('\nServer-only key stripping\n')
-
-test('object value with trailing comma',
-  `export default {\n  route: '/',\n  server: { data: async (ctx) => 'hello' },\n  view: () => ''\n}`,
-  `export default {\n  route: '/',\n  view: () => ''\n}`
-)
-
-test('async arrow with block body',
-  `export default {\n  server: {\n    data: async (ctx) => {\n      return 'x'\n    }\n  },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('serverTimeout simple number',
-  `export default {\n  serverTimeout: 5000,\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('guard async arrow with block body containing nested object',
-  `export default {\n  guard: async (ctx) => {\n    if (!ctx.session) return { redirect: '/login' }\n  },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('guard inline arrow expression',
-  `export default {\n  guard: async (ctx) => { if (!ctx.session) return { redirect: '/login' } },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('contentType and render are both stripped (raw content specs are never hydrated)',
-  `export default {\n  route: '/feed.xml',\n  contentType: 'application/rss+xml',\n  render: (ctx) => '<rss/>'\n}`,
-  `export default {\n  route: '/feed.xml',\n}`
-)
-
-test('render with template literal containing ${...}',
-  'export default {\n  render: (ctx, srv) => `<rss>${srv.items.map(i => i.title).join(\',\')}</rss>`,\n  view: () => \'\'\n}',
-  "export default {\n  view: () => ''\n}"
-)
-
-test('last property — no trailing comma',
-  `export default {\n  view: () => '',\n  server: { data: async () => [] }\n}`,
-  `export default {\n  view: () => '',\n}`
-)
-
-test('multiple fetchers in server object',
-  `export default {\n  server: {\n    user: async (ctx) => ctx.user,\n    posts: async (ctx) => []\n  },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('does not strip non-server keys',
-  `export default {\n  route: '/',\n  state: {},\n  view: () => ''\n}`,
-  `export default {\n  route: '/',\n  state: {},\n  view: () => ''\n}`
-)
-
-test('strips all server-only keys in one pass',
-  `export default {\n  route: '/admin',\n  guard: async (ctx) => { if (!ctx.user) return { redirect: '/login' } },\n  serverTimeout: 3000,\n  server: { profile: async (ctx) => ctx.user },\n  view: () => ''\n}`,
-  `export default {\n  route: '/admin',\n  view: () => ''\n}`
-)
-
-test('does not touch "server" inside a view string',
-  `export default {\n  view: (state, server) => \`<p>\${server.name}</p>\`\n}`,
-  `export default {\n  view: (state, server) => \`<p>\${server.name}</p>\`\n}`
-)
-
-test('async function expression (not arrow)',
-  `export default {\n  server: {\n    data: async function(ctx) { return ctx.db.query() }\n  },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('server with deeply nested template literal in view is not affected',
-  'export default {\n  server: { items: async () => [] },\n  view: (s, srv) => `<ul>${srv.items.map(i => `<li>${i}</li>`).join(\'\')}</ul>`\n}',
-  'export default {\n  view: (s, srv) => `<ul>${srv.items.map(i => `<li>${i}</li>`).join(\'\')}</ul>`\n}'
-)
-
-test('render: inside a template literal string (docs code example) is not stripped',
-  'export default {\n  route: \'/auth\',\n  view: () => `${highlight(`export default {\n  render: (ctx) => ctx.user\n}`)}`\n}',
-  'export default {\n  route: \'/auth\',\n  view: () => `${highlight(`export default {\n  render: (ctx) => ctx.user\n}`)}`\n}'
-)
-
-test('server: inside a double-quoted string is not stripped',
-  'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}',
-  'export default {\n  route: \'/docs\',\n  view: () => "<pre>server: { data: async () => {} }</pre>"\n}'
-)
-
-test('server/meta not fooled by regex literal containing double quote (/"/g)',
-  'const esc = s => s.replace(/"/g, \'&quot;\')\nexport default {\n  meta: { title: \'Page\', description: \'Desc\' },\n  server: { data: async () => [] },\n  view: () => \'\'\n}',
-  'const esc = s => s.replace(/"/g, \'&quot;\')\nexport default {\n  view: () => \'\'\n}'
-)
-
-test('server not fooled by line comment containing double quote',
-  'export default {\n  // server: "comment"\n  server: { data: async () => [] },\n  view: () => \'\'\n}',
-  'export default {\n  // server: "comment"\n  view: () => \'\'\n}'
-)
-
-test('server not fooled by block comment containing double quote',
-  'export default {\n  /* server: "comment" */\n  server: { data: async () => [] },\n  view: () => \'\'\n}',
-  'export default {\n  /* server: "comment" */\n  view: () => \'\'\n}'
-)
-
-test('meta object is stripped (client runtime never reads spec.meta)',
-  `export default {\n  route: '/blog',\n  meta: {\n    title: async (ctx) => fetchPost(ctx).frontmatter.title,\n    styles: ['/pulse-ui.css'],\n  },\n  view: () => ''\n}`,
-  `export default {\n  route: '/blog',\n  view: () => ''\n}`
-)
-
-test('meta: inside a template literal string is not stripped',
-  'export default {\n  view: () => `<pre>meta: { title: \'Home\' }</pre>`\n}',
-  'export default {\n  view: () => `<pre>meta: { title: \'Home\' }</pre>`\n}'
-)
-
-// ---------------------------------------------------------------------------
-// Server-only import stripping
-// ---------------------------------------------------------------------------
-
-console.log('\nServer-only import stripping\n')
-
-test('strips @invisibleloop/pulse/md import and const declaration',
-  `import { md } from '@invisibleloop/pulse/md'\nconst fetchPost = md('src/content/blog.md')\nexport default {\n  route: '/blog',\n  view: () => ''\n}`,
-  `export default {\n  route: '/blog',\n  view: () => ''\n}`
-)
-
-test('strips named import with multiple bindings',
-  `import { md, parseMd } from '@invisibleloop/pulse/md'\nconst post = md('src/content/post.md')\nconst result = parseMd('# Hello')\nexport default {\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('strips import + const then strips meta that used the const',
-  `import { md } from '@invisibleloop/pulse/md'\nconst fetchPost = md('src/content/trees.md')\nexport default {\n  route: '/blog',\n  meta: {\n    title: async (ctx) => (await fetchPost(ctx)).frontmatter.title,\n    styles: ['/pulse-ui.css'],\n  },\n  server: { post: fetchPost },\n  view: () => ''\n}`,
-  `export default {\n  route: '/blog',\n  view: () => ''\n}`
-)
-
-test('does not strip non-server imports',
-  `import { nav, footer } from '@invisibleloop/pulse/ui'\nexport default {\n  view: () => nav({})\n}`,
-  `import { nav, footer } from '@invisibleloop/pulse/ui'\nexport default {\n  view: () => nav({})\n}`
-)
-
-test('strips node:fs default import',
-  `import fs from 'node:fs'\nexport default {\n  server: { data: async () => fs.readFileSync('x') },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('strips node:fs/promises named import',
-  `import { readFile } from 'node:fs/promises'\nexport default {\n  server: { data: async () => readFile('x') },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('strips node:path and node:url together',
-  `import path from 'node:path'\nimport { fileURLToPath } from 'node:url'\nexport default {\n  server: { data: async (ctx) => path.join('a', 'b') },\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-test('strips node:fs default import and top-level const using it',
-  `import fs from 'node:fs'\nconst DIR = fs.readdirSync('.')\nexport default {\n  view: () => ''\n}`,
-  `export default {\n  view: () => ''\n}`
-)
-
-// ---------------------------------------------------------------------------
-// Dev-mode node:* import stripping (same regex used in src/cli/dev.js serveFile)
-// ---------------------------------------------------------------------------
-
-console.log('\nDev-mode node:* import stripping\n')
-
-const DEV_NODE_RE = /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"]node:[^'"]+['"]\s*;?[ \t]*\n?/gm
-
-function devStrip(source) {
-  return source.replace(DEV_NODE_RE, '')
-}
-
-function devTest(label, input, expected) {
-  const got = devStrip(input).trim()
-  const exp = expected.trim()
-  if (got === exp) {
-    console.log('  \u2713 ' + label)
-    pass++
-  } else {
-    console.log('  \u2717 ' + label)
-    console.log('    expected: ' + JSON.stringify(exp))
-    console.log('    got:      ' + JSON.stringify(got))
-    fail++
-  }
-}
-
-devTest('strips default import (node:fs)',
-  `import fs from 'node:fs'\nconst DIR = '/journal'\nexport default { view: () => '' }`,
-  `const DIR = '/journal'\nexport default { view: () => '' }`
-)
-
-devTest('strips named import (node:path)',
-  `import { join, resolve } from 'node:path'\nexport default { view: () => '' }`,
-  `export default { view: () => '' }`
-)
-
-devTest('strips multiple node: imports',
-  `import fs from 'node:fs'\nimport path from 'node:path'\nexport default { view: () => '' }`,
-  `export default { view: () => '' }`
-)
-
-devTest('strips node:fs/promises named import',
-  `import { readFile } from 'node:fs/promises'\nexport default { view: () => '' }`,
-  `export default { view: () => '' }`
-)
-
-devTest('does not strip non-node imports',
-  `import { nav } from '@invisibleloop/pulse/ui'\nexport default { view: () => '' }`,
-  `import { nav } from '@invisibleloop/pulse/ui'\nexport default { view: () => '' }`
-)
-
-devTest('leaves module-level constants intact',
-  `import fs from 'node:fs'\nconst JOURNAL_DIR = '/Users/andy/journal'\nexport default { view: () => '' }`,
-  `const JOURNAL_DIR = '/Users/andy/journal'\nexport default { view: () => '' }`
-)
-
-// ---------------------------------------------------------------------------
-
-console.log('\nStore + new spec fields\n')
-
-test('sitemap enumerator is stripped (server-only)',
-  `export default {\n  route: '/blog/:slug',\n  sitemap: async () => ['/blog/a'],\n  view: () => '',\n}`,
-  `export default {\n  route: '/blog/:slug',\n  view: () => '',\n}`
-)
-
-test('submit is NOT stripped — it collides with the common submit action name',
-  `export default {\n  route: '/x',\n  actions: {\n    submit: {\n      run: async () => 1,\n    },\n  },\n  view: () => '',\n}`,
-  `export default {\n  route: '/x',\n  actions: {\n    submit: {\n      run: async () => 1,\n    },\n  },\n  view: () => '',\n}`
-)
-
-test('store definition: server fetchers stripped, state and mutations survive',
-  `export default {\n  state: { basket: [] },\n  server: {\n    nav: async () => fetchNav(),\n  },\n  mutations: {\n    add: (store, item) => ({ basket: [...store.basket, item] }),\n  },\n}`,
-  `export default {\n  state: { basket: [] },\n  mutations: {\n    add: (store, item) => ({ basket: [...store.basket, item] }),\n  },\n}`
-)
-
-test('package-root import (pushStore) is stripped — the root export is the server itself',
-  `import { pushStore } from '@invisibleloop/pulse'\nexport default {\n  route: '/staff',\n  view: () => '',\n}`,
-  `export default {\n  route: '/staff',\n  view: () => '',\n}`
-)
-
-test('subpath imports (/ui) are NOT stripped by the root entry',
-  `import { button } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => button({ label: 'x' }),\n}`,
-  `import { button } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => button({ label: 'x' }),\n}`
-)
-
-// ---------------------------------------------------------------------------
-// needsClientBundle — must match discover.js's needsHydration() exactly.
-// Regression: found via dogfooding. This check used to be "does the spec have
-// a `view:` key" alone, so a purely server-rendered page (a redirect handler,
-// a custom 404, a spec.submit-only form) still got a client bundle generated —
-// and if that page imported a local server-only helper module (e.g. a
-// node:fs-based persistence layer), the production build failed outright when
-// esbuild tried to bundle Node built-ins for the browser.
-// ---------------------------------------------------------------------------
-
-console.log('\nneedsClientBundle — matches discover.js hydration logic\n')
-
-function boolTest(label, input, expected) {
-  const got = needsClientBundle(strip(input))
-  if (got === expected) {
-    console.log('  ✓ ' + label)
-    pass++
-  } else {
-    console.log('  ✗ ' + label)
-    console.log('    expected: ' + expected)
-    console.log('    got:      ' + got)
-    fail++
-  }
-}
-
-boolTest('a view-only spec (no mutations/actions/persist) does not need a bundle — the exact bug this fixes',
-  `export default {\n  route: '/:code',\n  guard: async (ctx) => {},\n  view: () => '',\n}`,
-  false
-)
-
-boolTest('a spec.submit-only page does not need a bundle',
-  `export default {\n  route: '/',\n  submit: async (ctx) => ({ redirect: '/' }),\n  view: () => '',\n}`,
-  false
-)
-
-boolTest('mutations require a bundle',
-  `export default {\n  route: '/x',\n  state: {},\n  mutations: {\n    inc: (s) => ({ n: s.n + 1 }),\n  },\n  view: () => '',\n}`,
-  true
-)
-
-boolTest('actions require a bundle',
-  `export default {\n  route: '/x',\n  state: {},\n  actions: {\n    save: { run: async () => {} },\n  },\n  view: () => '',\n}`,
-  true
-)
-
-boolTest('persist requires a bundle',
-  `export default {\n  route: '/x',\n  state: { count: 0 },\n  persist: ['count'],\n  view: () => '',\n}`,
-  true
-)
-
-boolTest('store alone (no local mutations/actions) requires a bundle — regression: mount() is what wires up data-store-event dispatch AND the live SSE store-push subscription; a store-only page with no client bundle would silently never receive pushStore() broadcasts and have a dead data-store-event button',
-  `export default {\n  route: '/x',\n  store: ['count'],\n  state: {},\n  view: (state, server) => \`\${server.count}\`,\n}`,
-  true
-)
-
-// ---------------------------------------------------------------------------
-
-console.log(`\n${pass + fail} tests: ${pass} passed, ${fail} failed\n`)
-if (fail > 0) process.exit(1)
+    assert.ok(dist.includes('mutations') || dist.includes('inc'), 'the client code is still there')
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+test('the real build refuses (exit 1, the file and the reason, no stack trace) a page it cannot prove is stripped', () => {
+  const root = project({
+    'src/lib/base.js': `export default { server: { k: async () => 'SECRET_SPREAD' } }\n`,
+    'src/pages/spread.js': `import base from '../lib/base.js'\nexport default {\n  ...base, route: '/spread', ${META}, state: { n: 0 }, mutations: { inc: s => ({ n: s.n + 1 }) }, ${VIEW} }\n`,
+  })
+  try {
+    const r = build(root)
+    assert.equal(r.status, 1, `exit code ${r.status}:\n${r.stdout}${r.stderr}`)
+    assert.match(r.stderr, /src\/pages\/spread\.js:3: this page spreads another object/)
+    assert.ok(!/\n\s+at /.test(r.stderr), 'no stack trace')
+    assert.ok(!fs.existsSync(path.join(root, 'public', 'dist', 'manifest.json')), 'and nothing was published')
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+test('the real build leaves a spread page alone when it needs no browser bundle (nothing would ship)', () => {
+  const root = project({
+    'src/lib/base.js': `export default { server: { k: async () => 'SECRET_X' } }\n`,
+    'src/pages/ssr.js': `import base from '../lib/base.js'\nexport default { ...base, route: '/ssr', ${META}, view: () => '<main id="main-content">hi</main>' }\n`,
+  })
+  try {
+    const r = build(root)
+    assert.equal(r.status, 0, `a server-rendered page with a spread is fine:\n${r.stdout}${r.stderr}`)
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+test('the real build fails (exit 1, file and reason) when a page cannot be loaded, instead of printing "Build complete"', () => {
+  const root = project({
+    'src/pages/good.js': `export default { route: '/good', ${META}, view: () => '<main id="main-content">ok</main>' }\n`,
+    'src/lib/ui.js': `export const stillHere = () => ''\n`,
+    'src/pages/broken.js': `import { removedComponent } from '../lib/ui.js'\nexport default { route: '/broken', ${META}, view: () => removedComponent() }\n`,
+  })
+  try {
+    const r = build(root)
+    assert.equal(r.status, 1, `exit code ${r.status}:\n${r.stdout}${r.stderr}`)
+    assert.match(r.stderr, /src\/pages\/broken\.js could not be loaded: .*removedComponent/)
+    assert.ok(!/Build complete/.test(r.stdout), 'must not claim success')
+  } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})

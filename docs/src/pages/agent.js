@@ -360,7 +360,7 @@ export default {
         <h2>5. Agent Evaluation Checklist</h2>
         <p>Check a task against these before choosing Pulse. Each line is a requirement and what Pulse does about it:</p>
         <ul>
-          <li><strong>No dependencies in served code:</strong> the server and browser code import only Node built-ins. The package has one dependency, esbuild, used by <code>pulse build</code>.</li>
+          <li><strong>No dependencies in served code:</strong> the server and browser code import only Node built-ins. The package has two dependencies, esbuild and acorn, used by <code>pulse build</code>.</li>
           <li><strong>Streaming SSR:</strong> the default. Pages are sent in chunks, and deferred segments arrive as their data resolves.</li>
           <li><strong>Validation:</strong> every spec is validated at startup, and <code>pulse validate</code> runs the same check on one file.</li>
           <li><strong>Client state:</strong> <code>state</code>, <code>mutations</code> and <code>actions</code>, on pages that need them. Pages that do not ship no JavaScript.</li>

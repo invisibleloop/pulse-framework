@@ -140,6 +140,8 @@ route: '/blog/:year/:slug'`, 'js'))}
   product: async (ctx) => db.products.find(ctx.params.id),   // available as server.product in the view
 }`, 'js'))}
 
+      ${callout('warning', '<strong>Server code stays on the server, and the build checks it.</strong> For a page that gets a browser bundle, <code>pulse build</code> parses the spec and removes <code>server</code>, <code>guard</code>, <code>submit</code>, <code>meta</code>, <code>render</code>, <code>contentType</code>, <code>sitemap</code>, <code>serverTimeout</code> and <code>serverTtl</code>, plus the imports and top-level declarations only they used. So write the spec as <code>export default { ... }</code> (or <code>const spec = { ... }</code> then <code>export default spec</code>) with those keys written out in the object. If the build cannot see the keys, because of a spread (<code>...base</code>), a computed key, or a spec that is built or imported, it <strong>stops with the file, the line and the reason</strong> instead of risking shipping a database query or an API key in a public file. A page with no mutations, actions, persist or store ships no JavaScript and is not affected.')}
+
       ${section('stream', 'stream')}
       <p>Enables streaming SSR. Declare which named view segments are in the <code>shell</code> (rendered immediately) and which are <code>deferred</code> (streamed when ready). See <a href="/streaming">Streaming SSR</a>.</p>
       ${codeBlock(highlight(`stream: {

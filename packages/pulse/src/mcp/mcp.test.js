@@ -383,14 +383,11 @@ test('pulse diagnose / resolve-error CLI commands exist and share diagnose.js wi
   assert(serverSrc.includes('resolveEntries(ROOT'), 'the MCP pulse_resolve_error tool must call the shared resolveEntries() logic')
 })
 
-test('package-root import is stripped from client bundles in build and dev', () => {
+test('package-root import is stripped from client bundles in dev (the build is covered in scripts/strip-server.test.js)', () => {
   // Regression: import { pushStore } from '@invisibleloop/pulse' (the documented
   // live-push pattern) pulled the entire server — http, fs, zlib — into the
   // browser bundle and broke `pulse build`.
-  const buildSrc = fs.readFileSync(path.join(ROOT, 'scripts/build.js'), 'utf8')
-  const devSrc   = fs.readFileSync(path.join(ROOT, 'src/cli/dev.js'), 'utf8')
-  assert(buildSrc.includes(`'@invisibleloop/pulse/md', '@invisibleloop/pulse'`),
-    'build.js SERVER_ONLY_IMPORTS must include the package root')
+  const devSrc = fs.readFileSync(path.join(ROOT, 'src/cli/dev.js'), 'utf8')
   assert(devSrc.includes(`@invisibleloop\\/pulse)['"]`),
     'dev.js serveFile must strip package-root imports before serving specs to the browser')
 })
@@ -682,10 +679,10 @@ test('verify.md calls pulse_check_bundles as part of the full Lighthouse pre-fli
 // ~90 packages. New projects list them as devDependencies; this package declares them as optional
 // peers; and the tools fail with a clear message, not a module-not-found stack, when absent.
 
-test('package.json: esbuild is the only dependency; the MCP SDK and zod are optional peers', () => {
+test('package.json: esbuild and acorn (both build-time only) are the only dependencies; the MCP SDK and zod are optional peers', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
-  assert(JSON.stringify(Object.keys(pkg.dependencies)) === '["esbuild"]',
-    `dependencies must be exactly esbuild, got ${JSON.stringify(Object.keys(pkg.dependencies))}`)
+  assert(JSON.stringify(Object.keys(pkg.dependencies).sort()) === '["acorn","esbuild"]',
+    `dependencies must be exactly acorn and esbuild, got ${JSON.stringify(Object.keys(pkg.dependencies))}`)
   for (const name of ['@modelcontextprotocol/sdk', 'zod']) {
     assert(pkg.peerDependencies?.[name], `${name} must be a peer dependency`)
     assert(pkg.peerDependenciesMeta?.[name]?.optional === true, `${name} must be an OPTIONAL peer (npm installs required peers)`)

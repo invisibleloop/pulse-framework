@@ -25,377 +25,29 @@ import { buildBootstrapSource } from './bootstrap.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { toPosix } from '../src/cli/paths.js'
 import { loadConfigOrExit } from '../src/cli/config.js'
+import { stripServerCode, analyseSpec, needsClientBundle, StripError } from './strip-server.js'
 
 // ---------------------------------------------------------------------------
-// Server-only property stripping
+// Server-only code stripping (see strip-server.js: a real parser, and it fails closed)
 // ---------------------------------------------------------------------------
 
 /**
- * These spec properties are resolved and used exclusively on the server.
- * Stripping them from the client bundle:
- *   - reduces bundle size
- *   - prevents server-only imports (DB clients, Node built-ins, internal APIs)
- *     from being shipped to and evaluated in the browser
- *   - avoids bundling errors when server imports use Node-only modules
- */
-// NOTE: spec.submit is also server-only but must NOT be listed here — the key
-// scanner is line-anchored at any nesting depth, and `submit:` is the most
-// common ACTION name (actions: { submit: {…} }), which would get stripped too.
-const SERVER_ONLY_KEYS = ['server', 'meta', 'guard', 'serverTimeout', 'contentType', 'render', 'sitemap']
-
-/**
- * Pulse subpath exports that are server-only (use Node built-ins).
- * Imports from these paths are removed from client bundles along with any
- * top-level variable declarations whose right-hand side calls the imported names.
- * All `node:*` built-ins are also stripped automatically via the import regex.
- */
-const SERVER_ONLY_IMPORTS = ['@invisibleloop/pulse/md', '@invisibleloop/pulse']
-
-/**
- * Strip all server-only property declarations from a spec source string.
- * Matches properties at the start of a line (after optional whitespace) —
- * the standard formatting for Pulse spec files.
- */
-function stripServerOnlyKeys(source) {
-  for (const key of SERVER_ONLY_KEYS) {
-    source = removeObjectKey(source, key)
-  }
-  return source
-}
-
-/**
- * A page needs a client boot bundle only if it needs hydration — matches
- * discover.js's needsHydration() exactly (mutations || actions || persist ||
- * store). Call this on source that has already had stripServerOnlyKeys/Imports
- * applied, and that has already been confirmed to have a `view:` key
- * (a view alone is necessary but not sufficient — a purely server-rendered
- * page, e.g. a redirect handler or a spec.submit-only form, has a view and
- * no hydration need at all).
+ * esbuild plugin: strips server-only code from the page specs that get a browser bundle, and from
+ * the global store file (pulse.store.js carries server fetchers that must never reach the browser).
+ * It touches exactly those files, never runtime or server code, and never a helper module.
  *
- * `store` counts even with no local mutations/actions: mount() is what wires
- * up data-store-event dispatch AND the live SSE store-push subscription — a
- * store-only page with no client bundle would silently never receive
- * pushStore() broadcasts and have a dead data-store-event button.
- */
-function needsClientBundle(strippedSource) {
-  return /\b(mutations|actions|persist|store)\s*:/.test(strippedSource)
-}
-
-/**
- * Strip import statements for server-only modules and any top-level
- * variable declarations whose right-hand side calls the imported names.
- *
- * Strips:
- *   - All `node:*` built-in imports (fs, path, url, crypto, …)
- *   - Named entries in SERVER_ONLY_IMPORTS (@invisibleloop/pulse/md, …)
- *
- * Also removes associated top-level declarations, e.g.:
- *   import fs   from 'node:fs'          → removed
- *   import { md } from '@invisibleloop/pulse/md'  → removed
- *   const fetchPost = md('src/content/blog.md')   → removed
- */
-function stripServerOnlyImports(source) {
-  // Match any import whose specifier starts with `node:` OR is in SERVER_ONLY_IMPORTS.
-  // Covers: default imports, named imports, namespace imports.
-  const importRe =
-    /^[ \t]*import\s+(?:\{[^}]*\}|[\w*]+(?:\s+as\s+\w+)?)\s+from\s+['"](?:node:[^'"]+|__SERVER_ONLY__)['"]\s*;?[ \t]*\n?/gm
-
-  // Build a combined pattern for SERVER_ONLY_IMPORTS entries
-  const extraPattern = SERVER_ONLY_IMPORTS
-    .map(m => m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('|')
-
-  // Single regex covering node:* and every listed server-only module
-  const combinedRe = new RegExp(
-    importRe.source.replace('__SERVER_ONLY__', extraPattern),
-    'gm'
-  )
-
-  // Collect all imported binding names before stripping
-  const importedNames = new Set()
-  for (const m of source.matchAll(combinedRe)) {
-    const named = m[0].match(/\{\s*([^}]*)\s*\}/)
-    if (named) {
-      for (const part of named[1].split(',')) {
-        const name = part.trim().split(/\s+as\s+/).pop().trim()
-        if (name) importedNames.add(name)
-      }
-    }
-    const def = m[0].match(/import\s+([\w]+)\s+from/)
-    if (def) importedNames.add(def[1])
-  }
-
-  source = source.replace(combinedRe, '')
-
-  // Remove top-level: const/let/var X = importedName... (call, method call, or property)
-  for (const name of importedNames) {
-    const declRe = new RegExp(
-      `^[ \\t]*(?:const|let|var)\\s+\\w+\\s*=\\s*${name}\\b[^\\n]*;?[ \\t]*\\n?`,
-      'gm'
-    )
-    source = source.replace(declRe, '')
-  }
-
-  return source
-}
-
-/**
- * Remove a single named property (key + value + optional trailing comma/newline)
- * from a JS source string. Uses a character-level scanner to correctly handle
- * nested structures, string literals, template literals, and function expressions.
- */
-/**
- * Returns true if `pos` in `source` falls inside a string or template literal.
- * Used to avoid stripping keys that appear inside code-example strings in docs pages.
- */
-function isInsideString(source, pos) {
-  let i = 0
-  const stack = []  // stack of open delimiters: '"' | "'" | '`' | '{'  ('{' = template expression)
-  while (i < pos) {
-    const c = source[i]
-    const top = stack[stack.length - 1]
-    if (top === '"' || top === "'") {
-      if (c === '\\') { i += 2; continue }
-      if (c === top)  { stack.pop() }
-      i++; continue
-    }
-    if (top === '`') {
-      if (c === '\\') { i += 2; continue }
-      if (c === '`')  { stack.pop(); i++; continue }
-      if (c === '$' && source[i + 1] === '{') { stack.push('{'); i += 2; continue }
-      i++; continue
-    }
-    if (top === '{') {
-      // inside a template expression — track nested braces
-      if (c === '{') { stack.push('{'); i++; continue }
-      if (c === '}') { stack.pop(); i++; continue }
-      if (c === '"' || c === "'" || c === '`') { stack.push(c); i++; continue }
-      i++; continue
-    }
-    // Top level — handle comments and regex literals before string delimiters.
-    // Without this, a `"` inside a regex literal (e.g. /"/g) or a comment would
-    // be mistaken for an opening string delimiter, causing all subsequent keys to
-    // be treated as "inside a string" and never stripped.
-    if (c === '/') {
-      if (source[i + 1] === '/') {          // line comment — skip to end of line
-        while (i < pos && source[i] !== '\n') i++
-        continue
-      }
-      if (source[i + 1] === '*') {           // block comment — skip to */
-        const end = source.indexOf('*/', i + 2)
-        i = end < 0 ? pos : end + 2
-        continue
-      }
-      // Regex literal heuristic: / is a regex when not preceded by ) ] or alnum.
-      // Division (a / b) always follows one of those; regex follows operators, keywords, etc.
-      let prev = ''
-      for (let k = i - 1; k >= 0; k--) {
-        if (source[k] !== ' ' && source[k] !== '\t') { prev = source[k]; break }
-      }
-      if (!/[a-zA-Z0-9_$)\]]/.test(prev)) {
-        i++  // skip opening /
-        while (i < pos) {
-          if (source[i] === '\\') { i += 2; continue }
-          if (source[i] === '/') { i++; break }   // closing /
-          if (source[i] === '\n') break            // regex can't span lines
-          i++
-        }
-        while (i < pos && /[gimsuy]/.test(source[i])) i++  // skip flags
-        continue
-      }
-    }
-    if (c === '"' || c === "'" || c === '`') { stack.push(c) }
-    i++
-  }
-  return stack.length > 0
-}
-
-function removeObjectKey(source, key) {
-  const keyRe = new RegExp(`^([ \\t]*)(${key})([ \\t]*:)`, 'gm')
-  let match
-
-  while ((match = keyRe.exec(source)) !== null) {
-    if (isInsideString(source, match.index)) { continue }
-
-    const removeStart = match.index                    // start of indentation
-    const afterColon  = match.index + match[0].length // character after ':'
-
-    // Skip whitespace between ':' and value
-    let pos = afterColon
-    while (pos < source.length && (source[pos] === ' ' || source[pos] === '\t')) pos++
-
-    // Scan past the full value
-    pos = scanJsValue(source, pos)
-
-    // Consume optional trailing comma and newline
-    while (pos < source.length && (source[pos] === ' ' || source[pos] === '\t')) pos++
-    if (pos < source.length && source[pos] === ',') pos++
-    if (pos < source.length && source[pos] === '\n') pos++
-
-    source = source.slice(0, removeStart) + source.slice(pos)
-    keyRe.lastIndex = removeStart
-  }
-
-  return source
-}
-
-/**
- * Scan a JS value starting at `pos`, returning the index just past it.
- *
- * Correctly handles:
- *   - Object / array / group literals:  { }  [ ]  ( )
- *   - Arrow functions:  (params) => expr  or  (params) => { body }
- *   - Function expressions:  function(params) { body }  /  async function ...
- *   - String literals:  '...'  "..."
- *   - Template literals:  `...${expr}...`
- *   - Line and block comments
- *   - Simple values (numbers, booleans, identifiers, null/undefined)
- *
- * Stops when it finds a comma or closing delimiter at depth 0 that is NOT
- * followed by a continuation (arrow `=>`, method call `.`, etc.).
- */
-function scanJsValue(src, pos) {
-  let i     = pos
-  let depth = 0
-
-  while (i < src.length) {
-    const c = src[i]
-
-    // ---- Line comment -------------------------------------------------------
-    if (c === '/' && src[i + 1] === '/') {
-      while (i < src.length && src[i] !== '\n') i++
-      continue
-    }
-
-    // ---- Block comment ------------------------------------------------------
-    if (c === '/' && src[i + 1] === '*') {
-      const end = src.indexOf('*/', i + 2)
-      i = end < 0 ? src.length : end + 2
-      continue
-    }
-
-    // ---- String literals ----------------------------------------------------
-    if (c === '"' || c === "'") {
-      i++
-      while (i < src.length) {
-        if (src[i] === '\\') { i += 2; continue }
-        if (src[i] === c)    { i++; break }
-        i++
-      }
-      if (depth === 0) return i
-      continue
-    }
-
-    // ---- Template literals --------------------------------------------------
-    if (c === '`') {
-      i = scanTemplateLiteral(src, i + 1)
-      if (depth === 0) return i
-      continue
-    }
-
-    // ---- Open delimiters ----------------------------------------------------
-    if (c === '{' || c === '[' || c === '(') {
-      depth++
-      i++
-      continue
-    }
-
-    // ---- Close delimiters ---------------------------------------------------
-    if (c === '}' || c === ']' || c === ')') {
-      if (depth === 0) {
-        // Hit the parent structure's closing delimiter — stop, don't consume
-        return i
-      }
-      depth--
-      i++
-      if (depth === 0) {
-        // Just closed a top-level nested block — peek ahead to see if this is
-        // the end of the value or if the expression continues.
-        let j = i
-        while (j < src.length && (src[j] === ' ' || src[j] === '\t')) j++
-        const next = src[j]
-        // Terminator characters — value is complete
-        if (!next || next === ',' || next === '}' || next === ']' || next === ')' || next === '\n') {
-          return i
-        }
-        // Arrow function body follows:  (params) => ...
-        if (next === '=' && src[j + 1] === '>') continue
-        // Anything else (method chain, ternary, etc.) — keep scanning
-        continue
-      }
-      continue
-    }
-
-    // ---- Terminators at top level -------------------------------------------
-    if (depth === 0) {
-      if (c === ',')  return i
-      if (c === '\n') return i
-    }
-
-    i++
-  }
-
-  return i
-}
-
-/**
- * Scan a template literal body (starting just after the opening backtick).
- * Returns the index just past the closing backtick.
- * Handles `${...}` expression blocks including nested strings and templates.
- */
-function scanTemplateLiteral(src, pos) {
-  let i = pos
-  while (i < src.length) {
-    if (src[i] === '\\') { i += 2; continue }
-    if (src[i] === '`')  { return i + 1 }
-    if (src[i] === '$' && src[i + 1] === '{') {
-      i += 2
-      let depth = 1
-      while (i < src.length && depth > 0) {
-        const c = src[i]
-        if (c === '{') { depth++; i++; continue }
-        if (c === '}') { depth--; i++; continue }
-        if (c === '"' || c === "'") {
-          const q = c; i++
-          while (i < src.length) {
-            if (src[i] === '\\') { i += 2; continue }
-            if (src[i] === q)    { i++; break }
-            i++
-          }
-          continue
-        }
-        if (c === '`') { i = scanTemplateLiteral(src, i + 1); continue }
-        i++
-      }
-      continue
-    }
-    i++
-  }
-  return i
-}
-
-/**
- * esbuild plugin — strips server-only spec properties before bundling.
- * Transforms files under src/pages/ plus the global store file (pulse.store.js
- * carries server fetchers that must never reach the browser) — never touches
- * runtime/server code.
- *
- * @param {string} pagesDir         Absolute path to src/pages/
+ * @param {Set<string>} specFiles   Absolute paths of the page specs being bundled
  * @param {string|null} storePath   Absolute path to pulse.store.js, if it exists
  */
-function createStripServerPlugin(pagesDir, storePath = null) {
+function createStripServerPlugin(specFiles, storePath = null) {
   return {
     name: 'pulse-strip-server',
     setup(build) {
       build.onLoad({ filter: /\.js$/ }, (args) => {
-        const isPage  = args.path.startsWith(pagesDir + path.sep) ||
-                        args.path === pagesDir.replace(/\/$/, '') + '.js'
-        const isStore = storePath && args.path === storePath
-        if (!isPage && !isStore) return undefined
-
-        const source   = fs.readFileSync(args.path, 'utf8')
-        const stripped = stripServerOnlyImports(stripServerOnlyKeys(source))
-        return { contents: stripped, loader: 'js' }
+        if (!specFiles.has(args.path) && args.path !== storePath) return undefined
+        const source = fs.readFileSync(args.path, 'utf8')
+        const { code } = stripServerCode(source, { file: toPosix(path.relative(ROOT, args.path)) })
+        return { contents: code, loader: 'js' }
       })
     }
   }
@@ -404,9 +56,11 @@ function createStripServerPlugin(pagesDir, storePath = null) {
 // ---------------------------------------------------------------------------
 // Project root — can be overridden via --root flag for CLI usage
 const rootArg = process.argv.indexOf('--root')
-const ROOT    = rootArg !== -1
+const ROOT    = fs.realpathSync(rootArg !== -1
   ? path.resolve(process.argv[rootArg + 1])
-  : path.resolve(import.meta.dirname, '..')
+  : path.resolve(import.meta.dirname, '..'))
+// (the real path: the import specifiers in the generated boot files are relative paths, which are
+// computed lexically and go wrong when the project sits behind a symlink such as macOS /tmp or /var)
 
 const OUT_DIR = path.join(ROOT, 'public', 'dist')
 const TMP_DIR = path.join(ROOT, '.pulse-build')
@@ -466,44 +120,57 @@ const STORE_PATH = fs.existsSync(path.join(ROOT, 'pulse.store.js'))
   ? path.join(ROOT, 'pulse.store.js')
   : null
 
-const bootstrapFiles = pages.flatMap(({ filePath }) => {
-  // Strip server-only keys/imports to check what's left for the client.
-  // Skip specs with no view — these are API routes or raw content specs
-  // (using render: instead of view:) that have no client-side code. Including
-  // them in the bundle fragments the shared runtime chunk unnecessarily.
-  const source   = fs.readFileSync(filePath, 'utf8')
-  const stripped = stripServerOnlyImports(stripServerOnlyKeys(source))
-  if (!/\bview\s*:/.test(stripped)) return []
-  // A view alone doesn't need hydration — see needsClientBundle's doc comment.
-  // Without this, a purely server-rendered page (a redirect handler, a custom
-  // 404, any spec.submit-only page) got a client bundle generated anyway —
-  // wasted build output that's silently never referenced, and worse, a real
-  // build failure if that page imports a local server-only helper module
-  // (e.g. a persistence layer using node:fs) that esbuild then tries to
-  // bundle for the browser.
-  if (!needsClientBundle(stripped)) return []
+// A page needs a browser bundle when it has a view and client-side behaviour (mutations, actions,
+// persist or store). A view alone does not: a purely server-rendered page (a redirect handler, a
+// custom 404, a spec.submit-only form) gets none, which also keeps it from failing the build when it
+// imports a server-only helper (a persistence layer using node:fs) that esbuild would try to bundle.
+// Specs with no view are API routes or raw responses (render:) with no client code at all.
+const bootstrapFiles = []
+try {
+  for (const { filePath } of pages) {
+    const rel      = toPosix(path.relative(ROOT, filePath))
+    const analysis = analyseSpec(fs.readFileSync(filePath, 'utf8'), { file: rel })
+    if (analysis.none) continue
+    if (analysis.analysable) {
+      if (!needsClientBundle(analysis)) continue
+    } else {
+      // The parser cannot see this spec's keys (a spread, an imported or built object). Ask the
+      // evaluated spec whether it needs a bundle; if it does, stripping cannot be proven and the
+      // build must stop, because server code might ship. If it does not, there is nothing to ship.
+      const spec = (await import(pathToFileURL(filePath).href)).default
+      const hasView = typeof spec?.view === 'function' || (spec?.view && typeof spec.view === 'object')
+      if (!hasView || !(spec.mutations || spec.actions || spec.persist || spec.store?.length)) continue
+      stripServerCode(fs.readFileSync(filePath, 'utf8'), { file: rel })      // throws StripError with the reason and the line
+    }
+    // Strip now, not only inside esbuild, so a problem is reported here, naming the file.
+    stripServerCode(fs.readFileSync(filePath, 'utf8'), { file: rel })
 
-  // Use the path relative to src/pages/ so nested pages get unique names.
-  // e.g. src/pages/api/products.js → 'api--products' (not 'products')
-  const relToPages    = path.relative(PAGES_DIR, filePath)
-  const name          = relToPages.replace(/\.js$/, '').replace(/[\\/]/g, '--')
-  const bootstrapPath = path.join(TMP_DIR, `${name}.boot.js`)
-  // Forward slashes: these go inside string literals in generated JS (see paths.js)
-  const relSpec       = toPosix(path.relative(TMP_DIR, filePath))
-  const relRuntime    = toPosix(path.relative(TMP_DIR, RUNTIME_PATH))
-  const relNavigate   = toPosix(path.relative(TMP_DIR, NAVIGATE_PATH))
+    // Use the path relative to src/pages/ so nested pages get unique names.
+    // e.g. src/pages/api/products.js → 'api--products' (not 'products')
+    const relToPages    = path.relative(PAGES_DIR, filePath)
+    const name          = relToPages.replace(/\.js$/, '').replace(/[\\/]/g, '--')
+    const bootstrapPath = path.join(TMP_DIR, `${name}.boot.js`)
+    // Forward slashes: these go inside string literals in generated JS (see paths.js)
+    const relSpec       = toPosix(path.relative(TMP_DIR, filePath))
+    const relRuntime    = toPosix(path.relative(TMP_DIR, RUNTIME_PATH))
+    const relNavigate   = toPosix(path.relative(TMP_DIR, NAVIGATE_PATH))
 
-  // Global store — when pulse.store.js exists, every boot bundle imports it and
-  // passes it to mount() so client store mutations register in production.
-  // The strip plugin removes its server fetchers from the browser bundle;
-  // esbuild's shared-chunk splitting keeps it from being duplicated per page.
-  const storeImport = STORE_PATH ? `\nimport store from '${toPosix(path.relative(TMP_DIR, STORE_PATH))}'` : ''
-  const mountOpts   = STORE_PATH ? `{ ssr: true, store }` : `{ ssr: true }`
+    // Global store — when pulse.store.js exists, every boot bundle imports it and
+    // passes it to mount() so client store mutations register in production.
+    // The strip plugin removes its server fetchers from the browser bundle;
+    // esbuild's shared-chunk splitting keeps it from being duplicated per page.
+    const storeImport = STORE_PATH ? `\nimport store from '${toPosix(path.relative(TMP_DIR, STORE_PATH))}'` : ''
+    const mountOpts   = STORE_PATH ? `{ ssr: true, store }` : `{ ssr: true }`
 
-  fs.writeFileSync(bootstrapPath, buildBootstrapSource({ relSpec, relRuntime, relNavigate, storeImport, mountOpts }))
-
-  return [{ filePath, bootstrapPath, name }]
-})
+    fs.writeFileSync(bootstrapPath, buildBootstrapSource({ relSpec, relRuntime, relNavigate, storeImport, mountOpts }))
+    bootstrapFiles.push({ filePath, bootstrapPath, name })
+  }
+  if (STORE_PATH) stripServerCode(fs.readFileSync(STORE_PATH, 'utf8'), { file: toPosix(path.relative(ROOT, STORE_PATH)) })
+} catch (err) {
+  if (!(err instanceof StripError)) throw err
+  console.error(`\n  ✗ ${err.message}\n`)
+  process.exit(1)
+}
 
 // ---------------------------------------------------------------------------
 // Bundle
@@ -522,7 +189,7 @@ const result = await esbuild.build({
   metafile:    true,
   sourcemap:   false,
   treeShaking: true,
-  plugins:     [createStripServerPlugin(PAGES_DIR, STORE_PATH)],
+  plugins:     [createStripServerPlugin(new Set(bootstrapFiles.map(b => b.filePath)), STORE_PATH)],
   define: {
     'process.env.NODE_ENV': '"production"'
   }
@@ -716,6 +383,7 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   const cssFiles     = new Set()
   const cssStats     = {}
 
+  const failedPages = []
   for (const { filePath } of pages) {
     try {
       const mod  = await import(pathToFileURL(filePath).href)
@@ -741,7 +409,18 @@ async function purgeCssStep(pages, manifest, root, outDir) {
 
       // Also scan source JS for conditionally-applied class names
       jsContents.push(fs.readFileSync(filePath, 'utf8'))
-    } catch {}
+    } catch (err) {
+      // A page that cannot be loaded cannot be served either (pulse start and pulse dev would die on
+      // it), so this is a failed build, not a page to skip: a removed component import used to
+      // print "Build complete" and leave a project that crashed on start.
+      failedPages.push({ file: toPosix(path.relative(ROOT, filePath)), message: err?.message ?? String(err) })
+    }
+  }
+  if (failedPages.length) {
+    console.error('')
+    for (const f of failedPages) console.error(`  ✗ ${f.file} could not be loaded: ${f.message}`)
+    console.error('\n  Fix the import above (for example a component that was removed or moved) and build again.\n')
+    process.exit(1)
   }
 
   // Scan project components directory for conditional class names
