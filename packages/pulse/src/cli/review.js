@@ -10,6 +10,7 @@
  * a terminal.
  */
 
+import { fenced } from './fence.js'
 import fs   from 'fs'
 import path from 'path'
 import os   from 'os'
@@ -356,8 +357,8 @@ export function formatFullReview(result, { source, file, agentFacing = false }) 
     ? `# Pulse Code Review\n\nYou are now a **senior code reviewer**. Read the spec, find every problem, and fix them all before reporting back to the user.`
     : `# Pulse Code Review\n\nSpec: ${file || '(content-only mode)'}`
 
-  const specDump = validationResult.includes('✓') ? '' : `\n## Spec source (validation failed — showing for debugging)\n\n\`\`\`js\n${source}\n\`\`\`\n`
-  const renderErrorDump = renderNote.includes('could not') ? `\n## Render error\n\n${renderNote}\n\n\`\`\`js\n${source}\n\`\`\`\n` : ''
+  const specDump = validationResult.includes('✓') ? '' : `\n## Spec source (validation failed — showing for debugging)\n\n${fenced(source, 'js')}\n`
+  const renderErrorDump = renderNote.includes('could not') ? `\n## Render error\n\n${renderNote}\n\n${fenced(source, 'js')}\n` : ''
 
   const workOrder = agentFacing
     ? 'Work through every item. Fix anything that fails. Refer to the spec source at ' + file + ' as needed — do not ask me to paste it.'

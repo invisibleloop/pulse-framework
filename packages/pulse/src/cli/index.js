@@ -323,8 +323,12 @@ async function launchSession(root, agentOverride = null) {
 // ---------------------------------------------------------------------------
 
 async function launchClaudeSession(root, mcpConfig, spawn, os) {
-  const mcpConfigPath = path.join(os.tmpdir(), `pulse-mcp-${Date.now()}.json`)
-  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2))
+  // A private directory (mode 0700) and an unpredictable name: a fixed, guessable file in the shared
+  // temp directory could be pre-created as a symlink by another local user, and the write would
+  // follow it.
+  const mcpConfigDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-mcp-'))
+  const mcpConfigPath = path.join(mcpConfigDir, 'mcp.json')
+  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2), { mode: 0o600 })
 
   // Launch the agent with MCP config — don't spawn a dev server here,
   // Claude Code cannot be launched as a child process from within a Claude session.
@@ -335,7 +339,7 @@ async function launchClaudeSession(root, mcpConfig, spawn, os) {
   })
 
   agentProc.on('exit', () => {
-    try { fs.unlinkSync(mcpConfigPath) } catch { /* ignore */ }
+    try { fs.rmSync(mcpConfigDir, { recursive: true, force: true }) } catch { /* ignore */ }
     process.exit(0)
   })
 }
@@ -384,8 +388,11 @@ async function launchCopilotSession(root, mcpServerArgv, spawn, os) {
     process.exit(0)
   }
 
+  // SIGHUP is what closing the terminal window sends; without it the pulse entry stayed in the
+  // user's ~/.copilot/mcp-config.json.
   process.on('SIGINT',  cleanup)
   process.on('SIGTERM', cleanup)
+  process.on('SIGHUP',  cleanup)
 
   const agentProc = spawnCommand('copilot', [], { stdio: 'inherit', cwd: root })
   agentProc.on('exit', cleanup)
