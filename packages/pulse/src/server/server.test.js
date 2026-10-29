@@ -1531,13 +1531,14 @@ function requestFull(port, method, path, { headers = {}, body = null } = {}) {
   })
 }
 
-function postForm(port, path, fields, cookie = '') {
+function postForm(port, path, fields, cookie = '', extraHeaders = {}) {
   const body = new URLSearchParams(fields).toString()
   return requestFull(port, 'POST', path, {
     headers: {
       'Content-Type':   'application/x-www-form-urlencoded',
       'Content-Length': Buffer.byteLength(body),
       ...(cookie ? { Cookie: cookie } : {}),
+      ...extraHeaders,
     },
     body,
   })
@@ -3386,6 +3387,31 @@ await test('a page receives only the store keys it subscribes to, plus the stati
       }
     })
   }
+})
+
+// ---------------------------------------------------------------------------
+
+console.log('\nCSRF cookie over HTTPS\n')
+
+await test('over HTTPS the CSRF cookie is __Host- prefixed, and a plain pulse_csrf cookie is not honoured', async () => {
+  await withServer([formSpec], { stream: false, quiet: true }, async (port) => {
+    const https = { 'x-forwarded-proto': 'https' }
+    const first = await request(port, 'GET', '/signup', https)
+    const issued = [].concat(first.headers['set-cookie'] || []).find(c => c.startsWith('__Host-pulse_csrf='))
+    assert(issued, `Expected a __Host-pulse_csrf cookie, got ${JSON.stringify(first.headers['set-cookie'])}`)
+    assert(/;\s*Secure/i.test(issued) && /;\s*Path=\//i.test(issued) && !/Domain=/i.test(issued) && /HttpOnly/i.test(issued), `__Host- needs Secure, Path=/, no Domain: ${issued}`)
+    const cookie = issued.split(';')[0]
+    const token  = first.body.match(/name="_csrf" value="([^"]+)"/)?.[1]
+
+    const ok = await postForm(port, '/signup', { email: 'a@b.com', _csrf: token }, cookie, https)
+    assert(ok.status === 303, `a valid pair over HTTPS should submit, got ${ok.status}`)
+
+    // A signed pair under the old name (what a sibling subdomain could plant) is ignored over HTTPS.
+    const plain = await getCsrfPair(port, '/signup')            // plain http: pulse_csrf pair
+    assert(plain.cookie.startsWith('pulse_csrf='), 'plain http still uses pulse_csrf')
+    const tossed = await postForm(port, '/signup', { email: 'a@b.com', _csrf: plain.token }, plain.cookie, https)
+    assert(tossed.status === 403, `a pulse_csrf cookie must not satisfy an HTTPS POST, got ${tossed.status}`)
+  })
 })
 
 // ---------------------------------------------------------------------------
