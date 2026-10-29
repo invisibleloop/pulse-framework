@@ -107,13 +107,15 @@ function renderInline(raw) {
   //    only digits and the null byte, so esc() leaves them untouched.
   s = esc(s)
 
+  // The bounds keep the scan linear: an unbounded [^\]]+ rescans to the end of the line from every
+  // unclosed '[', so a long run of them took quadratic time (20k characters ≈ 1.5s).
   // 3. Images (before links — same syntax with leading !)
-  s = s.replace(/!\[([^\]]*)\]\(([^)\s"]+)(?:\s+"([^"]*)")?\)/g,
+  s = s.replace(/!\[([^\]]{0,2000})\]\(([^)\s]{1,4096})(?:\s+&quot;((?:(?!&quot;).){0,1000})&quot;)?\)/g,
     (_, alt, src, title) =>
       `<img src="${safeUrl(src, true)}" alt="${alt}"${title ? ` title="${title}"` : ''}>`)
 
   // 4. Links
-  s = s.replace(/\[([^\]]+)\]\(([^)\s"]+)(?:\s+"([^"]*)")?\)/g,
+  s = s.replace(/\[([^\]]{1,2000})\]\(([^)\s]{1,4096})(?:\s+&quot;((?:(?!&quot;).){0,1000})&quot;)?\)/g,
     (_, label, href, title) =>
       `<a href="${safeUrl(href)}"${title ? ` title="${title}"` : ''}>${label}</a>`)
 

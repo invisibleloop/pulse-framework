@@ -261,5 +261,30 @@ test('a heading containing U+2028 / U+2029 parses (used to hang forever)', () =>
 
 // ---------------------------------------------------------------------------
 
+console.log('\nLink parsing stays linear\n')
+
+test('long runs of unclosed link/image openers do not take quadratic time', () => {
+  // Before the bounds, each of these took several seconds at this size (20k took 1.5s, and time
+  // quadrupled per doubling), so a 200KB line held a request for minutes.
+  for (const unit of ['[', '[a', '![', '[a](b']) {
+    const input = unit.repeat(Math.ceil(40000 / unit.length))
+    const start = performance.now()
+    parseMd(input)
+    const ms = performance.now() - start
+    assert(ms < 1500, `${JSON.stringify(unit)} x ${input.length / unit.length} took ${Math.round(ms)}ms`)
+  }
+})
+
+test('ordinary links and images still render, including long labels and urls', () => {
+  assert(parseMd('[docs](/a/b "T")').html.includes('<a href="/a/b" title="T">docs</a>'), 'link with title')
+  assert(parseMd('![alt](/i.png)').html.includes('<img src="/i.png" alt="alt">'), 'image')
+  const label = 'x'.repeat(1500)
+  assert(parseMd(`[${label}](/u)`).html.includes(`>${label}</a>`), 'a 1500-character label')
+  const url = '/' + 'u'.repeat(3000)
+  assert(parseMd(`[a](${url})`).html.includes(`href="${url}"`), 'a 3000-character url')
+})
+
+// ---------------------------------------------------------------------------
+
 console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed\n`)
 if (failed > 0) process.exit(1)
