@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url'
 import { definedClasses, undefinedClasses } from './class-check.js'
 import { loadConfigOrExit, failStartup } from './config.js'
 import { commandsToSync } from './commands.js'
-import { writeDevPort, removeDevPort } from './dev-port.js'
+import { writeDevPort, removeDevPort, findFreePort } from './dev-port.js'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -48,9 +48,16 @@ register('./reload-hooks.js', {
 
 const _config = await loadConfigOrExit(ROOT)
 
+const HOST = (hostArg !== -1 && args[hostArg + 1]) || _config.host || '127.0.0.1'
+
+// An explicit --port is a request, so a busy port stays an error. A port that only came from the
+// config or the default moves up to the next free one: another project on the machine is normal.
 async function resolvePort() {
   if (portArg !== -1) return parseInt(args[portArg + 1], 10)
-  return _config.port || 3000
+  const wanted = _config.port || 3000
+  const port = await findFreePort(wanted, HOST)
+  if (port !== wanted) log.warn(`Port ${wanted} is in use (another project?), using ${port}`)
+  return port
 }
 
 const PORT = await resolvePort()
@@ -294,7 +301,7 @@ const { updateSpecs, updateStore, server: httpServer } = await createServer(spec
   // Loopback by default: the dev server has dev-only endpoints and stack-trace error
   // pages, and should not be reachable from the LAN. `--host 0.0.0.0` (or `host` in
   // pulse.config.js) opts in — e.g. for testing on a phone, or inside a container.
-  host:      (hostArg !== -1 && args[hostArg + 1]) || _config.host || '127.0.0.1',
+  host:      HOST,
   stream:    true,
   staticDir: fs.existsSync(PUBLIC_DIR) ? PUBLIC_DIR : null,
   manifest:  {},        // never use a build manifest in dev — always serve source files
