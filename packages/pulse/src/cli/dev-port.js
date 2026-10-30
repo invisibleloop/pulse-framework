@@ -47,13 +47,31 @@ export function resolveDevPort(root, configPort) {
   return readDevPort(root) ?? configPort ?? 3000
 }
 
-/** Whether `port` can be listened on at `host` right now. */
-function isFree(port, host) {
+/** Whether something accepts connections on `port` at `address`. */
+function accepts(port, address) {
   return new Promise(resolve => {
+    const socket = net.connect({ port, host: address })
+    const done = (answer) => { socket.destroy(); resolve(answer) }
+    socket.setTimeout(500, () => done(false))
+    socket.once('connect', () => done(true))
+    socket.once('error', () => done(false))
+  })
+}
+
+/**
+ * Whether `port` is free for a server on `host`. Binding alone is not a test: on macOS a server on
+ * 127.0.0.1 can bind a port that another project already holds on all addresses, and then
+ * `localhost` may reach the other project. So a port also counts as busy when something answers on
+ * it, at either loopback address.
+ */
+async function isFree(port, host) {
+  const bound = await new Promise(resolve => {
     const probe = net.createServer()
     probe.once('error', () => resolve(false))
     probe.listen(port, host, () => probe.close(() => resolve(true)))
   })
+  if (!bound) return false
+  return !(await accepts(port, '127.0.0.1')) && !(await accepts(port, '::1'))
 }
 
 /**

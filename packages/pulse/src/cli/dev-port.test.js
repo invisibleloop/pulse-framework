@@ -172,3 +172,16 @@ await test('pulse dev --port stays an error when that port is busy', async () =>
     fs.rmSync(root, { recursive: true, force: true })
   }
 })
+
+await test('findFreePort skips a port another process holds on all addresses', async () => {
+  // On macOS a server on 127.0.0.1 can bind a port that is held on all addresses, so binding alone
+  // called it free and `localhost` then reached the other project (ste-demo held 3001 this way).
+  const wildcard = net.createServer(socket => socket.end())
+  await new Promise(r => wildcard.listen(0, r))
+  const port = wildcard.address().port
+  try {
+    const found = await findFreePort(port, '127.0.0.1')
+    assert.notEqual(found, port)
+    assert(found > port && found < port + 20, `expected a nearby port, got ${found}`)
+  } finally { wildcard.close() }
+})
