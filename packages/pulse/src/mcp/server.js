@@ -1267,61 +1267,50 @@ server.registerTool(
 server.registerTool(
   'pulse_restart_server',
   {
-    description: 'Reload specs in the running dev server. Tries a fast hot-reload first (no process restart); falls back to full kill/restart only if the server is not running.',
+    description: 'Reload specs in this project\'s running dev server. Tries a fast hot-reload first (no process restart); starts a new server if this project has none, on the next free port when another project holds the configured one. Never touches another project\'s server.',
     inputSchema: {},
   },
   async () => {
-    let port = 3000
-    const configPath = path.join(ROOT, 'pulse.config.js')
-    if (fs.existsSync(configPath)) {
-      try {
-        const mod = await import(`${pathToFileURL(configPath).href}?t=${Date.now()}`)
-        if (mod.default?.port) port = mod.default.port
-      } catch { /* use default */ }
-    }
-    port = readDevPort(ROOT) ?? port   // the running server's real port wins over the config
+    // Only this project's own server is ever reloaded or stopped. Its port comes from the record
+    // `pulse dev` writes (.pulse/dev.json). The configured port is only where a new server first
+    // tries to start: another project may hold it, and posting a reload there reloads that project.
+    const ownPort = readDevPort(ROOT)
 
-    // Fast path — POST to the running dev server's hot-reload endpoint.
+    // Fast path — POST to this project's running dev server's hot-reload endpoint.
     // This reloads specs in-process and sends an SSE reload event to the browser
     // without killing the server process (~200 ms vs ~3 s for a full restart).
-    const hotReloaded = await new Promise(resolve => {
-      try {
-        const req = http.request(
-          { hostname: '127.0.0.1', port, path: '/_pulse/trigger-reload', method: 'POST', timeout: 2000 },
-          res => resolve(res.statusCode === 204)
-        )
-        req.on('error', () => resolve(false))
-        req.on('timeout', () => { req.destroy(); resolve(false) })
-        req.end()
-      } catch { resolve(false) }
-    })
+    if (ownPort) {
+      const hotReloaded = await new Promise(resolve => {
+        try {
+          const req = http.request(
+            { hostname: '127.0.0.1', port: ownPort, path: '/_pulse/trigger-reload', method: 'POST', timeout: 2000 },
+            res => resolve(res.statusCode === 204)
+          )
+          req.on('error', () => resolve(false))
+          req.on('timeout', () => { req.destroy(); resolve(false) })
+          req.end()
+        } catch { resolve(false) }
+      })
+      if (hotReloaded) return text(`Dev server specs reloaded (hot) on port ${ownPort}`)
 
-    if (hotReloaded) {
-      return text(`Dev server specs reloaded (hot) on port ${port}`)
+      // Unresponsive: stop it before starting a fresh one. killPulseServerOnPort leaves any
+      // process that is not this project's Pulse server alone.
+      killPulseServerOnPort(ownPort, { root: ROOT })
     }
 
-    // Slow path — server not running or unresponsive, do a full kill/restart.
-    // Only kill a process on this port if it's actually a Pulse server — see
-    // killPulseServerOnPort's doc comment. If something else owns the port,
-    // report that instead of starting a second server that will just fail
-    // to bind (or, worse, silently kill someone else's unrelated process).
-    const { killed, skipped } = killPulseServerOnPort(port, { root: ROOT })
-    if (skipped.length > 0 && killed.length === 0) {
-      return text(
-        `Port ${port} is occupied by a process that is not this project's Pulse server — refusing to kill it:\n` +
-        skipped.map(s => `  PID ${s.pid}: ${s.command}`).join('\n') +
-        `\n\nFree the port yourself, or set a different port in pulse.config.js.`
-      )
-    }
-
+    // Slow path — no server of this project is running. `pulse dev` takes the configured port, or
+    // the next free one when another project holds it, and records where it is.
     const devScript = fileURLToPath(new URL('../cli/dev.js', import.meta.url))
     const proc = spawn(process.execPath, [devScript, '--root', ROOT], { detached: true, stdio: 'ignore' })
     proc.unref()
 
-    const ready = await waitForServer(port)
+    const deadline = Date.now() + 10_000
+    let port = null
+    while (Date.now() < deadline && !(port = readDevPort(ROOT))) await new Promise(r => setTimeout(r, 200))
+    const ready = port ? await waitForServer(port) : false
     return text(ready
-      ? `Dev server restarted on port ${port}`
-      : `Dev server started on port ${port} (did not respond within 10 s — check for errors)`
+      ? `Dev server ${ownPort ? 're' : ''}started on port ${port}`
+      : `Dev server did not start within 10 s — run \`pulse dev\` in the project to see the error`
     )
   }
 )
