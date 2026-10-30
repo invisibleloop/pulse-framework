@@ -108,3 +108,38 @@ test('specFileForRoute finds the page by its route, in a folder too, and skips t
   assert.equal(specFileForRoute(root, '/nope'), null)
   fs.rmSync(root, { recursive: true, force: true })
 })
+
+test('a criterion that restates Lighthouse, LCP or CLS is a problem, whether or not a test names it', () => {
+  const root = project({
+    'src/pages/contact.js':            "export default { route: '/contact' }",
+    'src/pages/contact.acceptance.md': '- AC1: An invalid email shows an error.\n- AC2: Lighthouse scores 100 for accessibility on mobile.\n- AC3: CLS stays at 0.00.\n- AC4: The largest contentful paint is under 2.5 seconds.\n',
+    'src/pages/contact.test.js':       "test('AC1 — x', () => {})\ntest('AC2 — an empty test that names it', () => {})",
+  })
+  const status = acceptanceStatus(path.join(root, 'src/pages/contact.js'))
+  assert.deepEqual(status.stampChecked, ['AC2', 'AC3', 'AC4'])
+  assert.deepEqual(status.uncovered, [], 'they are reported as problems of their own, not as missing tests')
+  const [problem, ...rest] = acceptanceProblems(status, 'contact.js')
+  assert.equal(rest.length, 0)
+  assert.match(problem, /^AC2, AC3, AC4 restate a check that \/verify already makes/)
+  assert.match(problem, /Remove them from the criteria file/)
+})
+
+test('one stamp-checked criterion reads in the singular', () => {
+  const root = project({
+    'src/pages/p.js':            "export default { route: '/p' }",
+    'src/pages/p.acceptance.md': '- AC1: It loads.\n- AC2: CLS is 0.\n',
+    'src/pages/p.test.js':       "test('AC1 — loads', () => {})",
+  })
+  const [problem] = acceptanceProblems(acceptanceStatus(path.join(root, 'src/pages/p.js')), 'p.js')
+  assert.match(problem, /^AC2 restates a check/)
+  assert.match(problem, /Remove it from the criteria file, because no test can name it/)
+})
+
+test('words that merely contain the letters do not count as a stamp-checked criterion', () => {
+  const root = project({
+    'src/pages/p.js':            "export default { route: '/p' }",
+    'src/pages/p.acceptance.md': '- AC1: The click closes the dialog.\n- AC2: The pulse of the heart icon animates.\n',
+    'src/pages/p.test.js':       "test('AC1 — a', () => {})\ntest('AC2 — b', () => {})",
+  })
+  assert.deepEqual(acceptanceStatus(path.join(root, 'src/pages/p.js')).stampChecked, [])
+})

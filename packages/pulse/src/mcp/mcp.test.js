@@ -454,6 +454,15 @@ test('the verify guides send the agent to the URL pulse_build returns, not to a 
   assert(/Production URL: http:\/\/localhost:\$\{prodPort\}/.test(serverSrc), 'pulse_build must print the production URL')
 })
 
+test('the workflow asks for a criterion for every failure of a form, and none for what /verify checks', () => {
+  // A demo agent wrote only working-path criteria, plus a Lighthouse criterion no test can prove.
+  const wf = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  assert(/for every rule in your plan, and for every way it can fail/.test(wf), 'the workflow must ask for failure criteria')
+  assert(/the save or send failing/.test(wf), 'a form needs a criterion for the save failing')
+  assert(/linked to its field, so a screen reader announces it/.test(wf), 'a form needs a criterion for errors linked to fields')
+  assert(/Do not write a criterion for what `\/verify` already checks/.test(wf), 'the workflow must say not to write Lighthouse criteria')
+})
+
 test('the server guide clears the flash cookie in guard, never in a server fetcher', () => {
   // A streamed page sends its headers before the fetchers run, so a cookie a fetcher sets is lost
   // and a refresh shows the confirmation again (server.test.js proves the behaviour).
