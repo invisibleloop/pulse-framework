@@ -32,7 +32,7 @@ For any **new page, landing page, or branded site**, run the intake sequence fir
 ```
 
 - **Step 0 — Ask for inspiration first (mandatory):**
-  1. Ask the user this question before you call a tool or show a plan: *"Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop images into `public/intake/` or paste a URL. I will extract the design intent before we start."*
+  1. Ask the user this question before you show a plan or write code. You can read the guides and call `pulse_list_structure` first. Do not call a design tool first. The question: *"Do you have any design inspiration — a site you love, a screenshot, or a mood board image? Drop images into `public/intake/` or paste a URL. I will extract the design intent before we start."*
   2. Wait for the answer.
   3. Ask the question even when the brief is detailed.
   4. Look in `public/intake/` for images that are already there.
