@@ -470,6 +470,12 @@ test('the workflow says a criterion about refusing something needs a test that s
   assert(/post without the token and expect 403/.test(wf), 'the workflow must give the CSRF example')
 })
 
+test('the components guide lists alert items (escaped lines that can link to a field)', () => {
+  const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
+  const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
+  assert(row && /`items` \(a list of `\{ text, href\? \}` lines/.test(row), 'the alert row must list items')
+})
+
 test('the components guide lists alert message (escaped) before content (HTML, not escaped)', () => {
   // The prop table used to list only `content`, so an agent put error text in the one prop that does not escape.
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')

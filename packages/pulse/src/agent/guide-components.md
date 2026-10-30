@@ -146,7 +146,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | Component | Key props |
 |-----------|-----------|
 | `card` | `title`, `level` (1–6, default 3), `content` (HTML slot), `footer` (HTML slot), `flush` (full-bleed), `variant` (default/elevated/bordered/flat/glass/tinted) |
-| `alert` | `variant` (info/success/warning/error), `title`, `message` (plain text, escaped: use it for anything from a user, a form, an error or an API), `content` (an HTML string you wrote, **not** escaped) |
+| `alert` | `variant` (info/success/warning/error), `title`, `message` (plain text, escaped: use it for anything from a user, a form, an error or an API), `items` (a list of `{ text, href? }` lines under the message, escaped; with `href` a line is a link, so a form's errors can each link to their field), `content` (an HTML string you wrote, **not** escaped) |
 | `badge` | `label`, `variant` (default/success/warning/error/info) |
 | `stat` | `label`, `value`, `change`, `trend` (up/down/neutral), `size` (sm/md/lg — lg for hero KPIs), `center` |
 | `avatar` | `src`, `alt`, `size` (sm/md/lg/xl), `initials` |

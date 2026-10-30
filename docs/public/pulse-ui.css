@@ -490,6 +490,9 @@ html, body {
 
 .ui-alert-title { font-weight: 600; }
 
+.ui-alert-list { margin: .25rem 0 0; padding-left: 1.25rem; }
+.ui-alert-list a { color: inherit; text-decoration: underline; }
+
 /* ─── Stat ───────────────────────────────────────────────────────────────── */
 .ui-stat {
   display:        flex;

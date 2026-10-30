@@ -241,6 +241,8 @@ export interface AlertProps {
   message?: string
   /** Message body as an HTML string — NOT escaped. Use `message` for text. */
   content?: string
+  /** Lines under the message, as plain text, escaped. With `href` a line is a link, for example an error that jumps to its field (`href: '#email'`). Use this for a list of errors from a user or a form. */
+  items?: Array<{ text: string, href?: string }>
   class?: string
 }
 /** Pulse UI — Alert Inline feedback message. error/warning use role="alert" (assertive), info/success use role="status" (polite). */
