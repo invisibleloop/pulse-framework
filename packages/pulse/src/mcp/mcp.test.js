@@ -478,6 +478,12 @@ test('the server guide says shutdown() ends the process, so a test closes the se
   assert(/await createServer\(specs, \{\s*port: 3000/.test(guide), 'createServer is async: the shutdown example must await it')
 })
 
+test('the workflow puts the 404 page in the plan, so the user approves it with the page', () => {
+  // A demo agent saw the review warning, called a 404 page "a separate new page" and left it out.
+  const wf = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  assert(/\*\*A 404 page\*\*[^\n]*`route: '\*'`[^\n]*add `src\/pages\/not-found\.js` to the plan/.test(wf), 'the plan step must include a 404 page')
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
