@@ -59,10 +59,11 @@ function accepts(port, address) {
 }
 
 /**
- * Whether `port` is free for a server on `host`. Binding alone is not a test: on macOS a server on
+ * Whether `port` is free for a server on `host`. Binding alone is not a test on macOS: a server on
  * 127.0.0.1 can bind a port that another project already holds on all addresses, and then
- * `localhost` may reach the other project. So a port also counts as busy when something answers on
- * it, at either loopback address.
+ * `localhost` may reach the other project. So there a port also counts as busy when something
+ * answers on it, at either loopback address. Linux and Windows refuse that bind, so for them the
+ * bind is the whole test (and a connect probe on Windows reported every port busy).
  */
 async function isFree(port, host) {
   const bound = await new Promise(resolve => {
@@ -71,6 +72,7 @@ async function isFree(port, host) {
     probe.listen(port, host, () => probe.close(() => resolve(true)))
   })
   if (!bound) return false
+  if (process.platform !== 'darwin') return true
   return !(await accepts(port, '127.0.0.1')) && !(await accepts(port, '::1'))
 }
 
