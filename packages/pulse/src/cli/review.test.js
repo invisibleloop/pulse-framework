@@ -127,8 +127,9 @@ test('formatFullReview agentFacing:false (CLI default) never says "you are now a
 
 test('the checklist reference material is identical in both agentFacing modes', async () => {
   const root = tmpProject()
+  // A spec that uses every area, so the checklist shows every section
   const file = writeSpec(root, 'good.js',
-    `export default {\n  route: '/x',\n  meta: { title: 't', description: 'd', theme: 'dark' },\n  view: () => '<main id="main-content">x</main>',\n}`)
+    `export default {\n  route: '/x/:id',\n  meta: { title: 't', description: 'd', theme: 'dark' },\n  state: { n: 0 },\n  server: { item: async (ctx) => { const r = await fetch('/api/' + ctx.params.id); if (!r.ok) throw new Error('x'); return r.json() } },\n  mutations: { inc: (s) => ({ n: s.n + 1 }) },\n  actions: { save: { run: async () => {} } },\n  view: (state, server) => '<main id="main-content"><button data-event="inc">+</button>' + state.n + '</main>',\n}`)
   const source = fs.readFileSync(file, 'utf8')
   const result = await runFullReview(source, file)
   const agentOutput = formatFullReview(result, { source, file, agentFacing: true })
@@ -244,4 +245,75 @@ test('review flags generic link text', async () => {
   const src = STATIC_PAGE().replace('<h1>About</h1>', '<a href="/x">click here</a>')
   const checks = await checksFor(src)
   assert.equal(checks.some(c => c.includes('Generic link text')), true)
+})
+
+// ── The checklist shows only what can apply ───────────────────────────────
+
+import { relevantChecklist } from './review.js'
+
+const STATIC = `export default {\n  route: '/about',\n  meta: { title: 'About', description: 'A real sentence about this page.' },\n  view: () => '<main id="main-content"><h1>About</h1><p>text</p></main>',\n}`
+
+const FULL = `export default {
+  route: '/items/:id',
+  state: { n: 0 },
+  server: { item: async (ctx) => { const r = await fetch('/api/' + ctx.params.id); if (!r.ok) throw new Error('x'); return r.json() } },
+  mutations: { inc: (s) => ({ n: s.n + 1 }) },
+  actions: { save: { onStart: () => ({}), run: async () => {} } },
+  view: (state, server) => '<main id="main-content"><button data-event="inc" disabled>+</button><input name="q"><a href="/x">Items</a></main>',
+}`
+
+test('a static page is not shown the mutation, action, fetch or ARIA-state items', () => {
+  const { md } = relevantChecklist(STATIC, '<main id="main-content"><h1>About</h1><p>text</p></main>')
+  for (const gone of ['Every mutation returns', 'Actions read user input', 'Any `fetch`', '**State**', '**Tab order**', '`onViewError` defined']) {
+    assert.equal(md.includes(gone), false, `should not show: ${gone}`)
+  }
+  assert.equal(md.includes('### Mutations & actions'), false, 'an empty section is dropped with its heading')
+  assert.equal(md.includes('### Defensive coding'), false)
+  for (const kept of ['### Structure', '`meta.description` is a real description', 'Heading hierarchy is correct', '`<main id="main-content">` is present']) {
+    assert.equal(md.includes(kept), true, `must keep: ${kept}`)
+  }
+})
+
+test('a page that uses every area keeps every item', () => {
+  const { md, skipped } = relevantChecklist(FULL, '<main><button data-event="inc" disabled>+</button><input name="q"><a href="/x">Items</a></main>')
+  for (const shown of ['Every mutation returns', 'Actions read user input', 'Any `fetch`', '**State**', '**Tab order**', 'Optional chaining used', 'URL params validated', '`onViewError` defined', 'No `data-event` on text inputs', '**Keyboard focusability**']) {
+    assert.equal(md.includes(shown), true, `should show: ${shown}`)
+  }
+  assert.deepEqual(skipped.map(s => s.skip), ['no CTA', 'no `aria-live`'].filter(r => skipped.some(s => s.skip === r)))
+})
+
+test('the skipped items are named with the reason, so an agent can overrule a wrong one', async () => {
+  const root = tmpProject()
+  const file = writeSpec(root, 'static.js', STATIC)
+  const result = await runFullReview(STATIC, file)
+  const out = formatFullReview(result, { source: STATIC, file, agentFacing: true })
+  assert.match(out, /Not shown, because they cannot apply to this spec/)
+  assert.match(out, /- no `mutations`: mutation purity, constraints, disabled vs bounds/)
+  assert.match(out, /If one of those reasons is wrong for this spec, work through the item anyway/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('every applicability rule matches a real checklist item, so a reworded item or a typo is caught', () => {
+  // A rule only skips an item it matched. If every rule skips on a static page, each one found its item.
+  // If a spec that has everything skips nothing, each rule's "applies" test can be satisfied.
+  const { skipped } = relevantChecklist(STATIC, '')
+  const labels = skipped.flatMap(s => s.labels)
+  assert.equal(labels.length, 20, `20 rules skip on a static page, got ${labels.length}: ${labels.join(', ')}`)
+
+  const kitchenSink = `export default {
+    route: '/items/:id',
+    server: { item: async (ctx) => { const r = await fetch('/api/' + ctx.params.id); if (!r.ok) throw new Error('x'); return r.json() } },
+    mutations: { inc: (s) => s },
+    actions: { save: { onStart: () => ({}), run: async () => {} } },
+    view: (state, server) => '<main id="main-content"></main>',
+  }`
+  const html = '<main><button data-event="inc" disabled>+</button><input name="q"><a href="/x">Items</a><div class="ui-cta" aria-live="polite"></div></main>'
+  const all = relevantChecklist(kitchenSink, html)
+  assert.deepEqual(all.skipped, [], `a spec with everything skips nothing, but skipped: ${JSON.stringify(all.skipped)}`)
+})
+
+test('the static page checklist is far shorter than the full one', () => {
+  const short = relevantChecklist(STATIC, '').md.split(/\s+/).length
+  const long  = relevantChecklist(FULL, '<button data-event="x" disabled></button><input><a href="/"></a>').md.split(/\s+/).length
+  assert.ok(short < long * 0.5, `static ${short} words, full ${long} words`)
 })

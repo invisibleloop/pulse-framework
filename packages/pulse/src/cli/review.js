@@ -394,6 +394,93 @@ const CHECKLIST_MD = `### Structure
 - [ ] \`onViewError\` defined if the view could crash on bad or missing data`
 
 /**
+ * Items of CHECKLIST_MD that cannot apply to a spec, each with the fact that rules it out.
+ * `test` matches the first line of the item; `applies` gets the facts from `specFacts`.
+ * An item with no rule here is always shown, so a new item is shown until someone decides otherwise.
+ */
+const APPLICABILITY = [
+  { test: /^Every mutation returns/,          applies: f => f.mutations,   skip: 'no `mutations`',                  label: 'mutation purity' },
+  { test: /^`constraints` are used/,           applies: f => f.mutations,   skip: 'no `mutations`',                  label: 'constraints' },
+  { test: /^`disabled` in the view matches/,   applies: f => f.mutations,   skip: 'no `mutations`',                  label: 'disabled vs bounds' },
+  { test: /^Actions read user input/,          applies: f => f.actions,     skip: 'no `actions`',                    label: 'FormData in onStart' },
+  { test: /^`onStart` sets a loading/,         applies: f => f.actions,     skip: 'no `actions`',                    label: 'loading status' },
+  { test: /^A single `status` field/,          applies: f => f.actions,     skip: 'no `actions`',                    label: 'single status field' },
+  { test: /^\*\*CTA must be wrapped/,          applies: f => f.cta,         skip: 'no CTA',                          label: 'CTA wrapper' },
+  { test: /^No `data-event` on text inputs/,   applies: f => f.textInput,   skip: 'no text input',                   label: 'data-event on inputs' },
+  { test: /^Icon-only buttons/,                applies: f => f.button,      skip: 'no button',                       label: 'icon-only buttons' },
+  { test: /^`aria-live` and `aria-label`/,     applies: f => f.ariaLive,    skip: 'no `aria-live`',                  label: 'aria-live with aria-label' },
+  { test: /^Disabled state uses/,              applies: f => f.disabled,    skip: 'nothing is disabled',             label: 'disabled attribute' },
+  { test: /^\*\*Keyboard focusability/,        applies: f => f.dataEvents,  skip: 'no `data-event`/`data-dialog-*`', label: 'keyboard focusability' },
+  { test: /^\*\*Purpose/,                      applies: f => f.interactive, skip: 'no interactive element',          label: 'accessible names' },
+  { test: /^\*\*State/,                        applies: f => f.interactive, skip: 'no interactive element',          label: 'ARIA state' },
+  { test: /^\*\*Tab order/,                    applies: f => f.interactive, skip: 'no interactive element',          label: 'tab order' },
+  { test: /^Any `fetch`/,                      applies: f => f.fetch,       skip: 'no `fetch`',                      label: 'res.ok before .json()' },
+  { test: /^Fetch errors use the safe/,        applies: f => f.fetch,       skip: 'no `fetch`',                      label: 'safe fetch errors' },
+  { test: /^Optional chaining used/,           applies: f => f.external,    skip: 'no server fetcher or `fetch`',    label: 'optional chaining on external data' },
+  { test: /^URL params validated/,             applies: f => f.params,      skip: 'no route params, query or `ctx`', label: 'URL param validation' },
+  { test: /^`onViewError` defined/,            applies: f => f.viewInput,   skip: 'the view reads no state or server data', label: 'onViewError' },
+]
+
+/** What the spec contains, read from its source and its rendered HTML. */
+function specFacts(source, html = '') {
+  const hay = `${source}\n${html}`
+  return {
+    mutations:   /^\s*mutations\s*:/m.test(source),
+    actions:     /^\s*actions\s*:/m.test(source),
+    fetch:       /\bfetch\s*\(/.test(source),
+    external:    /^\s*server\s*:/m.test(source) || /\bfetch\s*\(/.test(source),
+    params:      /route\s*:\s*['"`][^'"`]*[:*]/.test(source) || /\bctx\.(?:params|query)\b/.test(source),
+    viewInput:   /^\s*server\s*:/m.test(source) || !/\bview\s*:\s*(?:async\s*)?\(\s*\)\s*=>/.test(source),
+    cta:         /ui-cta|\bcta\s*\(/.test(hay),
+    textInput:   /<(?:input|textarea)[\s>]|\b(?:input|textarea)\s*\(/.test(hay),
+    button:      /<button[\s>]|\b(?:button|iconButton)\s*\(/.test(hay),
+    ariaLive:    /aria-live/.test(hay),
+    disabled:    /\bdisabled\b/.test(hay),
+    dataEvents:  /data-(?:event|store-event|dialog-open|dialog-close)/.test(hay),
+    interactive: /<(?:a|button|input|select|textarea|summary|form)[\s>]|\b(?:button|input|select|textarea|link)\s*\(|data-(?:event|store-event|dialog-open)/.test(hay),
+  }
+}
+
+/**
+ * The checklist for this spec: CHECKLIST_MD without the items that cannot apply, and a note of what was
+ * left out and why. Without this a static page got every item about mutations, fetches and ARIA state,
+ * about 2,000 words, and an agent that could not tell which mattered answered none of them.
+ *
+ * @param {string} source
+ * @param {string} [html]
+ * @returns {{ md: string, skipped: { skip: string, labels: string[] }[] }}
+ */
+export function relevantChecklist(source, html = '') {
+  const facts = specFacts(source, html)
+  const sections = []
+  for (const line of CHECKLIST_MD.split('\n')) {
+    if (line.startsWith('### ')) sections.push({ heading: line, items: [] })
+    else if (line.startsWith('- [ ] ')) sections.at(-1).items.push([line])
+    else sections.at(-1).items.at(-1)?.push(line)
+  }
+
+  const skippedByReason = new Map()
+  const kept = []
+  for (const sec of sections) {
+    const items = sec.items.filter(lines => {
+      const first = lines[0].replace(/^- \[ \] /, '').replace(/\\`/g, '`')
+      const rule = APPLICABILITY.find(r => r.test.test(first))
+      if (!rule || rule.applies(facts)) return true
+      if (!skippedByReason.has(rule.skip)) skippedByReason.set(rule.skip, [])
+      skippedByReason.get(rule.skip).push(rule.label)
+      return false
+    })
+    if (items.length === 0) continue
+    kept.push([sec.heading, ...items.map(lines => lines.join('\n').replace(/\n+$/, ''))].join('\n'))
+  }
+
+  return {
+    md: kept.join('\n\n'),
+    skipped: [...skippedByReason].map(([skip, labels]) => ({ skip, labels })),
+  }
+}
+
+/**
  * Format the full review result.
  *
  * @param {{ validationResult, renderedHtml, renderNote, autoChecks }} result
@@ -408,6 +495,12 @@ export function formatFullReview(result, { source, file, agentFacing = false }) 
 
   const specDump = validationResult.includes('✓') ? '' : `\n## Spec source (validation failed — showing for debugging)\n\n${fenced(source, 'js')}\n`
   const renderErrorDump = renderNote.includes('could not') ? `\n## Render error\n\n${renderNote}\n\n${fenced(source, 'js')}\n` : ''
+
+  const checklist = relevantChecklist(source, result.renderedHtml)
+  const skippedNote = checklist.skipped.length === 0 ? '' :
+    `\n**Not shown, because they cannot apply to this spec:**\n` +
+    checklist.skipped.map(({ skip, labels }) => `- ${skip}: ${labels.join(', ')}`).join('\n') +
+    `\n\nIf one of those reasons is wrong for this spec, work through the item anyway.\n`
 
   const workOrder = agentFacing
     ? 'Work through every item. Fix anything that fails. Refer to the spec source at ' + file + ' as needed — do not ask me to paste it.'
@@ -436,7 +529,7 @@ ${autoChecks.join('\n')}
 ## Review checklist
 
 ${workOrder}
-
-${CHECKLIST_MD}
+${skippedNote}
+${checklist.md}
 ${closing}`
 }
