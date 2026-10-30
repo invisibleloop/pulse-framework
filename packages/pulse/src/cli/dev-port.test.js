@@ -1,11 +1,12 @@
 import { test }   from 'node:test'
 import assert     from 'node:assert/strict'
 import fs         from 'node:fs'
+import net        from 'node:net'
 import os         from 'node:os'
 import path       from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { writeDevPort, removeDevPort, readDevPort, resolveDevPort, DEV_PORT_FILE } from './dev-port.js'
+import { writeDevPort, removeDevPort, readDevPort, resolveDevPort, findFreePort, DEV_PORT_FILE } from './dev-port.js'
 
 function project() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-devport-'))
@@ -99,4 +100,75 @@ test('pulse dev records the port it really listens on and removes the record whe
     // file may remain; readDevPort ignores it because its process is gone
     if (process.platform !== 'win32') assert.equal(fs.existsSync(path.join(root, DEV_PORT_FILE)), false, 'the record goes when the server stops')
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
+})
+
+// A port held by another process (another project's server): findFreePort skips it, and
+// `pulse dev` moves to the next free port unless --port asked for that one.
+function holdPort() {
+  return new Promise(resolve => {
+    const blocker = net.createServer()
+    blocker.listen(0, '127.0.0.1', () => resolve({ blocker, port: blocker.address().port }))
+  })
+}
+
+function devProject(config) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-devfree-'))
+  fs.mkdirSync(path.join(root, 'src', 'pages'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'package.json'), '{"type":"module"}')
+  fs.writeFileSync(path.join(root, 'pulse.config.js'), `export default ${JSON.stringify(config)}\n`)
+  fs.writeFileSync(path.join(root, 'src/pages/home.js'), "export default { route: '/', view: () => '<main id=\"main-content\"><h1>Hi</h1></main>' }\n")
+  return root
+}
+
+await test('findFreePort skips a port that is in use', async () => {
+  const { blocker, port } = await holdPort()
+  try {
+    const found = await findFreePort(port)
+    assert.notEqual(found, port)
+    assert(found > port && found < port + 20, `expected a nearby port, got ${found}`)
+  } finally { blocker.close() }
+})
+
+await test('findFreePort returns the start port when it is free', async () => {
+  const { blocker, port } = await holdPort()
+  await new Promise(r => blocker.close(r))
+  assert.equal(await findFreePort(port), port)
+})
+
+await test('pulse dev moves to a free port when the configured one is busy, and records it', async () => {
+  const { blocker, port: busy } = await holdPort()
+  const root = devProject({ port: busy })
+  const dev = fileURLToPath(new URL('./dev.js', import.meta.url))
+  const { spawn } = await import('node:child_process')
+  const proc = spawn(process.execPath, [dev, '--root', root], { stdio: 'ignore' })
+  try {
+    const deadline = Date.now() + 15000
+    let port = null
+    while (Date.now() < deadline && !(port = readDevPort(root))) await new Promise(r => setTimeout(r, 100))
+    assert(port, 'dev.js never recorded a port')
+    assert.notEqual(port, busy, 'must not claim the busy port')
+    assert.equal((await fetch(`http://127.0.0.1:${port}/`)).status, 200)
+  } finally {
+    if (proc.exitCode === null && proc.signalCode === null) {
+      proc.kill('SIGTERM')
+      await new Promise(r => proc.once('exit', r))
+    }
+    blocker.close()
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+await test('pulse dev --port stays an error when that port is busy', async () => {
+  const { blocker, port: busy } = await holdPort()
+  const root = devProject({})
+  const dev = fileURLToPath(new URL('./dev.js', import.meta.url))
+  try {
+    const { spawnSync } = await import('node:child_process')
+    const r = spawnSync(process.execPath, [dev, '--root', root, '--port', String(busy)], { encoding: 'utf8', timeout: 20000 })
+    assert.equal(r.status, 1)
+    assert(r.stderr.includes(`Port ${busy} is already in use`), r.stderr.slice(0, 300))
+  } finally {
+    blocker.close()
+    fs.rmSync(root, { recursive: true, force: true })
+  }
 })

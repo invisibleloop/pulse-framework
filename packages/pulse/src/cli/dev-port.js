@@ -8,6 +8,7 @@
  */
 
 import fs   from 'fs'
+import net  from 'net'
 import path from 'path'
 
 export const DEV_PORT_FILE = path.join('.pulse', 'dev.json')
@@ -44,4 +45,24 @@ export function readDevPort(root) {
 /** The dev port the tools should use: the running server's, else the configured one, else 3000. */
 export function resolveDevPort(root, configPort) {
   return readDevPort(root) ?? configPort ?? 3000
+}
+
+/** Whether `port` can be listened on at `host` right now. */
+function isFree(port, host) {
+  return new Promise(resolve => {
+    const probe = net.createServer()
+    probe.once('error', () => resolve(false))
+    probe.listen(port, host, () => probe.close(() => resolve(true)))
+  })
+}
+
+/**
+ * The first free port from `start` up, trying `tries` ports. Returns `start` when none is free,
+ * so the server's own "port is in use" message is what the user sees.
+ */
+export async function findFreePort(start, host = '127.0.0.1', tries = 20) {
+  for (let port = start; port < start + tries && port <= 65535; port++) {
+    if (await isFree(port, host)) return port
+  }
+  return start
 }
