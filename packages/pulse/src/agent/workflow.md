@@ -93,6 +93,8 @@ Decide the complexity tier (see below) and confirm with the user if the task is 
 
 Do not ask about details you can decide safely, such as spacing or border radius.
 
+**Write a criterion for every requirement the user stated, in their own words.** If the request says "it should work without JavaScript", a criterion says so: with JavaScript off, the visitor can still do the task. The same goes for "keyboard only", "mobile first" and any limit the user gave. A requirement with no criterion has no test.
+
 **Write a criterion for every rule in your plan, and for every way it can fail.** A criterion that covers only the working path leaves the failures untested.
 
 - A form: each validation rule, with its limits. Name the field and the number, for example "a message over 2000 characters".
