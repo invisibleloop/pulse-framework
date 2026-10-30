@@ -245,3 +245,10 @@ test('review flags generic link text', async () => {
   const checks = await checksFor(src)
   assert.equal(checks.some(c => c.includes('Generic link text')), true)
 })
+
+test('generic link text is found inside a wrapping tag, and a longer text is not flagged', async () => {
+  const wrapped = await checksFor(STATIC_PAGE().replace('<h1>About</h1>', '<a href="/x"><span>Read more</span></a>'))
+  assert.equal(wrapped.some(c => c.includes('Generic link text "read more"')), true)
+  const fine = await checksFor(STATIC_PAGE().replace('<h1>About</h1>', '<a href="/x">Read more about our pricing</a>'))
+  assert.equal(fine.some(c => c.includes('Generic link text')), false)
+})

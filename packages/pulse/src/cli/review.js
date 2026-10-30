@@ -235,9 +235,11 @@ export async function runFullReview(source, file) {
     const hasEmoji = emojiRegex.test(htmlNoSvg)
     autoChecks.push(hasEmoji ? '⚠ **Emoji in HTML** — use icon components or aria-label instead (verify: may be intentional icon)' : '✓ No emoji in view HTML')
 
+    // The link's inner HTML must be nothing but the phrase, with tags or whitespace around it. Matching it
+    // directly (not stripping the tags first) keeps this a test and not a sanitiser.
     const genericLink = [...renderedHtml.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)]
-      .map(m => m[1].replace(/<[^>]*>/g, '').trim().toLowerCase())
-      .find(t => /^(click here|here|read more|more|learn more|link)$/.test(t))
+      .map(m => m[1].match(/^(?:\s|<[^>]*>)*(click here|here|read more|more|learn more|link)(?:\s|<[^>]*>)*$/i)?.[1].toLowerCase())
+      .find(Boolean)
     autoChecks.push(genericLink
       ? `⚠ **Generic link text "${genericLink}"** — a link's text must say where it goes, out of context`
       : '✓ No generic link text')
