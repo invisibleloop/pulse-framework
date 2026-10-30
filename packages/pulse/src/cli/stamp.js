@@ -13,6 +13,11 @@
  * and was found (via a real user report) to be silently skipped: /verify
  * completed and reported scores in the conversation, but nothing ever
  * landed in .pulse/reports/.
+ *
+ * The report must also hold the evidence verify.md's pass bar asks for, for BOTH devices: the
+ * Accessibility, Best Practices and SEO scores at 100, a measured LCP and a CLS of 0.00. A report
+ * saved with only `cls` (or with scores missing) used to be enough, so a page whose speed was
+ * never measured got the same stamp as one that was.
  */
 
 import fs   from 'fs'
@@ -21,6 +26,55 @@ import { urlToSlug }       from './report.js'
 import { resolveEntries }  from './diagnose.js'
 
 const STAMP_REPORT_WINDOW_MS = 10 * 60 * 1000 // a report older than this wasn't from this /verify run
+
+// verify.md's pass bar. Performance as a score varies with machine load and is not gated, but LCP
+// must be measured, and a clearly poor one (Core Web Vitals "poor", over 4 s) is a fail.
+const DEVICES        = ['desktop', 'mobile']
+const MUST_BE_100    = ['accessibility', 'bestPractices', 'seo']
+const LCP_POOR_MS    = 4000
+const CLS_MAX        = 0.005 // "CLS 0.00" once rounded to two places
+
+const isNum = v => typeof v === 'number' && Number.isFinite(v)
+
+/**
+ * What is wrong with the newest recent report of each device, as sentences an agent can act on.
+ * Empty when both devices meet the bar.
+ *
+ * @param {string} reportDir
+ * @returns {string[]}
+ */
+function reportProblems(reportDir) {
+  const newest = {}
+  for (const f of fs.readdirSync(reportDir).filter(f => f.endsWith('.json'))) {
+    const file = path.join(reportDir, f)
+    const mtime = fs.statSync(file).mtimeMs
+    if (Date.now() - mtime >= STAMP_REPORT_WINDOW_MS) continue
+    let rec
+    try { rec = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { continue }
+    const device = rec?.device
+    if (DEVICES.includes(device) && (!newest[device] || mtime > newest[device].mtime)) newest[device] = { mtime, rec }
+  }
+
+  const problems = []
+  for (const device of DEVICES) {
+    const rec = newest[device]?.rec
+    if (!rec) {
+      problems.push(`no ${device} report (save it with \`pulse save-report --device ${device}\`)`)
+      continue
+    }
+    for (const key of MUST_BE_100) {
+      const v = rec.scores?.[key]
+      if (!isNum(v)) problems.push(`${device}: scores.${key} is missing`)
+      else if (v !== 100) problems.push(`${device}: ${key} is ${v}, the bar is 100`)
+    }
+    const { lcp, cls } = rec.metrics ?? {}
+    if (!isNum(lcp)) problems.push(`${device}: metrics.lcp is missing (measure it; verify.md step 9 says how)`)
+    else if (lcp > LCP_POOR_MS) problems.push(`${device}: LCP is ${Math.round(lcp)} ms, over ${LCP_POOR_MS} ms`)
+    if (!isNum(cls)) problems.push(`${device}: metrics.cls is missing`)
+    else if (cls > CLS_MAX) problems.push(`${device}: CLS is ${cls}, the bar is 0.00`)
+  }
+  return problems
+}
 
 /**
  * @param {string} root
@@ -62,8 +116,21 @@ export function writeStamp(root, { route, mode } = {}) {
         stamped: false,
         refused: true,
         reason: `No Lighthouse report saved for "${route}" in the last 10 minutes. Full /verify requires ` +
-          `pulse save-report --url "http://localhost:3001${route}" --data '{"scores":{...},"metrics":{...}}' ` +
+          `pulse save-report --url "http://localhost:3001${route}" --device <desktop|mobile> --data '{"scores":{...},"metrics":{...}}' ` +
           `(run from the project root) for BOTH the desktop and mobile Lighthouse runs before stamping.`,
+        resolvedCount: 0,
+        ts: null,
+      }
+    }
+
+    const problems = reportProblems(reportDir)
+    if (problems.length > 0) {
+      return {
+        stamped: false,
+        refused: true,
+        reason: `The saved Lighthouse reports for "${route}" do not meet the /verify bar:\n` +
+          problems.map(p => `  - ${p}`).join('\n') +
+          `\nFix the page or save the missing numbers, then save the report again. Do not save numbers you did not measure.`,
         resolvedCount: 0,
         ts: null,
       }
@@ -102,7 +169,7 @@ export function formatStampResult(result, { agentFacing = true } = {}) {
   if (!result.stamped) {
     const prefix = result.refused ? 'Refusing to stamp' : 'Failed to stamp'
     return agentFacing && result.refused
-      ? `${prefix}: ${result.reason}\n\nRun it now with the real numbers from your Lighthouse results, then call pulse_stamp again.`
+      ? `${prefix}: ${result.reason}\n\nFix that with real numbers from your Lighthouse results and trace, then call pulse_stamp again.`
       : `${prefix}: ${result.reason}`
   }
   const resolvedNote = result.resolvedCount > 0

@@ -186,3 +186,62 @@ export default { route: '/s', state: {}, meta: { title: 't', description: 'd', t
   assert.ok(!out.includes('data-event on <input>'), 'the slider must not trigger the focus-loss error')
   fs.rmSync(path.dirname(file), { recursive: true, force: true })
 })
+
+// ── Mechanical checks added from a real /verify run ───────────────────────
+
+const STATIC_PAGE = (extra = '') => `export default {
+  route: '/about',
+  meta: { title: 'About', description: 'A real sentence about what this page is and who it is for.' },
+  ${extra}
+  view: () => '<main id="main-content"><h1>About</h1></main>',
+}`
+
+async function checksFor(source, { withTest = '' } = {}) {
+  const root = tmpProject()
+  const file = writeSpec(root, 'page.js', source)
+  if (withTest) fs.writeFileSync(file.replace(/\.js$/, '.test.js'), withTest)
+  const { autoChecks } = await runFullReview(source, file).catch(() => ({ autoChecks: [] }))
+  fs.rmSync(root, { recursive: true, force: true })
+  return autoChecks
+}
+
+test('a static page whose view takes no input is not asked for an XSS test', async () => {
+  const checks = await checksFor(STATIC_PAGE(), { withTest: "import test from 'node:test'" })
+  assert.equal(checks.some(c => c.includes('No XSS test found')), false)
+  assert.equal(checks.some(c => c.includes('XSS test not applicable')), true)
+})
+
+test('a page with server data is still asked for an XSS test', async () => {
+  const src = STATIC_PAGE("server: { items: async () => [] },")
+  const checks = await checksFor(src, { withTest: "import test from 'node:test'" })
+  assert.equal(checks.some(c => c.includes('No XSS test found')), true)
+})
+
+test('a view that takes state is still asked for an XSS test', async () => {
+  const src = `export default {\n  route: '/x',\n  state: { n: 1 },\n  view: (state) => '<main id="main-content">' + state.n + '</main>',\n}`
+  const checks = await checksFor(src, { withTest: "import test from 'node:test'" })
+  assert.equal(checks.some(c => c.includes('No XSS test found')), true)
+})
+
+test('review flags hydrate set by hand', async () => {
+  const checks = await checksFor(STATIC_PAGE("hydrate: '/x.js',"))
+  assert.equal(checks.some(c => c.startsWith('✗') && c.includes('`hydrate` set')), true)
+})
+
+test('review flags a placeholder or very short meta.description', async () => {
+  const checks = await checksFor(STATIC_PAGE().replace(/description: '[^']*'/, "description: 'Built with Pulse'"))
+  assert.equal(checks.some(c => c.includes('placeholder or very short')), true)
+})
+
+test('review flags raw response text thrown into an error, and .json() without .ok', async () => {
+  const src = `export default {\n  route: '/x',\n  state: {},\n  actions: { go: { run: async () => { const res = await fetch('/api'); if (!res) throw new Error(await res.text()); return res.json() } } },\n  view: () => '<main id="main-content"></main>',\n}`
+  const checks = await checksFor(src)
+  assert.equal(checks.some(c => c.includes('res.text()')), true)
+  assert.equal(checks.some(c => c.includes('`.ok` is never checked')), true)
+})
+
+test('review flags generic link text', async () => {
+  const src = STATIC_PAGE().replace('<h1>About</h1>', '<a href="/x">click here</a>')
+  const checks = await checksFor(src)
+  assert.equal(checks.some(c => c.includes('Generic link text')), true)
+})

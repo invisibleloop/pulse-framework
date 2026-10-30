@@ -638,6 +638,14 @@ test('workflow.md documents the same internal-tool exception for Step 0', () => 
     'must be explicit that the internal-tool branch reframes the question, it does not remove the requirement to ask it')
 })
 
+test('pulse_build starts the production server without the shell\'s PORT, which would override --port', () => {
+  const server = fs.readFileSync(path.join(agentDir, '..', 'mcp', 'server.js'), 'utf8')
+  const block  = server.slice(server.indexOf("'pulse_build'"), server.indexOf("'pulse_check_bundles'"))
+  assert(/const \{ PORT: _stray, \.\.\.startEnv \} = process\.env/.test(block),
+    'pulse_build must drop PORT from the environment it hands to start.js: start.js lets PORT beat --port, so a PORT in the developer\'s shell put the production server on the wrong port and Lighthouse had nothing to test')
+  assert(/env:\s*startEnv/.test(block), 'the spawn must use the environment without PORT')
+})
+
 // ── pulse_check_bundles ──────────────────────────────────────────────────────
 // Verified live (build a real project, reproduce the exact bug it catches by
 // temporarily reverting the build.js fix, confirm the tool flags it, restore

@@ -5,7 +5,7 @@
  * Prunes entries older than 30 days on each write.
  *
  * Usage (CLI):
- *   node src/cli/report.js --root /path/to/project --url http://localhost:3000/about --data '{...}'
+ *   node src/cli/report.js --root /path/to/project --url http://localhost:3000/about --device desktop --data '{...}'
  *
  * Usage (import):
  *   import { saveReport, urlToSlug } from './report.js'
@@ -48,8 +48,10 @@ function pathnameToSlug(pathname) {
  * @param {string} url     - Full URL that was audited
  * @param {Object} scores  - { performance, accessibility, bestPractices, seo } (0-100)
  * @param {Object} metrics - { lcp, cls, fcp, tbt } (numbers)
+ * @param {'desktop'|'mobile'} [device] - which Lighthouse run this is. Without it a mobile report
+ *   could not be told from a desktop one, and two saves in the same millisecond shared a file name.
  */
-export function saveReport(root, url, scores, metrics = {}) {
+export function saveReport(root, url, scores, metrics = {}, device) {
   const slug = urlToSlug(url)
   const dir  = path.join(root, '.pulse', 'reports', slug)
   fs.mkdirSync(dir, { recursive: true })
@@ -57,11 +59,12 @@ export function saveReport(root, url, scores, metrics = {}) {
   const record = {
     timestamp: new Date().toISOString(),
     url,
+    ...(device ? { device } : {}),
     scores,
     metrics,
   }
 
-  const filename = path.join(dir, `${Date.now()}.json`)
+  const filename = path.join(dir, `${Date.now()}${device ? `-${device}` : ''}.json`)
   fs.writeFileSync(filename, JSON.stringify(record, null, 2))
 
   pruneOldReports(dir)
@@ -96,20 +99,26 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const rootArg = args.indexOf('--root')
   const urlArg  = args.indexOf('--url')
   const dataArg = args.indexOf('--data')
+  const devArg  = args.indexOf('--device')
 
   const root = rootArg !== -1 ? path.resolve(args[rootArg + 1]) : process.cwd()
   const url  = urlArg  !== -1 ? args[urlArg  + 1] : null
   const data = dataArg !== -1 ? args[dataArg + 1] : null
+  const device = devArg !== -1 ? args[devArg + 1] : undefined
 
   if (!url || !data) {
-    console.error('Usage: pulse-report --url <url> --data \'{"scores":{...},"metrics":{...}}\'')
+    console.error('Usage: pulse-report --url <url> --device <desktop|mobile> --data \'{"scores":{...},"metrics":{...}}\'')
+    process.exit(1)
+  }
+  if (device !== undefined && !['desktop', 'mobile'].includes(device)) {
+    console.error(`Failed to save report: --device must be "desktop" or "mobile", got "${device}"`)
     process.exit(1)
   }
 
   try {
     const { scores, metrics } = JSON.parse(data)
-    const { slug } = saveReport(root, url, scores, metrics)
-    console.log(`✓ Report saved for ${url} (slug: ${slug})`)
+    const { slug } = saveReport(root, url, scores, metrics, device)
+    console.log(`✓ ${device ? `${device} report` : 'Report'} saved for ${url} (slug: ${slug})`)
   } catch (e) {
     console.error('Failed to save report:', e.message)
     process.exit(1)
