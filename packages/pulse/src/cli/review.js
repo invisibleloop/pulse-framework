@@ -11,6 +11,7 @@
  */
 
 import { fenced } from './fence.js'
+import { acceptanceStatus, acceptanceProblems, acceptancePathFor } from './acceptance.js'
 import fs   from 'fs'
 import path from 'path'
 import os   from 'os'
@@ -298,6 +299,18 @@ export async function runFullReview(source, file) {
       xssNote = '○ No test file found — create one at ' + path.basename(testFile)
     }
     autoChecks.push(xssNote)
+
+    const acceptance = acceptanceStatus(file)
+    if (acceptance.exists) {
+      const problems = acceptanceProblems(acceptance, path.basename(file))
+      autoChecks.push(problems.length === 0
+        ? `✓ Acceptance criteria: ${acceptance.criteria.length}, each named by a test`
+        : `✗ **Acceptance criteria not met** — ${problems.join('; ')}`)
+    } else if (/^\s*(?:mutations|actions|server|submit|store|guard)\s*:/m.test(source)) {
+      autoChecks.push(`⚠ **No acceptance criteria** — this page has behaviour. Write ${path.basename(acceptancePathFor(file))} (one line per criterion: \`- AC1: <what a user can see or do>\`) and name a test for each.`)
+    } else {
+      autoChecks.push('○ No acceptance criteria file (optional for a static page)')
+    }
   }
 
   const hasModalOpenState = /state\.modalOpen|modalOpen\s*:/.test(source)

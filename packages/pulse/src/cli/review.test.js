@@ -324,3 +324,35 @@ test('generic link text is found inside a wrapping tag, and a longer text is not
   const fine = await checksFor(STATIC_PAGE().replace('<h1>About</h1>', '<a href="/x">Read more about our pricing</a>'))
   assert.equal(fine.some(c => c.includes('Generic link text')), false)
 })
+
+// ── Acceptance criteria in the review ─────────────────────────────────────
+
+async function acceptanceCheck({ spec, criteria, tests }) {
+  const root = tmpProject()
+  const file = writeSpec(root, 'page.js', spec)
+  if (criteria !== undefined) fs.writeFileSync(file.replace(/\.js$/, '.acceptance.md'), criteria)
+  if (tests !== undefined) fs.writeFileSync(file.replace(/\.js$/, '.test.js'), tests)
+  const { autoChecks } = await runFullReview(spec, file)
+  fs.rmSync(root, { recursive: true, force: true })
+  return autoChecks.find(c => /cceptance criteria/.test(c))
+}
+
+const WITH_ACTIONS = `export default {\n  route: '/x',\n  state: {},\n  actions: { go: { run: async () => {} } },\n  view: (state) => '<main id="main-content">' + state + '</main>',\n}`
+
+test('review warns that a page with behaviour has no acceptance criteria', async () => {
+  const c = await acceptanceCheck({ spec: WITH_ACTIONS })
+  assert.match(c, /^⚠ \*\*No acceptance criteria\*\*/)
+  assert.match(c, /page\.acceptance\.md/)
+})
+
+test('review does not ask a static page for acceptance criteria', async () => {
+  const c = await acceptanceCheck({ spec: STATIC_PAGE() })
+  assert.match(c, /^○ No acceptance criteria file \(optional for a static page\)/)
+})
+
+test('review fails a criterion no test names, and passes when every one is named', async () => {
+  const open = await acceptanceCheck({ spec: WITH_ACTIONS, criteria: '- AC1: a\n- AC2: b\n', tests: "test('AC1 — a', () => {})" })
+  assert.match(open, /^✗ \*\*Acceptance criteria not met\*\*.*no test names AC2/)
+  const met = await acceptanceCheck({ spec: WITH_ACTIONS, criteria: '- AC1: a\n- AC2: b\n', tests: "test('AC1 — a', () => {})\ntest('AC2 — b', () => {})" })
+  assert.match(met, /^✓ Acceptance criteria: 2, each named by a test/)
+})

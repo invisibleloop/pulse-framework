@@ -14,6 +14,9 @@
  * completed and reported scores in the conversation, but nothing ever
  * landed in .pulse/reports/.
  *
+ * A page with src/pages/<name>.acceptance.md must also have a test that names each criterion (see
+ * acceptance.js).
+ *
  * The report must also hold the evidence verify.md's pass bar asks for, for BOTH devices: the
  * Accessibility, Best Practices and SEO scores at 100, a measured LCP and a CLS of 0.00. A report
  * saved with only `cls` (or with scores missing) used to be enough, so a page whose speed was
@@ -24,6 +27,7 @@ import fs   from 'fs'
 import path from 'path'
 import { urlToSlug }       from './report.js'
 import { resolveEntries }  from './diagnose.js'
+import { specFileForRoute, acceptanceStatus, acceptanceProblems } from './acceptance.js'
 
 const STAMP_REPORT_WINDOW_MS = 10 * 60 * 1000 // a report older than this wasn't from this /verify run
 
@@ -131,16 +135,23 @@ export function writeStamp(root, { route, mode } = {}) {
     }
 
     const problems = reportProblems(reportDir)
-    if (problems.length > 0) {
-      return {
-        stamped: false,
-        refused: true,
-        reason: `The saved Lighthouse reports for "${route}" do not meet the /verify bar:\n` +
+    // A page with a criteria file cannot be stamped while a criterion has no test that names it.
+    // A page without the file is not asked for one here: pulse_review warns about that.
+    const specFile = specFileForRoute(root, route)
+    const unmet    = specFile ? acceptanceProblems(acceptanceStatus(specFile), path.basename(specFile)) : []
+    if (problems.length > 0 || unmet.length > 0) {
+      const sections = []
+      if (problems.length > 0) {
+        sections.push(`The saved Lighthouse reports for "${route}" do not meet the /verify bar:\n` +
           problems.map(p => `  - ${p}`).join('\n') +
-          `\nFix the page or save the missing numbers, then save the report again. Do not save numbers you did not measure.`,
-        resolvedCount: 0,
-        ts: null,
+          `\nFix the page or save the missing numbers, then save the report again. Do not save numbers you did not measure.`)
       }
+      if (unmet.length > 0) {
+        sections.push(`The acceptance criteria for "${route}" are not met:\n` +
+          unmet.map(p => `  - ${p}`).join('\n') +
+          `\nA test proves a criterion by naming it in its title. Write the test from the criterion, not from the code. If the page and the criterion disagree, ask the user which is right.`)
+      }
+      return { stamped: false, refused: true, reason: sections.join('\n\n'), resolvedCount: 0, ts: null }
     }
   }
 

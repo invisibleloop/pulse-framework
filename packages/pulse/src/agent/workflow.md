@@ -79,6 +79,18 @@ Decide the complexity tier (see below) and confirm with the user if the task is 
 - **Theme: light or dark** — Pulse defaults to **dark** when `meta.theme` is unset. Decide now (ask the user if the brief doesn't say) — discovering a wrong theme at the screenshot costs a full edit → restart → re-approval cycle.
 - Which UI components you will use
 - Files you will create or modify
+- **Acceptance criteria** *(Tier 2 and 3)*: 3 to 8 sentences. Each names one thing a user can see or do. Number them AC1, AC2 and so on. The user confirms them with the plan.
+
+**Check that the request is complete before you write the criteria.** Ask one question at a time about anything it leaves out:
+
+- A form: where it submits, and which fields are required.
+- A form: the validation rules, and what the user sees on success and on failure.
+- A page that lists data: where the data comes from.
+- A page that lists data: what shows when the list is empty, and when the fetch fails.
+- A page behind a login: who may see it, and where everyone else goes.
+- Any page: the copy, or permission to write placeholder text.
+
+Do not ask about details you can decide safely, such as spacing or border radius.
 
 **Skip confirmation for trivially small tasks** (add a button, fix a label, swap a component). When in doubt, confirm.
 
@@ -102,7 +114,7 @@ Not every task needs all 8 phases. Match the tier to the task:
 | 4a | Design approval | screenshot → show user → **wait for approval** *(new-build only)* |
 | 4b | Verify | `pulse_design_review` (if intake ran) → `pulse_layout_review` → Lighthouse desktop + mobile (100/100/100) |
 
-No tests required for pure view specs with no logic. Add tests if the view has non-trivial helper functions.
+No tests required for pure view specs with no logic. Add tests if the view has non-trivial helper functions. Acceptance criteria are optional at this tier.
 
 ### Tier 2 — Standard (interactive, single-purpose)
 
@@ -198,6 +210,8 @@ Write each file using the **Write tool** — not `pulse_create_page`. This shows
 ```
 Writing src/pages/my-page.js...
 ```
+
+For Tier 2 and 3, also write `src/pages/<name>.acceptance.md`. Use one line per criterion: `- AC1: <sentence>`.
 
 After the Write tool completes, call `pulse_create_page(name)` to register the page. Only after that call succeeds output:
 
@@ -313,6 +327,9 @@ Write tests for every spec you created or modified. At minimum:
 - Each mutation as a pure function
 - View renders expected HTML landmarks
 - Any utility functions defined in the spec
+- Each acceptance criterion. Put its ID in the test title, for example `test('AC1 — an invalid email shows an error', …)`.
+
+Write the criterion tests from the criteria, not from the code. `pulse_review` and `pulse_stamp` refuse a criterion that no test names. If the page and a criterion disagree, ask the user which is right.
 
 Run the tests. Fix every failure.
 

@@ -199,6 +199,62 @@ test('the older-pulse hint is not added when every report names its device', () 
   assert.doesNotMatch(r.reason, /name no device/)
 })
 
+// ── Acceptance criteria ──────────────────────────────────────────────────
+
+function writePage(root, { criteria, tests, route = '/dashboard' }) {
+  const dir = path.join(root, 'src', 'pages')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(path.join(dir, 'dashboard.js'), `export default { route: '${route}' }`)
+  if (criteria !== undefined) fs.writeFileSync(path.join(dir, 'dashboard.acceptance.md'), criteria)
+  if (tests !== undefined) fs.writeFileSync(path.join(dir, 'dashboard.test.js'), tests)
+}
+
+test('full mode stamps a page whose every criterion is named by a test', () => {
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard')
+  writePage(root, { criteria: '- AC1: one\n- AC2: two\n', tests: "test('AC1 — one', () => {})\ntest('AC2 — two', () => {})" })
+  assert.equal(writeStamp(root, { route: '/dashboard', mode: 'full' }).stamped, true)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('full mode refuses a page with a criterion no test names, and says how to fix it', () => {
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard')
+  writePage(root, { criteria: '- AC1: one\n- AC2: two\n', tests: "test('AC1 — one', () => {})" })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /acceptance criteria for "\/dashboard" are not met/)
+  assert.match(r.reason, /no test names AC2/)
+  assert.match(r.reason, /ask the user which is right/)
+  assert.equal(fs.existsSync(path.join(root, '.pulse-verified')), false)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('full mode lists a failing report and an open criterion together, so one pass fixes both', () => {
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard', { desktop: { metrics: { cls: 0 } } })
+  writePage(root, { criteria: '- AC1: one\n', tests: "test('other', () => {})" })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.match(r.reason, /desktop: metrics\.lcp is missing/)
+  assert.match(r.reason, /no test names AC1/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('a page with no criteria file is stamped as before: the file is asked for by review, not here', () => {
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard')
+  writePage(root, {})
+  assert.equal(writeStamp(root, { route: '/dashboard', mode: 'full' }).stamped, true)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('quick mode never checks acceptance criteria', () => {
+  const root = tmpProject()
+  writePage(root, { criteria: '- AC1: one\n' })
+  assert.equal(writeStamp(root, { route: '/dashboard', mode: 'quick' }).stamped, true)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
 // ── Error-journal auto-resolve ───────────────────────────────────────────
 
 test('writeStamp with a route marks unresolved error-journal entries for that route resolved', () => {
