@@ -41,9 +41,9 @@ Use `mcp__chrome-devtools__navigate_page` to load the page route, then `mcp__chr
 ### 6. Lighthouse — desktop *(skip in quick mode)*
 
 **Pre-flight (required before every Lighthouse run):**
-1. Call `pulse_build` to produce a production build and start the production server on port 3001.
+1. Call `pulse_build` to produce a production build and start the production server. It returns the **production URL**, an address with no trailing slash. The port is 3001 when the dev server is on 3000, and another port when it is not. Use that URL in every step below, and add the route to it (`/` for the homepage). Do not type a port from memory, because another project can hold 3001.
 2. Call `pulse_check_bundles` — reads the actual generated bundle files, not just their sizes. Lighthouse scores can pass on a bundle that shouldn't exist at all (a page with no mutations/actions/persist that got a boot file anyway) or one containing leaked server-only code — neither shows up as a score failure. If it flags anything, fix it and restart from step 3.
-3. Call `navigate_page` with `url: "http://localhost:3001/"` so the browser is on the production server.
+3. Call `navigate_page` with the production URL, so the browser is on the production server.
 
 Then run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop" }`.
 
@@ -53,11 +53,11 @@ Keep the score numbers from this run — step 9a saves the desktop and the mobil
 
 ### 7. Lighthouse — mobile *(skip in quick mode)*
 
-The browser should still be on `http://localhost:3001/` from step 6. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "mobile" }`.
+The browser should still be on the production URL from step 6. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "mobile" }`.
 
 **Same pass bar: Accessibility, Best Practices, and SEO must all be 100.** Fix any failures and restart from step 3.
 
-**Stay on the production server (port 3001)** — steps 8 and 9 use it too. Save the reports in step 9a, after step 9 has given you the LCP. Do not call `pulse_restart_server` yet.
+**Stay on the production server** — steps 8 and 9 use it too. Save the reports in step 9a, after step 9 has given you the LCP. Do not call `pulse_restart_server` yet.
 
 ### 8. Mobile layout check *(skip in quick mode)*
 
@@ -65,7 +65,7 @@ Emulate a mobile viewport and take a screenshot to catch wrapping, overflow, and
 
 ```
 mcp__chrome-devtools__emulate  viewport: "390x844x2,mobile,touch"
-mcp__chrome-devtools__navigate_page  url: "http://localhost:3001/"
+mcp__chrome-devtools__navigate_page  url: "<production URL>"
 mcp__chrome-devtools__take_screenshot
 ```
 
@@ -83,7 +83,7 @@ mcp__chrome-devtools__emulate  viewport: "1440x900x1"
 
 ### 9. Performance *(skip in quick mode)*
 
-**Run the trace against the production server, not dev.** Navigate to `http://localhost:3001/<route>` first — if the production server is no longer running, run `pulse_build` again. Tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
+**Run the trace against the production server, not dev.** Navigate to `<production URL><route>` first — if the production server is no longer running, run `pulse_build` again. Tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS. Flag any LCP insight that suggests a fixable problem (render-blocking resources, large image load delay, etc.).
 
 **If the trace shows no LCP** (a very small page can finish before the trace marks a navigation), read it from the page. Run `mcp__chrome-devtools__evaluate_script` on the production page with this function, and take the number as the LCP in milliseconds:
 
@@ -106,8 +106,8 @@ After the trace, call `pulse_restart_server` to return to the dev server.
 Run one `Bash` call per device — **not an MCP tool call**, and run from the project root (the directory containing `pulse.config.js`). `--device` is required: it keeps the two reports apart.
 
 ```
-npx --no-install pulse save-report --url "http://localhost:3001/<route>" --device desktop --data '{"scores":{"performance":<N>,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":<N>,"cls":<N>,"fcp":<N>,"tbt":<N>}}'
-npx --no-install pulse save-report --url "http://localhost:3001/<route>" --device mobile  --data '{...}'
+npx --no-install pulse save-report --url "<production URL><route>" --device desktop --data '{"scores":{"performance":<N>,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":<N>,"cls":<N>,"fcp":<N>,"tbt":<N>}}'
+npx --no-install pulse save-report --url "<production URL><route>" --device mobile  --data '{...}'
 ```
 
 Use `npx --no-install pulse`, not a bare `pulse`. A bare `pulse` can be an older global install that ignores `--device` and still prints a success line. The project's own copy knows the flag.

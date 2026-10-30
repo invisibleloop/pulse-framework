@@ -1380,7 +1380,7 @@ server.registerTool(
     // Wait until the prod server is actually accepting requests
     waitForServer(prodPort, 15_000).then(ready => resolve(text(
       ready
-        ? `Production build complete. Server running at http://localhost:${prodPort}/\nRun Lighthouse against this URL, then call pulse_restart_server to return to dev.`
+        ? `Production build complete. Production URL: http://localhost:${prodPort}\nUse this URL for navigate_page, Lighthouse, the trace and pulse save-report (add the route to it). Then call pulse_restart_server to return to dev.`
         : `Build complete but prod server on port ${prodPort} did not respond within 15 s — check for startup errors.`
     )))
   })
@@ -2262,7 +2262,7 @@ Use this AFTER design approval (user has seen the screenshot and signed off on t
 Call this as part of the Phase 5b verification flow (after design approval):
   design approval → pulse_design_review → pulse_layout_review → Lighthouse`,
     inputSchema: {
-      url: z.string().describe('The full URL to check, e.g. http://localhost:3001/about'),
+      url: z.string().describe('The full URL to check, e.g. the production URL from pulse_build plus /about'),
     },
   },
   async ({ url }) => {

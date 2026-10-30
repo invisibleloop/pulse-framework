@@ -51,11 +51,11 @@ Run `pulse_layout_review` with the page URL. It checks 390/768/1280px viewports 
 
 ### 5. Production build
 
-Run `pulse_build` to start the production server on port 3001. Tell the user: "Building for production — ~30s…" before calling it.
+Run `pulse_build` to start the production server. It returns the production URL (port 3001 when the dev server is on 3000, another port when it is not). Use that URL below, not a port from memory. Tell the user: "Building for production — ~30s…" before calling it.
 
 ### 6. Lighthouse — desktop
 
-Navigate to `http://localhost:3001/<route>` with `mcp__chrome-devtools__navigate_page`, then run `mcp__chrome-devtools__lighthouse_audit` with `device: "desktop"`.
+Navigate to `<production URL><route>` with `mcp__chrome-devtools__navigate_page`, then run `mcp__chrome-devtools__lighthouse_audit` with `device: "desktop"`.
 
 **Pass bar: Accessibility, Best Practices, and SEO must all be 100.** Report scores as a single line, e.g. `Accessibility 100 · Best Practices 100 · SEO 100`. If any score is below 100, identify the failing audit(s), fix, and restart from step 2.
 
@@ -67,7 +67,7 @@ Run `mcp__chrome-devtools__lighthouse_audit` with `device: "mobile"` against the
 
 ### 8. Performance
 
-**Stay on the production server (port 3001) for the trace** — navigate to `http://localhost:3001/<route>` first; tracing the dev server (port 3000) reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.
+**Stay on the production server for the trace** — navigate to `<production URL><route>` first; tracing the dev server reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.
 
 ### 9. Console errors
 

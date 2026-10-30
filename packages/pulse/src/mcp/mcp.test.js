@@ -442,6 +442,18 @@ test('identity.md declares the creative override (Design Freedom) carve-out', ()
   )
 })
 
+test('the verify guides send the agent to the URL pulse_build returns, not to a port typed from memory', () => {
+  // Another project can hold port 3001. An agent that followed "navigate to localhost:3001" audited the
+  // wrong server and built by hand instead of using pulse_build.
+  for (const rel of ['commands/verify.md', 'skills/verify/SKILL.md']) {
+    const text = fs.readFileSync(path.join(agentDir, rel), 'utf8')
+    assert(!/localhost:3001/.test(text), `${rel} must not tell the agent to open localhost:3001`)
+    assert(/<production URL>/.test(text), `${rel} must use the production URL that pulse_build returns`)
+  }
+  assert(!/localhost:3001/.test(fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')), 'workflow.md must not name localhost:3001')
+  assert(/Production URL: http:\/\/localhost:\$\{prodPort\}/.test(serverSrc), 'pulse_build must print the production URL')
+})
+
 test('the server guide clears the flash cookie in guard, never in a server fetcher', () => {
   // A streamed page sends its headers before the fetchers run, so a cookie a fetcher sets is lost
   // and a refresh shows the confirmation again (server.test.js proves the behaviour).

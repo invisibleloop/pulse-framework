@@ -127,7 +127,7 @@ export function writeStamp(root, { route, mode } = {}) {
         stamped: false,
         refused: true,
         reason: `No Lighthouse report saved for "${route}" in the last 10 minutes. Full /verify requires ` +
-          `pulse save-report --url "http://localhost:3001${route}" --device <desktop|mobile> --data '{"scores":{...},"metrics":{...}}' ` +
+          `pulse save-report --url "<production URL from pulse_build>${route}" --device <desktop|mobile> --data '{"scores":{...},"metrics":{...}}' ` +
           `(run from the project root) for BOTH the desktop and mobile Lighthouse runs before stamping.`,
         resolvedCount: 0,
         ts: null,

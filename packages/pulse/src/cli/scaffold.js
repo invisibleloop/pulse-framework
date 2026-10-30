@@ -9,7 +9,7 @@ import fs   from 'fs'
 import path from 'path'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
-import { GUIDE_LINE_NEW } from './migrations.js'
+import { GUIDE_LINE_NEW, LIGHTHOUSE_HOOK_STEPS } from './migrations.js'
 
 const PULSE_PKG = '@invisibleloop/pulse'
 
@@ -188,7 +188,7 @@ ${port !== 3000 ? `  port: ${port},\n` : ''}${agent && agent !== 'claude' ? `  a
           hooks: [
             {
               type: 'command',
-              command: `node -e "process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:'LIGHTHOUSE PRE-FLIGHT: This tool audits the currently loaded browser page. Before proceeding you MUST: (1) have called pulse_build to start the production server on port ${port + 1}, (2) have called navigate_page with url http://localhost:${port + 1}/ so the current page IS the production server. If either step is not done, stop — do those steps first, then call lighthouse_audit.'}}))"`,
+              command: `node -e "process.stdout.write(JSON.stringify({hookSpecificOutput:{hookEventName:'PreToolUse',additionalContext:'LIGHTHOUSE PRE-FLIGHT: This tool audits the currently loaded browser page. Before proceeding you MUST: ${LIGHTHOUSE_HOOK_STEPS} If either step is not done, stop — do those steps first, then call lighthouse_audit.'}}))"`,
               statusMessage: 'Checking Lighthouse prerequisites...',
             }
           ]
