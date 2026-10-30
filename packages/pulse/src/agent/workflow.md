@@ -79,6 +79,7 @@ Decide the complexity tier (see below) and confirm with the user if the task is 
 - **Theme: light or dark** — Pulse defaults to **dark** when `meta.theme` is unset. Decide now (ask the user if the brief doesn't say) — discovering a wrong theme at the screenshot costs a full edit → restart → re-approval cycle.
 - Which UI components you will use
 - Files you will create or modify
+- **A 404 page** *(a project that has none)*: if no spec in `src/pages` has `route: '*'`, add `src/pages/not-found.js` to the plan. It uses the shared layout. The user approves it with the plan, so `pulse_review` has nothing to warn about later.
 - **Acceptance criteria** *(Tier 2 and 3)*: 3 to 8 sentences. Each names one thing a user can see or do. Number them AC1, AC2 and so on. The user confirms them with the plan.
 
 **Check that the request is complete before you write the criteria.** Ask one question at a time about anything it leaves out:
