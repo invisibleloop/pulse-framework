@@ -78,6 +78,8 @@ test('a criterion no test names is reported, with how to fix it', () => {
   assert.equal(problems.length, 1)
   assert.match(problems[0], /no test names AC2/)
   assert.match(problems[0], /test\('AC2 — /)
+  assert.match(problems[0], /as plain text/, 'a generated title is not read, and the message says so')
+  assert.match(problems[0], /variable, a loop or test\.each/)
   fs.rmSync(root, { recursive: true, force: true })
 })
 

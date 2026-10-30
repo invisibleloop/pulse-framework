@@ -95,7 +95,7 @@ export function acceptanceProblems(status, specName = 'the page') {
   if (status.duplicates.length) out.push(`${status.duplicates.join(', ')} appear more than once in the criteria file`)
   if (status.stampChecked.length) out.push(`${status.stampChecked.join(', ')} restate${status.stampChecked.length === 1 ? 's' : ''} a check that /verify already makes (Lighthouse, LCP or CLS). Remove ${status.stampChecked.length === 1 ? 'it' : 'them'} from the criteria file, because no test can name ${status.stampChecked.length === 1 ? 'it' : 'them'}`)
   if (status.uncovered.length) {
-    const how = status.noTestFile ? 'there is no test file' : `name a test for each, for example test('${status.uncovered[0]} — <what it proves>', ...)`
+    const how = status.noTestFile ? 'there is no test file' : `write the ID in the title of a test for each, as plain text, for example test('${status.uncovered[0]} — <what it proves>', ...). A title built from a variable, a loop or test.each is not read`
     out.push(`no test names ${status.uncovered.join(', ')}: ${how}`)
   }
   return out

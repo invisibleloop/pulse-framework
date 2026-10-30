@@ -339,7 +339,7 @@ Write tests for every spec you created or modified. At minimum:
 - Each mutation as a pure function
 - View renders expected HTML landmarks
 - Any utility functions defined in the spec
-- Each acceptance criterion. Put its ID in the test title, for example `test('AC1 — an invalid email shows an error', …)`.
+- Each acceptance criterion. Put its ID in the test title, for example `test('AC1 — an invalid email shows an error', …)` Write the title as plain text. A title built from a variable, a loop or `test.each` is not read.
 
 Write the criterion tests from the criteria, not from the code. `pulse_review` and `pulse_stamp` refuse a criterion that no test names. If the page and a criterion disagree, ask the user which is right.
 
