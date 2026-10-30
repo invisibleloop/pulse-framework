@@ -260,8 +260,15 @@ test('pulse_restart_server does not reload another project that holds the config
     assert.deepEqual(reloads, [], 'still no reload sent to the other project')
   } finally {
     client.close()
-    if (pid) { try { process.kill(pid, 'SIGTERM') } catch { /* already gone */ } }
+    if (pid) {
+      try { process.kill(pid, 'SIGTERM') } catch { /* already gone */ }
+      // Windows will not remove a folder a running process still has open, so wait for it to end
+      for (let i = 0; i < 50; i++) {
+        try { process.kill(pid, 0) } catch { break }
+        await new Promise(r => setTimeout(r, 100))
+      }
+    }
     await new Promise(r => other.close(r))
-    fs.rmSync(root, { recursive: true, force: true })
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
   }
 })
