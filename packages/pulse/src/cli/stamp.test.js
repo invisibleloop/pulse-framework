@@ -21,16 +21,36 @@ function tmpProject() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-stamp-test-'))
 }
 
-function writeReport(root, slug, { ageMs = 0 } = {}) {
+const PASSING = {
+  scores:  { accessibility: 100, bestPractices: 100, seo: 100 },
+  metrics: { lcp: 480, cls: 0 },
+}
+
+let seq = 0
+function writeReport(root, slug, { ageMs = 0, device = 'desktop', scores = PASSING.scores, metrics = PASSING.metrics } = {}) {
   const dir = path.join(root, '.pulse', 'reports', slug)
   fs.mkdirSync(dir, { recursive: true })
-  const file = path.join(dir, `${Date.now()}.json`)
-  fs.writeFileSync(file, JSON.stringify({ timestamp: new Date().toISOString(), scores: {} }))
+  const file = path.join(dir, `${Date.now()}-${seq++}.json`)
+  fs.writeFileSync(file, JSON.stringify({ timestamp: new Date().toISOString(), ...(device ? { device } : {}), scores, metrics }))
   if (ageMs > 0) {
     const past = new Date(Date.now() - ageMs)
     fs.utimesSync(file, past, past)
   }
   return file
+}
+
+/** A desktop and a mobile report that meet the bar. */
+function writePassingPair(root, slug, overrides = {}) {
+  writeReport(root, slug, { device: 'desktop', ...overrides.desktop })
+  writeReport(root, slug, { device: 'mobile',  ...overrides.mobile })
+}
+
+function refusalFor(overrides) {
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard', overrides)
+  const result = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  fs.rmSync(root, { recursive: true, force: true })
+  return result
 }
 
 // ── Quick mode / no route ───────────────────────────────────────────────
@@ -71,9 +91,9 @@ test('writeStamp in full mode refuses when the only report is older than the win
   fs.rmSync(root, { recursive: true, force: true })
 })
 
-test('writeStamp in full mode stamps when a recent report exists for the route', () => {
+test('writeStamp in full mode stamps when both devices have a passing report for the route', () => {
   const root = tmpProject()
-  writeReport(root, 'dashboard')
+  writePassingPair(root, 'dashboard')
   const result = writeStamp(root, { route: '/dashboard', mode: 'full' })
   assert.equal(result.stamped, true)
   assert.equal(result.refused, false)
@@ -84,7 +104,7 @@ test('writeStamp in full mode stamps when a recent report exists for the route',
 test('writeStamp full mode checks the same slug pulse save-report would use for this route', () => {
   const root = tmpProject()
   // Root route '/' slugs to 'home' — same as report.js's urlToSlug.
-  writeReport(root, 'home')
+  writePassingPair(root, 'home')
   const result = writeStamp(root, { route: '/', mode: 'full' })
   assert.equal(result.stamped, true)
   fs.rmSync(root, { recursive: true, force: true })
@@ -96,6 +116,87 @@ test('a report saved for a different route does not satisfy the check', () => {
   const result = writeStamp(root, { route: '/dashboard', mode: 'full' })
   assert.equal(result.stamped, false)
   fs.rmSync(root, { recursive: true, force: true })
+})
+
+// ── Full mode — the reports must show the bar was met, on both devices ──
+
+test('full mode refuses a report with only a CLS: the speed was never measured', () => {
+  const r = refusalFor({ desktop: { metrics: { cls: 0 } }, mobile: { metrics: { cls: 0 } } })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /desktop: metrics\.lcp is missing/)
+  assert.match(r.reason, /mobile: metrics\.lcp is missing/)
+})
+
+test('full mode refuses when the mobile run was never saved', () => {
+  const root = tmpProject()
+  writeReport(root, 'dashboard', { device: 'desktop' })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /no mobile report/)
+  assert.doesNotMatch(r.reason, /no desktop report/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('full mode refuses reports that name no device', () => {
+  const root = tmpProject()
+  writeReport(root, 'dashboard', { device: null })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /no desktop report/)
+  assert.match(r.reason, /--device desktop/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('full mode refuses an Accessibility, Best Practices or SEO score below 100', () => {
+  const r = refusalFor({ mobile: { scores: { accessibility: 96, bestPractices: 100, seo: 100 } } })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /mobile: accessibility is 96, the bar is 100/)
+})
+
+test('full mode refuses a missing score, not only a low one', () => {
+  const r = refusalFor({ desktop: { scores: { accessibility: 100, bestPractices: 100 } } })
+  assert.match(r.reason, /desktop: scores\.seo is missing/)
+})
+
+test('full mode refuses a CLS above 0.00 and a poor LCP', () => {
+  const r = refusalFor({ desktop: { metrics: { lcp: 4200, cls: 0.02 } } })
+  assert.match(r.reason, /LCP is 4200 ms/)
+  assert.match(r.reason, /CLS is 0.02/)
+})
+
+test('full mode accepts a Performance score that is absent: it is reported, not gated', () => {
+  const r = refusalFor({})
+  assert.equal(r.stamped, true)
+})
+
+test('the newest report of a device decides, so a fixed page can be saved again', () => {
+  const root = tmpProject()
+  writeReport(root, 'dashboard', { device: 'desktop', metrics: { lcp: 9000, cls: 0 }, ageMs: 60 * 1000 })
+  writePassingPair(root, 'dashboard')
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.equal(r.stamped, true)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('the refusal text tells an agent to fix the numbers, and not to invent them', () => {
+  const r = refusalFor({ desktop: { metrics: { cls: 0 } } })
+  const text = formatStampResult(r)
+  assert.match(text, /Do not save numbers you did not measure/)
+})
+
+test('device-less reports get a refusal that names an older pulse ignoring --device', () => {
+  const root = tmpProject()
+  writeReport(root, 'dashboard', { device: null })
+  writeReport(root, 'dashboard', { device: null })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.match(r.reason, /2 recent report\(s\) name no device/)
+  assert.match(r.reason, /npx --no-install pulse save-report/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('the older-pulse hint is not added when every report names its device', () => {
+  const r = refusalFor({ desktop: { metrics: { cls: 0 } } })
+  assert.doesNotMatch(r.reason, /name no device/)
 })
 
 // ── Error-journal auto-resolve ───────────────────────────────────────────

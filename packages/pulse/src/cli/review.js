@@ -235,6 +235,15 @@ export async function runFullReview(source, file) {
     const hasEmoji = emojiRegex.test(htmlNoSvg)
     autoChecks.push(hasEmoji ? '⚠ **Emoji in HTML** — use icon components or aria-label instead (verify: may be intentional icon)' : '✓ No emoji in view HTML')
 
+    // The link's inner HTML must be nothing but the phrase, with tags or whitespace around it. Matching it
+    // directly (not stripping the tags first) keeps this a test and not a sanitiser.
+    const genericLink = [...renderedHtml.matchAll(/<a\b[^>]*>([\s\S]*?)<\/a>/gi)]
+      .map(m => m[1].match(/^(?:\s|<[^>]*>)*(click here|here|read more|more|learn more|link)(?:\s|<[^>]*>)*$/i)?.[1].toLowerCase())
+      .find(Boolean)
+    autoChecks.push(genericLink
+      ? `⚠ **Generic link text "${genericLink}"** — a link's text must say where it goes, out of context`
+      : '✓ No generic link text')
+
     const hasMain = /<main[^>]*id=["']?main-content/.test(renderedHtml)
     autoChecks.push(hasMain ? '✓ <main id="main-content"> present' : '✗ **Missing main landmark** — add <main id="main-content">')
   }
@@ -249,10 +258,37 @@ export async function runFullReview(source, file) {
     ? '⚠ **Possible hex colour in view** — use var(--ui-*) tokens only'
     : '✓ No obvious hex colours in view')
 
+  autoChecks.push(/^\s*hydrate\s*:/m.test(source)
+    ? '✗ **`hydrate` set in the spec** — the framework derives it from the URL entry passed to createServer. Remove it.'
+    : '✓ `hydrate` not set by hand')
+
+  const descMatch = source.match(/\bdescription\s*:\s*(['"`])([^'"`]*)\1/)
+  if (descMatch) {
+    const d = descMatch[2].trim()
+    const placeholder = d.length < 30 || /^built with pulse\.?$/i.test(d)
+    autoChecks.push(placeholder
+      ? `⚠ **\`meta.description\` is a placeholder or very short** ("${d}") — write one real sentence about this page (search results show it).`
+      : '✓ `meta.description` present')
+  }
+
+  if (/throw new Error\(\s*await\s+\w+\.text\(\)\s*\)/.test(source)) {
+    autoChecks.push('✗ **`throw new Error(await res.text())`** — this puts raw response HTML in a toast. Use the safe pattern from the checklist.')
+  }
+  if (/\bfetch\s*\(/.test(source) && /\.json\s*\(\)/.test(source) && !/\.ok\b/.test(source)) {
+    autoChecks.push('✗ **`fetch` result parsed with `.json()` and `.ok` is never checked** — a 4xx or 5xx body is parsed as data. Check `res.ok` first.')
+  }
+
   if (file) {
     const testFile = file.replace(/\.js$/, '.test.js')
+    // A view that takes no state or server argument, on a page with no server data, store or form,
+    // renders only what its own source says. There is no input to escape, so an XSS test would
+    // assert nothing and the warning would send an agent to write one anyway.
+    const viewTakesNothing = /\bview\s*:\s*(?:async\s*)?\(\s*\)\s*=>/.test(source)
+    const hasInputSource   = /^\s*(?:server|store|submit)\s*:/m.test(source)
     let xssNote = ''
-    if (fs.existsSync(testFile)) {
+    if (viewTakesNothing && !hasInputSource) {
+      xssNote = '○ XSS test not applicable — the view takes no state or server data and the page has no form, store or fetcher'
+    } else if (fs.existsSync(testFile)) {
       const testSrc = fs.readFileSync(testFile, 'utf8')
       const hasXssAssertion = testSrc.includes('<script>') || testSrc.includes('xss') || testSrc.includes('script>alert')
       xssNote = hasXssAssertion
