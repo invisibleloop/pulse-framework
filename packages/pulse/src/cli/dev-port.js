@@ -58,20 +58,27 @@ function accepts(port, address) {
   })
 }
 
-/**
- * Whether `port` is free for a server on `host`. Binding alone is not a test on macOS: a server on
- * 127.0.0.1 can bind a port that another project already holds on all addresses, and then
- * `localhost` may reach the other project. So there a port also counts as busy when something
- * answers on it, at either loopback address. Linux and Windows refuse that bind, so for them the
- * bind is the whole test (and a connect probe on Windows reported every port busy).
- */
-async function isFree(port, host) {
-  const bound = await new Promise(resolve => {
+/** Whether a server can bind `port` at `host` (no host = all addresses) right now. */
+function canBind(port, host) {
+  return new Promise(resolve => {
     const probe = net.createServer()
     probe.once('error', () => resolve(false))
-    probe.listen(port, host, () => probe.close(() => resolve(true)))
+    const listening = () => probe.close(() => resolve(true))
+    if (host) probe.listen(port, host, listening)
+    else      probe.listen(port, listening)
   })
-  if (!bound) return false
+}
+
+/**
+ * Whether `port` is free for a server on `host`. Binding `host` alone is not a test: macOS and
+ * Windows let a server on 127.0.0.1 bind a port that another project already holds on all
+ * addresses, and then `localhost` may reach the other project. Binding all addresses as well fails
+ * when anyone holds the port. macOS also lets that wildcard bind sit beside a server on one address,
+ * so there a port counts as busy too when something answers on it at either loopback address. The
+ * connect probe stays off Windows, where it reported every port busy.
+ */
+async function isFree(port, host) {
+  if (!(await canBind(port, host)) || !(await canBind(port))) return false
   if (process.platform !== 'darwin') return true
   return !(await accepts(port, '127.0.0.1')) && !(await accepts(port, '::1'))
 }
