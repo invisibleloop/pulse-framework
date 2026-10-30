@@ -411,3 +411,12 @@ test('review is silent when a sibling spec is the 404 page, or the page under re
   assert.equal(hasCustomNotFound("export default { route: \"*\", view: () => '' }", null), true)
   assert.equal(hasCustomNotFound("export default { route: '/' }", null), null, 'no file: cannot tell')
 })
+
+test('review finds a 404 page whose route is set through a constant, and not one set to something else', async () => {
+  // A demo project wrote `const NOT_FOUND = '*'` and `route: NOT_FOUND`, and was told it had no 404 page.
+  const viaConst = "const NOT_FOUND = '*'\nexport default {\n  route: NOT_FOUND,\n  view: () => ''\n}"
+  assert.equal(hasCustomNotFound(viaConst, null), true)
+  assert.equal(hasCustomNotFound("const ROUTE = '/about'\nexport default { route: ROUTE, view: () => '' }", null), null, 'a constant that is not * is no 404 page')
+  assert.equal(await notFoundCheck({ 'not-found.js': viaConst }), undefined)
+  assert.match(await notFoundCheck({ 'about.js': "const ROUTE = '/about'\nexport default { route: ROUTE, view: () => '' }" }), /No custom 404 page/)
+})

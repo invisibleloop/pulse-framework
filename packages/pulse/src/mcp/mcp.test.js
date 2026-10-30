@@ -484,6 +484,14 @@ test('the workflow puts the 404 page in the plan, so the user approves it with t
   assert(/\*\*A 404 page\*\*[^\n]*`route: '\*'`[^\n]*add `src\/pages\/not-found\.js` to the plan/.test(wf), 'the plan step must include a 404 page')
 })
 
+test('the guides say a generated test title is not read, and any spread fails the build for a bundled page', () => {
+  // Found with a throwaway project: titles from a loop or test.each are not read, and a spread fails even with no server code in it.
+  const wf = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  const spec = fs.readFileSync(path.join(agentDir, 'guide-spec.md'), 'utf8')
+  assert(/Write the title as plain text\. A title built from a variable, a loop or `test\.each` is not read/.test(wf))
+  assert(/Any spread fails the build for a page with a boot bundle, even when the base object holds no server code/.test(spec))
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))

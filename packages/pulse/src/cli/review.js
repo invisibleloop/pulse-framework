@@ -195,17 +195,25 @@ export function alertsWithDynamicContent(source) {
  * when it cannot tell (no file, or the folder cannot be read), so the review stays silent then.
  */
 export function hasCustomNotFound(source, file) {
-  if (/\broute\s*:\s*(['"`])\*\1/.test(source)) return true
+  if (routeIsStar(source)) return true
   if (!file) return null
   let names
   try { names = fs.readdirSync(path.dirname(file)) } catch { return null }
   for (const name of names) {
     if (!name.endsWith('.js') || /\.test\.js$/.test(name)) continue
     try {
-      if (/\broute\s*:\s*(['"`])\*\1/.test(fs.readFileSync(path.join(path.dirname(file), name), 'utf8'))) return true
+      if (routeIsStar(fs.readFileSync(path.join(path.dirname(file), name), 'utf8'))) return true
     } catch { /* unreadable: keep looking */ }
   }
   return false
+}
+
+/** Whether the source sets `route` to '*', directly or through a constant in the same file. */
+function routeIsStar(source) {
+  if (/\broute\s*:\s*(['"`])\*\1/.test(source)) return true
+  const named = source.match(/\broute\s*:\s*([A-Za-z_$][\w$]*)\s*[,}\n]/)
+  if (!named) return false
+  return new RegExp(`\\b(?:const|let|var)\\s+${named[1]}\\s*=\\s*(['"\`])\\*\\1`).test(source)
 }
 
 export async function runFullReview(source, file) {
