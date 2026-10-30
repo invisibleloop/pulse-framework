@@ -45,6 +45,7 @@ const isNum = v => typeof v === 'number' && Number.isFinite(v)
  */
 function reportProblems(reportDir) {
   const newest = {}
+  let withoutDevice = 0
   for (const f of fs.readdirSync(reportDir).filter(f => f.endsWith('.json'))) {
     const file = path.join(reportDir, f)
     const mtime = fs.statSync(file).mtimeMs
@@ -52,6 +53,7 @@ function reportProblems(reportDir) {
     let rec
     try { rec = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { continue }
     const device = rec?.device
+    if (!device) withoutDevice++
     if (DEVICES.includes(device) && (!newest[device] || mtime > newest[device].mtime)) newest[device] = { mtime, rec }
   }
 
@@ -59,7 +61,7 @@ function reportProblems(reportDir) {
   for (const device of DEVICES) {
     const rec = newest[device]?.rec
     if (!rec) {
-      problems.push(`no ${device} report (save it with \`pulse save-report --device ${device}\`)`)
+      problems.push(`no ${device} report (save it with \`npx --no-install pulse save-report --device ${device}\`)`)
       continue
     }
     for (const key of MUST_BE_100) {
@@ -72,6 +74,11 @@ function reportProblems(reportDir) {
     else if (lcp > LCP_POOR_MS) problems.push(`${device}: LCP is ${Math.round(lcp)} ms, over ${LCP_POOR_MS} ms`)
     if (!isNum(cls)) problems.push(`${device}: metrics.cls is missing`)
     else if (cls > CLS_MAX) problems.push(`${device}: CLS is ${cls}, the bar is 0.00`)
+  }
+  // A `pulse` older than 0.28 ignores --device and prints a plain "Report saved". The usual cause is a
+  // global install that comes first on the PATH, so name it: the project's own copy knows the flag.
+  if (problems.length > 0 && withoutDevice > 0) {
+    problems.push(`${withoutDevice} recent report(s) name no device. An older \`pulse\` ignores --device (a global install ahead of the project's copy on the PATH). Save with \`npx --no-install pulse save-report ...\`, which runs the project's own copy`)
   }
   return problems
 }

@@ -106,9 +106,11 @@ After the trace, call `pulse_restart_server` to return to the dev server.
 Run one `Bash` call per device — **not an MCP tool call**, and run from the project root (the directory containing `pulse.config.js`). `--device` is required: it keeps the two reports apart.
 
 ```
-pulse save-report --url "http://localhost:3001/<route>" --device desktop --data '{"scores":{"performance":<N>,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":<N>,"cls":<N>,"fcp":<N>,"tbt":<N>}}'
-pulse save-report --url "http://localhost:3001/<route>" --device mobile  --data '{...}'
+npx --no-install pulse save-report --url "http://localhost:3001/<route>" --device desktop --data '{"scores":{"performance":<N>,"accessibility":100,"bestPractices":100,"seo":100},"metrics":{"lcp":<N>,"cls":<N>,"fcp":<N>,"tbt":<N>}}'
+npx --no-install pulse save-report --url "http://localhost:3001/<route>" --device mobile  --data '{...}'
 ```
+
+Use `npx --no-install pulse`, not a bare `pulse`. A bare `pulse` can be an older global install that ignores `--device` and still prints a success line. The project's own copy knows the flag.
 
 Use the scores from step 6's result for the desktop call and from step 7's result for the mobile call. Use the LCP and CLS from step 9 in both, since the trace is one run. `<route>` is the page's route (`/` for the homepage). Confirm each call printed `✓ <device> report saved for ... (slug: ...)` — if it errored, fix the command and retry before moving on; do not silently continue to step 8 with an unsaved report.
 

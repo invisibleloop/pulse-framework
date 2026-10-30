@@ -184,6 +184,21 @@ test('the refusal text tells an agent to fix the numbers, and not to invent them
   assert.match(text, /Do not save numbers you did not measure/)
 })
 
+test('device-less reports get a refusal that names an older pulse ignoring --device', () => {
+  const root = tmpProject()
+  writeReport(root, 'dashboard', { device: null })
+  writeReport(root, 'dashboard', { device: null })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.match(r.reason, /2 recent report\(s\) name no device/)
+  assert.match(r.reason, /npx --no-install pulse save-report/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('the older-pulse hint is not added when every report names its device', () => {
+  const r = refusalFor({ desktop: { metrics: { cls: 0 } } })
+  assert.doesNotMatch(r.reason, /name no device/)
+})
+
 // ── Error-journal auto-resolve ───────────────────────────────────────────
 
 test('writeStamp with a route marks unresolved error-journal entries for that route resolved', () => {
