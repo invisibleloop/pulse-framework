@@ -18,6 +18,10 @@ import path from 'path'
 
 const CRITERION = /^\s*[-*]\s*(AC\d+)\s*[:—–-]\s*(\S.*)$/
 
+// /verify and pulse_stamp already check these, from saved reports. No test can name them, so a
+// criterion about one only invites an empty test.
+const STAMP_CHECKED = /\b(lighthouse|core web vitals|cls|lcp|layout shift|largest contentful paint)\b/i
+
 /** @param {string} specFile @returns {string} */
 export function acceptancePathFor(specFile) {
   return specFile.replace(/\.js$/, '.acceptance.md')
@@ -57,11 +61,11 @@ export function namedInTests(testSource) {
  * file, which is not a problem by itself.
  *
  * @param {string} specFile
- * @returns {{ exists: boolean, criteria: { id: string, text: string }[], uncovered: string[], duplicates: string[], empty: boolean, noTestFile: boolean }}
+ * @returns {{ exists: boolean, criteria: { id: string, text: string }[], uncovered: string[], stampChecked: string[], duplicates: string[], empty: boolean, noTestFile: boolean }}
  */
 export function acceptanceStatus(specFile) {
   const file = acceptancePathFor(specFile)
-  if (!fs.existsSync(file)) return { exists: false, criteria: [], uncovered: [], duplicates: [], empty: false, noTestFile: false }
+  if (!fs.existsSync(file)) return { exists: false, criteria: [], uncovered: [], stampChecked: [], duplicates: [], empty: false, noTestFile: false }
 
   const criteria = parseCriteria(fs.readFileSync(file, 'utf8'))
   const seen = new Set()
@@ -74,9 +78,10 @@ export function acceptanceStatus(specFile) {
   const testFile = specFile.replace(/\.js$/, '.test.js')
   const noTestFile = !fs.existsSync(testFile)
   const named = noTestFile ? new Set() : namedInTests(fs.readFileSync(testFile, 'utf8'))
-  const uncovered = [...seen].filter(id => !named.has(id))
+  const stampChecked = criteria.filter(c => STAMP_CHECKED.test(c.text)).map(c => c.id)
+  const uncovered = [...seen].filter(id => !named.has(id) && !stampChecked.includes(id))
 
-  return { exists: true, criteria, uncovered, duplicates, empty: criteria.length === 0, noTestFile }
+  return { exists: true, criteria, uncovered, stampChecked, duplicates, empty: criteria.length === 0, noTestFile }
 }
 
 /** Sentences an agent can act on, empty when the criteria are met. */
@@ -88,6 +93,7 @@ export function acceptanceProblems(status, specName = 'the page') {
     return out
   }
   if (status.duplicates.length) out.push(`${status.duplicates.join(', ')} appear more than once in the criteria file`)
+  if (status.stampChecked.length) out.push(`${status.stampChecked.join(', ')} restate${status.stampChecked.length === 1 ? 's' : ''} a check that /verify already makes (Lighthouse, LCP or CLS). Remove ${status.stampChecked.length === 1 ? 'it' : 'them'} from the criteria file, because no test can name ${status.stampChecked.length === 1 ? 'it' : 'them'}`)
   if (status.uncovered.length) {
     const how = status.noTestFile ? 'there is no test file' : `name a test for each, for example test('${status.uncovered[0]} — <what it proves>', ...)`
     out.push(`no test names ${status.uncovered.join(', ')}: ${how}`)

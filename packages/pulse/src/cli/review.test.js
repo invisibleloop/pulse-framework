@@ -356,3 +356,9 @@ test('review fails a criterion no test names, and passes when every one is named
   const met = await acceptanceCheck({ spec: WITH_ACTIONS, criteria: '- AC1: a\n- AC2: b\n', tests: "test('AC1 — a', () => {})\ntest('AC2 — b', () => {})" })
   assert.match(met, /^✓ Acceptance criteria: 2, each named by a test/)
 })
+
+test('review fails a criterion that restates Lighthouse, LCP or CLS', async () => {
+  const c = await acceptanceCheck({ spec: WITH_ACTIONS, criteria: '- AC1: a\n- AC2: CLS is 0.00 on mobile.\n', tests: "test('AC1 — a', () => {})" })
+  assert.match(c, /^✗ \*\*Acceptance criteria not met\*\*.*AC2 restates a check that \/verify already makes/)
+  assert.doesNotMatch(c, /no test names/)
+})

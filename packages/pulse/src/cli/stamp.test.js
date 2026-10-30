@@ -230,6 +230,16 @@ test('full mode refuses a page with a criterion no test names, and says how to f
   fs.rmSync(root, { recursive: true, force: true })
 })
 
+test('full mode refuses a criterion that restates Lighthouse, even when a test names it', () => {
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard')
+  writePage(root, { criteria: '- AC1: one\n- AC2: Lighthouse scores 100 on mobile.\n', tests: "test('AC1 — one', () => {})\ntest('AC2 — an empty test', () => {})" })
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /AC2 restates a check that \/verify already makes/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
 test('full mode lists a failing report and an open criterion together, so one pass fixes both', () => {
   const root = tmpProject()
   writePassingPair(root, 'dashboard', { desktop: { metrics: { cls: 0 } } })
