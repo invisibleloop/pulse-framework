@@ -700,17 +700,7 @@ async function runStart(root) {
 // Route command
 // ---------------------------------------------------------------------------
 
-switch (command) {
-  case '--version':
-  case '-v': {
-    const pkgPath = fileURLToPath(new URL('../../package.json', import.meta.url))
-    const { version } = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
-    console.log(version)
-    process.exit(0)
-  }
-  case 'help':
-  case '--help':
-  case '-h': {
+async function printHelp() {
     const { c, icon } = await import('./fmt.js').catch(() => ({
       c: { bold: s => s, dim: s => s, cyan: s => s, purple: s => s, white: s => s },
       icon: { bolt: () => '⚡' },
@@ -747,6 +737,27 @@ switch (command) {
     ${c.dim('pulse build                # bundle for production')}
     ${c.dim('pulse start                # serve production build')}
 `)
+}
+
+// `pulse <command> --help` prints the help and stops. Without this the flag reached the command:
+// `pulse dev --help` started a server, and `pulse update --help` would have upgraded the package.
+if (command && !['help', '--help', '-h', '--version', '-v'].includes(command) && args.slice(1).some(a => a === '--help' || a === '-h')) {
+  await printHelp()
+  process.exit(0)
+}
+
+switch (command) {
+  case '--version':
+  case '-v': {
+    const pkgPath = fileURLToPath(new URL('../../package.json', import.meta.url))
+    const { version } = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+    console.log(version)
+    process.exit(0)
+  }
+  case 'help':
+  case '--help':
+  case '-h': {
+    await printHelp()
     process.exit(0)
   }
   case 'dev':

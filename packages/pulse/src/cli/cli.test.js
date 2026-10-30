@@ -442,6 +442,23 @@ test('migrations: the vulnerable hook is rewritten, the rule and the gitignore l
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('--help or -h after a subcommand prints the help and runs nothing', async () => {
+  // `pulse dev --help` used to start a server; `pulse update --help` would have upgraded the package.
+  const { spawnSync } = await import('child_process')
+  const { mkdtempSync, rmSync, readdirSync } = await import('fs')
+  const os = await import('os')
+  const cli = fileURLToPath(new URL('./index.js', import.meta.url))
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-help-'))
+  try {
+    for (const argv of [['dev', '--help'], ['dev', '-h'], ['start', '--help'], ['build', '-h'], ['update', '--help'], ['stamp', '-h'], ['stop', '--help']]) {
+      const r = spawnSync(process.execPath, [cli, ...argv], { cwd: dir, encoding: 'utf8', timeout: 15000 })
+      if (r.status !== 0) throw new Error(`pulse ${argv.join(' ')} should exit 0, got ${r.status ?? 'a timeout (it started something)'}: ${r.stderr}`)
+      if (!/spec-first frontend framework/.test(r.stdout)) throw new Error(`pulse ${argv.join(' ')} should print the help`)
+    }
+    if (readdirSync(dir).length !== 0) throw new Error(`the help must create nothing, found ${readdirSync(dir).join(', ')}`)
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('migrations: the Lighthouse hook reminder stops naming a port, for any port, and a second run changes nothing', async () => {
   const { fixSettings, LIGHTHOUSE_HOOK_STEPS } = await import('./migrations.js')
   const scaffoldSrc = readFileSync(new URL('./scaffold.js', import.meta.url), 'utf8')
