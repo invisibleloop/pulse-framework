@@ -326,7 +326,7 @@ test('alert: items are escaped lines, and a line with href is a link a screen re
 test('alert: an item href cannot be a javascript: URL, and items default to no list', () => {
   const html = alert({ variant: 'error', items: [{ text: 'x', href: 'javascript:alert(1)' }, { text: 'y', href: '"><script>1</script>' }] })
   assert.doesNotMatch(html, /javascript:/i)
-  assert.doesNotMatch(html, /<script>/)
+  assert.doesNotMatch(html, /<script/i)
   assert.doesNotMatch(alert({ variant: 'error', message: 'x' }), /ui-alert-list/)
   assert.doesNotMatch(alert({ variant: 'error', message: 'x', items: [] }), /ui-alert-list/)
 })
