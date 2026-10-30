@@ -31,7 +31,7 @@ function errorsPanel(errors) {
       e.resolved ? badge({ label: 'resolved', variant: 'default' }) : badge({ label: 'open', variant: 'danger' }),
     ]),
   }) + (unresolved.length > 0
-    ? alert({ variant: 'warning', content: `${unresolved.length} unresolved error${unresolved.length === 1 ? '' : 's'}` })
+    ? alert({ variant: 'warning', message: `${unresolved.length} unresolved error${unresolved.length === 1 ? '' : 's'}` })
     : '')
 }
 

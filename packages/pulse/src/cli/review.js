@@ -169,6 +169,26 @@ export function formatQuickReview(result, { agentFacing = false } = {}) {
  *   autoChecks: string[],
  * }>}
  */
+/**
+ * The `alert(...)` calls whose `content` is not a plain string literal. `content` is an HTML string
+ * and is not escaped, so a variable or an interpolated template there puts raw text in the page.
+ * A fixed string, or HTML written inline, is fine.
+ */
+export function alertsWithDynamicContent(source) {
+  const hits = []
+  for (const m of source.matchAll(/\balert\s*\(/g)) {
+    let depth = 1
+    let i = m.index + m[0].length
+    for (; i < source.length && depth > 0; i++) {
+      if (source[i] === '(') depth++
+      else if (source[i] === ')') depth--
+    }
+    const call = source.slice(m.index, i)
+    if (/\bcontent\s*:\s*(`[^`]*\$\{|[^\s'"`])/.test(call)) hits.push(call)
+  }
+  return hits
+}
+
 export async function runFullReview(source, file) {
   // Run the validator in a child process (same as pulse_validate/pulse validate)
   let validationResult = '(could not run validator)'
@@ -274,6 +294,9 @@ export async function runFullReview(source, file) {
 
   if (/throw new Error\(\s*await\s+\w+\.text\(\)\s*\)/.test(source)) {
     autoChecks.push('✗ **`throw new Error(await res.text())`** — this puts raw response HTML in a toast. Use the safe pattern from the checklist.')
+  }
+  if (alertsWithDynamicContent(source).length) {
+    autoChecks.push('⚠ **`alert({ content })` is not escaped** — `content` takes an HTML string. For text from a user, a form, an error or an API, use `message`, which escapes it. Keep `content` for HTML you wrote yourself.')
   }
   if (/\bfetch\s*\(/.test(source) && /\.json\s*\(\)/.test(source) && !/\.ok\b/.test(source)) {
     autoChecks.push('✗ **`fetch` result parsed with `.json()` and `.ok` is never checked** — a 4xx or 5xx body is parsed as data. Check `res.ok` first.')

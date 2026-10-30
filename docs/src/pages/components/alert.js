@@ -20,14 +20,15 @@ export default {
     description: '<code>error</code> and <code>warning</code> use <code>role="alert"</code> — screen readers announce them immediately. <code>info</code> and <code>success</code> use <code>role="status"</code> for a polite announcement.',
     content: `
       ${demo(
-        alert({ variant: 'info',    content: 'Your account is pending email verification.' }) +
-        alert({ variant: 'success', title: 'Saved',   content: 'Your changes have been saved.' }) +
-        alert({ variant: 'warning', title: 'Heads up', content: 'This action cannot be undone.' }) +
-        alert({ variant: 'error',   title: 'Failed',   content: 'Something went wrong. Please try again.' }),
-        `alert({ variant: 'info',    content: 'Your account is pending email verification.' })
-alert({ variant: 'success', title: 'Saved',    content: 'Your changes have been saved.' })
-alert({ variant: 'warning', title: 'Heads up', content: 'This action cannot be undone.' })
-// message is plain text and is escaped for you; content is an HTML string and is not
+        alert({ variant: 'info',    message: 'Your account is pending email verification.' }) +
+        alert({ variant: 'success', title: 'Saved',   message: 'Your changes have been saved.' }) +
+        alert({ variant: 'warning', title: 'Heads up', message: 'This action cannot be undone.' }) +
+        alert({ variant: 'error',   title: 'Failed',   message: 'Something went wrong. Please try again.' }),
+        `alert({ variant: 'info',    message: 'Your account is pending email verification.' })
+alert({ variant: 'success', title: 'Saved',    message: 'Your changes have been saved.' })
+alert({ variant: 'warning', title: 'Heads up', message: 'This action cannot be undone.' })
+// message is plain text and is escaped for you: use it for anything from a user, a form or an error.
+// content is an HTML string you wrote and is not escaped.
 alert({ variant: 'error',   title: 'Failed',   message: server.error })
 alert({ variant: 'info',    content: '<a href="/help">Read the guide</a>' })`,
         { col: true }
