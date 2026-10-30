@@ -66,6 +66,15 @@ export function addUntrustedSection(text) {
   return { text: next, changed: true }
 }
 
+export const GUIDE_LINE_OLD = '2. Read `pulse://guide` from MCP — the complete reference for spec format, components, verification workflow, CSS rules, and patterns'
+export const GUIDE_LINE_NEW = '2. Read `pulse://guide` from MCP — the reference for spec format, components, CSS rules and patterns. For a new page or site, also read `pulse://workflow` before you plan or write code. It holds the planning steps and the acceptance criteria. The guide does not.'
+
+/** Replace the scaffold's old "the guide is the complete reference" line, which told agents they never needed pulse://workflow. */
+export function addWorkflowPointer(text) {
+  if (!text.includes(GUIDE_LINE_OLD)) return { text, changed: false }
+  return { text: text.split(GUIDE_LINE_OLD).join(GUIDE_LINE_NEW), changed: true }
+}
+
 /** Add the error-journal line to a .gitignore that lacks it. */
 export function addGitignoreLine(text) {
   if (text.split('\n').some(l => l.trim() === GITIGNORE_LINE)) return { text, changed: false }
@@ -115,6 +124,7 @@ export function migrateProject(root) {
   }
   apply(path.join('.claude', 'settings.json'), fixSettings)
   apply(path.join('.claude', 'CLAUDE.md'), addUntrustedSection)
+  apply(path.join('.claude', 'CLAUDE.md'), addWorkflowPointer)
   apply('.gitignore', addGitignoreLine)
   for (const rel of removeStaleSkills(root)) done.push(rel)
   return done

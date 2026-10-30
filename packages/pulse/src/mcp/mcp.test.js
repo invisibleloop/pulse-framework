@@ -459,6 +459,15 @@ test('pulse://start reads design:"freeform" from pulse.config.js and ties it to 
     'comment into each spec file — pulse_review detects Mode B from that comment, not from config')
 })
 
+test('the guide and the quickstart tell an agent to read pulse://workflow before it plans a new page', () => {
+  // The planning steps and the acceptance criteria live only in workflow.md. An agent that reads the
+  // guide and stops never sees them, so the guide index and the quickstart must send it there.
+  assert(/New page or new site: read \\`pulse:\/\/workflow\\` before you plan or write code/.test(serverSrc),
+    'the guide index must say a new page needs pulse://workflow before planning')
+  assert(/acceptance[- ]criteria/.test(serverSrc.slice(serverSrc.indexOf('# Pulse Quickstart'), serverSrc.indexOf('# Pulse Quickstart') + 1500)),
+    'the quickstart must send a page with behaviour to pulse://workflow, which has the acceptance-criteria step')
+})
+
 test('pulse_report_issue is registered and gated behind preview → a server-issued, single-use previewId', () => {
   assert(/registerTool\(\s*'pulse_report_issue'/.test(serverSrc), 'pulse_report_issue must be registered')
   assert(/!args\.confirmed\)\s*return text\(formatPreview/.test(serverSrc),

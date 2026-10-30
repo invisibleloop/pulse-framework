@@ -438,6 +438,30 @@ test('migrations: the vulnerable hook is rewritten, the rule and the gitignore l
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('migrations: the old "the guide is the complete reference" line is replaced once, and the scaffold writes the new one', async () => {
+  const { addWorkflowPointer, GUIDE_LINE_OLD, GUIDE_LINE_NEW, migrateProject } = await import('./migrations.js')
+  const { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync: read } = await import('fs')
+  const os = await import('os')
+
+  if (!GUIDE_LINE_NEW.includes('pulse://workflow')) throw new Error('the new line must send the agent to pulse://workflow')
+  const scaffoldSrc = readFileSync(new URL('./scaffold.js', import.meta.url), 'utf8')
+  if (scaffoldSrc.includes('the complete reference')) throw new Error('the scaffold must no longer call the guide the complete reference')
+  if (!scaffoldSrc.includes('${GUIDE_LINE_NEW}')) throw new Error('the scaffold must write the line from migrations.js')
+
+  const md = addWorkflowPointer(`# app\n\n${GUIDE_LINE_OLD}\n\nkeep this\n`)
+  if (!md.changed || !md.text.includes(GUIDE_LINE_NEW) || md.text.includes(GUIDE_LINE_OLD) || !md.text.includes('keep this')) throw new Error('only the old line is replaced')
+  if (addWorkflowPointer(md.text).changed) throw new Error('the second run changes nothing')
+  if (addWorkflowPointer('# a CLAUDE.md the user rewrote').changed) throw new Error('a file without the old line is left alone')
+
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-migrate-'))
+  try {
+    mkdirSync(path.join(dir, '.claude'), { recursive: true })
+    writeFileSync(path.join(dir, '.claude/CLAUDE.md'), `# app\n\n${GUIDE_LINE_OLD}\n`)
+    if (!migrateProject(dir).includes(path.join('.claude', 'CLAUDE.md'))) throw new Error('migrateProject must update CLAUDE.md')
+    if (!read(path.join(dir, '.claude/CLAUDE.md'), 'utf8').includes('pulse://workflow')) throw new Error('CLAUDE.md on disk points at the workflow')
+  } finally { rmSync(dir, { recursive: true, force: true }) }
+})
+
 test('scaffold exports a scaffold function', () => {
   const mod = modules[0].value
   if (typeof mod?.scaffold !== 'function') {
