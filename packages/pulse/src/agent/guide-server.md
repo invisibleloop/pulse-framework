@@ -313,18 +313,20 @@ export default {
       const data = await ctx.formData()
       if (!data.email) return { redirect: '/contact?error=required' }
       await db.leads.create(data)
-      // Flash cookie — consumed once, clears on next GET (see server fetcher below)
+      // Flash cookie — consumed once, cleared by the guard on the next GET (see below)
       ctx.setCookie('flash_sent', '1', { maxAge: 30 })
       return { redirect: '/contact' }
     }
+    // The guard runs before the response starts, so it can clear the cookie
+    if (ctx.cookies.flash_sent === '1') ctx.setCookie('flash_sent', '', { maxAge: 0 })
   },
 
   server: {
-    status: async (ctx) => {
-      const sent = ctx.cookies.flash_sent === '1'
-      if (sent) ctx.setCookie('flash_sent', '', { maxAge: 0 })  // clear immediately
-      return { sent, error: ctx.query?.error ?? null }
-    },
+    // Read only. A fetcher cannot set a cookie on a streamed page (see below)
+    status: async (ctx) => ({
+      sent:  ctx.cookies.flash_sent === '1',
+      error: ctx.query?.error ?? null,
+    }),
   },
 
   state: {},
@@ -344,8 +346,11 @@ export default {
 **Use a flash cookie instead:**
 
 1. After the POST succeeds: `ctx.setCookie('flash_sent', '1', { maxAge: 30 })` then redirect to the clean URL.
-2. In the `server.*` fetcher on the subsequent GET: read the cookie, then clear it immediately with `maxAge: 0`.
-3. Pass the flag to the view. On refresh the cookie is gone — the form renders normally.
+2. In `guard` on the next GET: if the cookie is present, clear it with `ctx.setCookie('flash_sent', '', { maxAge: 0 })`.
+3. In a `server.*` fetcher, read `ctx.cookies.flash_sent` and pass the flag to the view. The fetcher only reads. `ctx.cookies` still holds the cookie the browser sent.
+4. On refresh the browser no longer sends the cookie, so the form renders normally.
+
+**Clear the cookie in `guard`, never in a `server` fetcher.** A streamed page sends its headers before the fetchers run. A cookie set by a fetcher is lost, and a refresh shows the confirmation again. `guard` and `meta` run before the headers go out.
 
 Error states (validation failures) are fine as query params (`?error=required`) because they are expected to persist until the user corrects the form.
 

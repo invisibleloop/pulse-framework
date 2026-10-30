@@ -442,6 +442,15 @@ test('identity.md declares the creative override (Design Freedom) carve-out', ()
   )
 })
 
+test('the server guide clears the flash cookie in guard, never in a server fetcher', () => {
+  // A streamed page sends its headers before the fetchers run, so a cookie a fetcher sets is lost
+  // and a refresh shows the confirmation again (server.test.js proves the behaviour).
+  const guide = fs.readFileSync(path.join(agentDir, 'guide-server.md'), 'utf8')
+  assert(!/if \(sent\) ctx\.setCookie\(/.test(guide), 'the guide must not clear the flash cookie inside a server fetcher')
+  assert(/Clear the cookie in `guard`, never in a `server` fetcher/.test(guide), 'the guide must say where to clear the flash cookie')
+  assert(/if \(ctx\.cookies\.flash_sent === '1'\) ctx\.setCookie\('flash_sent', '', \{ maxAge: 0 \}\)/.test(guide), 'the guide example must clear the cookie in guard')
+})
+
 test('pulse://start reads design:"freeform" from pulse.config.js and ties it to the Mode B override comment', () => {
   // pulse.config.js's `design: 'freeform'` flag is a project-wide default for
   // Mode B (see identity.md's "Design Freedom" rule / workflow.md 3a) — not a
