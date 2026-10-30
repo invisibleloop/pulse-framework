@@ -798,6 +798,45 @@ await test('ctx.setCookie on guard redirect includes cookie in redirect response
   })
 })
 
+// The flash-cookie pattern in pulse://guide/server. A cookie queued by a `server` fetcher is queued
+// after the streamed headers went out, so it never reaches the browser; the guard clears it instead.
+await test('flash cookie: a guard clears it on a streamed page and a fetcher only reads it; a fetcher cannot clear it', async () => {
+  const flash = {
+    route: '/flash',
+    meta:  { title: 'Flash', styles: [] },
+    state: {},
+    guard: async (ctx) => {
+      if (ctx.cookies.flash_sent === '1') ctx.setCookie('flash_sent', '', { maxAge: 0 })
+    },
+    server: { status: async (ctx) => ({ sent: ctx.cookies.flash_sent === '1' }) },
+    view: (_s, server) => `<main id="main-content">${server.status.sent ? 'Message sent' : 'Form'}</main>`,
+  }
+  const fetcherClears = {
+    route: '/flash-bad',
+    meta:  { title: 'Flash', styles: [] },
+    state: {},
+    server: {
+      status: async (ctx) => {
+        const sent = ctx.cookies.flash_sent === '1'
+        if (sent) ctx.setCookie('flash_sent', '', { maxAge: 0 })
+        return { sent }
+      },
+    },
+    view: (_s, server) => `<main id="main-content">${server.status.sent ? 'Message sent' : 'Form'}</main>`,
+  }
+  await withServer([flash, fetcherClears], { stream: true }, async (port) => {
+    const good = await request(port, 'GET', '/flash', { cookie: 'flash_sent=1' })
+    assert(good.body.includes('Message sent'), `the fetcher must see the cookie: ${good.body}`)
+    const cleared = [good.headers['set-cookie']].flat().filter(Boolean)
+    assert(cleared.some(c => c.startsWith('flash_sent=') && c.includes('Max-Age=0')), `the guard's clear must be sent: ${JSON.stringify(cleared)}`)
+
+    const bad = await request(port, 'GET', '/flash-bad', { cookie: 'flash_sent=1' })
+    assert(bad.body.includes('Message sent'))
+    const lost = [bad.headers['set-cookie']].flat().filter(Boolean)
+    assert(!lost.some(c => c.startsWith('flash_sent=')), `a fetcher's cookie must not reach a streamed response: ${JSON.stringify(lost)}`)
+  })
+})
+
 await test('raw response render can return { redirect } for auth callbacks', async () => {
   const callbackSpec = {
     route:       '/auth/callback',
