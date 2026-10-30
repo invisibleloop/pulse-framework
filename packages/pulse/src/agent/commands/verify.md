@@ -154,8 +154,8 @@ Summarise:
 - Validation: pass or fail (with errors if any)
 - Visual: desktop screenshot — any issues found and fixed
 - Console: any errors
-- Review: the mechanical results, and for each checklist section what you fixed or why it does not apply
-- Acceptance: each criterion and the test that proves it, or that the page has no criteria file
+- Review: the mechanical results, then a list with one line per checklist section: what you fixed, or why it does not apply. Do not summarise the sections as one sentence.
+- Acceptance: a table with one row per criterion, in two columns: the criterion ID and the title of the test that proves it. If the page has no criteria file, say so.
 - Error journal: clean, or resolved N entries
 - **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, whether both were saved via `pulse save-report --device` (step 9a), mobile layout check, LCP and CLS values (say which were measured and how)
 

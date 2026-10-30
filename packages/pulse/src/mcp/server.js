@@ -398,6 +398,7 @@ server.registerResource(
 > - Any task where you don't need intake, sketch, or design direction
 >
 > **When to use the full guides instead**
+> - A page with a form, server data, a login or any other behaviour, even as a one-shot request → \`pulse://workflow\` first. It has the acceptance-criteria step, and this resource does not.
 > - New project or new branded page → \`pulse://workflow\` then \`pulse://guide/templates\` + \`pulse://guide/design-references\`
 > - Unfamiliar component props → \`pulse://guide/components\`
 > - Server data, store, auth → \`pulse://guide/server\`
@@ -3892,6 +3893,8 @@ const PULSE_GUIDE_INDEX = `# Pulse Framework Guide
 
 **Fetch \`pulse://start\` first.** It detects your context (new project, new page, edit, or bug fix) and returns exactly what you need — no upfront decision tree.
 
+**New page or new site: read \`pulse://workflow\` before you plan or write code.** It holds the planning steps and the acceptance criteria. This guide does not.
+
 If you know your context already:
 - New page / new site → \`pulse://workflow\`
 - Edit, fix, or one-shot build → \`pulse://quickstart\`
@@ -3902,7 +3905,7 @@ If you know your context already:
 |---|---|
 | \`pulse://start\` | **Always fetch first** — context-aware entry point that routes you to the right resources |
 | \`pulse://quickstart\` | **Editing, bug-fixing, or a simple one-shot build** — workflow + spec skeleton + components + theming in one fetch. Skip the 4-resource cold-start for targeted tasks. |
-| \`pulse://workflow\` | **New project or new page** — full phase/gate sequence before writing any code. |
+| \`pulse://workflow\` | **New project or new page — required.** Planning steps, acceptance criteria and the phase/gate sequence. Read it before you plan. |
 | \`pulse://guide/spec\` | Building a spec — state, mutations, actions, streaming SSR, key rules, form layout |
 | \`pulse://guide/server\` | Server data, global store, persist, cookies, redirects, POST handling |
 | \`pulse://guide/styles\` | CSS tokens, theming, custom fonts, utility classes |
