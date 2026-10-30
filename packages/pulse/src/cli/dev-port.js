@@ -1,0 +1,47 @@
+/**
+ * Pulse — the port a project's dev server is really using.
+ *
+ * `pulse dev` can end up on a port that pulse.config.js does not name: `--port 3010` because 3000
+ * was busy, say. The agent tools (pulse_status, pulse_restart_server, pulse_build) read the port from
+ * the config, so they looked at 3000 and talked to another project's server. The dev server now
+ * records its port in .pulse/dev.json, and the tools read it first.
+ */
+
+import fs   from 'fs'
+import path from 'path'
+
+export const DEV_PORT_FILE = path.join('.pulse', 'dev.json')
+
+/** Record this process as the project's dev server. */
+export function writeDevPort(root, port, pid = process.pid) {
+  const file = path.join(root, DEV_PORT_FILE)
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, JSON.stringify({ port, pid, root: path.resolve(root) }) + '\n')
+}
+
+/** Remove the record, but only if this process wrote it (a newer server may have replaced it). */
+export function removeDevPort(root, pid = process.pid) {
+  const file = path.join(root, DEV_PORT_FILE)
+  try {
+    if (JSON.parse(fs.readFileSync(file, 'utf8')).pid === pid) fs.rmSync(file)
+  } catch { /* no file, or not ours */ }
+}
+
+function isAlive(pid) {
+  try { process.kill(pid, 0); return true } catch (err) { return err.code === 'EPERM' }
+}
+
+/** The port of this project's running dev server, or null when there is no live record. */
+export function readDevPort(root) {
+  let record
+  try { record = JSON.parse(fs.readFileSync(path.join(root, DEV_PORT_FILE), 'utf8')) } catch { return null }
+  if (!Number.isInteger(record?.port) || record.port < 1 || record.port > 65535) return null
+  if (!Number.isInteger(record.pid) || !isAlive(record.pid)) return null
+  if (record.root !== path.resolve(root)) return null
+  return record.port
+}
+
+/** The dev port the tools should use: the running server's, else the configured one, else 3000. */
+export function resolveDevPort(root, configPort) {
+  return readDevPort(root) ?? configPort ?? 3000
+}

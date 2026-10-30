@@ -48,6 +48,7 @@ import { writeStamp, formatStampResult } from '../cli/stamp.js'
 import { checkBundles, formatBundleCheck } from '../cli/check-bundles.js'
 import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from '../cli/review.js'
 import { killPulseServerOnPort } from '../cli/process-utils.js'
+import { readDevPort } from '../cli/dev-port.js'
 import { buildReport, previewId, formatPreview, sendViaProxy, sendViaGh, formatResult, DEFAULT_ENDPOINT } from '../cli/feedback.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { fenced } from '../cli/fence.js'
@@ -719,6 +720,7 @@ server.registerTool(
         if (mod.default?.port) port = mod.default.port
       } catch { /* use default */ }
     }
+    port = readDevPort(ROOT) ?? port   // the running server's real port wins over the config
     const serverRunning = await new Promise(res => {
       const req = http.get(`http://localhost:${port}/`, r => { r.resume(); res(true) })
       req.on('error', () => res(false))
@@ -1277,6 +1279,7 @@ server.registerTool(
         if (mod.default?.port) port = mod.default.port
       } catch { /* use default */ }
     }
+    port = readDevPort(ROOT) ?? port   // the running server's real port wins over the config
 
     // Fast path — POST to the running dev server's hot-reload endpoint.
     // This reloads specs in-process and sends an SSE reload event to the browser
@@ -1302,10 +1305,10 @@ server.registerTool(
     // killPulseServerOnPort's doc comment. If something else owns the port,
     // report that instead of starting a second server that will just fail
     // to bind (or, worse, silently kill someone else's unrelated process).
-    const { killed, skipped } = killPulseServerOnPort(port)
+    const { killed, skipped } = killPulseServerOnPort(port, { root: ROOT })
     if (skipped.length > 0 && killed.length === 0) {
       return text(
-        `Port ${port} is occupied by a process that is not a Pulse server — refusing to kill it:\n` +
+        `Port ${port} is occupied by a process that is not this project's Pulse server — refusing to kill it:\n` +
         skipped.map(s => `  PID ${s.pid}: ${s.command}`).join('\n') +
         `\n\nFree the port yourself, or set a different port in pulse.config.js.`
       )
@@ -1345,6 +1348,7 @@ server.registerTool(
       const m = src.match(/port\s*:\s*(\d+)/)
       if (m) devPort = parseInt(m[1], 10)
     } catch { /* use default */ }
+    devPort = readDevPort(ROOT) ?? devPort
     const prodPort = devPort + 1
 
     // Run build
@@ -1356,10 +1360,10 @@ server.registerTool(
     // Kill only a Pulse server on prodPort — see killPulseServerOnPort's doc
     // comment. Refuse (don't kill, don't start a second server on the same
     // port) if something else owns it.
-    const { killed: prodKilled, skipped: prodSkipped } = killPulseServerOnPort(prodPort)
+    const { killed: prodKilled, skipped: prodSkipped } = killPulseServerOnPort(prodPort, { root: ROOT })
     if (prodSkipped.length > 0 && prodKilled.length === 0) {
       return resolve(text(
-        `Build succeeded, but port ${prodPort} is occupied by a process that is not a Pulse server — refusing to kill it:\n` +
+        `Build succeeded, but port ${prodPort} is occupied by a process that is not this project's Pulse server — refusing to kill it:\n` +
         prodSkipped.map(s => `  PID ${s.pid}: ${s.command}`).join('\n') +
         `\n\nFree the port yourself, or set a different port in pulse.config.js.`
       ))

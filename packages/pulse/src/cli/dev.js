@@ -19,6 +19,7 @@ import { fileURLToPath } from 'url'
 import { definedClasses, undefinedClasses } from './class-check.js'
 import { loadConfigOrExit, failStartup } from './config.js'
 import { commandsToSync } from './commands.js'
+import { writeDevPort, removeDevPort } from './dev-port.js'
 
 // ---------------------------------------------------------------------------
 // Args
@@ -288,7 +289,7 @@ const reloadScript = (nonce) => `<script nonce="${nonce}">
   })();
 </script>`
 
-const { updateSpecs, updateStore } = await createServer(specs, {
+const { updateSpecs, updateStore, server: httpServer } = await createServer(specs, {
   port:      PORT,
   // Loopback by default: the dev server has dev-only endpoints and stack-trace error
   // pages, and should not be reachable from the LAN. `--host 0.0.0.0` (or `host` in
@@ -380,3 +381,9 @@ const { updateSpecs, updateStore } = await createServer(specs, {
     if (serveDir('/@pulse/', path.join(FRAMEWORK_ROOT, 'src'))) return false
   }
 }).catch(failStartup)
+
+// Tell the agent tools which port this project's server is on (see dev-port.js).
+const recordPort = () => { try { writeDevPort(ROOT, httpServer.address().port) } catch { /* read-only project: tools fall back to the config */ } }
+if (httpServer.listening) recordPort()
+else httpServer.once('listening', recordPort)
+process.on('exit', () => removeDevPort(ROOT))

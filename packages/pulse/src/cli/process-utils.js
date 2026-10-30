@@ -7,6 +7,7 @@
  */
 
 import { execFileSync } from 'child_process'
+import path from 'path'
 
 /** Command-line substrings that identify a process as a Pulse server. */
 export const PULSE_SERVER_MARKERS = ['cli/dev.js', 'cli/start.js', 'scripts/build.js']
@@ -28,17 +29,31 @@ export const PULSE_SERVER_MARKERS = ['cli/dev.js', 'cli/start.js', 'scripts/buil
  * Only kills a PID whose command line contains one of PULSE_SERVER_MARKERS
  * — anything else on the port is left alone and reported back instead.
  *
+ * When `root` is given, a Pulse server that was started for a different project (its command line
+ * has `--root <other path>`) is left alone too. Two projects can use the same port number, and
+ * restarting one must not kill the other.
+ *
  * @param {number} port
+ * @param {{ root?: string }} [options]
  * @returns {{ killed: string[], skipped: { pid: string, command: string }[] }}
  */
-export function killPulseServerOnPort(port) {
-  return process.platform === 'win32' ? killOnPortWindows(port) : killOnPortPosix(port)
+export function killPulseServerOnPort(port, { root } = {}) {
+  return process.platform === 'win32' ? killOnPortWindows(port, root) : killOnPortPosix(port, root)
 }
 
-function classify(result, pid, command, kill) {
+/** True when a command line names a --root other than `root`. A command with no --root is not judged. */
+export function startedForOtherProject(command, root) {
+  if (!root) return false
+  const normalised = command.replace(/\\/g, '/')
+  if (!/\s--root\s/.test(normalised)) return false
+  const want = path.resolve(root).replace(/\\/g, '/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return !new RegExp(`\\s--root\\s+["']?${want}(?=["']?(\\s|$))`).test(normalised)
+}
+
+function classify(result, pid, command, kill, root) {
   // Windows command lines use backslashes; the markers are written with forward slashes
   const normalised = command.replace(/\\/g, '/')
-  if (PULSE_SERVER_MARKERS.some(marker => normalised.includes(marker))) {
+  if (PULSE_SERVER_MARKERS.some(marker => normalised.includes(marker)) && !startedForOtherProject(command, root)) {
     kill(pid)
     result.killed.push(pid)
   } else {
@@ -46,7 +61,7 @@ function classify(result, pid, command, kill) {
   }
 }
 
-function killOnPortPosix(port) {
+function killOnPortPosix(port, root) {
   const result = { killed: [], skipped: [] }
   let pids
   try {
@@ -63,7 +78,7 @@ function killOnPortPosix(port) {
     if (!command) continue
     classify(result, pid, command, p => {
       try { execFileSync('sh', ['-c', `kill -9 ${p} 2>/dev/null`]) } catch { /* already gone */ }
-    })
+    }, root)
   }
   return result
 }
@@ -72,7 +87,7 @@ function powershell(script) {
   return execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { encoding: 'utf8' })
 }
 
-function killOnPortWindows(port) {
+function killOnPortWindows(port, root) {
   const result = { killed: [], skipped: [] }
   const portNum = Number(port)
   if (!Number.isInteger(portNum)) return result
@@ -91,7 +106,7 @@ function killOnPortWindows(port) {
     if (!command) continue
     classify(result, pid, command, p => {
       try { execFileSync('taskkill', ['/F', '/PID', p], { stdio: 'ignore' }) } catch { /* already gone */ }
-    })
+    }, root)
   }
   return result
 }

@@ -25,6 +25,7 @@
 import path from 'path'
 import fs   from 'fs'
 import { scaffold } from './scaffold.js'
+import { readDevPort } from './dev-port.js'
 import { killPulseServerOnPort } from './process-utils.js'
 import { isInstalledInProject, projectCopyDir, linkedToInstalledCopy, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, confirm, PACKAGE } from './update.js'
 import { loadConfigOrExit } from './config.js'
@@ -406,6 +407,7 @@ async function runStop(root) {
   let port = 3000
   const config = await loadConfigOrExit(root)
   if (config.port) port = config.port
+  port = readDevPort(root) ?? port   // a dev server started on another port (--port) records it
   // --port wins over pulse.config.js, as it does for `pulse dev` and `pulse start`
   const portFlag = args.indexOf('--port')
   if (portFlag !== -1) {
@@ -422,15 +424,15 @@ async function runStop(root) {
   // kills a process that's actually a Pulse server — see
   // killPulseServerOnPort's doc comment for why: a blind lsof|kill on the
   // port used to kill whatever else happened to be listening there.
-  const dev  = killPulseServerOnPort(port)
-  const prod = killPulseServerOnPort(port + 1)
+  const dev  = killPulseServerOnPort(port, { root })
+  const prod = killPulseServerOnPort(port + 1, { root })
   const stopped = [
     ...(dev.killed.length  ? [`${port} (dev)`]     : []),
     ...(prod.killed.length ? [`${port + 1} (prod)`] : []),
   ]
   if (stopped.length > 0) console.log(`\n⚡ Server${stopped.length > 1 ? 's' : ''} on ${stopped.join(' and ')} stopped.\n`)
   for (const skipped of [...dev.skipped, ...prod.skipped]) {
-    console.log(`⚠  Left PID ${skipped.pid} running — not a Pulse server: ${skipped.command}`)
+    console.log(`⚠  Left PID ${skipped.pid} running — not this project's Pulse server: ${skipped.command}`)
   }
   if (stopped.length === 0 && dev.skipped.length === 0 && prod.skipped.length === 0) {
     console.log(`\nNothing running on ports ${port} and ${port + 1}.\n`)

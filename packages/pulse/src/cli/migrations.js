@@ -75,10 +75,16 @@ export function addWorkflowPointer(text) {
   return { text: text.split(GUIDE_LINE_OLD).join(GUIDE_LINE_NEW), changed: true }
 }
 
-/** Add the error-journal line to a .gitignore that lacks it. */
+export const GITIGNORE_DEV_LINE = '.pulse/dev.json'
+export const GITIGNORE_DEV_BLOCK = '# Which port the dev server is on, for the agent tools\n' + GITIGNORE_DEV_LINE
+
+/** Add the error-journal line and the dev-port line to a .gitignore that lacks them. */
 export function addGitignoreLine(text) {
-  if (text.split('\n').some(l => l.trim() === GITIGNORE_LINE)) return { text, changed: false }
-  return { text: text.replace(/\n*$/, '\n') + GITIGNORE_BLOCK + '\n', changed: true }
+  const has = line => text.split('\n').some(l => l.trim() === line)
+  let next = text
+  if (!has(GITIGNORE_LINE))     next = next.replace(/\n*$/, '\n') + GITIGNORE_BLOCK + '\n'
+  if (!has(GITIGNORE_DEV_LINE)) next = next.replace(/\n*$/, '\n') + GITIGNORE_DEV_BLOCK + '\n'
+  return { text: next, changed: next !== text }
 }
 
 /**

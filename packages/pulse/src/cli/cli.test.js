@@ -423,6 +423,10 @@ test('migrations: the vulnerable hook is rewritten, the rule and the gitignore l
 
   const gi = addGitignoreLine('node_modules')
   if (!gi.changed || !gi.text.includes(GITIGNORE_LINE) || addGitignoreLine(gi.text).changed) throw new Error('gitignore line added once')
+  if (!gi.text.includes('.pulse/dev.json')) throw new Error('the dev-port record is ignored too, so it is never committed')
+  if (!scaffoldSrc.includes('.pulse/dev.json')) throw new Error('the scaffold ignores the dev-port record')
+  const half = addGitignoreLine('node_modules\n.pulse/errors.json\n')
+  if (!half.changed || !half.text.includes('.pulse/dev.json') || half.text.split('.pulse/errors.json').length !== 2) throw new Error('a project with only the first line gets only the second')
 
   // on disk: only existing files are touched, none is created
   const dir = mkdtempSync(path.join(os.tmpdir(), 'pulse-migrate-'))
