@@ -84,6 +84,8 @@ function startClient(root, { elicit = null } = {}) {
     async call(name, args) { await ready; return (await request('tools/call', { name, arguments: args })).result },
     async list() { await ready; return (await request('tools/list', {})).result.tools },
     close() { proc.kill() },
+    /** Resolves once the server process has ended (Windows keeps a folder locked until then). */
+    exited: new Promise(resolve => proc.once('exit', resolve)),
   }
 }
 
@@ -260,6 +262,7 @@ test('pulse_restart_server does not reload another project that holds the config
     assert.deepEqual(reloads, [], 'still no reload sent to the other project')
   } finally {
     client.close()
+    await client.exited
     if (pid) {
       try { process.kill(pid, 'SIGTERM') } catch { /* already gone */ }
       // Windows will not remove a folder a running process still has open, so wait for it to end
@@ -269,6 +272,7 @@ test('pulse_restart_server does not reload another project that holds the config
       }
     }
     await new Promise(r => other.close(r))
-    fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+    // Clearing the temp folder is housekeeping: a lock on Windows must not fail the test
+    try { fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }) } catch { /* left for the OS temp cleaner */ }
   }
 })

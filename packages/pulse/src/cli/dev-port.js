@@ -47,13 +47,40 @@ export function resolveDevPort(root, configPort) {
   return readDevPort(root) ?? configPort ?? 3000
 }
 
-/** Whether `port` can be listened on at `host` right now. */
-function isFree(port, host) {
+/** Whether something accepts connections on `port` at `address`. */
+function accepts(port, address) {
+  return new Promise(resolve => {
+    const socket = net.connect({ port, host: address })
+    const done = (answer) => { socket.destroy(); resolve(answer) }
+    socket.setTimeout(500, () => done(false))
+    socket.once('connect', () => done(true))
+    socket.once('error', () => done(false))
+  })
+}
+
+/** Whether a server can bind `port` at `host` (no host = all addresses) right now. */
+function canBind(port, host) {
   return new Promise(resolve => {
     const probe = net.createServer()
     probe.once('error', () => resolve(false))
-    probe.listen(port, host, () => probe.close(() => resolve(true)))
+    const listening = () => probe.close(() => resolve(true))
+    if (host) probe.listen(port, host, listening)
+    else      probe.listen(port, listening)
   })
+}
+
+/**
+ * Whether `port` is free for a server on `host`. Binding `host` alone is not a test: macOS and
+ * Windows let a server on 127.0.0.1 bind a port that another project already holds on all
+ * addresses, and then `localhost` may reach the other project. Binding all addresses as well fails
+ * when anyone holds the port. macOS also lets that wildcard bind sit beside a server on one address,
+ * so there a port counts as busy too when something answers on it at either loopback address. The
+ * connect probe stays off Windows, where it reported every port busy.
+ */
+async function isFree(port, host) {
+  if (!(await canBind(port, host)) || !(await canBind(port))) return false
+  if (process.platform !== 'darwin') return true
+  return !(await accepts(port, '127.0.0.1')) && !(await accepts(port, '::1'))
 }
 
 /**
