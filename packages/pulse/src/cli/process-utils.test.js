@@ -115,14 +115,17 @@ test('killPulseServerOnPort on a free port returns empty killed and skipped', as
 })
 
 test('startedForOtherProject: only a --root naming a different project counts', () => {
-  const root = '/work/shop'
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js --root /work/shop', root), false)
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js --root /work/shop --port 3010', root), false)
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js --root "/work/shop"', root), false)
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js --root /work/blog', root), true)
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js --root /work/shop-two', root), true, 'a longer path sharing the prefix is another project')
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js', root), false, 'no --root: not judged')
-  assert.equal(startedForOtherProject('node /pkg/cli/dev.js --root /work/blog', undefined), false, 'no root given: not judged')
+  // Built with path.resolve so the paths are absolute on this platform (D:\\work\\shop on Windows)
+  const root  = path.resolve('/work/shop')
+  const other = path.resolve('/work/blog')
+  const dev   = (args) => `node ${path.resolve('/pkg/cli/dev.js')} ${args}`
+  assert.equal(startedForOtherProject(dev(`--root ${root}`), root), false)
+  assert.equal(startedForOtherProject(dev(`--root ${root} --port 3010`), root), false)
+  assert.equal(startedForOtherProject(dev(`--root "${root}"`), root), false)
+  assert.equal(startedForOtherProject(dev(`--root ${other}`), root), true)
+  assert.equal(startedForOtherProject(dev(`--root ${root}-two`), root), true, 'a longer path sharing the prefix is another project')
+  assert.equal(startedForOtherProject(dev(''), root), false, 'no --root: not judged')
+  assert.equal(startedForOtherProject(dev(`--root ${other}`), undefined), false, 'no root given: not judged')
 })
 
 test('killPulseServerOnPort leaves a Pulse server started for another project, and kills one started for this project', async () => {

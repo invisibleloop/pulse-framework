@@ -4,6 +4,7 @@ import fs         from 'node:fs'
 import os         from 'node:os'
 import path       from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { writeDevPort, removeDevPort, readDevPort, resolveDevPort, DEV_PORT_FILE } from './dev-port.js'
 
 function project() {
@@ -79,7 +80,7 @@ test('pulse dev records the port it really listens on and removes the record whe
     fs.writeFileSync(path.join(root, 'package.json'), '{"type":"module"}')
     fs.writeFileSync(path.join(root, 'pulse.config.js'), 'export default {}\n')
     fs.writeFileSync(path.join(root, 'src/pages/home.js'), "export default { route: '/', view: () => '<main id=\"main-content\"><h1>Hi</h1></main>' }\n")
-    const dev = path.resolve(new URL('./dev.js', import.meta.url).pathname)
+    const dev = fileURLToPath(new URL('./dev.js', import.meta.url))
     const { spawn } = await import('node:child_process')
     const proc = spawn(process.execPath, [dev, '--root', root, '--port', '0'], { stdio: 'ignore' })
     try {
@@ -93,6 +94,9 @@ test('pulse dev records the port it really listens on and removes the record whe
       proc.kill('SIGTERM')
       await new Promise(r => proc.once('exit', r))
     }
-    assert.equal(fs.existsSync(path.join(root, DEV_PORT_FILE)), false, 'the record goes when the server stops')
+    assert.equal(readDevPort(root), null, 'a stopped server is no longer reported')
+    // Windows ends the process on SIGTERM without running exit handlers, so only there the stale
+    // file may remain; readDevPort ignores it because its process is gone
+    if (process.platform !== 'win32') assert.equal(fs.existsSync(path.join(root, DEV_PORT_FILE)), false, 'the record goes when the server stops')
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })
