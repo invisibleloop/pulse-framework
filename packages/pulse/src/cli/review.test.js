@@ -316,6 +316,7 @@ test('the static page checklist is far shorter than the full one', () => {
   const short = relevantChecklist(STATIC, '').md.split(/\s+/).length
   const long  = relevantChecklist(FULL, '<button data-event="x" disabled></button><input><a href="/"></a>').md.split(/\s+/).length
   assert.ok(short < long * 0.5, `static ${short} words, full ${long} words`)
+})
 
 test('generic link text is found inside a wrapping tag, and a longer text is not flagged', async () => {
   const wrapped = await checksFor(STATIC_PAGE().replace('<h1>About</h1>', '<a href="/x"><span>Read more</span></a>'))
