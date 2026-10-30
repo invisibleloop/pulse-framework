@@ -440,16 +440,27 @@ In dev mode (`dev: true`), every error the three error layers above catch — pl
 3. In-flight requests are allowed to finish naturally
 4. A force-exit fires after `shutdownTimeout` ms (default 30 000 ms) to prevent a stuck request from blocking a deploy
 
-The `shutdown()` function is also returned from `createServer` so you can trigger it programmatically (useful in tests or custom process managers):
+The `shutdown()` function is also returned from `createServer`, for custom process managers. It finishes by **ending the process** (`process.exit`). Do not call it in a test. The test runner is cut off before it reports, and the run can look like a pass. `createServer` is async, so `await` it:
 
 ```js
-const { server, shutdown } = createServer(specs, {
+const { server, shutdown } = await createServer(specs, {
   port: 3000,
   shutdownTimeout: 10000,  // override default 30 s grace period
 })
 
 // Call manually when needed (SIGTERM is already wired up automatically)
 shutdown()
+```
+
+In a test, start the server on port `0` and close the `server` yourself:
+
+```js
+const { server } = await createServer(specs, { port: 0, host: '127.0.0.1' })
+if (!server.listening) await new Promise((resolve) => server.once('listening', resolve))  // createServer resolves before the port is bound
+const base = `http://127.0.0.1:${server.address().port}`
+// ... fetch(base + '/contact') ...
+server.closeAllConnections()
+await new Promise((resolve) => server.close(resolve))
 ```
 
 `shutdown()` is idempotent — calling it multiple times is safe.

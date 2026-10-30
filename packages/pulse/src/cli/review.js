@@ -189,6 +189,25 @@ export function alertsWithDynamicContent(source) {
   return hits
 }
 
+/**
+ * Whether the pages folder holds a custom 404 page (a spec with `route: '*'`). Looks at the
+ * folder of the page under review, since that is where a project keeps its pages. Returns null
+ * when it cannot tell (no file, or the folder cannot be read), so the review stays silent then.
+ */
+export function hasCustomNotFound(source, file) {
+  if (/\broute\s*:\s*(['"`])\*\1/.test(source)) return true
+  if (!file) return null
+  let names
+  try { names = fs.readdirSync(path.dirname(file)) } catch { return null }
+  for (const name of names) {
+    if (!name.endsWith('.js') || /\.test\.js$/.test(name)) continue
+    try {
+      if (/\broute\s*:\s*(['"`])\*\1/.test(fs.readFileSync(path.join(path.dirname(file), name), 'utf8'))) return true
+    } catch { /* unreadable: keep looking */ }
+  }
+  return false
+}
+
 export async function runFullReview(source, file) {
   // Run the validator in a child process (same as pulse_validate/pulse validate)
   let validationResult = '(could not run validator)'
@@ -300,6 +319,10 @@ export async function runFullReview(source, file) {
   }
   if (/\bfetch\s*\(/.test(source) && /\.json\s*\(\)/.test(source) && !/\.ok\b/.test(source)) {
     autoChecks.push('✗ **`fetch` result parsed with `.json()` and `.ok` is never checked** — a 4xx or 5xx body is parsed as data. Check `res.ok` first.')
+  }
+
+  if (hasCustomNotFound(source, file) === false) {
+    autoChecks.push('⚠ **No custom 404 page** — no spec in this folder has `route: \'*\'`, so a bad URL shows the unbranded framework page. Add `src/pages/not-found.js` that uses the shared layout (see the checklist).')
   }
 
   if (file) {

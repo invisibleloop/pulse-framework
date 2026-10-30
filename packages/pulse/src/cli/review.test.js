@@ -14,7 +14,7 @@ import assert     from 'node:assert/strict'
 import fs         from 'node:fs'
 import os         from 'node:os'
 import path       from 'node:path'
-import { runQuickReview, formatQuickReview, runFullReview, formatFullReview } from './review.js'
+import { runQuickReview, formatQuickReview, runFullReview, hasCustomNotFound, formatFullReview } from './review.js'
 
 function tmpProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-review-test-'))
@@ -387,3 +387,27 @@ test('review does not warn for alert() with message, or a fixed string in conten
   assert.equal(await alertCheck("${alert({ variant: 'info', content: '<a href=\"/help\">Help</a>' })}"), undefined)
 })
 
+
+// ── custom 404 page ────────────────────────────────────────────────────────
+
+async function notFoundCheck(otherPages) {
+  const root = tmpProject()
+  const spec = `export default {\n  route: '/x',\n  view: () => '<main id="main-content"><h1>X</h1></main>',\n}`
+  const file = writeSpec(root, 'page.js', spec)
+  for (const [name, body] of Object.entries(otherPages)) writeSpec(root, name, body)
+  const { autoChecks } = await runFullReview(spec, file)
+  fs.rmSync(root, { recursive: true, force: true })
+  return autoChecks.find(c => /custom 404/.test(c))
+}
+
+test('review warns when no spec in the pages folder has route: "*"', async () => {
+  const c = await notFoundCheck({ 'home.js': "export default { route: '/', view: () => '<main id=\"main-content\"></main>' }" })
+  assert.match(c, /^⚠ \*\*No custom 404 page\*\*/)
+  assert.match(c, /route: '\*'/)
+})
+
+test('review is silent when a sibling spec is the 404 page, or the page under review is', async () => {
+  assert.equal(await notFoundCheck({ 'not-found.js': "export default { route: '*', view: () => '<main id=\"main-content\"></main>' }" }), undefined)
+  assert.equal(hasCustomNotFound("export default { route: \"*\", view: () => '' }", null), true)
+  assert.equal(hasCustomNotFound("export default { route: '/' }", null), null, 'no file: cannot tell')
+})
