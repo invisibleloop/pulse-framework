@@ -470,6 +470,14 @@ test('the workflow says a criterion about refusing something needs a test that s
   assert(/post without the token and expect 403/.test(wf), 'the workflow must give the CSRF example')
 })
 
+test('the server guide says shutdown() ends the process, so a test closes the server itself', () => {
+  // A demo agent called shutdown() in a test teardown; the process exited before the reporter printed, and the run looked like a pass.
+  const guide = fs.readFileSync(path.join(agentDir, 'guide-server.md'), 'utf8')
+  assert(/\*\*ending the process\*\*/.test(guide), 'the guide must say shutdown() ends the process')
+  assert(/server\.closeAllConnections\(\)/.test(guide), 'the guide must show closing the server in a test')
+  assert(/await createServer\(specs, \{\s*port: 3000/.test(guide), 'createServer is async: the shutdown example must await it')
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
