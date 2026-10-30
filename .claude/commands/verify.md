@@ -144,6 +144,8 @@ Call `pulse_stamp` with `{ route: "<this page's route>", mode: "full" }` in full
 
 **In full mode, `pulse_stamp` refuses to write the stamp unless it finds, for this route and from the last 10 minutes, a saved desktop report and a saved mobile report that each meet the bar** (step 9a genuinely happened, and the numbers show 100/100/100, a measured LCP and a CLS of 0.00). The refusal lists what is missing or failing. Fix the page or measure the missing number, save the report again, and call `pulse_stamp` again — do not work around the refusal any other way.
 
+**It also refuses when the page has a `<name>.acceptance.md` file and a criterion has no test that names it.** Write the missing test from the criterion. If the page does not do what the criterion says, fix the page, or ask the user whether the criterion is wrong.
+
 **This must be the last operation before stopping.** The stop hook compares each edited spec's mtime against this stamp — if any spec is newer than the stamp, the hook blocks. Do not edit any spec file after calling `pulse_stamp`.
 
 ### 15. Report
@@ -153,6 +155,7 @@ Summarise:
 - Visual: desktop screenshot — any issues found and fixed
 - Console: any errors
 - Review: the mechanical results, and for each checklist section what you fixed or why it does not apply
+- Acceptance: each criterion and the test that proves it, or that the page has no criteria file
 - Error journal: clean, or resolved N entries
 - **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, whether both were saved via `pulse save-report --device` (step 9a), mobile layout check, LCP and CLS values (say which were measured and how)
 
