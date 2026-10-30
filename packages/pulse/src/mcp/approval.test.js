@@ -230,3 +230,45 @@ test('create_page / create_tests do not follow a symlink out of the project', { 
     assert.ok(!fs.existsSync(path.join(outside, 'newfile')), 'nothing may be written through the link')
   } finally { client.close(); fs.rmSync(root, { recursive: true, force: true }); fs.rmSync(outside, { recursive: true, force: true }) }
 })
+
+// ── pulse_restart_server acts only on this project's own server ──────────────
+
+test('pulse_restart_server does not reload another project that holds the configured port; it starts its own server elsewhere', async () => {
+  // A demo agent's restart reported "specs reloaded" for ste-demo, which held port 3000.
+  const reloads = []
+  const other = http.createServer((req, res) => { reloads.push(req.url); res.statusCode = 204; res.end() })
+  await new Promise(r => other.listen(0, '127.0.0.1', r))
+  const busy = other.address().port
+  const root = tmp('pulse-restart-')
+  fs.mkdirSync(path.join(root, 'src', 'pages'), { recursive: true })
+  fs.writeFileSync(path.join(root, 'package.json'), '{"name":"p","type":"module"}')
+  fs.writeFileSync(path.join(root, 'pulse.config.js'), `export default { port: ${busy} }\n`)
+  fs.writeFileSync(path.join(root, 'src/pages/home.js'), "export default { route: '/', view: () => '<main id=\"main-content\"><h1>Mine</h1></main>' }\n")
+  const client = startClient(root)
+  let pid = null
+  try {
+    const out = textOf(await client.call('pulse_restart_server', {}))
+    assert.deepEqual(reloads, [], 'the other project must not be sent a reload')
+    const record = JSON.parse(fs.readFileSync(path.join(root, '.pulse', 'dev.json'), 'utf8'))
+    pid = record.pid
+    assert.notEqual(record.port, busy, 'this project moves to its own port')
+    assert.match(out, new RegExp(`started on port ${record.port}\\b`))
+    assert.match(await (await fetch(`http://127.0.0.1:${record.port}/`)).text(), /Mine/)
+
+    // A second call reloads the server that is this project's, and still never the other one.
+    assert.match(textOf(await client.call('pulse_restart_server', {})), new RegExp(`reloaded \\(hot\\) on port ${record.port}\\b`))
+    assert.deepEqual(reloads, [], 'still no reload sent to the other project')
+  } finally {
+    client.close()
+    if (pid) {
+      try { process.kill(pid, 'SIGTERM') } catch { /* already gone */ }
+      // Windows will not remove a folder a running process still has open, so wait for it to end
+      for (let i = 0; i < 50; i++) {
+        try { process.kill(pid, 0) } catch { break }
+        await new Promise(r => setTimeout(r, 100))
+      }
+    }
+    await new Promise(r => other.close(r))
+    fs.rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+  }
+})
