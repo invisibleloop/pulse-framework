@@ -12,7 +12,8 @@ import { test }   from 'node:test'
 import assert     from 'node:assert/strict'
 import { spawn }  from 'node:child_process'
 import net        from 'node:net'
-import { killPulseServerOnPort } from './process-utils.js'
+import path       from 'node:path'
+import { killPulseServerOnPort, startedForOtherProject } from './process-utils.js'
 
 /** Find a free TCP port by binding to port 0 and reading it back. */
 async function freePort() {
@@ -111,4 +112,40 @@ test('killPulseServerOnPort on a free port returns empty killed and skipped', as
   const port = await freePort()
   const result = killPulseServerOnPort(port)
   assert.deepEqual(result, { killed: [], skipped: [] })
+})
+
+test('startedForOtherProject: only a --root naming a different project counts', () => {
+  // Built with path.resolve so the paths are absolute on this platform (D:\\work\\shop on Windows)
+  const root  = path.resolve('/work/shop')
+  const other = path.resolve('/work/blog')
+  const dev   = (args) => `node ${path.resolve('/pkg/cli/dev.js')} ${args}`
+  assert.equal(startedForOtherProject(dev(`--root ${root}`), root), false)
+  assert.equal(startedForOtherProject(dev(`--root ${root} --port 3010`), root), false)
+  assert.equal(startedForOtherProject(dev(`--root "${root}"`), root), false)
+  assert.equal(startedForOtherProject(dev(`--root ${other}`), root), true)
+  assert.equal(startedForOtherProject(dev(`--root ${root}-two`), root), true, 'a longer path sharing the prefix is another project')
+  assert.equal(startedForOtherProject(dev(''), root), false, 'no --root: not judged')
+  assert.equal(startedForOtherProject(dev(`--root ${other}`), undefined), false, 'no root given: not judged')
+})
+
+test('killPulseServerOnPort leaves a Pulse server started for another project, and kills one started for this project', async () => {
+  const mine  = path.resolve('/tmp/pulse-test-mine')
+  const other = path.resolve('/tmp/pulse-test-other')
+  for (const [rootArg, expectKilled] of [[other, false], [mine, true]]) {
+    const port = await freePort()
+    const proc = spawn(process.execPath, ['-e', `
+      const net = require('net')
+      net.createServer().listen(${port})
+      setInterval(() => {}, 1000)
+    `, '--', 'cli/dev.js', '--root', rootArg])
+    try {
+      assert.equal(await waitUntilListening(port), true, 'test listener never came up')
+      const result = killPulseServerOnPort(port, { root: mine })
+      assert.equal(result.killed.length, expectKilled ? 1 : 0, `killed for --root ${rootArg}`)
+      assert.equal(result.skipped.length, expectKilled ? 0 : 1, `skipped for --root ${rootArg}`)
+      assert.equal(await waitUntilFree(port, expectKilled ? 3000 : 300), expectKilled, expectKilled ? 'must be killed' : 'the other project\'s server must keep running')
+    } finally {
+      try { proc.kill('SIGKILL') } catch { /* already dead */ }
+    }
+  }
 })
