@@ -10,6 +10,8 @@ src/cli/scaffold.archive.js
 # Repository tooling, not used by an installed package or a project made with it
 scripts/bench.js
 scripts/release-version.js
+scripts/ste-check.js
+scripts/ste-baseline.json
 scripts/gen-ui-types.js
 tsconfig.json
 

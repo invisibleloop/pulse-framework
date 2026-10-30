@@ -632,9 +632,9 @@ test('pulse_intent reframes the inspiration question for the dashboard archetype
 
 test('workflow.md documents the same internal-tool exception for Step 0', () => {
   const workflow = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
-  assert(/Internal\/functional tools/.test(workflow),
+  assert(/Internal tools/.test(workflow),
     'workflow.md must carry the same internal-tool branch as pulse_intent, since an agent following workflow.md directly (without calling pulse_intent) needs the same guidance')
-  assert(/the question itself is still mandatory/.test(workflow),
+  assert(/question is still mandatory for an internal tool/.test(workflow),
     'must be explicit that the internal-tool branch reframes the question, it does not remove the requirement to ask it')
 })
 
