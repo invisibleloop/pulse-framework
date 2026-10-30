@@ -362,3 +362,28 @@ test('review fails a criterion that restates Lighthouse, LCP or CLS', async () =
   assert.match(c, /^✗ \*\*Acceptance criteria not met\*\*.*AC2 restates a check that \/verify already makes/)
   assert.doesNotMatch(c, /no test names/)
 })
+
+// ── alert({ content }) is not escaped ─────────────────────────────────────
+
+async function alertCheck(viewBody) {
+  const root = tmpProject()
+  const spec = `import { alert } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  state: {},\n  view: (state, server) => \`<main id="main-content">${viewBody}</main>\`,\n}`
+  const file = writeSpec(root, 'page.js', spec)
+  const { autoChecks } = await runFullReview(spec, file)
+  fs.rmSync(root, { recursive: true, force: true })
+  return autoChecks.find(c => /alert\(\{ content \}\)/.test(c))
+}
+
+test('review warns when alert() puts a variable or an interpolated string in content', async () => {
+  const c1 = await alertCheck("${alert({ variant: 'error', content: server.error })}")
+  assert.match(c1, /^⚠ \*\*`alert\(\{ content \}\)` is not escaped\*\*/)
+  assert.match(c1, /use `message`/)
+  assert.ok(await alertCheck("${alert({ variant: 'error', content: `Failed: ${server.error}` })}"))
+})
+
+test('review does not warn for alert() with message, or a fixed string in content', async () => {
+  assert.equal(await alertCheck("${alert({ variant: 'error', message: server.error })}"), undefined)
+  assert.equal(await alertCheck("${alert({ variant: 'info', content: 'Your changes have been saved.' })}"), undefined)
+  assert.equal(await alertCheck("${alert({ variant: 'info', content: '<a href=\"/help\">Help</a>' })}"), undefined)
+})
+

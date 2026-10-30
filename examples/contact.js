@@ -136,7 +136,7 @@ export default {
             <legend class="u-text-lg u-font-semibold u-mb-5">Send a message</legend>
             ${stack({ gap: 'md', content: `
               ${state.status === 'error' && state.errors.length > 0
-                ? alert({ variant: 'error', content: state.errors[0]?.message || 'Please check the fields below.' })
+                ? alert({ variant: 'error', message: state.errors[0]?.message || 'Please check the fields below.' })
                 : ''}
               ${grid({ cols: 2, gap: 'sm', content:
                 input({ name: 'name',  label: 'Name',          type: 'text',  placeholder: 'Jane Smith',       value: state.fields.name,    required: true, error: fieldError('name')    }) +

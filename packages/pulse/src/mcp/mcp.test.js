@@ -463,6 +463,15 @@ test('the workflow asks for a criterion for every failure of a form, and none fo
   assert(/Do not write a criterion for what `\/verify` already checks/.test(wf), 'the workflow must say not to write Lighthouse criteria')
 })
 
+test('the components guide lists alert message (escaped) before content (HTML, not escaped)', () => {
+  // The prop table used to list only `content`, so an agent put error text in the one prop that does not escape.
+  const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
+  const row = guide.split('\n').find(l => l.startsWith('| `alert` |') && l.includes('variant')) || ''
+  assert(/`message` \(plain text, escaped/.test(row), 'the alert row must list message as the escaped text prop')
+  assert(/`content` \(an HTML string you wrote, \*\*not\*\* escaped\)/.test(row), 'the alert row must say content is not escaped')
+  assert(row.indexOf('`message`') < row.indexOf('`content`'), 'message comes first')
+})
+
 test('the server guide clears the flash cookie in guard, never in a server fetcher', () => {
   // A streamed page sends its headers before the fetchers run, so a cookie a fetcher sets is lost
   // and a refresh shows the confirmation again (server.test.js proves the behaviour).

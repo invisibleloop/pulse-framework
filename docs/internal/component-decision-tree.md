@@ -117,14 +117,14 @@ empty({
 ### Need a message/alert box?
 → `alert()` — styled message container
 - variant: 'info' | 'success' | 'warning' | 'error'
-- title and content (both optional)
+- `title`, `message` (plain text, escaped) and `content` (an HTML string, not escaped), all optional
 
 **Example:**
 ```js
 alert({
   variant: 'success',
   title: 'Saved!',
-  content: 'Your changes have been saved.',
+  message: 'Your changes have been saved.',
 })
 ```
 
