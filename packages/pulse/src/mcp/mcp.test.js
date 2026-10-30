@@ -463,6 +463,13 @@ test('the workflow asks for a criterion for every failure of a form, and none fo
   assert(/Do not write a criterion for what `\/verify` already checks/.test(wf), 'the workflow must say not to write Lighthouse criteria')
 })
 
+test('the workflow says a criterion about refusing something needs a test that sends the bad input', () => {
+  // A demo agent proved "a post without the CSRF token is rejected" by checking the token field and by hand with curl.
+  const wf = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  assert(/proved only by a test that sends the bad input and checks the refusal/.test(wf), 'the workflow must ask for a refusal test')
+  assert(/post without the token and expect 403/.test(wf), 'the workflow must give the CSRF example')
+})
+
 test('the components guide lists alert message (escaped) before content (HTML, not escaped)', () => {
   // The prop table used to list only `content`, so an agent put error text in the one prop that does not escape.
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')

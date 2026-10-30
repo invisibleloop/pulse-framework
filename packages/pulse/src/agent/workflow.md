@@ -342,6 +342,8 @@ Write tests for every spec you created or modified. At minimum:
 
 Write the criterion tests from the criteria, not from the code. `pulse_review` and `pulse_stamp` refuse a criterion that no test names. If the page and a criterion disagree, ask the user which is right.
 
+A criterion about refusing something is proved only by a test that sends the bad input and checks the refusal. For "a post without the CSRF token is rejected", post without the token and expect 403. Checking that the form carries the token field does not prove it, and a `curl` run by hand leaves no test. The stamp checks only that a test names the criterion, so the test has to do the proving.
+
 Run the tests. Fix every failure.
 
 ---
