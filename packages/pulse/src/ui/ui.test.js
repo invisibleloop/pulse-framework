@@ -314,6 +314,23 @@ test('alert: message is plain text and is escaped; content is HTML and is not (t
   assert.match(alert({ variant: 'error', message: 'Required' }), /ui-alert-body">Required</)
 })
 
+test('alert: items are escaped lines, and a line with href is a link a screen reader can follow', () => {
+  const html = alert({ variant: 'error', title: 'Fix these', items: [{ text: 'Email <b>is</b> required', href: '#email' }, { text: 'Plain & simple' }] })
+  assert.match(html, /<ul class="ui-alert-list">/)
+  assert.match(html, /<li><a href="#email">Email &lt;b&gt;is&lt;\/b&gt; required<\/a><\/li>/, 'text is escaped inside the link')
+  assert.match(html, /<li>Plain &amp; simple<\/li>/, 'a line with no href is plain text')
+  assert.doesNotMatch(html, /<b>/)
+  assert.match(html, /role="alert"/)
+})
+
+test('alert: an item href cannot be a javascript: URL, and items default to no list', () => {
+  const html = alert({ variant: 'error', items: [{ text: 'x', href: 'javascript:alert(1)' }, { text: 'y', href: '"><script>1</script>' }] })
+  assert.doesNotMatch(html, /javascript:/i)
+  assert.doesNotMatch(html, /<script/i)
+  assert.doesNotMatch(alert({ variant: 'error', message: 'x' }), /ui-alert-list/)
+  assert.doesNotMatch(alert({ variant: 'error', message: 'x', items: [] }), /ui-alert-list/)
+})
+
 test('alert: info uses role=status', () => {
   assert.match(alert({ variant: 'info', content: 'x' }), /role="status"/)
 })
