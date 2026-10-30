@@ -442,6 +442,23 @@ test('migrations: the vulnerable hook is rewritten, the rule and the gitignore l
   } finally { rmSync(dir, { recursive: true, force: true }) }
 })
 
+test('migrations: the Lighthouse hook reminder stops naming a port, for any port, and a second run changes nothing', async () => {
+  const { fixSettings, LIGHTHOUSE_HOOK_STEPS } = await import('./migrations.js')
+  const scaffoldSrc = readFileSync(new URL('./scaffold.js', import.meta.url), 'utf8')
+  if (!scaffoldSrc.includes('${LIGHTHOUSE_HOOK_STEPS}')) throw new Error('the scaffold must write the hook wording from migrations.js')
+  if (/production server on port \$\{/.test(scaffoldSrc)) throw new Error('the scaffold must not put a port in the Lighthouse reminder')
+  if (/port \d/.test(LIGHTHOUSE_HOOK_STEPS) || !LIGHTHOUSE_HOOK_STEPS.includes('pulse_build returned')) throw new Error('the new wording names no port and points at what pulse_build returned')
+
+  for (const port of [3001, 3101]) {
+    const oldText = `LIGHTHOUSE PRE-FLIGHT: This tool audits the currently loaded browser page. Before proceeding you MUST: (1) have called pulse_build to start the production server on port ${port}, (2) have called navigate_page with url http://localhost:${port}/ so the current page IS the production server. If either step is not done, stop.`
+    const old = JSON.stringify({ hooks: { PreToolUse: [{ hooks: [{ type: 'command', command: `node -e "x('${oldText}')"` }, { type: 'command', command: 'echo untouched' }] }] } }, null, 2) + '\n'
+    const fixed = fixSettings(old)
+    if (!fixed.changed || /on port \d/.test(fixed.text) || !fixed.text.includes(LIGHTHOUSE_HOOK_STEPS)) throw new Error(`port ${port}: the reminder is rewritten`)
+    if (!fixed.text.includes('echo untouched') || !fixed.text.includes('If either step is not done, stop.')) throw new Error('everything around it is left alone')
+    if (fixSettings(fixed.text).changed) throw new Error('the second run changes nothing')
+  }
+})
+
 test('migrations: the old "the guide is the complete reference" line is replaced once, and the scaffold writes the new one', async () => {
   const { addWorkflowPointer, GUIDE_LINE_OLD, GUIDE_LINE_NEW, migrateProject } = await import('./migrations.js')
   const { mkdtempSync, rmSync, writeFileSync, mkdirSync, readFileSync: read } = await import('fs')

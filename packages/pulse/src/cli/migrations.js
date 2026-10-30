@@ -13,6 +13,12 @@ import path from 'path'
 import crypto from 'crypto'
 
 /**
+ * The Lighthouse pre-flight reminder used to name a port (`port 3001`), which sent agents to another
+ * project's server when that project held the port. It now tells them to use the URL pulse_build returns.
+ */
+export const LIGHTHOUSE_HOOK_STEPS = '(1) have called pulse_build to start the production server, (2) have called navigate_page with the production URL that pulse_build returned (not the dev server), so the current page IS the production server.'
+
+/**
  * Hook code the scaffold used to generate and what replaces it. The old PostToolUse hook built a
  * shell command from the edited file's path (`execSync('node --check ' + JSON.stringify(f))`);
  * double quotes do not stop a shell expanding `$(...)` or backticks, so writing a file called
@@ -22,6 +28,10 @@ export const HOOK_FIXES = [
   {
     bad:  "const {execSync}=require('child_process');try{execSync('node --check '+JSON.stringify(f),{stdio:'pipe'});",
     good: "const {execFileSync}=require('child_process');try{execFileSync(process.execPath,['--check',f],{stdio:'pipe'});",
+  },
+  {
+    pattern: /\(1\) have called pulse_build to start the production server on port \d+, \(2\) have called navigate_page with url http:\/\/localhost:\d+\/ so the current page IS the production server\./,
+    good:    LIGHTHOUSE_HOOK_STEPS,
   },
 ]
 
@@ -45,7 +55,7 @@ export function fixSettings(text) {
       for (const [key, value] of Object.entries(node)) {
         if (key === 'command' && typeof value === 'string') {
           let next = value
-          for (const { bad, good } of HOOK_FIXES) next = next.split(bad).join(good)
+          for (const { bad, pattern, good } of HOOK_FIXES) next = pattern ? next.replace(pattern, () => good) : next.split(bad).join(good)
           if (next !== value) { node[key] = next; changed = true }
         } else visit(value)
       }
