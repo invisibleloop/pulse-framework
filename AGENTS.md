@@ -608,7 +608,7 @@ Every build task follows this sequence. Each phase has a pass gate — do not ad
 | 2. Plan | Present plan to user, wait for confirmation | User confirms |
 | 3. Build | Write spec + related files | — |
 | 4. Validate | `pulse_validate` — fix all errors + warnings | Clean output |
-| 5a. Design approval *(new builds only)* | Screenshot → describe → ask the user | ⛔ User approves layout before any slow checks run (skip for edits/fixes) |
+| 5a. Design approval *(every new page)* | Screenshot → describe → ask the user | ⛔ User approves layout before any slow checks run (skip for edits/fixes) |
 | 5b. Browser | `pulse_design_review` (if intake ran) → `pulse_layout_review` → `/verify` (Lighthouse desktop + mobile + `pulse_review`) | ⛔ Do not skip: all gates must pass + `.pulse-verified` stamp written |
 | 6. Tests | Write tests, run them, fix failures | All pass |
 | 7. Code Review | `pulse_review` — only after phases 4–6 pass | — |
