@@ -515,6 +515,22 @@ test('design approval applies to every new page, not only builds that ran pulse_
   assert(/not-found\.acceptance\.md/.test(read('workflow.md')))
 })
 
+test('verify audits a new or changed 404 page in Lighthouse snapshot mode, and keeps it out of the stamp', () => {
+  // Found on a demo: Lighthouse refuses a real 404 (ERRORED_DOCUMENT_REQUEST), so the page was never audited.
+  const verify = fs.readFileSync(path.join(agentDir, 'commands', 'verify.md'), 'utf8')
+  const skill  = fs.readFileSync(path.join(agentDir, 'skills', 'verify', 'SKILL.md'), 'utf8')
+  const wf     = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  for (const [name, src] of [['verify.md', verify], ['SKILL.md', skill]]) {
+    assert(/### 7a\. The 404 page/.test(src), `${name} must have a 404 step`)
+    assert(/ERRORED_DOCUMENT_REQUEST/.test(src), `${name} must say why the normal audit cannot run`)
+    assert(/"mode": ?"snapshot"|mode: "snapshot"/.test(src), `${name} must say to use snapshot mode`)
+    assert(/pulse-no-such-page/.test(src), `${name} must give the URL to audit`)
+  }
+  assert(/Do not save these reports with `pulse save-report`/.test(verify))
+  assert(/The 404 page: its desktop and mobile snapshot scores/.test(verify), 'the report must include the 404 scores')
+  assert(/audits it in Lighthouse snapshot mode/.test(wf))
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
