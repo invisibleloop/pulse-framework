@@ -73,6 +73,7 @@ pulse dev          # dev server (port 3000, or the next free port)
 pulse build        # production build → public/dist/
 pulse start        # production server
 pulse update       # upgrade Pulse to the latest version and refresh copied assets
+pulse init-ai <client>  # MCP config for Cursor, Windsurf or Claude Desktop (add --write to merge it in)
 ```
 
 ## Docs
