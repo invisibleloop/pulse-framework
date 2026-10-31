@@ -65,6 +65,10 @@ Run `mcp__chrome-devtools__lighthouse_audit` with `device: "mobile"` against the
 
 **To inspect mobile layout** use `mcp__chrome-devtools__emulate` with `viewport: "390x844x2,mobile,touch"` — not `resize_page`. Reset with `"1440x900x1"` afterward.
 
+### 7a. The 404 page *(only when this task created or changed the `route: '*'` page)*
+
+A real 404 stops Lighthouse's normal audit with `ERRORED_DOCUMENT_REQUEST`. Navigate to `<production URL>/pulse-no-such-page` and run `mcp__chrome-devtools__lighthouse_audit` with `mode: "snapshot"`, once for `device: "desktop"` and once for `device: "mobile"`. Every category must be 100. Snapshot mode checks the page in the browser and not the network. Do not save these reports, because the stamp covers only the page you pass it.
+
 ### 8. Performance
 
 **Stay on the production server for the trace** — navigate to `<production URL><route>` first; tracing the dev server reports misleading LCP/CLS. Then run `mcp__chrome-devtools__performance_start_trace` with `reload: true` and `autoStop: true`. Report LCP and CLS as a single line, e.g. `LCP 73ms · CLS 0.00`. Flag any insight that identifies a fixable cause (render-blocking resources, large image delay). CLS must be 0.00.

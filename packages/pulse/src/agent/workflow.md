@@ -297,6 +297,8 @@ Do this before every screenshot, console check, or visual inspection. Never debu
 
 `/verify` validates, screenshots, runs Lighthouse (desktop + mobile), runs the performance trace (LCP + CLS), checks console errors, runs `pulse_review`, and writes the `.pulse-verified` stamp. Running steps manually does not write the stamp.
 
+When the task creates or changes the 404 page, `/verify` also audits it in Lighthouse snapshot mode, because a real 404 stops the normal audit. The stamp does not cover that page.
+
 > **Lighthouse pre-flight:** `/verify` calls `pulse_build` automatically before running Lighthouse, and audits against the production server. If you ever call `lighthouse_audit` manually outside `/verify`, you must first run `pulse_build` and navigate to the production URL it returns, plus your route. Do not assume port 3001, because another project can hold it. Auditing the dev server will produce misleading results.
 
 ### ⛔ After design approval — mandatory steps before continuing

@@ -59,6 +59,15 @@ The browser should still be on the production URL from step 6. Run `mcp__chrome-
 
 **Stay on the production server** — steps 8 and 9 use it too. Save the reports in step 9a, after step 9 has given you the LCP. Do not call `pulse_restart_server` yet.
 
+### 7a. The 404 page *(skip in quick mode; only when this task created or changed the `route: '*'` page)*
+
+The 404 page needs the same accessibility audit as any page, but Lighthouse cannot run its normal audit on it. A real 404 stops the audit with `ERRORED_DOCUMENT_REQUEST`. Use snapshot mode, which audits the page as the browser already shows it:
+
+1. Call `navigate_page` with `<production URL>/pulse-no-such-page`.
+2. Run `mcp__chrome-devtools__lighthouse_audit` with `{ "device": "desktop", "mode": "snapshot" }`, then again with `{ "device": "mobile", "mode": "snapshot" }`.
+
+**Pass bar: every category must be 100.** Snapshot mode checks the page in the browser and not the network, so it skips checks such as caching. Fix any failure and run steps 3 to 7a again. Do not save these reports with `pulse save-report`. `pulse_stamp` covers only the page you pass it as `route`.
+
 ### 8. Mobile layout check *(skip in quick mode)*
 
 Emulate a mobile viewport and take a screenshot to catch wrapping, overflow, and layout issues before they become Lighthouse failures.
@@ -158,6 +167,7 @@ Summarise:
 - Console: any errors
 - Review: the mechanical results, then a list with one line per checklist section: what you fixed, or why it does not apply. Do not summarise the sections as one sentence.
 - Changes from the plan: anything you built differently from the plan the user approved, for example a different success state or storage. Say "none" if there are none.
+- The 404 page: its desktop and mobile snapshot scores, or "not changed" when this task did not touch it
 - Acceptance: a table with one row per criterion, in two columns: the criterion ID and the title of the test that proves it. If the page has no criteria file, say so.
 - Error journal: clean, or resolved N entries
 - **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, whether both were saved via `pulse save-report --device` (step 9a), mobile layout check, LCP and CLS values (say which were measured and how)
