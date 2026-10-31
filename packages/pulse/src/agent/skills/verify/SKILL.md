@@ -29,9 +29,9 @@ Run `pulse_fetch_page` to confirm the server is responding. If it errors, run `p
 
 Navigate to the page route with `mcp__chrome-devtools__navigate_page`, then take a screenshot with `mcp__chrome-devtools__take_screenshot`. Describe what you see in 2–3 plain sentences — layout structure, visual tone, key sections. Do not list features or code details.
 
-### 4a. Design approval gate *(new builds only)*
+### 4a. Design approval gate *(every new page)*
 
-**If `pulse_intake` ran earlier in this session** (i.e. this is a new page or site, not an edit or bug fix):
+**If this task created a new page**, whether or not `pulse_intake` ran (a plain form needs it too, because the user has not seen the page):
 
 1. Show the screenshot to the user.
 2. **Call `pulse_await_approval` first, then ask:** *"Happy with the layout and direction, or any changes before I run Lighthouse?"* Always call the tool before asking, even when using a question tool like AskUserQuestion — in some hosts (including Claude Code) the question still ends the turn and fires the Stop hooks. The marker is harmless if the turn doesn't end; it is consumed when the user replies.

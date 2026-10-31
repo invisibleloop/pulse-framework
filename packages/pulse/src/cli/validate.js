@@ -178,7 +178,7 @@ export function formatValidationResult(result, { nextSteps = false } = {}) {
   }
 
   if (nextSteps && result.valid && result.sourceWarnings.length === 0) {
-    output += '\n\n---\n**Next: browser check sequence** (do not skip)\n1. `pulse_fetch_page` → screenshot\n2. **New build?** Show screenshot to user and ask for design approval before continuing\n3. Once approved (or edit/fix): `pulse_design_review` (if intake ran) → `pulse_layout_review <url>` → `/verify`\nDo not run Lighthouse before the user approves the design. Do not report done until `/verify` passes.'
+    output += '\n\n---\n**Next: browser check sequence** (do not skip)\n1. `pulse_fetch_page` → screenshot\n2. **New page?** Show screenshot to user and ask for design approval before continuing\n3. Once approved (or edit/fix): `pulse_design_review` (if intake ran) → `pulse_layout_review <url>` → `/verify`\nDo not run Lighthouse before the user approves the design. Do not report done until `/verify` passes.'
   }
 
   return output
