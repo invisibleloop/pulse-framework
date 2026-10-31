@@ -45,9 +45,11 @@ const isNum = v => typeof v === 'number' && Number.isFinite(v)
  * Empty when both devices meet the bar.
  *
  * @param {string} reportDir
+ * @param {number|null} [specMtimeMs] when the page's spec file was last written; a report saved before that
+ *   describes an earlier version of the page
  * @returns {string[]}
  */
-function reportProblems(reportDir) {
+function reportProblems(reportDir, specMtimeMs = null) {
   const newest = {}
   let withoutDevice = 0
   for (const f of fs.readdirSync(reportDir).filter(f => f.endsWith('.json'))) {
@@ -67,6 +69,9 @@ function reportProblems(reportDir) {
     if (!rec) {
       problems.push(`no ${device} report (save it with \`npx --no-install pulse save-report --device ${device}\`)`)
       continue
+    }
+    if (specMtimeMs !== null && newest[device].mtime < specMtimeMs) {
+      problems.push(`${device}: the page changed after this report was saved. Run Lighthouse again on the page as it is now, then save the report`)
     }
     for (const key of MUST_BE_100) {
       const v = rec.scores?.[key]
@@ -134,10 +139,13 @@ export function writeStamp(root, { route, mode } = {}) {
       }
     }
 
-    const problems = reportProblems(reportDir)
+    // A report older than the spec was measured on an earlier version of the page.
+    const specFile = specFileForRoute(root, route)
+    let specMtime = null
+    try { if (specFile) specMtime = fs.statSync(specFile).mtimeMs } catch { /* spec not readable: no age check */ }
+    const problems = reportProblems(reportDir, specMtime)
     // A page with a criteria file cannot be stamped while a criterion has no test that names it.
     // A page without the file is not asked for one here: pulse_review warns about that.
-    const specFile = specFileForRoute(root, route)
     const unmet    = specFile ? acceptanceProblems(acceptanceStatus(specFile), path.basename(specFile)) : []
     if (problems.length > 0 || unmet.length > 0) {
       const sections = []

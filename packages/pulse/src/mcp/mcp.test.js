@@ -492,6 +492,16 @@ test('the guides say a generated test title is not read, and any spread fails th
   assert(/Any spread fails the build for a page with a boot bundle, even when the base object holds no server code/.test(spec))
 })
 
+test('the workflow asks for a criterion per stated requirement; verify reports changes from the plan and re-running Lighthouse after a spec edit', () => {
+  // Found in a demo: "works without JavaScript" had no criterion; a plan changed silently; a spec edit after Lighthouse was stamped.
+  const wf = fs.readFileSync(path.join(agentDir, 'workflow.md'), 'utf8')
+  const verify = fs.readFileSync(path.join(agentDir, 'commands', 'verify.md'), 'utf8')
+  assert(/Write a criterion for every requirement the user stated, in their own words/.test(wf))
+  assert(/with JavaScript off, the visitor can still do the task/.test(wf))
+  assert(/Changes from the plan: anything you built differently from the plan the user approved/.test(verify))
+  assert(/If a fix changes the spec file, run Lighthouse again \(steps 6 to 9a\) before the stamp/.test(verify))
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
