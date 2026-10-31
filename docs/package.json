@@ -14,6 +14,6 @@
   },
   "dependencies": {
     "@invisibleloop/pulse": "file:../packages/pulse",
-    "glob": "^11.0.0"
+    "glob": "^14.0.3"
   }
 }
