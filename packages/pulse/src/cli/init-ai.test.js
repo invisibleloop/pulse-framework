@@ -37,7 +37,7 @@ test('configTargets: Claude Desktop uses each system\'s own path, and says to qu
 })
 
 test('configTargets: Windsurf is not writable, because its docs name two files', () => {
-  const t = configTargets('windsurf', { root: '/p', home: '/h', platform: 'linux', xdg: undefined })
+  const t = configTargets('windsurf', { root: '/p', home: '/h', platform: 'linux', xdg: '' })
   assert.equal(t.writable, false)
   assert.deepEqual(t.files.map(f => f.file), [path.join('/h', '.config', 'devin', 'mcp_config.json'), path.join('/h', '.codeium', 'windsurf', 'mcp_config.json')])
   assert.match(t.note, /two files/)
