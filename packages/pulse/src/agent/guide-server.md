@@ -179,6 +179,7 @@ export default {
 - Escape user-submitted values before interpolating them into HTML (`escHtml`).
 - **Progressive enhancement:** add `data-action="send"` to the same form — hydrated visitors get the async action with no page reload; no-JS visitors fall back to the POST.
 - Multi-instance deployments: pass a stable `secret` to `createServer` (e.g. from an env var) so CSRF tokens issued by one instance validate on another.
+- **A double click sends the form twice, and the CSRF token does not stop it.** The token is not single-use. To save once, put a random key in a hidden field when the form renders. Have `submit` refuse a key it has already saved.
 - **On a longer page, a form mid-page needs to scroll the success/error state into view after the redirect.** The 303 lands the browser at the top of the page — a success message rendered next to the form (or anywhere below the fold) is invisible until the visitor scrolls down manually, which they have no reason to do after just submitting. Give the form section an `id`, add `${server.form?.sent ? '<script nonce=\"${server.nonce}\">document.getElementById(\"contact-form\").scrollIntoView()</script>' : ''}` right after it, or simplest: `<form id="contact-form" method="POST">`. Don't skip this on a short/single-purpose page (the form IS the page, nothing to scroll past) — it only matters once the form sits below other content.
 
 ## Server-side data persistence — outside the store and `spec.persist`

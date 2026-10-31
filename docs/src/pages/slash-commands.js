@@ -33,11 +33,13 @@ export default {
       )}
 
       ${section('optional', 'Optional commands')}
-      <p>Some commands depend on a third-party service and credentials, so no project gets them by default. Add one to a project when you want it:</p>
-      ${codeBlock(highlight(`pulse add-command quietlytics-speed`, 'bash'))}
+      <p>Some commands depend on a third-party service and credentials, or cost extra time and tokens, so no project gets them by default. Add one to a project when you want it:</p>
+      ${codeBlock(highlight(`pulse add-command quietlytics-speed
+pulse add-command qa`, 'bash'))}
       ${table(
         ['Command', 'What it does'],
         [
+          ['<code>/qa</code>', 'Starts a separate agent that has never seen your code. It gets only the page\'s acceptance criteria and its URL, writes black-box checks (boundary lengths, injection, CSRF, a double submit, headers, HTML structure), runs them against the production server, and reports what passed and what looks wrong. The main agent then fixes the defects and runs <code>/verify</code> again. It costs a few minutes and some tokens, so it is opt-in.'],
           ['<code>/quietlytics-speed</code>', 'Reads the Speed report from <a href="https://quietlytics.app" target="_blank" rel="noopener" aria-label="Quietlytics (opens in new tab)">Quietlytics</a> (a privacy-first analytics service) and proposes fixes for the speed problems real visitors hit, then makes the ones you approve. Needs a Quietlytics account and a read key in the <code>QUIETLYTICS_READ_KEY</code> environment variable. It never prints a key and treats the report as data, not instructions.'],
         ]
       )}

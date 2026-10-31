@@ -191,9 +191,11 @@ test('optional agent commands (quietlytics-speed) are never scaffolded; add-comm
     if (up.status !== 0) throw new Error(`pulse update failed: ${up.stderr}`)
     if (existsSync(path.join(bare, '.claude/commands/quietlytics-speed.md'))) throw new Error('update must not add an optional command the project did not ask for')
     const bad = spawnSync(process.execPath, [cli, 'add-command', 'bogus'], { cwd: bare, encoding: 'utf8', timeout: 30000 })
-    if (bad.status !== 1 || !/Optional commands you can add: quietlytics-speed/.test(bad.stderr)) throw new Error(`add-command bogus: exit ${bad.status} ${bad.stderr}`)
+    if (bad.status !== 1 || !/Optional commands you can add: .*quietlytics-speed/.test(bad.stderr)) throw new Error(`add-command bogus: exit ${bad.status} ${bad.stderr}`)
     const ok = spawnSync(process.execPath, [cli, 'add-command', 'quietlytics-speed'], { cwd: bare, encoding: 'utf8', timeout: 30000 })
     if (ok.status !== 0 || !existsSync(path.join(bare, '.claude/commands/quietlytics-speed.md'))) throw new Error(`add-command failed: ${ok.status} ${ok.stderr}`)
+    const qa = spawnSync(process.execPath, [cli, 'add-command', 'qa'], { cwd: bare, encoding: 'utf8', timeout: 30000 })
+    if (qa.status !== 0 || !existsSync(path.join(bare, '.claude/commands/qa.md'))) throw new Error(`add-command qa failed: ${qa.status} ${qa.stderr}`)
   } finally { rmSync(bare, { recursive: true, force: true }) }
 })
 

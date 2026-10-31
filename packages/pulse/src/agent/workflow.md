@@ -100,6 +100,7 @@ Do not ask about details you can decide safely, such as spacing or border radius
 - A form: each validation rule, with its limits. Name the field and the number, for example "a message over 2000 characters".
 - A form: the save or send failing. The visitor sees an error, keeps what they typed, and sees no confirmation.
 - A form: each error is linked to its field, so a screen reader announces it.
+- A form: submitted twice, for example by a double click. The message is saved once, or the visitor is told it was already sent.
 - A form: a POST without a valid CSRF token is refused, and markup typed into a field is shown as text.
 - A page that lists data: the empty list, and the fetch failing.
 - A page behind a login: a visitor who may not see it.
