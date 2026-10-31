@@ -205,6 +205,9 @@ function writePage(root, { criteria, tests, route = '/dashboard' }) {
   const dir = path.join(root, 'src', 'pages')
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(path.join(dir, 'dashboard.js'), `export default { route: '${route}' }`)
+  // the page was written before the Lighthouse reports were saved
+  const earlier = new Date(Date.now() - 60 * 1000)
+  fs.utimesSync(path.join(dir, 'dashboard.js'), earlier, earlier)
   if (criteria !== undefined) fs.writeFileSync(path.join(dir, 'dashboard.acceptance.md'), criteria)
   if (tests !== undefined) fs.writeFileSync(path.join(dir, 'dashboard.test.js'), tests)
 }
@@ -254,6 +257,31 @@ test('a page with no criteria file is stamped as before: the file is asked for b
   const root = tmpProject()
   writePassingPair(root, 'dashboard')
   writePage(root, {})
+  assert.equal(writeStamp(root, { route: '/dashboard', mode: 'full' }).stamped, true)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('full mode refuses when the page changed after the Lighthouse reports were saved', () => {
+  // A demo agent edited the meta description after Lighthouse and the stamp still passed.
+  const root = tmpProject()
+  writePassingPair(root, 'dashboard')
+  writePage(root, {})
+  const later = new Date(Date.now() + 5000)
+  fs.utimesSync(path.join(root, 'src', 'pages', 'dashboard.js'), later, later)
+  const r = writeStamp(root, { route: '/dashboard', mode: 'full' })
+  assert.equal(r.stamped, false)
+  assert.match(r.reason, /desktop: the page changed after this report was saved/)
+  assert.match(r.reason, /mobile: the page changed after this report was saved/)
+  assert.match(r.reason, /Run Lighthouse again/)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
+test('full mode stamps once the reports are saved again after the last edit', () => {
+  const root = tmpProject()
+  writePage(root, {})
+  const earlier = new Date(Date.now() - 5000)
+  fs.utimesSync(path.join(root, 'src', 'pages', 'dashboard.js'), earlier, earlier)
+  writePassingPair(root, 'dashboard')
   assert.equal(writeStamp(root, { route: '/dashboard', mode: 'full' }).stamped, true)
   fs.rmSync(root, { recursive: true, force: true })
 })

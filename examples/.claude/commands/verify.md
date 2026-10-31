@@ -124,6 +124,8 @@ Use `mcp__chrome-devtools__list_console_messages` — report any errors or unexp
 
 Call `pulse_review` with the spec file path. Work through every item the review returns. Fix anything that fails before proceeding.
 
+If a fix changes the spec file, run Lighthouse again (steps 6 to 9a) before the stamp. The reports describe the page as it was when they were saved, and `pulse_stamp` refuses reports saved before the last edit.
+
 `pulse_review` checks only some items mechanically (the lines marked ✓, ⚠ or ✗ at the top). The checklist below them is for you to work through. Keep a list: for each checklist section, note what you fixed, or why an item does not apply. Step 15 asks for it.
 
 ### 12. Close extra browser tabs
@@ -142,7 +144,7 @@ If it returns none, continue — `pulse_stamp` in the next step auto-resolves an
 
 Call `pulse_stamp` with `{ route: "<this page's route>", mode: "full" }` in full mode, or just `{ route: "<this page's route>" }` in quick mode (quick never runs Lighthouse, so there's nothing to check). This writes `.pulse-verified` via the MCP server, which is more reliable than the `date +%s` shell command — the MCP write always lands after all spec edits, avoiding the mtime race condition that can cause the stop hook to block immediately after verification. It also marks any error-journal entries for this route as resolved.
 
-**In full mode, `pulse_stamp` refuses to write the stamp unless it finds, for this route and from the last 10 minutes, a saved desktop report and a saved mobile report that each meet the bar** (step 9a genuinely happened, and the numbers show 100/100/100, a measured LCP and a CLS of 0.00). The refusal lists what is missing or failing. Fix the page or measure the missing number, save the report again, and call `pulse_stamp` again — do not work around the refusal any other way.
+**In full mode, `pulse_stamp` refuses to write the stamp unless it finds, for this route and from the last 10 minutes, a saved desktop report and a saved mobile report that each meet the bar** (step 9a genuinely happened, the page has not changed since, and the numbers show 100/100/100, a measured LCP and a CLS of 0.00). The refusal lists what is missing or failing. Fix the page or measure the missing number, save the report again, and call `pulse_stamp` again — do not work around the refusal any other way.
 
 **It also refuses when the page has a `<name>.acceptance.md` file and a criterion has no test that names it.** Write the missing test from the criterion. If the page does not do what the criterion says, fix the page, or ask the user whether the criterion is wrong.
 
@@ -155,6 +157,7 @@ Summarise:
 - Visual: desktop screenshot — any issues found and fixed
 - Console: any errors
 - Review: the mechanical results, then a list with one line per checklist section: what you fixed, or why it does not apply. Do not summarise the sections as one sentence.
+- Changes from the plan: anything you built differently from the plan the user approved, for example a different success state or storage. Say "none" if there are none.
 - Acceptance: a table with one row per criterion, in two columns: the criterion ID and the title of the test that proves it. If the page has no criteria file, say so.
 - Error journal: clean, or resolved N entries
 - **Full mode only:** bundle content check (clean, or issues found and fixed), Lighthouse desktop/mobile scores, whether both were saved via `pulse save-report --device` (step 9a), mobile layout check, LCP and CLS values (say which were measured and how)
