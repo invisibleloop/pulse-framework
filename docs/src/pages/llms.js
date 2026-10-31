@@ -17,7 +17,7 @@ export default {
     ...NAV.flatMap(({ section, items }) => [
       `## ${section}`,
       '',
-      ...items.map(item => `- [${item.label}](${ORIGIN}${item.href})`),
+      ...items.map(item => `- [${item.label}](${ORIGIN}${item.href})${item.note ? `: ${item.note}` : ''}`),
       '',
     ]),
   ].join('\n'),

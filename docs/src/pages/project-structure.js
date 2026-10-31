@@ -82,6 +82,26 @@ export default {
   view: () => card({ title: 'Hello', body: 'Welcome to Pulse' }),
 }`, 'js'), 'src/pages/home.js')}
 
+      ${section('split-view', 'Splitting a long view')}
+      <p>When a view grows long, split it into component functions in <code>src/components/</code>. Pass them the part of <code>state</code> or <code>server</code> they need, and call them from <code>view</code>:</p>
+
+      ${codeBlock(highlight(`// src/components/order-rows.js
+import { escHtml } from '@invisibleloop/pulse/html'
+
+export const orderRows = (orders) =>
+  orders.map(o => \`<tr><td>\${escHtml(o.id)}</td><td>\${escHtml(o.total)}</td></tr>\`).join('')`, 'js'), 'src/components/order-rows.js')}
+
+      ${codeBlock(highlight(`// src/pages/orders.js
+import { orderRows } from '../components/order-rows.js'
+
+export default {
+  route: '/orders',
+  server: { orders: async () => loadOrders() },
+  view: (state, server) => \`<main id="main-content"><table>\${orderRows(server.orders)}</table></main>\`,
+}`, 'js'), 'src/pages/orders.js')}
+
+      ${callout('note', 'This is the supported way to share view code. Do not share a base spec object with a spread or a factory function. For a page that ships JavaScript, the build must read the spec\'s keys directly to remove server code, and it stops with an error when it cannot.')}
+
       ${section('one-file-per-page', 'One file per page')}
       <p>Pulse enforces <strong>one spec per file</strong>. Every page is self-contained — state, view, mutations, actions, and validation in one place. This is not a style preference. It is how the framework eliminates the question of where things live.</p>
 

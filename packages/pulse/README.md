@@ -57,13 +57,19 @@ Full documentation: **[pulseframework.dev](https://pulseframework.dev)**
 
 **No client-side dependencies.** Pulse ships no runtime framework to the browser — only a small hydration bundle that binds your spec's mutations and actions to the DOM (pages with no client behaviour ship none).
 
+**Forms work without JavaScript.** A spec with a `submit` function accepts a plain HTML form POST, with CSRF protection and a redirect after success. Hydrated visitors get the same form without a page reload.
+
+**Shared view code is plain functions.** A long view splits into component functions in `src/components/` that pages import. There is no template language to learn.
+
+**Live updates are built in.** The server can push shared data (stock, scores, announcements) to every open page over server-sent events, with `live: true` and `pushStore`. Per-user streaming, such as chat text token by token, is not built in yet.
+
 **AI-native.** The CLI starts an MCP server alongside the dev server, giving the coding agent tools to create pages, validate specs, and run Lighthouse audits — all without leaving the editor. The agent tools run on the MCP SDK, which is a development dependency of your project (new projects include it), so a production install does not carry it.
 
 ## CLI
 
 ```bash
 pulse              # scaffold a new project or start AI session
-pulse dev          # dev server (default port 3000)
+pulse dev          # dev server (port 3000, or the next free port)
 pulse build        # production build → public/dist/
 pulse start        # production server
 pulse update       # upgrade Pulse to the latest version and refresh copied assets
@@ -79,12 +85,17 @@ Full reference at [pulseframework.dev](https://pulseframework.dev):
 - **Server data** — async data fetching before render
 - **Routing** — dynamic routes and URL params
 - **Streaming SSR** — shell + deferred segments
+- **Global store and live updates** — state shared between pages, and server-pushed updates over SSE
+- **Forms** — server-side forms that work with JavaScript off, with CSRF protection
+- **Project structure** — folders, and shared components in `src/components/`
+- **Testing** — render a page's view in plain Node, with no browser
 - **Caching** — per-page TTL and HTTP cache headers
 - **Guard** — authentication and authorisation before data fetches
 - **Validation & constraints** — declarative form validation and state bounds
 - **Raw responses** — RSS feeds, sitemaps, JSON APIs
 - **Markdown** — built-in parser for blog posts and docs pages, zero browser JS
 - **Performance** — how the framework hits Lighthouse 100
+- **Configuration and deployment** — `pulse.config.js`, `createServer` options and hosting
 - **UI components** — 40+ built-in components
 
 ## Reporting framework bugs

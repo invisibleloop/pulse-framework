@@ -203,6 +203,7 @@ export default {
       <p>When you own the server entry, <code>createServer</code> also returns the handle directly: <code>const { pushStore } = await createServer(pages, { live: true })</code>.</p>
       <p>The browser side is automatic: pages that declare <code>store: [...]</code> keys open a single <code>EventSource</code> connection per tab (default endpoint <code>/__pulse/live</code>). The connection survives client-side navigations and reconnects natively after network interruptions. Pages without store keys never connect.</p>
       ${callout('warning', 'The live channel is a <strong>broadcast</strong> — every connected client receives every patch. Push <strong>shared</strong> data only (stock, announcements, scores). For per-user updates, use page actions with <code>_storeUpdate</code> instead.')}
+      ${callout('note', 'Per-user streaming is not built in yet. For example, there is no way to stream text token by token to one visitor, as a chat does. The live channel only broadcasts shared data, and an action returns its whole result at once.')}
       ${callout('note', 'Views must handle keys that haven\'t arrived yet — the first patch may land seconds after page load. Write <code>server.stock ?? \'—\'</code>, not <code>server.stock</code>. The page must also be hydrated (have mutations or actions); purely server-rendered pages have no JavaScript to receive patches.')}
 
       ${section('caching', 'Caching and performance')}
