@@ -14,11 +14,11 @@ If `--quick` appears anywhere in $ARGUMENTS, run in quick mode (steps 6 to 9a ar
 
 If $ARGUMENTS is provided, use it (minus `--quick` if present) as the file path or route. Otherwise, identify the most recently edited spec file from context.
 
-### 2. Design approval (new builds only)
+### 2. Design approval (every new page)
 
 **Skip this step for edits, bug fixes, or "add X to existing Y" tasks.**
 
-If this is a new page build (came through `pulse_intake` or `build-page`):
+If this task created a new page, whether or not `pulse_intake` ran, this step applies. A plain form needs it too: the user has not seen the page yet.
 
 1. Take a screenshot and describe what you see to the user.
 2. **Call `pulse_await_approval` first**, then ask the user: "Happy with the design and layout, or would you like any changes before I run Lighthouse?" — if your host provides a question tool (e.g. AskUserQuestion), offer the choices `["Yes, looks good — proceed", "I'd like some changes first"]`; otherwise ask in plain prose. Always call the tool before asking, whichever way you ask: in some hosts (including Claude Code) even a question tool ends the turn and fires the Stop hooks. The marker is harmless if the turn doesn't end — it is consumed when the user replies.

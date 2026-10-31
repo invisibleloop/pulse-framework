@@ -225,7 +225,7 @@ Write each file using the **Write tool** — not `pulse_create_page`. This shows
 Writing src/pages/my-page.js...
 ```
 
-For Tier 2 and 3, also write `src/pages/<name>.acceptance.md`. Use one line per criterion: `- AC1: <sentence>`.
+For Tier 2 and 3, also write `src/pages/<name>.acceptance.md`. Use one line per criterion: `- AC1: <sentence>`. A criterion goes in the file of the page it describes, because the check reads only that page's test file. The 404 page gets its own `not-found.acceptance.md`, and its test goes in `not-found.test.js`.
 
 After the Write tool completes, call `pulse_create_page(name)` to register the page. Only after that call succeeds output:
 
@@ -262,9 +262,9 @@ Do this before every screenshot, console check, or visual inspection. Never debu
 
 ---
 
-### Phase 5a — Design approval *(new builds from `pulse_intake` only)*
+### Phase 5a — Design approval *(every new page)*
 
-**This phase applies when `pulse_intake` ran** — i.e. you are building a new page or site from scratch, not editing an existing one. For edits, bug fixes, or "add X to existing Y", skip to Phase 5b immediately.
+**This phase applies to every new page**, whether or not `pulse_intake` ran. A plain form needs it too: the user has not seen the page yet. For edits, bug fixes, or "add X to existing Y", skip to Phase 5b immediately.
 
 1. Take a screenshot of the built page
 2. Describe what you see in 2–3 plain sentences — layout structure, visual tone, key sections. Do NOT list features or code details.

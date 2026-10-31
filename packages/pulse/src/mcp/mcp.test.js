@@ -502,6 +502,19 @@ test('the workflow asks for a criterion per stated requirement; verify reports c
   assert(/If a fix changes the spec file, run Lighthouse again \(steps 6 to 9a\) before the stamp/.test(verify))
 })
 
+test('design approval applies to every new page, not only builds that ran pulse_intake; criteria go in the file of the page they describe', () => {
+  // A demo skipped the gate because verify.md tied it to pulse_intake, and a plain form never ran intake.
+  const read = (rel) => fs.readFileSync(path.join(agentDir, rel), 'utf8')
+  for (const rel of ['workflow.md', 'identity.md', 'commands/verify.md', 'skills/verify/SKILL.md']) {
+    const src = read(rel)
+    assert(/every new page/.test(src), `${rel} must say design approval is for every new page`)
+    assert(!/new builds (from `pulse_intake` )?only/.test(src), `${rel} must not tie design approval to pulse_intake`)
+  }
+  assert(/whether or not `pulse_intake` ran/.test(read('commands/verify.md')))
+  assert(/A criterion goes in the file of the page it describes/.test(read('workflow.md')))
+  assert(/not-found\.acceptance\.md/.test(read('workflow.md')))
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
