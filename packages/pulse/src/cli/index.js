@@ -30,6 +30,7 @@ import { killPulseServerOnPort } from './process-utils.js'
 import { isInstalledInProject, projectCopyDir, linkedToInstalledCopy, installCommand, devInstallCommand, notInProjectNotice, latestPublished, compareVersions, confirm, PACKAGE } from './update.js'
 import { loadConfigOrExit } from './config.js'
 import { mcpDepsMissingFor, mcpMissingMessage, mcpServerLaunch, mcpInstallSpecs, shellQuote } from '../mcp/deps.js'
+import { CLIENTS, serverEntry, configTargets, snippet, writeConfig, ignoreInGit } from './init-ai.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { commandsToSync, addCommand, optionalCommandNames } from './commands.js'
 import { spawnCommand, spawnCommandSync } from './spawn.js'
@@ -400,6 +401,64 @@ async function launchCopilotSession(root, mcpServerArgv, spawn, os) {
 }
 
 // ---------------------------------------------------------------------------
+// pulse init-ai <client> — MCP config for a client that pulse does not launch
+// ---------------------------------------------------------------------------
+
+async function runInitAi(root) {
+  const client = args[1]
+  if (!CLIENTS.includes(client)) {
+    console.error(`\n  ${client ? `Unknown client "${client}".` : 'Which client?'} Clients: ${CLIENTS.join(', ')}.\n  Example: pulse init-ai cursor\n`)
+    process.exit(1)
+  }
+  if (!isPulseProject(root)) {
+    console.error('\n  Not a Pulse project. Run from your project root.\n')
+    process.exit(1)
+  }
+  const missingMcp = mcpDepsMissingFor(root)
+  if (missingMcp.length) {
+    console.error('\n  ' + mcpMissingMessage(missingMcp, { withPulse: !mcpServerLaunch(root).viaProject }).split('\n').join('\n  ') + '\n')
+    process.exit(1)
+  }
+
+  const os      = await import('os')
+  const launch  = mcpServerLaunch(root)
+  const entry   = serverEntry(client, { root, serverPath: launch.serverPath, nodeArgs: launch.nodeArgs })
+  const targets = configTargets(client, { root, home: os.homedir() })
+  const write   = args.includes('--write')
+
+  if (!write) {
+    console.log(`\n  ⚡ Pulse MCP entry for ${client}\n`)
+    console.log(snippet(entry).split('\n').map(l => '  ' + l).join('\n'))
+    console.log(`\n  Put it in ${targets.files.length > 1 ? 'one of these files' : 'this file'} (merge it into "mcpServers" if the file exists):`)
+    for (const f of targets.files) console.log(`    ${f.label.padEnd(10)} ${f.file}`)
+    if (targets.note) console.log(`\n  ${targets.note}`)
+    console.log(`\n  ${targets.after}`)
+    if (targets.writable) console.log(`\n  Or let Pulse merge it in: pulse init-ai ${client} --write${client === 'cursor' ? ' [--global]' : ''}`)
+    console.log('')
+    return
+  }
+
+  if (!targets.writable) {
+    console.error(`\n  ${targets.note}\n\n  Add this entry yourself:\n`)
+    console.error(snippet(entry).split('\n').map(l => '  ' + l).join('\n') + '\n')
+    process.exit(1)
+  }
+  const target = client === 'cursor' && !args.includes('--global') ? targets.files[0] : targets.files[targets.files.length - 1]
+  const result = writeConfig(target.file, entry)
+  if (!result.wrote) {
+    console.error(`\n  Not written: ${result.reason}.\n`)
+    process.exit(1)
+  }
+  console.log(`\n  ⚡ ${result.replaced ? 'Updated' : 'Added'} the pulse entry in ${target.file}`)
+  if (result.backup) console.log(`  The file as it was is saved at ${result.backup}`)
+  if (client === 'cursor' && target.label === 'project' && ignoreInGit(root, '.cursor/mcp.json')) {
+    console.log('  Added .cursor/mcp.json to .gitignore, because the entry holds paths on this machine.')
+  }
+  console.log('  The entry holds the path to this Node and this project. Run the command again after you change Node version or move the project.')
+  console.log(`\n  ${targets.after}\n`)
+}
+
+// ---------------------------------------------------------------------------
 // pulse stop
 // ---------------------------------------------------------------------------
 
@@ -723,6 +782,7 @@ async function printHelp() {
     ${c.cyan('check-bundles')}    inspect public/dist/ bundle contents ${c.dim('(requires prior build)')}
     ${c.cyan('review')} ${c.dim('<file>')}     run the mechanized review checklist ${c.dim('[--quick]')}
     ${c.cyan('update')}           upgrade to the latest version, then re-copy pulse-ui assets ${c.dim('[--no-install]')}
+    ${c.cyan('init-ai')} ${c.dim('<client>')}  MCP config for Cursor, Windsurf or Claude Desktop ${c.dim('(cursor | windsurf | claude-desktop) [--write]')}
     ${c.cyan('add-command')} ${c.dim('<name>')} add an optional agent slash command to this project ${c.dim('(e.g. quietlytics-speed)')}
 
   ${c.bold('Options:')}
@@ -804,6 +864,9 @@ switch (command) {
     break
   case 'update':
     await runUpdate(CWD)
+    break
+  case 'init-ai':
+    await runInitAi(CWD)
     break
   case 'add-command': {
     const name = args[1]

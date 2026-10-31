@@ -60,6 +60,15 @@ pulse`, 'bash'))}
 }`, 'js'))}
       <p>When using Copilot, project skills (<code>build-page</code> and <code>verify</code>) are available via the <code>/skills</code> command inside the Copilot CLI session. The Pulse MCP server is automatically injected into your Copilot MCP config for the duration of the session and removed cleanly on exit.</p>
 
+      ${section('other-clients', 'Using Cursor, Windsurf or Claude Desktop')}
+      <p><code>pulse</code> starts Claude Code or Copilot for you. Cursor, Windsurf and Claude Desktop start from their own apps and read their own config files, so Pulse gives you the entry to add. From your project root:</p>
+      ${codeBlock(highlight(`pulse init-ai cursor            # prints the entry and the file it goes in
+pulse init-ai cursor --write    # merges it into .cursor/mcp.json (add --global for ~/.cursor/mcp.json)
+pulse init-ai claude-desktop --write
+pulse init-ai windsurf          # prints the entry; you add it yourself`, 'bash'))}
+      <p>With <code>--write</code>, Pulse keeps every other server in the file, saves the old file as <code>mcp.json.pulse-backup</code> next to it, and refuses a file that is not valid JSON. It does not write Windsurf's config, because Windsurf's docs name two files and do not say which one applies to your install. The entry holds the path to your Node and your project, so run the command again after you change Node version or move the project.</p>
+      ${callout('note', 'Claude Desktop reads its config only when it starts: quit it completely and open it again. In Cursor, turn the server on under Customize in the sidebar.')}
+
       ${section('first-build', 'Build your first page')}
       <p>Once Claude opens, start the dev server and ask for something:</p>
       ${codeBlock(highlight(`/pulse-dev
