@@ -103,6 +103,7 @@ stream: {
 })`, 'js'))}
       <p>Even with global streaming enabled, only specs that declare a <code>stream</code> field will use chunked responses. All other specs use regular buffered SSR.</p>
 
+      ${callout('note', 'Streaming sends one page in parts. To update pages that are already open, see <a href="/store#live">live updates</a>: the server broadcasts shared data to every connected browser.')}
       ${callout('tip', 'Streaming is most beneficial on pages with large datasets or slow queries. For most pages, the speed of Pulse\'s synchronous rendering means streaming adds unnecessary complexity.')}
     `,
   }),
