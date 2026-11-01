@@ -167,6 +167,13 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   ```
   `_storeUpdate` only merges into the store — it does not appear in the page's own state. The rest of the return is merged into local state as normal. Use this instead of a full-page reload when a user action changes shared data (theme, cart count, user profile, etc.).
 
+### Images and LCP
+
+- **The largest image above the fold loads first.** That is usually the hero, or the first image on a list page. Mark it `uiImage({ loading: 'eager', fetchpriority: 'high' })`, or `img({ priority: true })` from `@invisibleloop/pulse/image`. `uiImage` is lazy by default, and a lazy image above the fold delays the Largest Contentful Paint.
+- **Every other image stays lazy.** An image that appears only later (a menu, a carousel slide) may also take `fetchpriority: 'low'`. In a long list, only the first few images load eagerly.
+- **Every image has `width` and `height`, or a `ratio`.** The browser then reserves its space and the page does not shift as images arrive. CLS must stay at 0.00.
+- **A hand-written `<img>` follows the same rules.** Add `loading`, `fetchpriority`, `width`, `height` and `alt` yourself.
+
 ### Accessibility
 
 - Interactive elements without visible text have an `aria-label`.

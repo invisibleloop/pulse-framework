@@ -156,7 +156,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | `progress` | `value`, `max` (100), `label`, `showLabel`, `showValue`, `variant`, `size` |
 | `breadcrumbs` | `items` ([{label,href}] — last item has no href), `separator` |
 | `stepper` | `steps` (array of label strings), `current` (0-based) |
-| `uiImage` | `src`, `alt`, `caption`, `ratio`, `rounded`, `pill`, `width`, `height`, `maxWidth` |
+| `uiImage` | `src`, `alt`, `caption`, `ratio`, `rounded`, `pill`, `width`, `height`, `maxWidth`, `loading` (`'lazy'` by default; use `'eager'` for the largest image above the fold), `fetchpriority` (`'high'` on that same image) |
 | `pullquote` | `quote`, `cite`, `size` (md/lg) |
 
 Image galleries, photo grids, logo/trust marquees, and timelines have no dedicated component — build them with `grid()` / `stack()` + `uiImage()` and raw HTML (creative override), or a CSS-only scrolling strip for marquee-style content.

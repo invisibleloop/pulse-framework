@@ -600,6 +600,16 @@ test('the guides say Pulse adds the skip link to every page, and that a page can
   assert(/Pulse adds a "Skip to main content" link to every page\. Write your own only to change its text or look/.test(templates))
 })
 
+test('the checklist and components guide tell agents to mark the LCP image eager and high priority', () => {
+  // uiImage is lazy by default; the benchmark's home page LCP swung between 0.9 s and 1.7 s across runs.
+  const checklist = fs.readFileSync(path.join(agentDir, 'checklist.md'), 'utf8')
+  const components = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
+  assert(/### Images and LCP/.test(checklist))
+  assert(/uiImage\(\{ loading: 'eager', fetchpriority: 'high' \}\)/.test(checklist) && /img\(\{ priority: true \}\)/.test(checklist), 'checklist: both ways to mark it')
+  assert(/`uiImage` is lazy by default/.test(checklist), 'checklist: the lazy default is called out')
+  assert(/`loading` \(`'lazy'` by default/.test(components) && /`fetchpriority` \(`'high'`/.test(components), 'components: the row lists both options')
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
