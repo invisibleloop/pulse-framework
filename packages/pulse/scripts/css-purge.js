@@ -14,6 +14,10 @@
 // without this a built app loses the rules that hide the injected skip link (#161).
 export const FRAMEWORK_INJECTED_CLASSES = ['pulse-skip-link']
 
+// `word-${expr}` and `'word-' + expr`: the fixed start (group 1) of a class name built at run time.
+const DYNAMIC_PREFIX_TEMPLATE = /(?<![\w-])([A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)*[-_]+)\$\{/g
+const DYNAMIC_PREFIX_CONCAT   = /['"`]([A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)*[-_]+)['"`]\s*\+/g
+
 export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
   const used = new Set(FRAMEWORK_INJECTED_CLASSES)
 
@@ -116,6 +120,23 @@ export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
       }
     }
   }
+
+  // Class names built at run time: `ui-btn--${variant}`, `u-text-${size}`, `'tok-' + kind`. The
+  // finished name is never in the source, so the scans above cannot find it. What the source does
+  // show is the fixed start of the name, so keep every rule whose class starts with it. Without
+  // this, a build that does not render the pages loses the style of every such class. A prefix
+  // shorter than four characters is too broad to trust ('ui-', 'u-').
+  const dynamicPrefixes = new Set()
+  for (const js of jsContents) {
+    for (const re of [DYNAMIC_PREFIX_TEMPLATE, DYNAMIC_PREFIX_CONCAT]) {
+      re.lastIndex = 0
+      let m
+      while ((m = re.exec(js)) !== null) {
+        if (m[1].length >= 4) dynamicPrefixes.add(m[1])
+      }
+    }
+  }
+  if (dynamicPrefixes.size) used._dynamicPrefixes = [...dynamicPrefixes]
 
   // Apply safelist from pulse.config.js — css.safelist accepts strings or RegExp.
   // String entries are added directly; RegExp entries are matched against all
@@ -255,6 +276,10 @@ export function selectorUsed(selector, usedClasses) {
     // Check RegExp safelist patterns if any were provided
     const patterns = usedClasses._safelistPatterns
     if (patterns && patterns.some(re => re.test(subject))) return true
+
+    // A class that starts like a name the source builds at run time (`ui-btn--${variant}`)
+    const prefixes = usedClasses._dynamicPrefixes
+    if (prefixes && prefixes.some(p => subject.length > p.length && subject.startsWith(p))) return true
   }
 
   return false

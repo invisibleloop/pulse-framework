@@ -580,15 +580,17 @@ test('the checklist and styles guide carry the accessibility baseline: target si
   assert(/attrs: \{ autocomplete: 'email' \}/.test(components), 'components: the input autocomplete example')
 })
 
-test('the server guide says pulse build runs server fetchers, how to guard them, and how to switch the render off', () => {
-  // Two benchmark agents each had to find out, from source, that the build calls their data loaders.
+test('the server guide says pulse build does not render pages by default, what that removes, and how to opt in', () => {
+  // Two benchmark agents each had to find out, from source, that the build called their data loaders.
   const server = fs.readFileSync(path.join(agentDir, 'guide-server.md'), 'utf8')
   const styles = fs.readFileSync(path.join(agentDir, 'guide-styles.md'), 'utf8')
   assert(/## What `pulse build` runs/.test(server))
-  assert(/`ctx\.build` is `true`, `process\.env\.PULSE_BUILD` is `'1'`/.test(server), 'server: the build flags')
-  assert(/if \(ctx\.build\) return null/.test(server), 'server: the guard example')
-  assert(/css: \{ renderPages: false \}/.test(server) && /runs no fetcher/.test(server), 'server: the switch')
-  assert(/css: \{ renderPages: false \}/.test(styles), 'styles: the purge section links the switch')
+  assert(/It does not render the pages, so it calls no `server` fetcher and no data source/.test(server), 'server: the default')
+  assert(/`type-\$\{name\}`/.test(server) && /keeps every CSS rule that starts like a class name your code builds at run time/.test(server), 'server: run-time class names are kept')
+  assert(/css: \{ safelist: \['category-news'/.test(server) && /css: \{ renderPages: true \}/.test(server), 'server: both ways to keep a data-only class')
+  assert(/`ctx\.build` is `true`, `process\.env\.PULSE_BUILD` is `'1'`/.test(server) && /if \(ctx\.build\) return null/.test(server), 'server: the build flags and the guard')
+  assert(/Before version 0\.38\.0 the render was on by default/.test(server), 'server: the change is announced')
+  assert(/It does not render the pages, so a class that exists only in fetched data is removed/.test(styles) && /css: \{ renderPages: true \}/.test(styles), 'styles: the purge section matches')
 })
 
 test('the guides say Pulse adds the skip link to every page, and that a page can bring its own', () => {
