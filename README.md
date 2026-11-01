@@ -111,6 +111,7 @@ The guides an agent needs are Markdown files in this package. After `npm install
 | `guide-styles.md` | CSS, tokens, and the build's removal of unused CSS |
 | `guide-components.md` | the `@invisibleloop/pulse/ui` components |
 | `workflow.md` | how to plan and check a page |
+| `checklist.md` | the accessibility, image, security and form rules to check against. Read it once the page works, before you finish |
 
 Running `pulse` in a project serves the same files as MCP resources (`pulse://guide`).
 

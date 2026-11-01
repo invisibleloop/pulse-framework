@@ -610,6 +610,19 @@ test('the checklist and components guide tell agents to mark the LCP image eager
   assert(/`loading` \(`'lazy'` by default/.test(components) && /`fetchpriority` \(`'high'`/.test(components), 'components: the row lists both options')
 })
 
+test('agents are sent to the checklist late, and the styles guide they do read carries the image rules', () => {
+  // A benchmark agent read spec, routing, server and styles, never the checklist or components guide,
+  // so the LCP-image rule had to live in a file on its read path.
+  for (const readme of ['README.md', 'packages/pulse/README.md']) {
+    const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
+    assert(/\| `checklist\.md` \| the accessibility, image, security and form rules to check against\. Read it once the page works, before you finish \|/.test(src), `${readme}: lists the checklist and when to read it`)
+  }
+  const styles = fs.readFileSync(path.join(agentDir, 'guide-styles.md'), 'utf8')
+  assert(/## Images/.test(styles))
+  assert(/`loading="eager"` and `fetchpriority="high"`/.test(styles) && /priority: true/.test(styles), 'styles: the LCP image')
+  assert(/`loading="lazy"` and `decoding="async"`/.test(styles) && /`width` and `height`, or a `ratio`/.test(styles), 'styles: the other images')
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
