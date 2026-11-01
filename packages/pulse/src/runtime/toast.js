@@ -56,6 +56,10 @@ const TOAST_CSS = `
   opacity: 1;
   transform: translateX(0);
 }
+@media (prefers-reduced-motion: reduce) {
+  /* Fade only, no slide. The duration stays above zero so transitionend still removes the toast. */
+  .pulse-toast { transform: none; transition: opacity .01ms; }
+}
 .pulse-toast--success { background: #166534; }
 .pulse-toast--error   { background: #991b1b; }
 .pulse-toast--warning { background: #92400e; }

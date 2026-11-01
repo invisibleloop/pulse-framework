@@ -1241,3 +1241,34 @@ test('heading and prose class/size/color cannot break out of the attribute', () 
     assert.ok(!/<[a-z0-9]+[^>]*"\s+onmouseover=/.test(html) && html.includes('&quot; onmouseover'), html)
   }
 })
+
+// ─── accessibility baseline in the shipped CSS ──────────────────────────────
+
+import fs   from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const UI_DIR = path.dirname(fileURLToPath(import.meta.url))
+const UI_CSS = fs.readFileSync(path.join(UI_DIR, '..', '..', 'public', 'pulse-ui.css'), 'utf8')
+
+test('pulse-ui.css sets color-scheme from the theme, so native controls and scrollbars match', () => {
+  assert.match(UI_CSS, /:root\s*\{\s*color-scheme:\s*dark;\s*\}/, 'dark is the default scheme')
+  assert.match(UI_CSS, /\[data-theme="light"\]\s*\{\s*color-scheme:\s*light;\s*\}/, 'meta.theme light switches it')
+})
+
+test('pulse-ui.css respects prefers-reduced-motion: instant transitions (never zero), spinners slowed and not stopped', () => {
+  const block = UI_CSS.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}\n/)?.[0] ?? ''
+  assert(block, 'a reduced-motion block exists')
+  assert.match(block, /transition-duration:\s*\.01ms/, 'a tiny non-zero duration keeps transitionend firing')
+  assert.doesNotMatch(block, /transition-duration:\s*0s/, 'zero would stop transitionend')
+  assert.match(block, /\.ui-spinner\s*\{\s*animation-duration:\s*6s/, 'the spinner is slowed')
+  assert.match(block, /ui-progress--indeterminate[^{]*\{\s*animation-duration:\s*6s/, 'the indeterminate bar is slowed')
+  assert.doesNotMatch(block, /animation:\s*none|animation-name:\s*none/, 'an endless animation is never removed')
+})
+
+test('toasts fade and do not slide under reduced motion, and keep a non-zero transition so they are still removed', () => {
+  const toast = fs.readFileSync(path.join(UI_DIR, '..', 'runtime', 'toast.js'), 'utf8')
+  const block = toast.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  assert.match(block, /transform:\s*none/, 'no slide')
+  assert.match(block, /transition:\s*opacity\s*\.01ms/, 'a fade, non-zero so transitionend fires')
+})

@@ -11,6 +11,12 @@
  * e.g. --ui-accent falls back to --accent, then to a hardcoded default.
  */
 
+/* ─── Colour scheme ─────────────────────────────────────────────────────────
+   Tells the browser which theme the page uses, so scrollbars, checkboxes, selects and the
+   default page background match it. meta.theme sets data-theme on <html>; dark is the default. */
+:root                { color-scheme: dark; }
+[data-theme="light"] { color-scheme: light; }
+
 /* ─── UI tokens ─────────────────────────────────────────────────────────────
    All component styles reference --ui-* tokens only.
    Override these in :root to retheme the entire library at once.          */
@@ -2733,3 +2739,15 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
  * pulse-ui.css must not see it as a plain link at the top of the page. */
 .pulse-skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
 .pulse-skip-link:focus{position:fixed;left:1rem;top:1rem;width:auto;height:auto;padding:.5rem 1rem;background:#000;color:#fff;font-size:1rem;font-weight:600;border-radius:4px;text-decoration:none;z-index:9999;outline:3px solid #fff;outline-offset:2px}
+
+/* ─── Reduced motion ────────────────────────────────────────────────────────
+   For visitors who ask their system for less motion. Transitions become instant (a tiny
+   non-zero duration, so transitionend still fires). Spinners and indeterminate bars are slowed
+   right down and not stopped, so people can still see that something is happening. */
+@media (prefers-reduced-motion: reduce) {
+  [class*="ui-"], [class*="ui-"]::before, [class*="ui-"]::after {
+    transition-duration: .01ms !important;
+  }
+  .ui-spinner                              { animation-duration: 6s !important; }
+  .ui-progress--indeterminate .ui-progress-fill { animation-duration: 6s !important; }
+}
