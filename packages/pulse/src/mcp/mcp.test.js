@@ -650,7 +650,8 @@ test('the ops guide is its own MCP resource, listed in the index, and the server
   for (const readme of ['README.md', 'packages/pulse/README.md']) {
     const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
     assert(/\| `guide-ops\.md` \|/.test(src), `${readme}: lists guide-ops.md`)
-    assert(/Read one guide per command/.test(src) && /<persisted-output>/.test(src), `${readme}: tells agents about the preview`)
+    assert(/Read the guides with your file-reading tool when you have one: it returns a whole file/.test(src), `${readme}: prefers the file-reading tool`)
+    assert(/read one guide per command/.test(src) && /<persisted-output>/.test(src), `${readme}: tells shell users about the preview`)
   }
 })
 
