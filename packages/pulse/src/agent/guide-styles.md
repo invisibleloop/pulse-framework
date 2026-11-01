@@ -466,6 +466,8 @@ This produces no browser error and is invisible at a glance — the expected spa
 
 `pulse build` deletes CSS rules whose class names it cannot find in your source. A class built at runtime, such as `` `type-${name}` ``, looks unused. Its rule is then missing from the production build, though it works in dev.
 
+The build also reads every file under `src/` for class names. It renders each page once as well. With `css: { renderPages: false }` it skips that render. A class that exists only in fetched data is then removed.
+
 Two ways to keep those rules:
 
 - Select on a `data-` attribute and not on a class: `[data-type="fire"] { ... }`.

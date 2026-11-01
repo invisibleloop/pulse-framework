@@ -580,6 +580,17 @@ test('the checklist and styles guide carry the accessibility baseline: target si
   assert(/attrs: \{ autocomplete: 'email' \}/.test(components), 'components: the input autocomplete example')
 })
 
+test('the server guide says pulse build runs server fetchers, how to guard them, and how to switch the render off', () => {
+  // Two benchmark agents each had to find out, from source, that the build calls their data loaders.
+  const server = fs.readFileSync(path.join(agentDir, 'guide-server.md'), 'utf8')
+  const styles = fs.readFileSync(path.join(agentDir, 'guide-styles.md'), 'utf8')
+  assert(/## What `pulse build` runs/.test(server))
+  assert(/`ctx\.build` is `true`, `process\.env\.PULSE_BUILD` is `'1'`/.test(server), 'server: the build flags')
+  assert(/if \(ctx\.build\) return null/.test(server), 'server: the guard example')
+  assert(/css: \{ renderPages: false \}/.test(server) && /runs no fetcher/.test(server), 'server: the switch')
+  assert(/css: \{ renderPages: false \}/.test(styles), 'styles: the purge section links the switch')
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))
