@@ -424,21 +424,28 @@ test('review finds a 404 page whose route is set through a constant, and not one
 // ── personal-data inputs need autocomplete (WCAG 1.3.5) ───────────────────
 
 test('personalInputsWithoutAutocomplete flags name/email/tel/password inputs that have none, and only those', () => {
-  const src = `
-    \${input({ label: 'Name', name: 'name' })}
-    \${input({ label: 'Email', name: 'contact', type: 'email' })}
-    \${input({ label: 'Phone', name: 'tel', attrs: { autocomplete: 'tel' } })}
-    \${input({ label: 'Search', name: 'q' })}
-    \${input({ label: 'Pass', type: 'password', name: 'pw' })}
-    \${someObject.input({ name: 'email' })}`
+  const src = [
+    "input({ label: 'Name', name: 'name' })",
+    "input({ label: 'Email', name: 'contact', type: 'email' })",
+    "input({ label: 'Phone', name: 'tel', attrs: { autocomplete: 'tel' } })",
+    "input({ label: 'Search', name: 'q' })",
+    "input({ label: 'Pass', type: 'password', name: 'pw' })",
+    "someObject.input({ name: 'email' })",
+  ].join('\n')
   assert.deepEqual(personalInputsWithoutAutocomplete(src), ['name', 'contact', 'pw'])
-  assert.deepEqual(personalInputsWithoutAutocomplete(`input({ name: 'email', attrs: { autocomplete: 'email' } })`), [])
-  assert.deepEqual(personalInputsWithoutAutocomplete(`textarea({ name: 'message' })`), [])
+  assert.deepEqual(personalInputsWithoutAutocomplete("input({ name: 'email', attrs: { autocomplete: 'email' } })"), [])
+  assert.deepEqual(personalInputsWithoutAutocomplete("textarea({ name: 'message' })"), [])
 })
 
 test('the full review warns about a personal-data input with no autocomplete, and not once it is added', async () => {
   const root = tmpProject()
-  const make = (attrs) => `import { input } from '@invisibleloop/pulse/ui'\nexport default {\n  route: '/x',\n  view: () => \`<main id="main-content">\${input({ label: 'Email', name: 'email'${attrs} })}</main>\`,\n}`
+  const make = (attrs) => [
+    "import { input } from '@invisibleloop/pulse/ui'",
+    'export default {',
+    "  route: '/x',",
+    "  view: () => '<main id=\"main-content\">' + input({ label: 'Email', name: 'email'" + attrs + " }) + '</main>',",
+    '}',
+  ].join('\n')
   const bare = make('')
   const fixed = make(", attrs: { autocomplete: 'email' }")
   const a = await runFullReview(bare, writeSpec(root, 'a.js', bare))
