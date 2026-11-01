@@ -99,6 +99,21 @@ Full reference at [pulseframework.dev](https://pulseframework.dev):
 - **Configuration and deployment** — `pulse.config.js`, `createServer` options and hosting
 - **UI components** — 40+ built-in components
 
+## For coding agents
+
+The guides an agent needs are Markdown files in this package. After `npm install` they are in `node_modules/@invisibleloop/pulse/src/agent/`. You do not need to read the framework source. Read the guide that matches your task:
+
+| File | Covers |
+| --- | --- |
+| `guide-spec.md` | the spec object, state, the query string and page cache, a 404 for an unknown id, code that reaches the browser |
+| `guide-routing.md` | routes, params, redirects and the 404 page |
+| `guide-server.md` | server data, forms, cookies, caching, `pulse start` and deploying |
+| `guide-styles.md` | CSS, tokens, and the build's removal of unused CSS |
+| `guide-components.md` | the `@invisibleloop/pulse/ui` components |
+| `workflow.md` | how to plan and check a page |
+
+Running `pulse` in a project serves the same files as MCP resources (`pulse://guide`).
+
 ## Reporting framework bugs
 
 If your coding agent hits what looks like a bug in Pulse itself, it can file a report through the `pulse_report_issue` MCP tool. It is always a two-step process: the tool first returns a redacted preview (local paths, tokens, secrets and emails stripped), and nothing is sent until the agent confirms that exact payload. Reports become GitHub issues on [invisibleloop/pulse-framework](https://github.com/invisibleloop/pulse-framework).

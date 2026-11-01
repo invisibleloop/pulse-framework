@@ -1520,6 +1520,36 @@ await test('custom 404 renders in streaming mode too (forced string path)', asyn
   })
 })
 
+await test('an id that does not exist answers 404 on a streaming page when meta throws status 404, and the fetch runs once (the pattern in guide-spec.md)', async () => {
+  const items = { pikachu: { name: 'Pikachu' } }
+  let fetches = 0
+  const fetchItem = async (name) => { fetches++; return items[name] }
+  const load = (ctx) => ((ctx._cache ??= {}).item ??= fetchItem(ctx.params.name))
+  const itemSpec = {
+    route: '/item/:name',
+    meta: {
+      title: async (ctx) => {
+        const item = await load(ctx)
+        if (!item) throw Object.assign(new Error('Not found'), { status: 404 })
+        return item.name
+      },
+    },
+    server: { item: load },
+    view: (state, { item }) => `<main id="main-content"><h1>${item.name}</h1></main>`,
+  }
+  await withServer([itemSpec, notFoundPageSpec], { stream: true }, async (port) => {
+    fetches = 0
+    const found = await get(port, '/item/pikachu')
+    assert(found.status === 200 && found.body.includes('Pikachu'), `Expected the item page, got ${found.status}`)
+    assert(fetches === 1, `The fetch is shared through ctx._cache, expected 1 call, got ${fetches}`)
+    fetches = 0
+    const missing = await get(port, '/item/missing')
+    assert(missing.status === 404, `Expected 404 for an unknown id, got ${missing.status}`)
+    assert(missing.body.includes('Custom not found'), 'Expected the custom 404 page')
+    assert(fetches === 1, `Expected 1 call for the unknown id, got ${fetches}`)
+  })
+})
+
 await test('known routes are unaffected by the "*" spec', async () => {
   await withServer([helloSpec, notFoundPageSpec], { stream: false }, async (port) => {
     const { status, body } = await get(port, '/hello')

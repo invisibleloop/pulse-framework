@@ -155,3 +155,44 @@ card({ content: `
 ```
 
 There is no `fieldset` component: group related fields with a plain `<fieldset>` and `<legend>` as above. For simple forms without distinct groups, omit it and use `u-flex u-flex-col u-gap-4` on the `<form>` directly.
+
+## Query string, caching and the address bar
+
+`ctx.query` holds the query string in `server` fetchers, `guard` and `meta`.
+
+The in-process page cache ignores the query string. If the output depends on a query key, list the key in `cacheVary`. Without it, every value of that key gets the same cached page:
+
+```js
+export default { route: '/', cacheVary: ['q', 'type', 'page'], /* ... */ }
+```
+
+Pulse has no built-in URL state. To show a search or filter in the address bar, write the new address yourself. Use `history.replaceState({ pulse: true, path }, '', path)`, where `path` is the pathname plus the query string. The `pulse: true` marker lets the back and forward buttons work. This is a side effect, so keep it in one small function.
+
+## A 404 for an id that does not exist
+
+On a streaming page the status is sent before the body. To answer 404 for an unknown id, check it in `meta` or `guard` and throw an error with `status: 404`. Share the fetch with the `server` fetcher through `ctx._cache`, so it runs once:
+
+```js
+const load = (ctx) => ((ctx._cache ??= {}).item ??= fetchItem(ctx.params.name))
+
+export default {
+  route: '/item/:name',
+  meta: {
+    title: async (ctx) => {
+      const item = await load(ctx)
+      if (!item) throw Object.assign(new Error('Not found'), { status: 404 })
+      return item.name
+    },
+  },
+  server: { item: load },
+  view: (state, { item }) => `<main id="main-content"><h1>${escHtml(item.name)}</h1></main>`,
+}
+```
+
+If you only render a "not found" message from the view, the status stays 200.
+
+## Code that reaches the browser
+
+A page with mutations or actions ships a browser bundle. The build removes `server`, `guard` and `submit` code, and the imports only they use. A module that the view or a mutation also imports stays in the bundle.
+
+If such a module reads `process.env` or other server-only names at the top level, the page crashes in the browser. Read them inside a function that only server code calls, or split the file. Also set `"sideEffects": ["*.css"]` in `package.json`, so the bundler drops imports whose exports nothing uses.
