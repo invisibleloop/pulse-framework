@@ -78,13 +78,14 @@ const _projectConfig = await loadConfigOrExit(ROOT)
 const CSS_SAFELIST = (_projectConfig.css?.safelist ?? [])
   .map(entry => typeof entry === 'string' ? entry : entry)
 
-// css.renderPages — the CSS step renders each page once to find the classes it uses. That runs the
-// page's `server` fetchers (ctx.build is true and process.env.PULSE_BUILD is '1'). Set it to false
-// to skip the render: the build then reads class names from the source files alone and calls no
-// data source. Default true, so existing projects build as before.
+// css.renderPages — whether the CSS step renders each page once to find the classes it uses.
+// Default false: the build reads class names from the source files alone and calls no data source.
+// Set it to true to render the pages as well. That runs the page's `server` fetchers
+// (ctx.build is true and process.env.PULSE_BUILD is '1') and also finds classes that exist only
+// in the data a fetcher returns. Before 0.38.0 the default was true.
 // Example in pulse.config.js:
-//   export default { css: { renderPages: false } }
-const CSS_RENDER_PAGES = _projectConfig.css?.renderPages !== false
+//   export default { css: { renderPages: true } }
+const CSS_RENDER_PAGES = _projectConfig.css?.renderPages === true
 
 // ---------------------------------------------------------------------------
 // Discover pages
@@ -395,6 +396,7 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   // return early instead of calling a database or an API.
   process.env.PULSE_BUILD = '1'
   let fetchersRun = false
+  let pagesWithFetchers = false
 
   const failedPages = []
   for (const { filePath } of pages) {
@@ -409,6 +411,7 @@ async function purgeCssStep(pages, manifest, root, outDir) {
       }
 
       // SSR render to extract class names from the actual HTML output
+      if (spec.server && Object.keys(spec.server).length) pagesWithFetchers = true
       if (CSS_RENDER_PAGES) {
         if (spec.server && Object.keys(spec.server).length) fetchersRun = true
         try {
@@ -434,7 +437,10 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   }
   if (fetchersRun) {
     console.log(info('The CSS step rendered each page once, which ran your server fetchers with ctx.build = true. ' +
-      'To keep the build from calling a data source, return early when ctx.build is set, or set css: { renderPages: false } in pulse.config.js.'))
+      'To keep the build from calling a data source, return early when ctx.build is set, or remove css: { renderPages: true } from pulse.config.js.'))
+  } else if (!CSS_RENDER_PAGES && pagesWithFetchers) {
+    console.log(info('The CSS step did not render your pages, so no server fetcher ran. A class that exists only in fetched data ' +
+      'is removed from the CSS: add it to css: { safelist }, or set css: { renderPages: true } in pulse.config.js to render the pages at build time.'))
   }
   if (failedPages.length) {
     console.error('')
@@ -472,11 +478,14 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   // not in the project's own pages, so they'd otherwise be purged.
   // Also scan the parent src/ui in case root is a subdirectory (e.g. docs/) that
   // imports UI components via relative paths from the parent project.
+  // The markdown highlighter (src/md) writes class names too (tok-kw, tok-str, ...) into the HTML it returns.
   const scanUiDirs = [
     path.join(root, 'src', 'ui'),          // project's own source
     path.join(root, '..', 'src', 'ui'),    // parent project source (e.g. pulse2/src/ui when root=docs)
     path.join(root, 'node_modules', '@invisibleloop', 'pulse', 'src', 'ui'),        // installed package
     path.join(root, '..', 'node_modules', '@invisibleloop', 'pulse', 'src', 'ui'), // parent node_modules
+    path.join(root, 'node_modules', '@invisibleloop', 'pulse', 'src', 'md'),
+    path.join(root, '..', 'node_modules', '@invisibleloop', 'pulse', 'src', 'md'),
   ]
   for (const dir of scanUiDirs) {
     if (!fs.existsSync(dir)) continue

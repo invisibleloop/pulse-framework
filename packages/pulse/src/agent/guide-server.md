@@ -393,7 +393,12 @@ To allow images from another origin, add its source to the policy in `pulse.conf
 
 ## What `pulse build` runs
 
-`pulse build` renders each page once, with an empty context, to find the CSS classes the page uses. That runs your `server` fetchers. In that render `ctx.build` is `true`, `process.env.PULSE_BUILD` is `'1'`, and `ctx.params` is empty. A fetcher that must not call a database or an API returns early:
+`pulse build` finds the CSS classes your pages use by reading every file under `src/`. It does not render the pages, so it calls no `server` fetcher and no data source. It keeps every CSS rule that starts like a class name your code builds at run time. Two examples are `` `type-${name}` `` and `` `ui-btn--${variant}` ``.
+
+A class that exists only in fetched data cannot be found this way. An example is a category name that comes from an API. Its CSS rule is removed from the production build. Keep it in one of two ways:
+
+- List it: `css: { safelist: ['category-news', /^tag-/] }` in `pulse.config.js`.
+- Render the pages at build time: `css: { renderPages: true }`. The build then renders each page once, with an empty context, and runs your `server` fetchers. In that render `ctx.build` is `true`, `process.env.PULSE_BUILD` is `'1'`, and `ctx.params` is empty. A fetcher that must not call a database or an API returns early:
 
 ```js
 server: {
@@ -404,9 +409,9 @@ server: {
 },
 ```
 
-To stop the build calling any data source, set `css: { renderPages: false }` in `pulse.config.js`. The build then reads class names from the files under `src/` alone and runs no fetcher. Use it when the spec forbids requests at build time, or when the build cannot reach the data.
+A view must still render when `server.item` is `null`. If a render fails, the build skips it and goes on.
 
-A view must still render when `server.item` is `null`. Without the switch, a failed render is skipped and the build goes on.
+Before version 0.38.0 the render was on by default. A project that relied on it for data-only classes now needs `renderPages: true` or a safelist.
 
 ## Production behind a proxy — pin the public origin
 

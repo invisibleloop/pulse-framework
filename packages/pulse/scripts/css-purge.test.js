@@ -154,3 +154,38 @@ test('classes the framework injects outside any view survive the purge (skip lin
   assert.match(out, /\.pulse-skip-link\{[^}]*left:-9999px/, 'hidden state purged')
   assert.match(out, /\.pulse-skip-link:focus\{[^}]*position:fixed/, 'focus state purged')
 })
+
+// ── class names built at run time ───────────────────────────────────────────
+
+// Source text that contains a template expression, built without escapes.
+const EXPR = '$' + '{variant}'
+
+test('a class built as a template literal or a concatenation keeps every rule that starts like it', () => {
+  const js = [
+    'const a = `ui-btn--' + EXPR + '`',
+    'const b = `u-text-' + EXPR + '`',
+    "const c = 'tok-' + kind",
+    'const d = `<i class="card item-' + EXPR + '">`',
+  ].join('\n')
+  const used = extractUsedClasses([], [js], [])
+  assert.deepEqual([...used._dynamicPrefixes].sort(), ['item-', 'tok-', 'u-text-', 'ui-btn--'])
+  for (const kept of ['.ui-btn--primary', '.ui-btn--sm', '.u-text-4xl', '.tok-kw', '.item-3', '.ui-btn--primary:hover', '.nav .tok-str']) {
+    assert(selectorUsed(kept, used), `${kept} starts like a name the source builds`)
+  }
+})
+
+test('the prefix rule does not keep unrelated classes, the bare prefix, or prefixes that are too short', () => {
+  const js = 'const x = `ui-' + EXPR + '`; const y = `u-' + EXPR + '`; const z = `type-' + EXPR + '`'
+  const used = extractUsedClasses([], [js], [])
+  assert.deepEqual(used._dynamicPrefixes, ['type-'], "'ui-' and 'u-' are too broad to trust")
+  assert(selectorUsed('.type-fire', used))
+  assert(!selectorUsed('.type-', used), 'the bare prefix is not a class')
+  for (const dropped of ['.ui-card', '.u-mt-4', '.typeface', '.other-fire']) assert(!selectorUsed(dropped, used), `${dropped} is not covered`)
+})
+
+test('without a template or concatenation there are no prefixes, and nothing extra is kept', () => {
+  const used = extractUsedClasses([], ["const a = 'ui-btn--disabled'"], [])
+  assert.equal(used._dynamicPrefixes, undefined)
+  assert(selectorUsed('.ui-btn--disabled', used))
+  assert(!selectorUsed('.ui-btn--primary', used))
+})
