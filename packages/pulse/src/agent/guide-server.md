@@ -391,6 +391,23 @@ A project needs `"type": "module"`, the dependency `@invisibleloop/pulse`, and t
 
 To allow images from another origin, add its source to the policy in `pulse.config.js`: `csp: { 'img-src': ['http://localhost:9000'] }`.
 
+## What `pulse build` runs
+
+`pulse build` renders each page once, with an empty context, to find the CSS classes the page uses. That runs your `server` fetchers. In that render `ctx.build` is `true`, `process.env.PULSE_BUILD` is `'1'`, and `ctx.params` is empty. A fetcher that must not call a database or an API returns early:
+
+```js
+server: {
+  item: async (ctx) => {
+    if (ctx.build) return null
+    return fetchItem(ctx.params.name)
+  },
+},
+```
+
+To stop the build calling any data source, set `css: { renderPages: false }` in `pulse.config.js`. The build then reads class names from the files under `src/` alone and runs no fetcher. Use it when the spec forbids requests at build time, or when the build cannot reach the data.
+
+A view must still render when `server.item` is `null`. Without the switch, a failed render is skipped and the build goes on.
+
 ## Production behind a proxy — pin the public origin
 
 By default Pulse builds `<link rel="canonical">`, `sitemap.xml` and `robots.txt` from the request's `Host`, `X-Forwarded-Host` and `X-Forwarded-Proto` headers. Anyone can send those headers, and a CDN that ignores `Vary` will cache the result for everyone — one forged request can point every visitor's canonical URL at another domain. For a real deployment, pin the origin:

@@ -78,6 +78,14 @@ const _projectConfig = await loadConfigOrExit(ROOT)
 const CSS_SAFELIST = (_projectConfig.css?.safelist ?? [])
   .map(entry => typeof entry === 'string' ? entry : entry)
 
+// css.renderPages — the CSS step renders each page once to find the classes it uses. That runs the
+// page's `server` fetchers (ctx.build is true and process.env.PULSE_BUILD is '1'). Set it to false
+// to skip the render: the build then reads class names from the source files alone and calls no
+// data source. Default true, so existing projects build as before.
+// Example in pulse.config.js:
+//   export default { css: { renderPages: false } }
+const CSS_RENDER_PAGES = _projectConfig.css?.renderPages !== false
+
 // ---------------------------------------------------------------------------
 // Discover pages
 // ---------------------------------------------------------------------------
@@ -383,6 +391,11 @@ async function purgeCssStep(pages, manifest, root, outDir) {
   const cssFiles     = new Set()
   const cssStats     = {}
 
+  // Fetchers that the render below will run get ctx.build === true and this variable, so they can
+  // return early instead of calling a database or an API.
+  process.env.PULSE_BUILD = '1'
+  let fetchersRun = false
+
   const failedPages = []
   for (const { filePath } of pages) {
     try {
@@ -396,15 +409,18 @@ async function purgeCssStep(pages, manifest, root, outDir) {
       }
 
       // SSR render to extract class names from the actual HTML output
-      try {
-        const { html } = await renderToString(spec, {})
-        htmlContents.push(html)
-      } catch {
-        // Server data might fail in build context — fall back to direct view call
+      if (CSS_RENDER_PAGES) {
+        if (spec.server && Object.keys(spec.server).length) fetchersRun = true
         try {
-          const html = spec.view(spec.state || {}, {})
-          if (typeof html === 'string') htmlContents.push(html)
-        } catch {}
+          const { html } = await renderToString(spec, { build: true })
+          htmlContents.push(html)
+        } catch {
+          // Server data might fail in build context — fall back to direct view call
+          try {
+            const html = spec.view(spec.state || {}, {})
+            if (typeof html === 'string') htmlContents.push(html)
+          } catch {}
+        }
       }
 
       // Also scan source JS for conditionally-applied class names
@@ -416,6 +432,10 @@ async function purgeCssStep(pages, manifest, root, outDir) {
       failedPages.push({ file: toPosix(path.relative(ROOT, filePath)), message: err?.message ?? String(err) })
     }
   }
+  if (fetchersRun) {
+    console.log(info('The CSS step rendered each page once, which ran your server fetchers with ctx.build = true. ' +
+      'To keep the build from calling a data source, return early when ctx.build is set, or set css: { renderPages: false } in pulse.config.js.'))
+  }
   if (failedPages.length) {
     console.error('')
     for (const f of failedPages) console.error(`  ✗ ${f.file} could not be loaded: ${f.message}`)
@@ -423,14 +443,19 @@ async function purgeCssStep(pages, manifest, root, outDir) {
     process.exit(1)
   }
 
-  // Scan project components directory for conditional class names
-  const componentsDir = path.join(root, 'src', 'components')
-  if (fs.existsSync(componentsDir)) {
-    const componentFiles = fs.readdirSync(componentsDir).filter(f => f.endsWith('.js'))
-    for (const f of componentFiles) {
-      try { jsContents.push(fs.readFileSync(path.join(componentsDir, f), 'utf8')) } catch {}
+  // Scan every source file under src/ for class names (components, lib helpers, nested folders),
+  // so a class used only in a helper survives even when the pages are not rendered. Tests are skipped.
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) { if (entry.name !== 'node_modules') walk(full) }
+      else if (/\.[cm]?js$/.test(entry.name) && !/\.(test|spec)\.[cm]?js$/.test(entry.name)) {
+        try { jsContents.push(fs.readFileSync(full, 'utf8')) } catch {}
+      }
     }
   }
+  const srcDir = path.join(root, 'src')
+  if (fs.existsSync(srcDir)) walk(srcDir)
 
   // Scan public/*.js static assets — these often contain classList.toggle() or
   // classList.add() calls that reference CSS classes not present in any page spec,
