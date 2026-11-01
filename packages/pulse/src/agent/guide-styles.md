@@ -495,3 +495,14 @@ Use `.01ms` and not `0s`: with a zero duration the `transitionend` event never f
 
 - **Colour scheme.** `pulse-ui.css` sets `color-scheme` from `meta.theme`, so scrollbars and native form controls follow your theme. Do not override it in `app.css`.
 - **Focus rings.** Draw them with `outline`. Windows High Contrast mode keeps outlines and removes `box-shadow`.
+
+## Images
+
+- **The largest image above the fold loads first.** That is the hero, or the main picture on a detail page. Give it `loading="eager"` and `fetchpriority="high"`. `uiImage` lazy-loads by default, so pass both options: `uiImage({ src, alt, width, height, loading: 'eager', fetchpriority: 'high' })`. The `img` helper does the same with `img({ src, alt, width, height, priority: true })`, imported from `@invisibleloop/pulse/image`.
+- **Every other image is lazy.** Give it `loading="lazy"` and `decoding="async"`.
+- **Every image has `width` and `height`, or a `ratio`.** The browser then reserves its space, and the page does not shift as images arrive.
+- **A hand-written `<img>` needs all of these written out.**
+
+```html
+<img src="/artwork/25.png" alt="Pikachu" width="475" height="475" loading="eager" fetchpriority="high">
+```
