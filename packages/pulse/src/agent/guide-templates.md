@@ -217,7 +217,7 @@ All HTML outside `phoneScreen` must use utility classes, not inline `style=""` a
 ### Accessibility checklist for this template
 
 - Nav and footer logo links must go to the same `href` (both `/`). Identical accessible name + different destination = WCAG failure.
-- Skip link: `<a href="#main-content" class="skip-link" style="position:absolute;left:-9999px;...">Skip to main content</a>` — always include it at the top of the view.
+- Skip link: Pulse adds a "Skip to main content" link to every page. Write your own only to change its text or look. Pulse then hides its own.
 - A phone mockup is decorative: give its wrapper `role="img"` and `aria-label="Phone screen preview"`.
 
 ---

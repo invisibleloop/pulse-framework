@@ -2751,3 +2751,8 @@ fieldset[disabled] .ui-rating-stars .ui-rating-star:hover ~ .ui-rating-star { co
   .ui-spinner                              { animation-duration: 6s !important; }
   .ui-progress--indeterminate .ui-progress-fill { animation-duration: 6s !important; }
 }
+
+/* A page that brings its own "skip to main content" link keeps only that one. The streamed document
+   cannot see the page before it sends the framework link, so this hides it afterwards. The framework
+   link is the direct child of <body>; a link inside #pulse-root is the page's own, with any class. */
+body:has(#pulse-root a[href="#main-content"]) > .pulse-skip-link{display:none}
