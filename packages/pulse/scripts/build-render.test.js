@@ -30,7 +30,8 @@ function project({ config = null } = {}) {
       `export default {`,
       `  route: '/',`,
       `  meta: { title: 't', description: 'A page for the build test.', theme: 'light', styles: ['/app.css'] },`,
-      `  server: { probe: async (ctx) => { fs.writeFileSync(${JSON.stringify(marker)}, JSON.stringify({ build: ctx.build, env: process.env.PULSE_BUILD })); return 1 } },`,
+      // The marker path comes from the environment, so no path is built into this source.
+      `  server: { probe: async (ctx) => { fs.writeFileSync(process.env.PULSE_TEST_MARKER, JSON.stringify({ build: ctx.build, env: process.env.PULSE_BUILD })); return 1 } },`,
       '  view: () => `<main id="main-content" class="keep-page ${helperClass}">${box()}</main>`,',
       `}`,
       '',
@@ -44,7 +45,7 @@ function project({ config = null } = {}) {
   return { root, marker }
 }
 
-const build = (root) => spawnSync(process.execPath, [BUILD, '--root', root], { encoding: 'utf8', timeout: 90000, env: { ...process.env, PORT: '' } })
+const build = (root, marker) => spawnSync(process.execPath, [BUILD, '--root', root], { encoding: 'utf8', timeout: 90000, env: { ...process.env, PORT: '', PULSE_TEST_MARKER: marker } })
 const builtCss = (root) => {
   const dist = path.join(root, 'public', 'dist')
   const file = fs.readdirSync(dist).find(f => /^app-.*\.css$/.test(f))
@@ -54,7 +55,7 @@ const builtCss = (root) => {
 test('by default the build renders each page, so a fetcher runs with ctx.build and PULSE_BUILD set, and the build says so', () => {
   const { root, marker } = project()
   try {
-    const r = build(root)
+    const r = build(root, marker)
     assert.equal(r.status, 0, `the build should succeed:\n${r.stdout}${r.stderr}`)
     assert.deepEqual(JSON.parse(fs.readFileSync(marker, 'utf8')), { build: true, env: '1' }, 'the fetcher can tell it runs inside the build')
     assert.match(r.stdout, /ran your server fetchers with ctx\.build = true/)
@@ -68,7 +69,7 @@ test('by default the build renders each page, so a fetcher runs with ctx.build a
 test('css.renderPages: false calls no fetcher during the build, and still keeps classes used in components and helper files', () => {
   const { root, marker } = project({ config: `export default { css: { renderPages: false } }\n` })
   try {
-    const r = build(root)
+    const r = build(root, marker)
     assert.equal(r.status, 0, `the build should succeed:\n${r.stdout}${r.stderr}`)
     assert.equal(fs.existsSync(marker), false, 'no server fetcher may run during the build')
     assert.doesNotMatch(r.stdout, /ran your server fetchers/, 'there is nothing to warn about')
