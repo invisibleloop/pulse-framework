@@ -591,6 +591,15 @@ test('the server guide says pulse build runs server fetchers, how to guard them,
   assert(/css: \{ renderPages: false \}/.test(styles), 'styles: the purge section links the switch')
 })
 
+test('the guides say Pulse adds the skip link to every page, and that a page can bring its own', () => {
+  // Streamed pages (the default) used to have no skip link unless the page wrote one by hand.
+  const routing = fs.readFileSync(path.join(agentDir, 'guide-routing.md'), 'utf8')
+  const templates = fs.readFileSync(path.join(agentDir, 'guide-templates.md'), 'utf8')
+  assert(/Pulse adds a "Skip to main content" link to every page, so you need none of your own/.test(routing))
+  assert(/Pulse then hides its own, so keyboard users meet one link/.test(routing))
+  assert(/Pulse adds a "Skip to main content" link to every page\. Write your own only to change its text or look/.test(templates))
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))

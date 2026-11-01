@@ -147,3 +147,8 @@ textarea { min-height: 120px; resize: vertical; }
 /* Focus ring */
 :focus-visible{outline:3px solid #9b8dff;outline-offset:2px}
 :focus:not(:focus-visible){outline:none}
+
+/* A page that brings its own "skip to main content" link keeps only that one. The streamed document
+   cannot see the page before it sends the framework link, so this hides it afterwards. The framework
+   link is the direct child of <body>; a link inside #pulse-root is the page's own, with any class. */
+body:has(#pulse-root a[href="#main-content"]) > .pulse-skip-link{display:none}

@@ -55,7 +55,9 @@ export default {
 
 ### Skip link
 
-Add a skip link before the nav for keyboard users. It must be the first focusable element on every page:
+Pulse adds a "Skip to main content" link to every page, so you need none of your own. The link points at `<main id="main-content">`, which every page must have. Add your own link only to change its text or its look. Pulse then hides its own, so keyboard users meet one link.
+
+A custom link must be the first focusable element on every page:
 
 ```js
 // src/components/layout.js

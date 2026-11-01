@@ -13,8 +13,7 @@ export default {
       onError:   () => ({ status: 'error' }),
     },
   },
-  view: (s) => `<a href="#main-content" class="pulse-skip-link">Skip to main content</a>
-  <main id="main-content">
+  view: (s) => `<main id="main-content">
     <h1>Home</h1>
     <nav>
       <a id="to-here" href="#details">Details on this page</a>

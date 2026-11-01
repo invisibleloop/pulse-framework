@@ -1550,6 +1550,40 @@ await test('an id that does not exist answers 404 on a streaming page when meta 
   })
 })
 
+const SKIP_LINK_HTML = '<a href="#main-content" class="pulse-skip-link">Skip to main content</a>'
+
+await test('a streamed page carries the framework skip link once, before the page root (it used to appear only on buffered renders)', async () => {
+  await withServer([helloSpec], { stream: true }, async (port) => {
+    const { status, body } = await get(port, '/hello')
+    assert(status === 200, `Expected 200, got ${status}`)
+    assert(body.split(SKIP_LINK_HTML).length === 2, 'exactly one framework skip link')
+    assert(body.indexOf(SKIP_LINK_HTML) < body.indexOf('id="pulse-root"'), 'the link comes before the page, so it is the first focusable element')
+    assert(body.indexOf('<body') < body.indexOf(SKIP_LINK_HTML), 'the link is inside <body>')
+  })
+})
+
+await test('the streamed and the buffered render emit the same skip link, so every page behaves alike', async () => {
+  const seen = {}
+  for (const stream of [true, false]) {
+    await withServer([helloSpec], { stream }, async (port) => { seen[stream] = (await get(port, '/hello')).body.includes(SKIP_LINK_HTML) })
+  }
+  assert(seen.true === true, 'the streamed render carries the skip link')
+  assert(seen.false === true, 'the buffered render carries the same skip link')
+})
+
+await test('a streamed page that brings its own skip link keeps both in the HTML, and both stylesheets hide the framework one', async () => {
+  const ownLinkSpec = { route: '/own', meta: { title: 'Own' }, view: () => '<a href="#main-content" class="skip-link">Skip</a><main id="main-content"><h1>Own</h1></main>' }
+  await withServer([ownLinkSpec], { stream: true }, async (port) => {
+    const { body } = await get(port, '/own')
+    assert(body.includes(SKIP_LINK_HTML) && body.includes('class="skip-link"'), 'the stream cannot know in advance, so both are sent')
+  })
+  const { readFileSync } = await import('node:fs')
+  const rule = 'body:has(#pulse-root a[href="#main-content"]) > .pulse-skip-link{display:none}'
+  for (const css of ['pulse.css', 'pulse-ui.css']) {
+    assert(readFileSync(new URL(`../../public/${css}`, import.meta.url), 'utf8').includes(rule), `${css} hides the framework link when the page has its own`)
+  }
+})
+
 await test('known routes are unaffected by the "*" spec', async () => {
   await withServer([helloSpec, notFoundPageSpec], { stream: false }, async (port) => {
     const { status, body } = await get(port, '/hello')

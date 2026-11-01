@@ -52,6 +52,19 @@ test('the skip link is hidden until focused, then visible', async ({ page }) => 
   await expect(link).toBeVisible()
 })
 
+test('a page with its own skip link keeps one: the framework link is hidden, and Tab lands on a visible link', async ({ page }) => {
+  await page.goto('/static')
+  const links = page.locator('.pulse-skip-link')
+  await expect(links).toHaveCount(2) // the framework link in <body>, and the page's own inside the root
+  await expect(links.filter({ visible: true })).toHaveCount(1) // only the page's own link is rendered (off-screen until focused); the framework one is display:none
+  await expect(page.locator('body > .pulse-skip-link')).toHaveCSS('display', 'none')
+  await page.keyboard.press('Tab')
+  const focused = page.locator('.pulse-skip-link:focus')
+  await expect(focused).toHaveCount(1)
+  await expect(focused).toBeVisible()
+  expect(await focused.evaluate((el) => el.closest('#pulse-root') !== null), 'the focused link is the page\'s own').toBe(true)
+})
+
 test('using the skip link does not refetch the page and moves focus to the content', async ({ page }) => {
   await page.goto('/')
   let navFetches = 0

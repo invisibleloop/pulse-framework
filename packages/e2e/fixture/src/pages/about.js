@@ -3,8 +3,7 @@ export default {
   meta: { title: 'About', description: 'E2E fixture', theme: 'light', styles: ['/pulse-ui.css'] },
   state: { count: 0 },
   mutations: { inc: (s) => ({ count: s.count + 1 }) },
-  view: (s) => `<a href="#main-content" class="pulse-skip-link">Skip to main content</a>
-  <main id="main-content">
+  view: (s) => `<main id="main-content">
     <h1>About</h1>
     <a id="back-home" href="/">Home</a>
     <button id="inc" data-event="inc">count ${s.count}</button>

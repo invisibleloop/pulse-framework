@@ -1789,6 +1789,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
   <title>${escHtml(title)}</title>
 ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreloads + '\n' : ''}${runtimePreload ? runtimePreload + '\n' : ''}${dev ? devImportMap(nonce) + '\n' : ''}${metaTags}${analyticsTag ? '  ' + analyticsTag + '\n' : ''}</head>
 <body${bodyAttr}>
+  <a href="#main-content" class="pulse-skip-link">Skip to main content</a>
   <div id="pulse-root">`
 
   const scriptTags    = (meta.scripts || [])
