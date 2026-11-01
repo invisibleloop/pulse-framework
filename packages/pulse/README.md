@@ -101,18 +101,20 @@ Full reference at [pulseframework.dev](https://pulseframework.dev):
 
 ## For coding agents
 
-The guides an agent needs are Markdown files in this package. After `npm install` they are in `node_modules/@invisibleloop/pulse/src/agent/`. You do not need to read the framework source. Read the guide that matches your task:
+The guides an agent needs are Markdown files in this package. After `npm install` they are in `node_modules/@invisibleloop/pulse/src/agent/`. You do not need to read the framework source. Read only the guides your task needs. Each one costs tokens on every later step.
 
-| File | Covers |
-| --- | --- |
-| `guide-spec.md` | the spec object, state, the query string and page cache, a 404 for an unknown id, code that reaches the browser |
-| `guide-routing.md` | routes, params, redirects and the 404 page |
-| `guide-server.md` | server data, forms, cookies, caching, the store, `pulse start` and what `pulse build` runs |
-| `guide-ops.md` | running in production: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown pages |
-| `guide-styles.md` | CSS, tokens, and the build's removal of unused CSS |
-| `guide-components.md` | the `@invisibleloop/pulse/ui` components |
-| `workflow.md` | how to plan and check a page |
-| `checklist.md` | the accessibility, image, security and form rules to check against. Read it once the page works, before you finish |
+| File | Covers | Read it |
+| --- | --- | --- |
+| `guide-spec.md` | the spec object, state, the query string and page cache, a 404 for an unknown id, code that reaches the browser | for every task |
+| `guide-styles.md` | CSS, tokens, images, accessibility in CSS, and the build's removal of unused CSS | for every task that has styles |
+| `guide-routing.md` | routes, params, redirects and the 404 page | when the site has more than one page, or dynamic routes |
+| `guide-server.md` | server data, forms, cookies, caching, the store, `pulse start` and what `pulse build` runs | when a page loads data or has a form, or when you build and serve the site |
+| `guide-components.md` | the `@invisibleloop/pulse/ui` components | when you use those components |
+| `guide-ops.md` | running in production: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown pages | only when you deploy, or use markdown pages or third-party scripts |
+| `workflow.md` | how to plan and check a page | when you plan a new page |
+| `checklist.md` | the accessibility, image, security and form rules to check against | once the page works, before you finish |
+
+The other files in that folder (`guide-examples.md`, `guide-templates.md`, `guide-design-references.md`, `guide-design-gallery.md`, `guide-explore.md`) are for landing pages, design work and worked examples. Skip them when you build an app.
 
 Read the guides with your file-reading tool when you have one: it returns a whole file. Shell output above about 30,000 characters is cut to a short preview, and several guides joined with `cat` go over that. If you use the shell, read one guide per command. A preview ends with `<persisted-output>`. When you see it, read the saved file with your file-reading tool, in pieces if needed. Do not work from the preview.
 

@@ -617,7 +617,7 @@ test('agents are sent to the checklist late, and the styles guide they do read c
   // so the LCP-image rule had to live in a file on its read path.
   for (const readme of ['README.md', 'packages/pulse/README.md']) {
     const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
-    assert(/\| `checklist\.md` \| the accessibility, image, security and form rules to check against\. Read it once the page works, before you finish \|/.test(src), `${readme}: lists the checklist and when to read it`)
+    assert(/\| `checklist\.md` \| the accessibility, image, security and form rules to check against \| once the page works, before you finish \|/.test(src), `${readme}: lists the checklist and when to read it`)
   }
   const styles = fs.readFileSync(path.join(agentDir, 'guide-styles.md'), 'utf8')
   assert(/## Images/.test(styles))
@@ -649,9 +649,22 @@ test('the ops guide is its own MCP resource, listed in the index, and the server
   }
   for (const readme of ['README.md', 'packages/pulse/README.md']) {
     const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
-    assert(/\| `guide-ops\.md` \|/.test(src), `${readme}: lists guide-ops.md`)
+    assert(/\| `guide-ops\.md` \|.*\| only when you deploy, or use markdown pages or third-party scripts \|/.test(src), `${readme}: lists guide-ops.md as read only when needed`)
     assert(/Read the guides with your file-reading tool when you have one: it returns a whole file/.test(src), `${readme}: prefers the file-reading tool`)
     assert(/read one guide per command/.test(src) && /<persisted-output>/.test(src), `${readme}: tells shell users about the preview`)
+  }
+})
+
+test('the README tells agents which guides a task needs, and to skip the design guides for an app', () => {
+  // A benchmark agent read guide-ops and guide-examples for a data-driven app: ~22,000 characters carried through 100 turns.
+  for (const readme of ['README.md', 'packages/pulse/README.md']) {
+    const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
+    assert(/Read only the guides your task needs\. Each one costs tokens on every later step\./.test(src), `${readme}: says reading costs tokens`)
+    assert(/\| File \| Covers \| Read it \|/.test(src), `${readme}: the table has a Read it column`)
+    for (const [file, when] of [['guide-spec.md', 'for every task'], ['guide-styles.md', 'for every task that has styles'], ['guide-routing.md', 'when the site has more than one page'], ['guide-server.md', 'when a page loads data or has a form'], ['guide-components.md', 'when you use those components'], ['workflow.md', 'when you plan a new page']]) {
+      assert(new RegExp('\\| `' + file.replace('.', '\\.') + '` \\|[^\\n]*\\| ' + when).test(src), `${readme}: ${file} says when to read it`)
+    }
+    assert(/Skip them when you build an app\./.test(src) && /`guide-examples\.md`/.test(src) && /`guide-design-references\.md`/.test(src), `${readme}: names the files to skip`)
   }
 })
 
