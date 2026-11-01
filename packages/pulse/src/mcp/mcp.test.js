@@ -568,6 +568,18 @@ test('the guides answer what a Pulse agent read source for: purge safelist, cach
   }
 })
 
+test('the checklist and styles guide carry the accessibility baseline: target size, autocomplete, reduced motion, colour scheme', () => {
+  // The benchmark's type page scored 95 on target-size; Google's accessibility guide covers 24px targets and autocomplete.
+  const read = (f) => fs.readFileSync(path.join(agentDir, f), 'utf8')
+  const checklist = read('checklist.md'), styles = read('guide-styles.md'), components = read('guide-components.md')
+  assert(/at least 24 by 24 CSS pixels\*\* \(WCAG 2\.5\.8/.test(checklist), 'checklist: target size')
+  assert(/`autocomplete` value\*\* \(WCAG 1\.3\.5/.test(checklist), 'checklist: autocomplete')
+  assert(/Motion respects `prefers-reduced-motion`/.test(checklist), 'checklist: reduced motion')
+  assert(/## Accessibility in your CSS/.test(styles) && /`\.01ms` and not `0s`/.test(styles), 'styles: the section and the transitionend warning')
+  assert(/sets `color-scheme` from `meta\.theme`/.test(styles) && /Draw them with `outline`/.test(styles), 'styles: colour scheme and focus rings')
+  assert(/attrs: \{ autocomplete: 'email' \}/.test(components), 'components: the input autocomplete example')
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))

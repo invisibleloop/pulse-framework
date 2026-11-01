@@ -14,7 +14,7 @@ import assert     from 'node:assert/strict'
 import fs         from 'node:fs'
 import os         from 'node:os'
 import path       from 'node:path'
-import { runQuickReview, formatQuickReview, runFullReview, hasCustomNotFound, formatFullReview } from './review.js'
+import { runQuickReview, formatQuickReview, runFullReview, hasCustomNotFound, formatFullReview, personalInputsWithoutAutocomplete } from './review.js'
 
 function tmpProject() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pulse-review-test-'))
@@ -419,4 +419,39 @@ test('review finds a 404 page whose route is set through a constant, and not one
   assert.equal(hasCustomNotFound("const ROUTE = '/about'\nexport default { route: ROUTE, view: () => '' }", null), null, 'a constant that is not * is no 404 page')
   assert.equal(await notFoundCheck({ 'not-found.js': viaConst }), undefined)
   assert.match(await notFoundCheck({ 'about.js': "const ROUTE = '/about'\nexport default { route: ROUTE, view: () => '' }" }), /No custom 404 page/)
+})
+
+// ── personal-data inputs need autocomplete (WCAG 1.3.5) ───────────────────
+
+test('personalInputsWithoutAutocomplete flags name/email/tel/password inputs that have none, and only those', () => {
+  const src = [
+    "input({ label: 'Name', name: 'name' })",
+    "input({ label: 'Email', name: 'contact', type: 'email' })",
+    "input({ label: 'Phone', name: 'tel', attrs: { autocomplete: 'tel' } })",
+    "input({ label: 'Search', name: 'q' })",
+    "input({ label: 'Pass', type: 'password', name: 'pw' })",
+    "someObject.input({ name: 'email' })",
+  ].join('\n')
+  assert.deepEqual(personalInputsWithoutAutocomplete(src), ['name', 'contact', 'pw'])
+  assert.deepEqual(personalInputsWithoutAutocomplete("input({ name: 'email', attrs: { autocomplete: 'email' } })"), [])
+  assert.deepEqual(personalInputsWithoutAutocomplete("textarea({ name: 'message' })"), [])
+})
+
+test('the full review warns about a personal-data input with no autocomplete, and not once it is added', async () => {
+  const root = tmpProject()
+  const make = (attrs) => [
+    "import { input } from '@invisibleloop/pulse/ui'",
+    'export default {',
+    "  route: '/x',",
+    "  view: () => '<main id=\"main-content\">' + input({ label: 'Email', name: 'email'" + attrs + " }) + '</main>',",
+    '}',
+  ].join('\n')
+  const bare = make('')
+  const fixed = make(", attrs: { autocomplete: 'email' }")
+  const a = await runFullReview(bare, writeSpec(root, 'a.js', bare))
+  const b = await runFullReview(fixed, writeSpec(root, 'b.js', fixed))
+  fs.rmSync(root, { recursive: true, force: true })
+  const warn = (r) => r.autoChecks.find(c => /Personal-data input without `autocomplete`/.test(c))
+  assert.match(warn(a), /^⚠ \*\*Personal-data input without `autocomplete`\*\* \(email\)/)
+  assert.equal(warn(b), undefined)
 })

@@ -179,6 +179,9 @@ Before finishing any spec, verify every point below. Fix anything that fails.
   - Toggle controls (open/close, show/hide, expand/collapse) carry `aria-expanded="true|false"` or `aria-pressed="true|false"`.
   - While an action is in flight, the trigger button has `aria-busy="true"` or its label changes (e.g. "Saving…"). A spinner alone is not enough.
   - Active nav items have `aria-current="page"`. Selected items in a list, tab set, or option group have `aria-selected="true"`.
+- **Interactive targets are at least 24 by 24 CSS pixels** (WCAG 2.5.8, level AA). Lighthouse reports a smaller one as `target-size`. A list of links needs padding or spacing between the items, not just text. Use `min-block-size` and `min-inline-size` or padding, and not a fixed `width`.
+- **Inputs that collect personal data have an `autocomplete` value** (WCAG 1.3.5, level AA): `autocomplete: 'name'`, `'email'`, `'tel'`, `'street-address'`, `'current-password'` and so on. Pass it as `attrs: { autocomplete: 'email' }`.
+- **Motion respects `prefers-reduced-motion`.** `pulse-ui.css` already does this for its own components. A transition or animation you write in `app.css` needs its own `@media (prefers-reduced-motion: reduce)` rule that removes or shortens it. Slow an endless spinner down and do not stop it.
 - **The page has a logical tab order:**
   - No `tabindex` value greater than 0. Positive tabindex values override the natural DOM order and create a broken tab sequence. Remove them and reorder the DOM instead.
   - Visually hidden interactive content (off-canvas menus, collapsed panels, `opacity:0` elements) is removed from the tab order with `tabindex="-1"` or the `inert` attribute — CSS alone does not remove an element from tab order.

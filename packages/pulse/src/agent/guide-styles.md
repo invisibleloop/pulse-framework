@@ -474,3 +474,22 @@ Two ways to keep those rules:
 ```js
 export default { css: { safelist: ['type-fire', /^type-/] } }
 ```
+\n
+## Accessibility in your CSS
+
+`pulse-ui.css` handles these for its own components. Your `app.css` has to handle them for yours.
+
+- **Target size.** An interactive element is at least 24 by 24 CSS pixels. The other option is enough space around it that a 24 px circle centred on it touches no other target. A column of plain text links fails this audit. Give each link `display: inline-block` with `min-block-size: 1.5rem`, or add vertical padding or a `gap`. On touch screens use a larger size: `@media (pointer: coarse) { ... }`.
+- **Reduced motion.** Wrap each transition or animation you add in a `prefers-reduced-motion: reduce` rule:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  .my-card { transition-duration: .01ms; }
+  .my-loader { animation-duration: 6s; }  /* slow it down, do not stop it */
+}
+```
+
+Use `.01ms` and not `0s`: with a zero duration the `transitionend` event never fires.
+
+- **Colour scheme.** `pulse-ui.css` sets `color-scheme` from `meta.theme`, so scrollbars and native form controls follow your theme. Do not override it in `app.css`.
+- **Focus rings.** Draw them with `outline`. Windows High Contrast mode keeps outlines and removes `box-shadow`.

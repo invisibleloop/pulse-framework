@@ -131,7 +131,7 @@ To add a missing icon: copy a Lucide path (MIT) into `src/ui/icons.js` using `s(
 | Component | Key props |
 |-----------|-----------|
 | `button` | `label`, `variant` (primary/secondary/ghost/**ghost-light**/danger), `size` (sm/md/lg), `href`, `type`, `disabled`, `fullWidth`, `icon`, `iconAfter`, `attrs` — **use `ghost-light` when the button sits on a dark background** (hero, `section--dark`, navy wrapper); `ghost` uses `--ui-muted` text which fails contrast on dark backgrounds in light theme |
-| `input` | `name`, `label`, `type`, `placeholder`, `value`, `error`, `hint`, `required`, `disabled`, `attrs` |
+| `input` | `name`, `label`, `type`, `placeholder`, `value`, `error`, `hint`, `required`, `disabled`, `attrs` (e.g. `attrs: { autocomplete: 'email' }`: set it on every field that collects the visitor's own name, email, phone or address) |
 | `select` | `name`, `label`, `options` (strings or `{value,label}`), `value`, `error`, `required`, `event` |
 | `textarea` | `name`, `label`, `placeholder`, `value`, `rows`, `error`, `hint`, `required`, `disabled`, `attrs` |
 | `toggle` | `name`, `label`, `checked`, `disabled`, `hint`, `id`, `event` — iOS-style switch; reads as `'on'` in FormData |

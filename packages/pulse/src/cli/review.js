@@ -170,6 +170,30 @@ export function formatQuickReview(result, { agentFacing = false } = {}) {
  * }>}
  */
 /**
+ * The field names of `input(...)` calls that collect the visitor's own details (name, email, phone,
+ * address, password) and carry no `autocomplete` value. WCAG 1.3.5 (level AA) asks for one, so
+ * browsers and password managers can fill the field. The component takes it as `attrs: { autocomplete }`.
+ */
+const PERSONAL_FIELD = /^(name|full-?name|first-?name|last-?name|given-?name|family-?name|email|e-?mail|phone|tel|telephone|mobile|address|street(-?address)?|city|postcode|post-?code|zip|postal-?code|country|username|password|new-?password|current-?password)$/i
+export function personalInputsWithoutAutocomplete(source) {
+  const hits = []
+  for (const m of source.matchAll(/(?<![.\w])input\s*\(/g)) {
+    let depth = 1
+    let i = m.index + m[0].length
+    for (; i < source.length && depth > 0; i++) {
+      if (source[i] === '(') depth++
+      else if (source[i] === ')') depth--
+    }
+    const call = source.slice(m.index, i)
+    if (/\bautocomplete\b/.test(call)) continue
+    const name = call.match(/\bname\s*:\s*['"`]([\w-]+)['"`]/)?.[1]
+    const type = call.match(/\btype\s*:\s*['"`](\w+)['"`]/)?.[1]
+    if ((name && PERSONAL_FIELD.test(name)) || type === 'email' || type === 'tel' || type === 'password') hits.push(name ?? type)
+  }
+  return hits
+}
+
+/**
  * The `alert(...)` calls whose `content` is not a plain string literal. `content` is an HTML string
  * and is not escaped, so a variable or an interpolated template there puts raw text in the page.
  * A fixed string, or HTML written inline, is fine.
@@ -321,6 +345,10 @@ export async function runFullReview(source, file) {
 
   if (/throw new Error\(\s*await\s+\w+\.text\(\)\s*\)/.test(source)) {
     autoChecks.push('✗ **`throw new Error(await res.text())`** — this puts raw response HTML in a toast. Use the safe pattern from the checklist.')
+  }
+  const noAutocomplete = personalInputsWithoutAutocomplete(source)
+  if (noAutocomplete.length) {
+    autoChecks.push(`⚠ **Personal-data input without \`autocomplete\`** (${[...new Set(noAutocomplete)].slice(0, 4).join(', ')}) — WCAG 1.3.5 asks for it so browsers and password managers can fill the field. Add \`attrs: { autocomplete: 'email' }\` (or \`'name'\`, \`'tel'\`, \`'current-password'\` and so on).`)
   }
   if (alertsWithDynamicContent(source).length) {
     autoChecks.push('⚠ **`alert({ content })` is not escaped** — `content` takes an HTML string. For text from a user, a form, an error or an API, use `message`, which escapes it, and `items` for a list of lines or links to fields. Keep `content` for HTML you wrote yourself.')
