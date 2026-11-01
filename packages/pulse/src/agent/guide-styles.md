@@ -461,3 +461,16 @@ CSS processes declarations top-to-bottom. A shorthand that appears **after** a l
 ```
 
 This produces no browser error and is invisible at a glance — the expected spacing just doesn't appear. Always write shorthand before longhand in the same declaration block.
+
+## Unused CSS is removed at build
+
+`pulse build` deletes CSS rules whose class names it cannot find in your source. A class built at runtime, such as `` `type-${name}` ``, looks unused. Its rule is then missing from the production build, though it works in dev.
+
+Two ways to keep those rules:
+
+- Select on a `data-` attribute and not on a class: `[data-type="fire"] { ... }`.
+- List the class in `pulse.config.js`. An entry is a string or a regular expression:
+
+```js
+export default { css: { safelist: ['type-fire', /^type-/] } }
+```

@@ -551,6 +551,23 @@ test('verify audits a new or changed 404 page in Lighthouse snapshot mode, and k
   assert(/audits it in Lighthouse snapshot mode/.test(wf))
 })
 
+test('the guides answer what a Pulse agent read source for: purge safelist, cacheVary, the address bar, an unknown-id 404, browser code, PORT; the README maps the guides', () => {
+  // A benchmark run had to read framework source for each of these, and the extra context cost tokens on every later turn.
+  const read = (f) => fs.readFileSync(path.join(agentDir, f), 'utf8')
+  const styles = read('guide-styles.md'), spec = read('guide-spec.md'), server = read('guide-server.md')
+  assert(/css: \{ safelist: \[/.test(styles) && /Unused CSS is removed at build/.test(styles), 'styles: purge and css.safelist')
+  assert(/cacheVary: \['q', 'type', 'page'\]/.test(spec) && /The in-process page cache ignores the query string/.test(spec), 'spec: cacheVary')
+  assert(/history\.replaceState\(\{ pulse: true, path \}, '', path\)/.test(spec), 'spec: the address bar')
+  assert(/throw Object\.assign\(new Error\('Not found'\), \{ status: 404 \}\)/.test(spec), 'spec: the unknown-id 404')
+  assert(/"sideEffects": \["\*\.css"\]/.test(spec) && /reads `process\.env`/.test(spec), 'spec: browser code and sideEffects')
+  assert(/listens on the `PORT` environment variable first, then on `--port`/.test(server), 'server: PORT')
+  for (const readme of ['README.md', 'packages/pulse/README.md']) {
+    const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
+    assert(/## For coding agents/.test(src) && /node_modules\/@invisibleloop\/pulse\/src\/agent\//.test(src), `${readme}: maps the guides`)
+    assert(/You do not need to read the framework source/.test(src), `${readme}: says the source is not needed`)
+  }
+})
+
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
   const guide = fs.readFileSync(path.join(agentDir, 'guide-components.md'), 'utf8')
   const row = guide.split('\n').find(l => l.startsWith('| `alert` | `variant`'))

@@ -379,6 +379,18 @@ export default {
 }
 ```
 
+## Starting a project by hand and running `pulse start`
+
+A project needs `"type": "module"`, the dependency `@invisibleloop/pulse`, and these scripts:
+
+```json
+{ "scripts": { "build": "pulse build", "start": "pulse start" } }
+```
+
+`pulse start` listens on the `PORT` environment variable first, then on `--port`, then on 3000. Hosts that set `PORT` need no flag. A `PORT` left in your shell overrides `--port`, and Pulse prints a warning when it does.
+
+To allow images from another origin, add its source to the policy in `pulse.config.js`: `csp: { 'img-src': ['http://localhost:9000'] }`.
+
 ## Production behind a proxy — pin the public origin
 
 By default Pulse builds `<link rel="canonical">`, `sitemap.xml` and `robots.txt` from the request's `Host`, `X-Forwarded-Host` and `X-Forwarded-Proto` headers. Anyone can send those headers, and a CDN that ignores `Vary` will cache the result for everyone — one forged request can point every visitor's canonical URL at another domain. For a real deployment, pin the origin:
