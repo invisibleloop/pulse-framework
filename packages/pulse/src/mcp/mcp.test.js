@@ -490,9 +490,9 @@ test('the workflow says a criterion about refusing something needs a test that s
   assert(/post without the token and expect 403/.test(wf), 'the workflow must give the CSRF example')
 })
 
-test('the server guide says shutdown() ends the process, so a test closes the server itself', () => {
+test('the ops guide says shutdown() ends the process, so a test closes the server itself', () => {
   // A demo agent called shutdown() in a test teardown; the process exited before the reporter printed, and the run looked like a pass.
-  const guide = fs.readFileSync(path.join(agentDir, 'guide-server.md'), 'utf8')
+  const guide = fs.readFileSync(path.join(agentDir, 'guide-ops.md'), 'utf8')
   assert(/\*\*ending the process\*\*/.test(guide), 'the guide must say shutdown() ends the process')
   assert(/server\.closeAllConnections\(\)/.test(guide), 'the guide must show closing the server in a test')
   assert(/await createServer\(specs, \{\s*port: 3000/.test(guide), 'createServer is async: the shutdown example must await it')
@@ -623,6 +623,35 @@ test('agents are sent to the checklist late, and the styles guide they do read c
   assert(/## Images/.test(styles))
   assert(/`loading="eager"` and `fetchpriority="high"`/.test(styles) && /priority: true/.test(styles), 'styles: the LCP image')
   assert(/`loading="lazy"` and `decoding="async"`/.test(styles) && /`width` and `height`, or a `ratio`/.test(styles), 'styles: the other images')
+})
+
+test('every agent guide fits one command: under 30,000 characters, the point where the tool shows only a preview', () => {
+  // A benchmark agent that cat'ed guide-server.md and guide-styles.md got a 2 KB preview ending in <persisted-output>,
+  // and in one run never read the saved file. guide-server.md was 30,015 bytes. Keep each file under the limit with room to grow.
+  const LIMIT = 28000
+  const over = fs.readdirSync(agentDir).filter(f => f.endsWith('.md'))
+    .map(f => [f, fs.readFileSync(path.join(agentDir, f), 'utf8').length])
+    .filter(([, chars]) => chars > LIMIT)
+  assert(over.length === 0, `these guides are over ${LIMIT} characters and would be shown as a preview: ${over.map(([f, n]) => `${f} (${n})`).join(', ')}. Split them by topic.`)
+})
+
+test('the ops guide is its own MCP resource, listed in the index, and the server guide points to it', () => {
+  const server = fs.readFileSync(path.join(ROOT, 'src', 'mcp', 'server.js'), 'utf8')
+  assert(/uri:\s+'pulse:\/\/guide\/ops'/.test(server), 'a resource entry for pulse://guide/ops')
+  assert(/GUIDE_OPS\s+= fs\.readFileSync\(new URL\('\.\.\/agent\/guide-ops\.md'/.test(server), 'the file is loaded')
+  assert(/\| \\`pulse:\/\/guide\/ops\\` \|/.test(server), 'the index table lists it')
+  const guideServer = fs.readFileSync(path.join(agentDir, 'guide-server.md'), 'utf8')
+  const ops = fs.readFileSync(path.join(agentDir, 'guide-ops.md'), 'utf8')
+  assert(/are in `guide-ops\.md`/.test(guideServer), 'guide-server.md says where the rest went')
+  for (const h of ['## Third-party inline scripts', '## Production behind a proxy', '## Health check endpoint', '## Error journal', '## Graceful shutdown', '## Markdown']) {
+    assert(ops.includes(h), `guide-ops.md has ${h}`)
+    assert(!guideServer.includes(h), `guide-server.md no longer has ${h}`)
+  }
+  for (const readme of ['README.md', 'packages/pulse/README.md']) {
+    const src = fs.readFileSync(path.join(REPO_ROOT, readme), 'utf8')
+    assert(/\| `guide-ops\.md` \|/.test(src), `${readme}: lists guide-ops.md`)
+    assert(/Read one guide per command/.test(src) && /<persisted-output>/.test(src), `${readme}: tells agents about the preview`)
+  }
 })
 
 test('the components guide lists alert items (escaped lines that can link to a field)', () => {
