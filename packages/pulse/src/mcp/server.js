@@ -193,6 +193,13 @@ const GUIDE_RESOURCES = [
     content:     () => GUIDE_SERVER,
   },
   {
+    name:        'guide-ops',
+    uri:         'pulse://guide/ops',
+    title:       'Pulse Guide — Running in Production, Health, Shutdown, Markdown',
+    description: 'Reverse proxy, health check, graceful shutdown, error journal, third-party inline scripts, markdown pages.',
+    content:     () => GUIDE_OPS,
+  },
+  {
     name:        'guide-styles',
     uri:         'pulse://guide/styles',
     title:       'Pulse Guide — CSS, Theming, Fonts, Utilities',
@@ -3850,6 +3857,7 @@ const WORKFLOW        = fs.readFileSync(new URL('../agent/workflow.md',         
 const CHECKLIST       = fs.readFileSync(new URL('../agent/checklist.md',         import.meta.url), 'utf8')
 const GUIDE_SPEC      = fs.readFileSync(new URL('../agent/guide-spec.md',        import.meta.url), 'utf8')
 const GUIDE_SERVER    = fs.readFileSync(new URL('../agent/guide-server.md',      import.meta.url), 'utf8')
+const GUIDE_OPS       = fs.readFileSync(new URL('../agent/guide-ops.md',         import.meta.url), 'utf8')
 const GUIDE_STYLES    = fs.readFileSync(new URL('../agent/guide-styles.md',      import.meta.url), 'utf8')
 const GUIDE_ROUTING   = fs.readFileSync(new URL('../agent/guide-routing.md',     import.meta.url), 'utf8')
 const GUIDE_COMPONENTS = fs.readFileSync(new URL('../agent/guide-components.md', import.meta.url), 'utf8')
@@ -3900,7 +3908,8 @@ If you know your context already:
 | \`pulse://quickstart\` | **Editing, bug-fixing, or a simple one-shot build** — workflow + spec skeleton + components + theming in one fetch. Skip the 4-resource cold-start for targeted tasks. |
 | \`pulse://workflow\` | **New project or new page — required.** Planning steps, acceptance criteria and the phase/gate sequence. Read it before you plan. |
 | \`pulse://guide/spec\` | Building a spec — state, mutations, actions, streaming SSR, key rules, form layout |
-| \`pulse://guide/server\` | Server data, global store, persist, cookies, redirects, POST handling |
+| \`pulse://guide/server\` | Server data, global store, persist, cookies, redirects, POST handling, \`pulse start\`, the build |
+| \`pulse://guide/ops\` | Deploying and running: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown |
 | \`pulse://guide/styles\` | CSS tokens, theming, custom fonts, utility classes |
 | \`pulse://guide/routing\` | Navigation, page discovery, dynamic routes |
 | \`pulse://guide/components\` | All UI components, icons, charts, composition patterns |

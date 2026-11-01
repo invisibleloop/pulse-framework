@@ -107,11 +107,14 @@ The guides an agent needs are Markdown files in this package. After `npm install
 | --- | --- |
 | `guide-spec.md` | the spec object, state, the query string and page cache, a 404 for an unknown id, code that reaches the browser |
 | `guide-routing.md` | routes, params, redirects and the 404 page |
-| `guide-server.md` | server data, forms, cookies, caching, `pulse start` and deploying |
+| `guide-server.md` | server data, forms, cookies, caching, the store, `pulse start` and what `pulse build` runs |
+| `guide-ops.md` | running in production: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown pages |
 | `guide-styles.md` | CSS, tokens, and the build's removal of unused CSS |
 | `guide-components.md` | the `@invisibleloop/pulse/ui` components |
 | `workflow.md` | how to plan and check a page |
 | `checklist.md` | the accessibility, image, security and form rules to check against. Read it once the page works, before you finish |
+
+Read the guides with your file-reading tool when you have one: it returns a whole file. Shell output above about 30,000 characters is cut to a short preview, and several guides joined with `cat` go over that. If you use the shell, read one guide per command. A preview ends with `<persisted-output>`. When you see it, read the saved file with your file-reading tool, in pieces if needed. Do not work from the preview.
 
 Running `pulse` in a project serves the same files as MCP resources (`pulse://guide`).
 
