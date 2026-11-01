@@ -19,21 +19,21 @@ function project({ config = null } = {}) {
   const files = {
     'package.json': '{"name":"p","type":"module"}',
     'public/pulse-ui.css': '',
-    'public/app.css': '.keep-page{color:red}.keep-helper{color:blue}.keep-component{color:green}.keep-variant-a{color:teal}.keep-variant-b{color:navy}.data-only-news{color:gold}.drop-me{color:black}',
+    'public/app.css': '.keep-page{color:red}.keep-helper{color:blue}.keep-component{color:green}.keep-variant-a{color:teal}.keep-variant-b{color:navy}.keep__bem--a{color:plum}.data-only-news{color:gold}.drop-me{color:black}',
     // The helper holds a class name that the page file does not spell out.
     // The finished class name is never written out: only its start, 'keep-variant-', is in the source.
-    'src/lib/helper.js': [`export const helperClass = 'keep-helper'`, `export const variantClass = (v) => 'keep-variant-' + v`, ''].join('\n'),
+    'src/lib/helper.js': [`export const helperClass = 'keep-helper'`, `export const variantClass = (v) => 'keep-variant-' + v`, `export const bemClass = (v) => 'keep__bem--' + v`, ''].join('\n'),
     'src/components/box.js': `export const box = () => '<div class="keep-component"></div>'\n`,
     'src/pages/home.js': [
       `import fs from 'node:fs'`,
-      `import { helperClass, variantClass } from '../lib/helper.js'`,
+      `import { helperClass, variantClass, bemClass } from '../lib/helper.js'`,
       `import { box } from '../components/box.js'`,
       `export default {`,
       `  route: '/',`,
       `  meta: { title: 't', description: 'A page for the build test.', theme: 'light', styles: ['/app.css'] },`,
       // The marker path comes from the environment, so no path is built into this source.
       `  server: { probe: async (ctx) => { fs.writeFileSync(process.env.PULSE_TEST_MARKER, JSON.stringify({ build: ctx.build, env: process.env.PULSE_BUILD })); return 1 } },`,
-      '  view: (state, server) => `<main id="main-content" class="keep-page ${helperClass} ${variantClass("a")}">${box()}</main>`,',
+      '  view: (state, server) => `<main id="main-content" class="keep-page ${helperClass} ${variantClass("a")} ${bemClass("a")}">${box()}</main>`,',
       `}`,
       '',
     ].join('\n'),
@@ -65,7 +65,12 @@ test('by default the build calls no server fetcher, and keeps the classes it can
     const css = builtCss(root)
     for (const kept of ['keep-page', 'keep-helper', 'keep-component']) assert(css.includes(kept), `${kept} must survive (the whole src/ folder is scanned)`)
     for (const kept of ['keep-variant-a', 'keep-variant-b']) assert(css.includes(kept), `${kept} must survive: the source builds names that start 'keep-variant-'`)
+    assert(css.includes('keep__bem--a'), 'a BEM-style name built at run time (keep__bem--) survives')
     assert(!css.includes('data-only-news'), 'a class that exists only in fetched data is removed without the render')
+    // The warning lists what is really removed, and nothing the prefixes keep.
+    const warning = r.stdout.split('\n').find(l => l.includes('purged (not found in any scanned source)')) ?? ''
+    assert(warning.includes('data-only-news') && warning.includes('drop-me'), `the warning names the removed classes: ${warning}`)
+    assert(!warning.includes('keep-variant') && !warning.includes('keep__bem'), `the warning does not name classes the prefixes keep: ${warning}`)
     assert(!css.includes('drop-me'), 'a class nothing uses is removed')
   } finally { fs.rmSync(root, { recursive: true, force: true }) }
 })

@@ -15,8 +15,9 @@
 export const FRAMEWORK_INJECTED_CLASSES = ['pulse-skip-link']
 
 // `word-${expr}` and `'word-' + expr`: the fixed start (group 1) of a class name built at run time.
-const DYNAMIC_PREFIX_TEMPLATE = /(?<![\w-])([A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)*[-_]+)\$\{/g
-const DYNAMIC_PREFIX_CONCAT   = /['"`]([A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)*[-_]+)['"`]\s*\+/g
+// A run of separators counts as one: 'strip__cell--' (BEM: block__element--modifier) is a prefix too.
+const DYNAMIC_PREFIX_TEMPLATE = /(?<![\w-])([A-Za-z][A-Za-z0-9]*(?:[-_]+[A-Za-z0-9]+)*[-_]+)\$\{/g
+const DYNAMIC_PREFIX_CONCAT   = /['"`]([A-Za-z][A-Za-z0-9]*(?:[-_]+[A-Za-z0-9]+)*[-_]+)['"`]\s*\+/g
 
 export function extractUsedClasses(htmlContents, jsContents, safelist = []) {
   const used = new Set(FRAMEWORK_INJECTED_CLASSES)
