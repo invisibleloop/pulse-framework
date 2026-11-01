@@ -189,3 +189,18 @@ test('without a template or concatenation there are no prefixes, and nothing ext
   assert(selectorUsed('.ui-btn--disabled', used))
   assert(!selectorUsed('.ui-btn--primary', used))
 })
+
+test('BEM-style run-time names (block__element--modifier) are recognised as prefixes too', () => {
+  // 24 Hours writes class="strip__cell strip__cell--${period}"; the double underscore and double dash were not matched,
+  // so .strip__cell--morning lost its CSS when the build stopped rendering the pages.
+  const E = '$' + '{x}'
+  const js = [
+    'const a = `<button class="strip__cell strip__cell--' + E + '">`',
+    "const b = 'card__title--' + size",
+    'const c = `block__el_mod-' + E + '`',
+  ].join('\n')
+  const used = extractUsedClasses([], [js], [])
+  for (const p of ['strip__cell--', 'card__title--', 'block__el_mod-']) assert(used._dynamicPrefixes.includes(p), `${p} is a prefix`)
+  for (const kept of ['.strip__cell--morning', '.card__title--lg', '.block__el_mod-x']) assert(selectorUsed(kept, used), `${kept} is kept`)
+  assert(!selectorUsed('.other__cell--x', used), 'a different block is not covered')
+})

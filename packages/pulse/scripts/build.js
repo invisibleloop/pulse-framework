@@ -20,7 +20,7 @@ import { createHash } from 'crypto'
 import { discoverPages } from '../src/cli/discover.js'
 import { renderToString } from '../src/runtime/ssr.js'
 import { c, header, table, ok, fail, info, warn, elapsed, icon } from '../src/cli/fmt.js'
-import { extractUsedClasses, purgeCss, minifyCss } from './css-purge.js'
+import { extractUsedClasses, purgeCss, minifyCss, selectorUsed } from './css-purge.js'
 import { buildBootstrapSource } from './bootstrap.js'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { toPosix } from '../src/cli/paths.js'
@@ -516,7 +516,9 @@ async function purgeCssStep(pages, manifest, root, outDir) {
       const definedClasses = [...original.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)\s*[{,:\[]/g)]
         .map(m => m[1])
         .filter((cls, i, arr) => arr.indexOf(cls) === i) // dedupe
-      const purgedClasses = definedClasses.filter(cls => !usedClasses.has(cls))
+      // The same keep-or-drop test the purge uses, so the warning matches what is really removed
+      // (a class covered by a safelist pattern or a run-time prefix is kept, and is not listed).
+      const purgedClasses = definedClasses.filter(cls => !selectorUsed('.' + cls, usedClasses))
       if (purgedClasses.length > 0) {
         console.log(warn(`${cssHref}: ${purgedClasses.length} class${purgedClasses.length === 1 ? '' : 'es'} purged (not found in any scanned source): ${purgedClasses.slice(0, 5).map(c => `.${c}`).join(', ')}${purgedClasses.length > 5 ? ` … +${purgedClasses.length - 5} more` : ''}`))
       }
