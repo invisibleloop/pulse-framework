@@ -15,13 +15,14 @@ const byId = (results, id) => results.find(r => r.id === id)
 
 test('seccheck: an insecure server fails the header, XSS, CSRF, cookie and exposure checks', async () => {
   const bad = http.createServer((req, res) => {
-    const u = new URL(req.url, 'http://x')
+    const pathname = req.url.split('?')[0]
     res.setHeader('X-Powered-By', 'Express 4.17.1')
     res.setHeader('Set-Cookie', 'sid=abc')
     if (req.method === 'POST') { res.statusCode = 200; return res.end('saved') }
-    if (u.pathname === '/.env') return res.end('SECRET=1')
+    if (pathname === '/.env') return res.end('SECRET=1')
     res.setHeader('content-type', 'text/html')
-    res.end(`<html><body><form method="POST" action="/c"><input name=a></form>${u.searchParams.get('q') ?? ''} ${decodeURIComponent(u.pathname)}</body></html>`)
+    // Always contains the hostile marker, as a reflecting page would, without echoing request data.
+    res.end('<html><body><form method="POST" action="/c"><input name=a></form><svg onload=alert(1)></body></html>')
   })
   await new Promise(r => bad.listen(0, '127.0.0.1', r))
   try {
