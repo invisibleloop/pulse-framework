@@ -6,3 +6,7 @@ body{margin:0;background:oklch(0.985 0.004 90);color:oklch(0.2 0.012 260);font-f
 .hv-2:hover{background:oklch(0.98 0.004 90)}
 .spec-grid{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}
 @media (max-width:903px){.spec-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Framework skip link: hidden until keyboard focus. This page loads no pulse-ui.css, which carries the framework rule. */
+.pulse-skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.pulse-skip-link:focus{position:fixed;left:1rem;top:1rem;width:auto;height:auto;padding:.5rem 1rem;background:oklch(0.2 0.012 260);color:oklch(0.985 0.004 90);font-size:1rem;font-weight:600;border-radius:4px;text-decoration:none;z-index:9999;outline:3px solid oklch(0.985 0.004 90);outline-offset:2px}
