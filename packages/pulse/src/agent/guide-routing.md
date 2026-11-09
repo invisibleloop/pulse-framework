@@ -89,7 +89,7 @@ The pattern above uses `attrs` — alternatively, use CSS with `:not` and a body
 
 Use the global store (`pulse.store.js`) for state that needs to be consistent across pages — user session, cart count, theme preference. Do not duplicate server fetchers across specs for the same data.
 
-See `pulse://guide/server` for the full store API.
+See `pulse://guide/store` for the full store API.
 
 ## Page discovery — no registration needed
 

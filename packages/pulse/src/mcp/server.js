@@ -165,7 +165,7 @@ function normaliseVibe(v) {
 const SERVER_INSTRUCTIONS = [
   'Pulse is a spec-first frontend framework. These tools and resources are the way to learn and build it.',
   '- Start by reading the resource pulse://start. It detects a new project, a new page or an edit, and returns what you need.',
-  '- Read pulse://guide for the index, then read only the one topic guide you need (pulse://guide/spec, /server, /styles, /routing, /components).',
+  '- Then read pulse://guide/cheatsheet (about 5 KB). It covers most builds. Open a larger topic guide (pulse://guide/spec, /server, /styles, /routing, /components) only for a topic the cheat sheet names.',
   '- Do not download or unpack the npm package to read its files. The guides here are the same text.',
   '- Check your work with pulse_validate, and for a new page follow the workflow in pulse://workflow, including its approval steps.',
 ].join('\n')
@@ -189,6 +189,13 @@ const GUIDE_RESOURCES = [
     content:     () => PULSE_GUIDE_INDEX,
   },
   {
+    name:        'guide-cheatsheet',
+    uri:         'pulse://guide/cheatsheet',
+    title:       'Pulse Guide — Cheat Sheet',
+    description: 'About 5 KB. The rules that decide most builds: one spec per route, a page with server data and a 404, interactivity, styles and the hex rule, build and run gotchas. Read this before the larger topic guides, and open one of them only for a topic it names.',
+    content:     () => GUIDE_CHEATSHEET,
+  },
+  {
     name:        'guide-spec',
     uri:         'pulse://guide/spec',
     title:       'Pulse Guide — Spec, Mutations, Actions, Streaming',
@@ -198,9 +205,23 @@ const GUIDE_RESOURCES = [
   {
     name:        'guide-server',
     uri:         'pulse://guide/server',
-    title:       'Pulse Guide — Server, Store, Cookies, Redirects',
-    description: 'Global store, per-page persistence, server context, cookies, redirects, POST bodies, raw specs.',
+    title:       'Pulse Guide — Server Data, Forms, Cookies, Redirects, Build',
+    description: 'Server fetchers, server-side forms, server-side data persistence, cookies, redirects, POST bodies, pulse start and what pulse build runs. The store, persist and live push are in pulse://guide/store.',
     content:     () => GUIDE_SERVER,
+  },
+  {
+    name:        'guide-store',
+    uri:         'pulse://guide/store',
+    title:       'Pulse Guide — Store, Persist, Live Push',
+    description: 'Per-page persistence (spec.persist), the global store (pulse.store.js), and live store push over SSE. Read only when pages must share state or update live.',
+    content:     () => GUIDE_STORE,
+  },
+  {
+    name:        'guide-fonts',
+    uri:         'pulse://guide/fonts',
+    title:       'Pulse Guide — Fonts and Third-Party Scripts',
+    description: 'Google Fonts, Adobe Fonts, self-hosted and multi-brand fonts, Subresource Integrity, third-party scripts and ad networks. Read only when you add a font or a third-party script.',
+    content:     () => GUIDE_FONTS,
   },
   {
     name:        'guide-ops',
@@ -212,8 +233,8 @@ const GUIDE_RESOURCES = [
   {
     name:        'guide-styles',
     uri:         'pulse://guide/styles',
-    title:       'Pulse Guide — CSS, Theming, Fonts, Utilities',
-    description: 'meta.styles, theming with CSS tokens, custom fonts (Google/Adobe/self-hosted), utility classes.',
+    title:       'Pulse Guide — CSS, Theming, Utilities',
+    description: 'meta.styles, theming with CSS tokens, vibes, the hex colour rule, utility classes, external images, unused-CSS removal. Fonts and third-party scripts are in pulse://guide/fonts.',
     content:     () => GUIDE_STYLES,
   },
   {
@@ -357,8 +378,9 @@ No resource fetch needed. Read the file, make the change, run \`/verify --quick\
 
 ### D — Stuck mid-build
 - Wrong component props? → \`pulse://guide/components\`
-- Server data / store / auth? → \`pulse://guide/server\`
-- CSS / theming? → \`pulse://guide/styles\`
+- Server data / forms / auth? → \`pulse://guide/server\`
+- Shared or live state (store, persist)? → \`pulse://guide/store\`
+- CSS / theming? → \`pulse://guide/styles\` (fonts and third-party scripts: \`pulse://guide/fonts\`)
 - Routing or layout? → \`pulse://guide/routing\`
 - Lighthouse < 100? → Fix the failing audit, re-run \`/verify\`
 - Something looks wrong visually? → \`pulse_restart_server\` (hot-reloads specs instantly) then navigate the browser
@@ -419,8 +441,8 @@ server.registerResource(
 > - A page with a form, server data, a login or any other behaviour, even as a one-shot request → \`pulse://workflow\` first. It has the acceptance-criteria step, and this resource does not.
 > - New project or new branded page → \`pulse://workflow\` then \`pulse://guide/templates\` + \`pulse://guide/design-references\`
 > - Unfamiliar component props → \`pulse://guide/components\`
-> - Server data, store, auth → \`pulse://guide/server\`
-> - CSS / theming deep-dive → \`pulse://guide/styles\`
+> - Server data, forms, auth → \`pulse://guide/server\`; shared or live state → \`pulse://guide/store\`
+> - CSS / theming deep-dive → \`pulse://guide/styles\`; fonts or third-party scripts → \`pulse://guide/fonts\`
 
 ---
 
@@ -3865,9 +3887,12 @@ function text(str) {
 const IDENTITY        = fs.readFileSync(new URL('../agent/identity.md',          import.meta.url), 'utf8')
 const WORKFLOW        = fs.readFileSync(new URL('../agent/workflow.md',           import.meta.url), 'utf8')
 const CHECKLIST       = fs.readFileSync(new URL('../agent/checklist.md',         import.meta.url), 'utf8')
+const GUIDE_CHEATSHEET = fs.readFileSync(new URL('../agent/guide-cheatsheet.md', import.meta.url), 'utf8')
 const GUIDE_SPEC      = fs.readFileSync(new URL('../agent/guide-spec.md',        import.meta.url), 'utf8')
 const GUIDE_SERVER    = fs.readFileSync(new URL('../agent/guide-server.md',      import.meta.url), 'utf8')
 const GUIDE_OPS       = fs.readFileSync(new URL('../agent/guide-ops.md',         import.meta.url), 'utf8')
+const GUIDE_STORE     = fs.readFileSync(new URL('../agent/guide-store.md',       import.meta.url), 'utf8')
+const GUIDE_FONTS     = fs.readFileSync(new URL('../agent/guide-fonts.md',       import.meta.url), 'utf8')
 const GUIDE_STYLES    = fs.readFileSync(new URL('../agent/guide-styles.md',      import.meta.url), 'utf8')
 const GUIDE_ROUTING   = fs.readFileSync(new URL('../agent/guide-routing.md',     import.meta.url), 'utf8')
 const GUIDE_COMPONENTS = fs.readFileSync(new URL('../agent/guide-components.md', import.meta.url), 'utf8')
@@ -3917,10 +3942,13 @@ If you know your context already:
 | \`pulse://start\` | **Always fetch first** — context-aware entry point that routes you to the right resources |
 | \`pulse://quickstart\` | **Editing, bug-fixing, or a simple one-shot build** — workflow + spec skeleton + components + theming in one fetch. Skip the 4-resource cold-start for targeted tasks. |
 | \`pulse://workflow\` | **New project or new page — required.** Planning steps, acceptance criteria and the phase/gate sequence. Read it before you plan. |
+| \`pulse://guide/cheatsheet\` | **Read before the topic guides** — about 5 KB: the rules that decide most builds, with a pointer to the full guide for each topic |
 | \`pulse://guide/spec\` | Building a spec — state, mutations, actions, streaming SSR, key rules, form layout |
-| \`pulse://guide/server\` | Server data, global store, persist, cookies, redirects, POST handling, \`pulse start\`, the build |
+| \`pulse://guide/server\` | Server data, forms, server-side persistence, cookies, redirects, POST handling, \`pulse start\`, the build |
+| \`pulse://guide/store\` | Only when pages share state or update live: \`spec.persist\`, the global store, SSE push |
 | \`pulse://guide/ops\` | Deploying and running: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown |
-| \`pulse://guide/styles\` | CSS tokens, theming, custom fonts, utility classes |
+| \`pulse://guide/styles\` | CSS tokens, theming, the hex rule, utility classes, external images |
+| \`pulse://guide/fonts\` | Only when you add a font or a third-party script: Google, Adobe, self-hosted, SRI, ad networks |
 | \`pulse://guide/routing\` | Navigation, page discovery, dynamic routes |
 | \`pulse://guide/components\` | All UI components, icons, charts, composition patterns |
 | \`pulse://guide/examples\` | Complete working page examples |
