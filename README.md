@@ -106,9 +106,11 @@ The guides an agent needs are Markdown files in this package. After `npm install
 | File | Covers | Read it |
 | --- | --- | --- |
 | `guide-spec.md` | the spec object, state, the query string and page cache, a 404 for an unknown id, code that reaches the browser | for every task |
-| `guide-styles.md` | CSS, tokens, images, accessibility in CSS, and the build's removal of unused CSS | for every task that has styles |
+| `guide-styles.md` | CSS, tokens, the hex colour rule, external images, accessibility in CSS, and the build's removal of unused CSS | for every task that has styles |
+| `guide-fonts.md` | Google, Adobe, self-hosted and multi-brand fonts, Subresource Integrity, third-party scripts | only when you add a font or a third-party script |
 | `guide-routing.md` | routes, params, redirects and the 404 page | when the site has more than one page, or dynamic routes |
-| `guide-server.md` | server data, forms, cookies, caching, the store, `pulse start` and what `pulse build` runs | when a page loads data or has a form, or when you build and serve the site |
+| `guide-server.md` | server data, forms, cookies, caching, `pulse start` and what `pulse build` runs | when a page loads data or has a form, or when you build and serve the site |
+| `guide-store.md` | `spec.persist`, the global store, live push over SSE | only when pages share state or update live |
 | `guide-components.md` | the `@invisibleloop/pulse/ui` components | when you use those components |
 | `guide-ops.md` | running in production: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown pages | only when you deploy, or use markdown pages or third-party scripts |
 | `workflow.md` | how to plan and check a page | when you plan a new page |

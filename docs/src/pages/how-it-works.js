@@ -113,10 +113,16 @@ export default {
         <dd>Spec format — state, mutations, actions, streaming SSR, validation, key rules, and form layout.</dd>
 
         <dt><code>pulse://guide/server</code></dt>
-        <dd>Server data fetchers, global store, persist, cookies, redirects, and POST handling.</dd>
+        <dd>Server data fetchers, forms, cookies, redirects, POST handling, and the build.</dd>
+
+        <dt><code>pulse://guide/store</code></dt>
+        <dd>Per-page persist, the global store, and live push. Read only when pages share state.</dd>
 
         <dt><code>pulse://guide/styles</code></dt>
-        <dd>CSS tokens, theming, custom fonts, and utility classes.</dd>
+        <dd>CSS tokens, theming, utility classes, and external images.</dd>
+
+        <dt><code>pulse://guide/fonts</code></dt>
+        <dd>Custom fonts and third-party scripts. Read only when you add one.</dd>
 
         <dt><code>pulse://guide/routing</code></dt>
         <dd>Client-side navigation, page discovery, and dynamic routes.</dd>

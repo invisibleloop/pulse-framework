@@ -68,8 +68,10 @@ const load = (ctx) => ((ctx._cache ??= {}).p ??= fetchPokemon(ctx.params.name)) 
 | Need | Read |
 |---|---|
 | Spec fields in full, streaming segments, form layout | `pulse://guide/spec` |
-| Store, `persist`, cookies, redirects, post bodies, SSE | `pulse://guide/server` |
-| Theming tokens, vibes, fonts, third-party scripts | `pulse://guide/styles` |
+| Cookies, redirects, post bodies, saving data on the server | `pulse://guide/server` |
+| Shared state, `persist`, live push (SSE) | `pulse://guide/store` |
+| Theming tokens, vibes, external images | `pulse://guide/styles` |
+| Fonts, third-party scripts | `pulse://guide/fonts` |
 | Layout component, redirects map, sitemap, canonical URLs | `pulse://guide/routing` |
 | Component props | `pulse://guide/components` |
 | New branded page or site (intake, sketch, approvals) | `pulse://workflow` |
