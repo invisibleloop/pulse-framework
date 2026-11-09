@@ -1195,6 +1195,40 @@ await test('the hsts option: false sends none, a string is verbatim, an object c
   strictAssert.equal(await hsts({ includeSubDomains: true, preload: true }), 'max-age=31536000; includeSubDomains; preload')
 })
 
+await test('the originTrial option sends an Origin-Trial header on HTML pages only', async () => {
+  const header = async (option, path = '/about') => {
+    let value
+    await withServer([canonicalSpec], { stream: false, originTrial: option }, async (port) => {
+      value = (await request(port, 'GET', path)).headers['origin-trial']
+    })
+    return value
+  }
+  strictAssert.equal(await header(undefined), undefined, 'off by default')
+  strictAssert.equal(await header('abc123+/=_-'), 'abc123+/=_-')
+  strictAssert.equal(await header(['tokenA', 'tokenB']), 'tokenA, tokenB', 'several tokens are sent as separate header lines')
+  strictAssert.equal(await header('tok', '/healthz'), undefined, 'a non-HTML response does not get the header')
+})
+
+await test('the originTrial option sends the header on streamed pages too', async () => {
+  let value
+  await withServer([canonicalSpec], { stream: true, originTrial: 'streamtoken' }, async (port) => {
+    value = (await request(port, 'GET', '/about')).headers['origin-trial']
+  })
+  strictAssert.equal(value, 'streamtoken')
+})
+
+await test('the originTrial option is validated before the server starts', async () => {
+  const { resolveOriginTrial } = await import('./index.js')
+  strictAssert.equal(resolveOriginTrial(undefined), null)
+  strictAssert.equal(resolveOriginTrial(false), null)
+  strictAssert.throws(() => resolveOriginTrial([]), /non-empty array/)
+  strictAssert.throws(() => resolveOriginTrial(''), /base64/)
+  strictAssert.throws(() => resolveOriginTrial('a b'), /base64/, 'a space is not a token character')
+  strictAssert.throws(() => resolveOriginTrial('abc\r\nSet-Cookie: x=1'), /base64/, 'a newline can never reach a header')
+  strictAssert.throws(() => resolveOriginTrial(42), /base64/)
+  strictAssert.throws(() => resolveOriginTrial('a'.repeat(4097)), /4096/)
+})
+
 await test('the hsts option is validated before the server starts', async () => {
   const { resolveHsts } = await import('./index.js')
   strictAssert.throws(() => resolveHsts({ preload: true }), /includeSubDomains/, 'preload without includeSubDomains is rejected')

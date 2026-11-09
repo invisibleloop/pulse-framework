@@ -17,6 +17,7 @@ import path from 'path'
 import os   from 'os'
 import { execFileSync } from 'child_process'
 import { fileURLToPath, pathToFileURL } from 'url'
+import { webMcpFormProblems, webMcpToolCount } from './webmcp.js'
 
 // ---------------------------------------------------------------------------
 // Quick mode — lightweight structural checks, no validator subprocess, no
@@ -65,6 +66,8 @@ export async function runQuickReview(source, file) {
       issues.push('✗ `data-event` on `<input>` — destroys focus on every keystroke, use FormData in onStart instead')
     if (/(className|htmlFor|onClick)=/.test(renderedHtml))
       issues.push('✗ React patterns found (className / htmlFor / onClick) — use class, for, data-event')
+    for (const p of webMcpFormProblems(renderedHtml))
+      (p.level === 'error' ? issues : warnings).push(`${p.level === 'error' ? '✗' : '⚠'} WebMCP tool form: ${p.message}`)
     if (/tabindex=["']?([1-9]\d*)/.test(renderedHtml))
       issues.push('✗ Positive tabindex found — remove, reorder DOM instead')
     const rawNavInSource = (source.match(/<nav[\s>]/gi) || []).length
@@ -298,6 +301,10 @@ export async function runFullReview(source, file) {
 
     const reactPatterns = /(className|htmlFor|onClick)=/.test(renderedHtml)
     autoChecks.push(reactPatterns ? '✗ **React patterns found** — use class, for, data-event instead' : '✓ No React patterns (className/htmlFor/onClick)')
+
+    const webMcp = webMcpFormProblems(renderedHtml)
+    for (const p of webMcp) autoChecks.push(`${p.level === 'error' ? '✗' : '⚠'} **WebMCP tool form** — ${p.message}`)
+    if (webMcp.length === 0 && webMcpToolCount(renderedHtml) > 0) autoChecks.push(`✓ WebMCP tool forms valid (${webMcpToolCount(renderedHtml)})`)
 
     const htmlNoSvg = renderedHtml
       .replace(/<svg[\s\S]*?<\/svg>/gi, '')

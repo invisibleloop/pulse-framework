@@ -224,6 +224,13 @@ const GUIDE_RESOURCES = [
     content:     () => GUIDE_FONTS,
   },
   {
+    name:        'guide-webmcp',
+    uri:         'pulse://guide/webmcp',
+    title:       'Pulse Guide — WebMCP, Forms an AI Agent Can Call',
+    description: 'The declarative WebMCP attributes (toolname, tooldescription, toolparamdescription, toolautosubmit) on server-rendered forms, the originTrial config option, the rules pulse_review checks, and safety. Read only when the user asks for WebMCP or agent-callable forms.',
+    content:     () => GUIDE_WEBMCP,
+  },
+  {
     name:        'guide-ops',
     uri:         'pulse://guide/ops',
     title:       'Pulse Guide — Running in Production, Health, Shutdown, Markdown',
@@ -3891,6 +3898,7 @@ const GUIDE_CHEATSHEET = fs.readFileSync(new URL('../agent/guide-cheatsheet.md',
 const GUIDE_SPEC      = fs.readFileSync(new URL('../agent/guide-spec.md',        import.meta.url), 'utf8')
 const GUIDE_SERVER    = fs.readFileSync(new URL('../agent/guide-server.md',      import.meta.url), 'utf8')
 const GUIDE_OPS       = fs.readFileSync(new URL('../agent/guide-ops.md',         import.meta.url), 'utf8')
+const GUIDE_WEBMCP    = fs.readFileSync(new URL('../agent/guide-webmcp.md',      import.meta.url), 'utf8')
 const GUIDE_STORE     = fs.readFileSync(new URL('../agent/guide-store.md',       import.meta.url), 'utf8')
 const GUIDE_FONTS     = fs.readFileSync(new URL('../agent/guide-fonts.md',       import.meta.url), 'utf8')
 const GUIDE_STYLES    = fs.readFileSync(new URL('../agent/guide-styles.md',      import.meta.url), 'utf8')
@@ -3948,6 +3956,7 @@ If you know your context already:
 | \`pulse://guide/store\` | Only when pages share state or update live: \`spec.persist\`, the global store, SSE push |
 | \`pulse://guide/ops\` | Deploying and running: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown |
 | \`pulse://guide/styles\` | CSS tokens, theming, the hex rule, utility classes, external images |
+| \`pulse://guide/webmcp\` | Only when the user asks for WebMCP or forms an AI agent can call: the tool attributes, the origin-trial option, the review rules |
 | \`pulse://guide/fonts\` | Only when you add a font or a third-party script: Google, Adobe, self-hosted, SRI, ad networks |
 | \`pulse://guide/routing\` | Navigation, page discovery, dynamic routes |
 | \`pulse://guide/components\` | All UI components, icons, charts, composition patterns |

@@ -110,6 +110,7 @@ The guides an agent needs are Markdown files in this package. After `npm install
 | `guide-fonts.md` | Google, Adobe, self-hosted and multi-brand fonts, Subresource Integrity, third-party scripts | only when you add a font or a third-party script |
 | `guide-routing.md` | routes, params, redirects and the 404 page | when the site has more than one page, or dynamic routes |
 | `guide-server.md` | server data, forms, cookies, caching, `pulse start` and what `pulse build` runs | when a page loads data or has a form, or when you build and serve the site |
+| `guide-webmcp.md` | the WebMCP form attributes, the `originTrial` option, the review rules and safety | only when the user asks for WebMCP or forms an AI agent can call |
 | `guide-store.md` | `spec.persist`, the global store, live push over SSE | only when pages share state or update live |
 | `guide-components.md` | the `@invisibleloop/pulse/ui` components | when you use those components |
 | `guide-ops.md` | running in production: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown pages | only when you deploy, or use markdown pages or third-party scripts |

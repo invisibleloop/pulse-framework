@@ -50,6 +50,21 @@ test('quick review flags a hex colour in rendered HTML', async () => {
   fs.rmSync(root, { recursive: true, force: true })
 })
 
+test('quick review checks WebMCP tool forms in the rendered HTML', async () => {
+  const root = tmpProject()
+  const spec = (form) => 'export default {\n  route: \'/x\',\n  state: {},\n  view: () => `<main id="main-content">' + form + '</main>`,\n}'
+  const review = async (name, form) => {
+    const file = writeSpec(root, name, spec(form))
+    return runQuickReview(fs.readFileSync(file, 'utf8'), file)
+  }
+  const bad = await review('bad-tool.js', '<form toolname="a b" tooldescription="d" toolautosubmit method="POST"><input name="q"></form>')
+  assert.equal(bad.issues.some(i => i.includes('WebMCP') && i.includes('not a valid tool name')), true)
+  assert.equal(bad.warnings.some(w => w.includes('WebMCP') && w.includes('toolautosubmit')), true)
+  const good = await review('good-tool.js', '<form toolname="find" tooldescription="Find a page"><input name="q" aria-label="Query"></form>')
+  assert.equal([...good.issues, ...good.warnings].some(x => x.includes('WebMCP')), false)
+  fs.rmSync(root, { recursive: true, force: true })
+})
+
 test('quick review reports no issues for a clean spec', async () => {
   const root = tmpProject()
   const file = writeSpec(root, 'good.js',

@@ -121,6 +121,9 @@ export default {
         <dt><code>pulse://guide/styles</code></dt>
         <dd>CSS tokens, theming, utility classes, and external images.</dd>
 
+        <dt><code>pulse://guide/webmcp</code></dt>
+        <dd>Forms an AI agent can call (WebMCP). Read only when asked for.</dd>
+
         <dt><code>pulse://guide/fonts</code></dt>
         <dd>Custom fonts and third-party scripts. Read only when you add one.</dd>
 

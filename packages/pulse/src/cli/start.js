@@ -50,7 +50,7 @@ let csp          = null
 let passthrough  = {}
 
 // Server options forwarded verbatim from pulse.config.js — keep in sync with dev.js
-const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'host', 'hsts']
+const PASSTHROUGH_OPTIONS = ['redirects', 'sitemap', 'robots', 'secret', 'live', 'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'host', 'hsts', 'originTrial']
 
 {
   const config = await loadConfigOrExit(ROOT)

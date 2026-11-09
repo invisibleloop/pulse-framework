@@ -302,6 +302,8 @@ await createServer(
     hsts:         undefined,      // Strict-Transport-Security on HTTPS responses; default max-age=31536000
                                   // (this host only). false = none, string = verbatim, or
                                   // { maxAge, includeSubDomains, preload } (opt-in: domain-wide commitments)
+    originTrial:  undefined,      // Chrome origin-trial token(s), sent as the Origin-Trial header on HTML pages
+                                  // (a string, or an array). WebMCP form attributes need one in Chrome
     secret:       process.env.PULSE_SECRET,  // HMAC secret for CSRF tokens — set a stable value
                                   // when running multiple instances (default: random per boot)
     sitemap:      true,           // auto-serve /sitemap.xml + robots.txt from registered routes

@@ -72,6 +72,7 @@ const load = (ctx) => ((ctx._cache ??= {}).p ??= fetchPokemon(ctx.params.name)) 
 | Shared state, `persist`, live push (SSE) | `pulse://guide/store` |
 | Theming tokens, vibes, external images | `pulse://guide/styles` |
 | Fonts, third-party scripts | `pulse://guide/fonts` |
+| Forms an AI agent can call (WebMCP), only if asked | `pulse://guide/webmcp` |
 | Layout component, redirects map, sitemap, canonical URLs | `pulse://guide/routing` |
 | Component props | `pulse://guide/components` |
 | New branded page or site (intake, sketch, approvals) | `pulse://workflow` |

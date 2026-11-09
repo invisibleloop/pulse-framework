@@ -123,6 +123,32 @@ function httpsHeaders(req) {
   return value ? { 'Strict-Transport-Security': value } : {}
 }
 
+const ORIGIN_TRIAL = Symbol('pulse.originTrial')
+
+/** The `Origin-Trial` header for an HTML response: one line per token, or nothing. */
+function originTrialHeaders(req) {
+  const value = req[ORIGIN_TRIAL]
+  return value ? { 'Origin-Trial': value } : {}
+}
+
+/**
+ * Turn the `originTrial` option into the value of the `Origin-Trial` header, or null for none.
+ * A token is a string; several tokens are an array and are sent as one header line each.
+ * A token holds only base64 characters, so anything else (a space, a newline) is an error here
+ * and never reaches a header.
+ */
+export function resolveOriginTrial(option) {
+  if (option === undefined || option === null || option === false) return null
+  const tokens = Array.isArray(option) ? option : [option]
+  if (tokens.length === 0) throw new Error('createServer: originTrial must be a token string or a non-empty array of token strings')
+  for (const t of tokens) {
+    if (typeof t !== 'string' || !/^[A-Za-z0-9+/=_-]+$/.test(t) || t.length > 4096) {
+      throw new Error('createServer: originTrial tokens must be strings of base64 characters (A-Z a-z 0-9 + / = _ -), at most 4096 long')
+    }
+  }
+  return tokens.length === 1 ? tokens[0] : tokens
+}
+
 /**
  * Make a redirect target safe to use when it came from the request (a `?next=` or `?return=`
  * parameter, a form field, a cookie). Returns `target` only if it is a path on this site;
@@ -830,6 +856,8 @@ export async function createServer(entries, options = {}) {
     hsts           = undefined,     // Strict-Transport-Security on HTTPS responses: default max-age=31536000;
                                     // false = send none; string = verbatim;
                                     // { maxAge, includeSubDomains, preload } — see resolveHsts
+    originTrial    = undefined,     // Chrome origin-trial token(s), sent as the Origin-Trial header on HTML
+                                    // pages: a string, or an array for several trials. Off by default.
     csp: cspOption = {},            // extra CSP sources: { 'style-src': ['https://fonts.googleapis.com'] }
     analytics      = null,          // opt-in analytics script URL, e.g. 'https://quietlytics.app/tracker.js'.
                                     // Injected as <script defer> in every page head; its origin is added
@@ -856,6 +884,7 @@ export async function createServer(entries, options = {}) {
     quiet          = false,        // suppress request logging
   } = options
 
+  const originTrialValue = resolveOriginTrial(originTrial)   // throws on a bad token, before the server accepts connections
   const hstsValue = resolveHsts(hsts)   // throws on a bad option, before the server accepts connections
 
   // A pinned origin must be a bare http(s) origin; normalise it ("https://example.com/x" -> "https://example.com").
@@ -1034,6 +1063,7 @@ export async function createServer(entries, options = {}) {
   // A named function so a request can be handled a second time as "not found" (see the catch below).
   const handleRequest = async (req, res) => {
     req[HSTS_VALUE] = hstsValue
+    req[ORIGIN_TRIAL] = originTrialValue
     // The dev server serves source files, a reload trigger and the error journal. A web page the
     // developer visits can reach it through DNS rebinding: the attacker's own domain is made to
     // resolve to 127.0.0.1, and the browser then treats the dev server as same-origin with it. Such
@@ -1692,6 +1722,7 @@ async function handleStringResponse(spec, ctx, req, res, extraBody = '', dev = f
     'Vary':                      'Accept-Encoding, X-Pulse-Navigate, X-Forwarded-Host, X-Forwarded-Proto',
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
+    ...originTrialHeaders(req),
   })
   if (encoding)          headers['Content-Encoding'] = encoding
   if (serverTimingValue) headers['Server-Timing']    = serverTimingValue
@@ -1720,6 +1751,7 @@ async function handleStreamResponse(spec, ctx, req, res, extraBody = '', dev = f
       'Vary':                    'Accept-Encoding, X-Pulse-Navigate, X-Forwarded-Host, X-Forwarded-Proto',
       ...SECURITY_HEADERS,
       ...httpsHeaders(req),
+      ...originTrialHeaders(req),
     })
     if (encoding) headers['Content-Encoding'] = encoding
     res.writeHead(200, headers)
@@ -1820,6 +1852,7 @@ ${stylePreconnects ? stylePreconnects + '\n' : ''}${stylePreloads ? stylePreload
     'Vary':                      'Accept-Encoding, X-Pulse-Navigate, X-Forwarded-Host, X-Forwarded-Proto',
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
+    ...originTrialHeaders(req),
   })
   if (encoding) headers['Content-Encoding'] = encoding
 

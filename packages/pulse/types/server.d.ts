@@ -97,6 +97,14 @@ export interface ServerOptions {
   hsts?: false | string | { maxAge?: number; includeSubDomains?: boolean; preload?: boolean }
 
   /**
+   * Chrome origin-trial token(s), sent as the `Origin-Trial` header on HTML pages. WebMCP is an
+   * origin trial in Chrome, so a site needs a token for its own origin to use the `toolname` form
+   * attributes without a browser flag. A string, or an array of strings for several trials.
+   * A token holds only base64 characters. Off by default.
+   */
+  originTrial?: string | string[]
+
+  /**
    * Path for the built-in health check endpoint. Default '/healthz'.
    * Returns { status: 'ok', uptime: number } — bypasses onRequest so load
    * balancers always get a response. Set to false to disable.
