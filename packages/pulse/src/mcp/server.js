@@ -165,7 +165,7 @@ function normaliseVibe(v) {
 const SERVER_INSTRUCTIONS = [
   'Pulse is a spec-first frontend framework. These tools and resources are the way to learn and build it.',
   '- Start by reading the resource pulse://start. It detects a new project, a new page or an edit, and returns what you need.',
-  '- Read pulse://guide for the index, then read only the one topic guide you need (pulse://guide/spec, /server, /styles, /routing, /components).',
+  '- Then read pulse://guide/cheatsheet (about 5 KB). It covers most builds. Open a larger topic guide (pulse://guide/spec, /server, /styles, /routing, /components) only for a topic the cheat sheet names.',
   '- Do not download or unpack the npm package to read its files. The guides here are the same text.',
   '- Check your work with pulse_validate, and for a new page follow the workflow in pulse://workflow, including its approval steps.',
 ].join('\n')
@@ -187,6 +187,13 @@ const GUIDE_RESOURCES = [
     title:       'Pulse Guide — Index',
     description: 'Index of all Pulse guide resources. Fetch this first to find which topic resource to read next.',
     content:     () => PULSE_GUIDE_INDEX,
+  },
+  {
+    name:        'guide-cheatsheet',
+    uri:         'pulse://guide/cheatsheet',
+    title:       'Pulse Guide — Cheat Sheet',
+    description: 'About 5 KB. The rules that decide most builds: one spec per route, a page with server data and a 404, interactivity, styles and the hex rule, build and run gotchas. Read this before the larger topic guides, and open one of them only for a topic it names.',
+    content:     () => GUIDE_CHEATSHEET,
   },
   {
     name:        'guide-spec',
@@ -3865,6 +3872,7 @@ function text(str) {
 const IDENTITY        = fs.readFileSync(new URL('../agent/identity.md',          import.meta.url), 'utf8')
 const WORKFLOW        = fs.readFileSync(new URL('../agent/workflow.md',           import.meta.url), 'utf8')
 const CHECKLIST       = fs.readFileSync(new URL('../agent/checklist.md',         import.meta.url), 'utf8')
+const GUIDE_CHEATSHEET = fs.readFileSync(new URL('../agent/guide-cheatsheet.md', import.meta.url), 'utf8')
 const GUIDE_SPEC      = fs.readFileSync(new URL('../agent/guide-spec.md',        import.meta.url), 'utf8')
 const GUIDE_SERVER    = fs.readFileSync(new URL('../agent/guide-server.md',      import.meta.url), 'utf8')
 const GUIDE_OPS       = fs.readFileSync(new URL('../agent/guide-ops.md',         import.meta.url), 'utf8')
@@ -3917,6 +3925,7 @@ If you know your context already:
 | \`pulse://start\` | **Always fetch first** — context-aware entry point that routes you to the right resources |
 | \`pulse://quickstart\` | **Editing, bug-fixing, or a simple one-shot build** — workflow + spec skeleton + components + theming in one fetch. Skip the 4-resource cold-start for targeted tasks. |
 | \`pulse://workflow\` | **New project or new page — required.** Planning steps, acceptance criteria and the phase/gate sequence. Read it before you plan. |
+| \`pulse://guide/cheatsheet\` | **Read before the topic guides** — about 5 KB: the rules that decide most builds, with a pointer to the full guide for each topic |
 | \`pulse://guide/spec\` | Building a spec — state, mutations, actions, streaming SSR, key rules, form layout |
 | \`pulse://guide/server\` | Server data, global store, persist, cookies, redirects, POST handling, \`pulse start\`, the build |
 | \`pulse://guide/ops\` | Deploying and running: reverse proxy, health check, graceful shutdown, error journal, third-party scripts, markdown |

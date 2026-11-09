@@ -91,6 +91,16 @@ test('the server sends instructions that point at resources which exist', () => 
   assert(block.includes('pulse://start') && block.includes('pulse://guide'), 'instructions must name pulse://start and pulse://guide')
 })
 
+test('the cheat sheet stays small and only points at resources that exist', () => {
+  const text = fs.readFileSync(path.join(agentDir, 'guide-cheatsheet.md'), 'utf8')
+  // Its job is to replace reading four large guides first. If it grows past this it has stopped doing that.
+  assert(text.length < 7000, `guide-cheatsheet.md is ${text.length} chars; keep it under 7000 and move detail into a topic guide`)
+  const known = [...registeredUris, 'pulse://workflow']
+  for (const uri of new Set(text.match(/pulse:\/\/[a-z/-]+/g))) {
+    assert(known.includes(uri), `${uri} is named in guide-cheatsheet.md but is not a registered resource`)
+  }
+})
+
 test('guide-routing.md exists on disk', () => {
   assert(fs.existsSync(path.join(agentDir, 'guide-routing.md')), 'guide-routing.md not found')
 })
