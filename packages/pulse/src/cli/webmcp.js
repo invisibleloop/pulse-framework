@@ -26,6 +26,16 @@ function attributesOf(tag) {
 
 const NOT_A_PARAMETER = new Set(['hidden', 'submit', 'button', 'reset', 'image'])
 
+/** An opening <form> tag. A quoted value may hold a `>`, so quotes are read as units. */
+const FORM_TAG = /<form\b(?:"[^"]*"|'[^']*'|[^'">])*>/gi
+
+/** Markup that is not part of the page: comments, scripts and styles. A form named in one is not a form. */
+function pageMarkup(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, m => ' '.repeat(m.length))
+    .replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, m => ' '.repeat(m.length))
+}
+
 /**
  * Find the problems with the WebMCP tool forms in rendered HTML.
  * Returns [] when the HTML has no tool form. Each problem is { level: 'error' | 'warn', message }.
@@ -33,9 +43,10 @@ const NOT_A_PARAMETER = new Set(['hidden', 'submit', 'button', 'reset', 'image']
 export function webMcpFormProblems(html) {
   const problems = []
   if (typeof html !== 'string' || !/\btool(?:name|description|autosubmit)\b/i.test(html)) return problems
+  html = pageMarkup(html)
 
   const seen = new Map()
-  const formRe = /<form\b[^>]*>/gi
+  const formRe = new RegExp(FORM_TAG)
   let m
   while ((m = formRe.exec(html))) {
     const attrs = attributesOf(m[0])
@@ -56,8 +67,9 @@ export function webMcpFormProblems(html) {
         problems.push({ level: 'error', message: `\`toolname="${attrs.toolname}"\` is not a valid tool name — use 1 to 128 ASCII letters, digits, \`_\`, \`-\` or \`.\`` })
       } else if (seen.has(attrs.toolname)) {
         problems.push({ level: 'error', message: `Two forms use \`toolname="${attrs.toolname}"\` — a tool name must be unique on the page` })
+      } else {
+        seen.set(attrs.toolname, true)
       }
-      seen.set(attrs.toolname, true)
     }
     if (hasDesc && attrs.tooldescription.trim() === '') {
       problems.push({ level: 'error', message: `Form ${label} has an empty \`tooldescription\` — the agent chooses a tool from this text, so say what the form does` })
@@ -66,13 +78,13 @@ export function webMcpFormProblems(html) {
     const end = html.indexOf('</form>', m.index)
     const inner = html.slice(m.index + m[0].length, end === -1 ? html.length : end)
 
-    const method = (attrs.method || 'get').toLowerCase()
+    const method = (attrs.method || 'get').trim().toLowerCase()
     if ('toolautosubmit' in attrs && method !== 'get') {
       problems.push({ level: 'warn', message: `Form ${label} has \`toolautosubmit\` and method ${method.toUpperCase()} — an agent can submit it without the user clicking Submit. Keep it only if the action is safe to run unattended; otherwise remove \`toolautosubmit\` so the user confirms` })
     }
 
     const labelRanges = [...inner.matchAll(/<label\b[^>]*>[\s\S]*?<\/label>/gi)].map(x => [x.index, x.index + x[0].length])
-    const labelFor = new Set([...inner.matchAll(/<label\b[^>]*\bfor\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)].map(x => x[1] ?? x[2] ?? x[3]))
+    const labelFor = new Set([...html.matchAll(/<label\b[^>]*\bfor\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)].map(x => x[1] ?? x[2] ?? x[3]))
     const undescribed = []
     for (const c of inner.matchAll(/<(?:input|select|textarea)\b[^>]*>/gi)) {
       const a = attributesOf(c[0])
@@ -93,5 +105,5 @@ export function webMcpFormProblems(html) {
 /** Number of forms that are WebMCP tools in rendered HTML. */
 export function webMcpToolCount(html) {
   if (typeof html !== 'string') return 0
-  return [...html.matchAll(/<form\b[^>]*>/gi)].filter(m => { const a = attributesOf(m[0]); return 'toolname' in a && 'tooldescription' in a }).length
+  return [...pageMarkup(html).matchAll(new RegExp(FORM_TAG))].filter(m => { const a = attributesOf(m[0]); return 'toolname' in a && 'tooldescription' in a }).length
 }

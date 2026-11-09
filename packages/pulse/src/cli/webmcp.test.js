@@ -81,6 +81,32 @@ test('an empty toolparamdescription does not count as a description', () => {
   assert.equal(warns('<form toolname="t" tooldescription="d"><input name="q" toolparamdescription=""></form>').length, 1)
 })
 
+test('a > inside a quoted attribute does not cut the tag short', () => {
+  const html = '<form toolname="t" tooldescription="Find a > b" toolautosubmit method="POST"><input name="q" aria-label="q"></form>'
+  assert.equal(webMcpToolCount(html), 1)
+  assert.deepEqual(errors(html), [])
+  assert.match(warns(html)[0], /without the user clicking Submit/, 'toolautosubmit and method are still read')
+  assert.equal(webMcpFormProblems('<form toolname="t" tooldescription="a > b"></form>').length, 0, 'the description is not read as empty')
+})
+
+test('a form named in a comment, a script or a style is not a form', () => {
+  const html = '<!-- <form toolname="a b" tooldescription=""> --><script>const f = \'<form toolname="x">\'</script><style>/* <form toolautosubmit> */</style><p>ok</p>'
+  assert.deepEqual(webMcpFormProblems(html), [])
+  assert.equal(webMcpToolCount(html), 0)
+})
+
+test('a label outside the form counts, and the method is trimmed', () => {
+  const html = '<label for="q">Query</label><form toolname="t" tooldescription="d" toolautosubmit method=" post "><input id="q" name="q"></form>'
+  const w = warns(html)
+  assert.equal(w.length, 1, 'only the autosubmit warning, no missing-label warning')
+  assert.match(w[0], /method POST — /, 'printed as POST with no stray spaces')
+})
+
+test('an invalid name is not recorded as taken, so a valid later form is not called a duplicate', () => {
+  const html = '<form toolname="a b" tooldescription="d"></form><form toolname="a b" tooldescription="d"></form>'
+  assert.equal(errors(html).filter(e => /unique/.test(e)).length, 0)
+})
+
 test('attributes in single quotes or unquoted are read', () => {
   assert.deepEqual(webMcpFormProblems("<form toolname='t' tooldescription=Does>" + '</form>'), [])
   assert.equal(webMcpToolCount("<form toolname='t' tooldescription='d'></form>"), 1)

@@ -304,7 +304,8 @@ export async function runFullReview(source, file) {
 
     const webMcp = webMcpFormProblems(renderedHtml)
     for (const p of webMcp) autoChecks.push(`${p.level === 'error' ? '✗' : '⚠'} **WebMCP tool form** — ${p.message}`)
-    if (webMcp.length === 0 && webMcpToolCount(renderedHtml) > 0) autoChecks.push(`✓ WebMCP tool forms valid (${webMcpToolCount(renderedHtml)})`)
+    const webMcpTools = webMcp.length === 0 ? webMcpToolCount(renderedHtml) : 0
+    if (webMcpTools > 0) autoChecks.push(`✓ WebMCP tool forms valid (${webMcpTools})`)
 
     const htmlNoSvg = renderedHtml
       .replace(/<svg[\s\S]*?<\/svg>/gi, '')

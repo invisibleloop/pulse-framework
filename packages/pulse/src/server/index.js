@@ -134,18 +134,20 @@ function originTrialHeaders(req) {
 /**
  * Turn the `originTrial` option into the value of the `Origin-Trial` header, or null for none.
  * A token is a string; several tokens are an array and are sent as one header line each.
- * A token holds only base64 characters, so anything else (a space, a newline) is an error here
- * and never reaches a header.
+ * Whitespace around a token is trimmed (an environment file often ends in a newline), and an empty
+ * token means "off", so `originTrial: process.env.TOKEN ?? ''` boots. A token holds only base64
+ * characters, so anything else, such as a space inside it, is an error here and never reaches a header.
  */
 export function resolveOriginTrial(option) {
   if (option === undefined || option === null || option === false) return null
-  const tokens = Array.isArray(option) ? option : [option]
-  if (tokens.length === 0) throw new Error('createServer: originTrial must be a token string or a non-empty array of token strings')
+  if (Array.isArray(option) && option.length === 0) throw new Error('createServer: originTrial must be a token string or a non-empty array of token strings')
+  const tokens = (Array.isArray(option) ? option : [option]).map(t => (typeof t === 'string' ? t.trim() : t)).filter(t => t !== '')
   for (const t of tokens) {
     if (typeof t !== 'string' || !/^[A-Za-z0-9+/=_-]+$/.test(t) || t.length > 4096) {
       throw new Error('createServer: originTrial tokens must be strings of base64 characters (A-Z a-z 0-9 + / = _ -), at most 4096 long')
     }
   }
+  if (tokens.length === 0) return null
   return tokens.length === 1 ? tokens[0] : tokens
 }
 
@@ -1958,6 +1960,7 @@ async function handleRawResponse(spec, ctx, req, res, dev) {
     'Cache-Control': buildCacheControl(spec, dev),
     ...SECURITY_HEADERS,
     ...httpsHeaders(req),
+    ...(/^text\/html\b/i.test(ct) ? originTrialHeaders(req) : {}),
   })
   if (encoding)     headers['Content-Encoding'] = encoding
   if (compressible) headers['Vary'] = 'Accept-Encoding'
