@@ -160,7 +160,17 @@ function normaliseVibe(v) {
 // Server
 // ---------------------------------------------------------------------------
 
-const server = new McpServer({ name: 'pulse', version: PKG_VERSION })
+// Shown to the model at session start. A fresh workspace has no CLAUDE.md, so without this an agent
+// tends to `npm pack` the package and read its files off disk instead of using these tools.
+const SERVER_INSTRUCTIONS = [
+  'Pulse is a spec-first frontend framework. These tools and resources are the way to learn and build it.',
+  '- Start by reading the resource pulse://start. It detects a new project, a new page or an edit, and returns what you need.',
+  '- Read pulse://guide for the index, then read only the one topic guide you need (pulse://guide/spec, /server, /styles, /routing, /components).',
+  '- Do not download or unpack the npm package to read its files. The guides here are the same text.',
+  '- Check your work with pulse_validate, and for a new page follow the workflow in pulse://workflow, including its approval steps.',
+].join('\n')
+
+const server = new McpServer({ name: 'pulse', version: PKG_VERSION }, { instructions: SERVER_INSTRUCTIONS })
 const approvals = createApprovals()
 
 // Validating a spec means importing it, which runs its top-level code. Say so in the tools that do it.

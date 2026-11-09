@@ -81,6 +81,16 @@ test('pulse_update installs only after an explicit confirmed: true', () => {
   assert(install !== -1 && gate < install, 'the confirmation gate must come before the install')
 })
 
+test('the server sends instructions that point at resources which exist', () => {
+  assert(/new McpServer\([^)]*\{ instructions: SERVER_INSTRUCTIONS \}\)/.test(serverSrc), 'McpServer must be given the instructions')
+  const block = serverSrc.slice(serverSrc.indexOf('const SERVER_INSTRUCTIONS'), serverSrc.indexOf("const server = new McpServer"))
+  for (const uri of block.match(/pulse:\/\/[a-z/]+/g)) {
+    const bare = uri.replace(/\/$/, '')
+    assert(serverSrc.includes(`'${bare}'`), `${bare} is named in the instructions but is not a registered resource`)
+  }
+  assert(block.includes('pulse://start') && block.includes('pulse://guide'), 'instructions must name pulse://start and pulse://guide')
+})
+
 test('guide-routing.md exists on disk', () => {
   assert(fs.existsSync(path.join(agentDir, 'guide-routing.md')), 'guide-routing.md not found')
 })
@@ -1124,7 +1134,7 @@ test('pulse_fetch_page frames the page as data inside a fence the page cannot cl
 
 test('the MCP server reports the package version, not a stale constant', () => {
   const { version } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
-  assert(/new McpServer\(\{ name: 'pulse', version: PKG_VERSION \}\)/.test(serverSrc), 'serverInfo.version must come from package.json')
+  assert(/new McpServer\(\{ name: 'pulse', version: PKG_VERSION \}[,)]/.test(serverSrc), 'serverInfo.version must come from package.json')
   assert(!/version: '0\.2\.0'/.test(serverSrc), `the hard-coded 0.2.0 is gone (package is ${version})`)
 })
 
