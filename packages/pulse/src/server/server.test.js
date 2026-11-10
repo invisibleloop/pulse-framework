@@ -1195,6 +1195,58 @@ await test('the hsts option: false sends none, a string is verbatim, an object c
   strictAssert.equal(await hsts({ includeSubDomains: true, preload: true }), 'max-age=31536000; includeSubDomains; preload')
 })
 
+await test('the originTrial option sends an Origin-Trial header on HTML pages only', async () => {
+  const header = async (option, path = '/about') => {
+    let value
+    await withServer([canonicalSpec], { stream: false, originTrial: option }, async (port) => {
+      value = (await request(port, 'GET', path)).headers['origin-trial']
+    })
+    return value
+  }
+  strictAssert.equal(await header(undefined), undefined, 'off by default')
+  strictAssert.equal(await header('abc123+/=_-'), 'abc123+/=_-')
+  strictAssert.equal(await header(['tokenA', 'tokenB']), 'tokenA, tokenB', 'several tokens are sent as separate header lines')
+  strictAssert.equal(await header('tok', '/healthz'), undefined, 'a non-HTML response does not get the header')
+})
+
+await test('the originTrial option sends the header on streamed pages too', async () => {
+  let value
+  await withServer([canonicalSpec], { stream: true, originTrial: 'streamtoken' }, async (port) => {
+    value = (await request(port, 'GET', '/about')).headers['origin-trial']
+  })
+  strictAssert.equal(value, 'streamtoken')
+})
+
+await test('the originTrial header is sent on a custom 404 page and a render() HTML page, but not on a render() JSON response', async () => {
+  const notFound = { route: '*', state: {}, meta: { title: 'nf' }, view: () => '<main id="main-content">nope</main>' }
+  const htmlRender = { route: '/raw', contentType: 'text/html; charset=utf-8', state: {}, render: async () => '<main id="main-content">raw</main>' }
+  const jsonRender = { route: '/data', contentType: 'application/json', state: {}, render: async () => '{"ok":true}' }
+  const results = {}
+  await withServer([canonicalSpec, notFound, htmlRender, jsonRender], { stream: false, originTrial: 'trialtoken' }, async (port) => {
+    results.notFound = (await request(port, 'GET', '/no-such-page')).headers['origin-trial']
+    results.html     = (await request(port, 'GET', '/raw')).headers['origin-trial']
+    results.json     = (await request(port, 'GET', '/data')).headers['origin-trial']
+  })
+  strictAssert.equal(results.notFound, 'trialtoken', 'the custom 404 page is a full HTML page')
+  strictAssert.equal(results.html, 'trialtoken', 'a render() page that serves HTML')
+  strictAssert.equal(results.json, undefined, 'a JSON response is not a page')
+})
+
+await test('the originTrial option is validated before the server starts', async () => {
+  const { resolveOriginTrial } = await import('./index.js')
+  strictAssert.equal(resolveOriginTrial(undefined), null)
+  strictAssert.equal(resolveOriginTrial(false), null)
+  strictAssert.throws(() => resolveOriginTrial([]), /non-empty array/)
+  strictAssert.equal(resolveOriginTrial(''), null, 'an empty token means off')
+  strictAssert.equal(resolveOriginTrial('  \n'), null)
+  strictAssert.equal(resolveOriginTrial('abc123\n'), 'abc123', 'a trailing newline from an env file is trimmed')
+  strictAssert.deepEqual(resolveOriginTrial(['a1', '', ' b2 ']), ['a1', 'b2'])
+  strictAssert.throws(() => resolveOriginTrial('a b'), /base64/, 'a space is not a token character')
+  strictAssert.throws(() => resolveOriginTrial('abc\r\nSet-Cookie: x=1'), /base64/, 'a newline can never reach a header')
+  strictAssert.throws(() => resolveOriginTrial(42), /base64/)
+  strictAssert.throws(() => resolveOriginTrial('a'.repeat(4097)), /4096/)
+})
+
 await test('the hsts option is validated before the server starts', async () => {
   const { resolveHsts } = await import('./index.js')
   strictAssert.throws(() => resolveHsts({ preload: true }), /includeSubDomains/, 'preload without includeSubDomains is rejected')

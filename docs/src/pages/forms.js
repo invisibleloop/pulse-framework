@@ -117,6 +117,27 @@ return { errors: { email: 'Invalid email' }, values: data }
 </form>`, 'html'))}
       <p>Keep the two paths consistent: <code>submit</code> and the action's <code>run</code> should call the same underlying function so validation and side effects cannot drift apart.</p>
 
+      ${section('webmcp', 'Forms an AI agent can call (WebMCP)')}
+      <p>WebMCP lets a page offer a form to an AI agent that runs in the browser. You add attributes to a form you already render on the server. The page gets no extra JavaScript.</p>
+      ${codeBlock(highlight(`<form method="POST"
+      toolname="join_newsletter"
+      tooldescription="Subscribe an email address to the weekly newsletter.">
+  \${server.csrf}
+  \${input({ label: 'Email', name: 'email', type: 'email', required: true })}
+  \${button({ label: 'Subscribe', type: 'submit' })}
+</form>`, 'html'))}
+      ${table(
+        ['Attribute', 'On', 'Meaning'],
+        [
+          ['<code>toolname</code>', 'form', 'The tool name: 1 to 128 ASCII letters, digits, <code>_</code>, <code>-</code> or <code>.</code>, unique on the page. Needs <code>tooldescription</code> too.'],
+          ['<code>tooldescription</code>', 'form', 'What the form does. The agent chooses a tool from this text.'],
+          ['<code>toolparamdescription</code>', 'field', 'Describes one parameter. Without it the browser uses the field\'s label.'],
+          ['<code>toolautosubmit</code>', 'form', 'Submit when the agent fills the form. Without it, the user clicks Submit.'],
+        ]
+      )}
+      <p>WebMCP is an origin trial in Chrome from version 149, and the spec is a draft. To try it locally, enable <code>chrome://flags/#enable-webmcp-testing</code>. For visitors, register your origin for the trial and set <code>originTrial</code> in <code>pulse.config.js</code>. Pulse sends the token as the <code>Origin-Trial</code> header on HTML pages.</p>
+      ${callout('warning', '<strong>An agent can fill a form with any value.</strong> Check it in <code>submit</code> like any other input. Use <code>toolautosubmit</code> only on a form that is safe to run unattended, such as a search. <code>pulse_review</code> warns about <code>toolautosubmit</code> on a form that is not GET, and flags a missing name or description, an invalid name and a field with no description.')}
+
       ${section('caching', 'Interaction with caching')}
       <p>Pages with <code>submit</code> are automatically excluded from the in-process page cache — the CSRF token is per-visitor, and a cached page would serve one visitor's token to everyone. POST responses are never cached.</p>
 

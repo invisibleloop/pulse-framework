@@ -24,7 +24,7 @@ export class ConfigError extends Error {
 export const KNOWN_CONFIG_KEYS = new Set([
   'port', 'host', 'agent', 'design',
   'defaultCache', 'staticCache', 'csp', 'redirects', 'sitemap', 'robots', 'secret', 'live',
-  'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts', 'allowedHosts',
+  'trailingSlash', 'fetcherTimeout', 'maxBody', 'origin', 'hsts', 'originTrial', 'allowedHosts',
   'lighthouse', 'load', 'environments', 'routes', 'css',
   'reportFeedback', 'reportEndpoint', 'reportTransport',
 ])
